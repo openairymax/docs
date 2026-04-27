@@ -917,7 +917,7 @@ void make_request(void)
 - [任务管理 API](task.md) - 任务生命周期管理 API
 - [记忆管理 API](memory.md) - 记忆读写和查询 API
 - [会话管理 API](session.md) - 会话生命周期管理 API
-- [架构设计：日志系统](../../architecture/folder/logging_system.md) - 统一日志架构详解
+- [架构设计：日志系统](../../Capital_Architecture/logging_system.md) - 统一日志架构详解
 
 ---
 

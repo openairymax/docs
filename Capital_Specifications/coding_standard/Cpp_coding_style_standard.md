@@ -3,11 +3,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS C++ 编码规范
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 C++ 代码模块  
 **理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论、微内核哲学  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: S-1至S-4（系统设计）、K-1至K-4（内核设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
 ---
@@ -55,11 +56,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 记忆层 | memoryrovol/ | agentos/atoms/memory/ | C-3, C-4 |
 | 安全层 | agentos/cupolas/ | agentos/atoms/agentos/cupolas/ | E-1, S-2 |
 | 系统调用 | syscall/ | agentos/atoms/syscall/ | K-2, K-3 |
-| 守护进程 | agentos/daemon/ | agentos/daemon/*_d/ | S-3, K-4 |
+| 用户态服务层 | agentos/daemon/ | agentos/daemon/*_d/ | S-3, K-4 |
 
 **层次纪律**（原则 S-2）:
 - `agentos/atoms/` 内部模块只能通过 `corekern/` 的 IPC 机制通信
-- `agentos/daemon/` 守护进程只能通过 `syscalls.h` 与内核交互
+- `agentos/daemon/` 用户态服务层只能通过 `syscalls.h` 与内核交互
 - 禁止跨层访问，禁止循环依赖
 
 ---
@@ -1161,16 +1162,16 @@ public:
 };
 ```
 
-### 14.2 daemon（守护层）C++ 编码
-daemon模块作为系统服务，强调可靠性和可观测性：
+### 14.2 用户态服务层（daemon）C++ 编码
+用户态服务层模块作为系统服务，强调可靠性和可观测性：
 
 #### 14.2.1 IPC服务守护进程（映射原则：E-3 通信基础设施）
 ```cpp
 /**
- * @brief IPC守护进程 - 体现系统观（S-3）和工程观（E-2, E-4）原则
+ * @brief IPC服务守护进程 - 体现系统观（S-3）和工程观（E-2, E-4）原则
  * 
  * 实现高性能进程间通信，集成OpenTelemetry可观测性。
- * 遵循守护进程设计模式，支持优雅启停。
+ * 遵循用户态服务层设计模式，支持优雅启停。
  * 
  * @see ipc.md 中的通信协议规范
  */
@@ -1341,19 +1342,38 @@ private:
 ```
 
 ---
+## 附录：跨文档规范引用
+
+本规范与以下 AgentOS 工程规范一致，所有 C++ 代码须同时遵循：
+
+| 规范集 | 说明 | 来源文档 |
+|--------|------|---------|
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_coding_style_standard.md) |
+| **CROSS-01~06** | 6 项跨平台编译规则 | [C编码规范 §17](./C_coding_style_standard.md) |
+| **SDK-01~05** | 4 SDK 编译验证规范 | [工程规范化标准手册 v10.5](../../../Docs-closed/工程规范化标准手册08.md) |
+| **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
+
+**关键术语映射**（需在 C++ 代码和文档中使用标准名称）：
+- `daemon` → **用户态服务层**（禁止使用"守护进程"）
+- `coreloopthree` → **认知循环运行时**
+- `memoryrovol` → **记忆卷载**
+- `triple_coordinator` → **认知层双思考功能**
+
+---
+
 ## 十五、参考文献
 
-1. **AgentOS 架构设计原则**: [architectural_design_principles.md](../../architecture/folder/architectural_design_principles.md)
+1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
 2. **C++ Core Guidelines**: https://isocpp.github.io/CppCoreGuidelines/
 3. **Google C++ Style Guide**: https://google.github.io/styleguide/cppguide.html
 4. **ISO C++ Standard**: https://eel.is/c++draft/
 5. **AgentOS 核心架构文档**:
-   - [coreloopthree.md](../../architecture/folder/coreloopthree.md)
-   - [memoryrovol.md](../../architecture/folder/memoryrovol.md)  
-   - [microkernel.md](../../architecture/folder/microkernel.md)
-   - [ipc.md](../../architecture/folder/ipc.md)
-   - [syscall.md](../../architecture/folder/syscall.md)
-   - [logging_system.md](../../architecture/folder/logging_system.md)
+   - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
+   - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)  
+   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [syscall.md](../../Capital_Architecture/syscall.md)
+   - [logging_system.md](../../Capital_Architecture/logging_system.md)
 
 ---
 

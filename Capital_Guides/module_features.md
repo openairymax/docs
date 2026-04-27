@@ -475,7 +475,7 @@ security:
 ## 📚 相关文档
 
 - [API 参考文档](../../api/README.md)
-- [架构设计文档](../../architecture/folder/partdocs_architecture.md)
+- [架构设计文档](../ARCHITECTURAL_PRINCIPLES.md)
 - [安装指南](./getting_started.md)
 - [配置手册](./deployment.md)
 - [故障排除指南](./troubleshooting.md)

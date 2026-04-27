@@ -4,11 +4,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 # AgentOS 代码注释与合规规范
 
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有编程语言的代码注释  
 **理论基础**: 工程两论、五维正交系统、双系统认知理论、代码合规框架  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: A-1至A-4（设计美学）、C-1至C-4（认知工程）、E-1至E-8（工程基础设施）、D-1至D-4（安全工程）、合规性原则
 
 ---
@@ -950,7 +951,7 @@ submitTask(plan: TaskPlan): string {
 5. **TypeScript Documentation**: https://www.typescriptlang.org/docs/
 6. **Effective Go**: https://golang.org/doc/effective_go
 7. **Rust API Guidelines**: https://rust-lang.github.io/api-guidelines/
-8. **AgentOS 架构设计原则**: [architectural_design_principles.md](../../architecture/folder/architectural_design_principles.md)
+8. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
 9. **AgentOS 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
 10. **AgentOS 安全设计指南**: [Security_design_standard.md](../Security_design_standard.md)
 
@@ -962,6 +963,18 @@ submitTask(plan: TaskPlan): string {
 |------|------|----------|--------|
 | 1.7 | 2026-03-31 | 重新整理，删除AI和出口管制相关内容，精简文档结构 | LirenWang |
 | 1.6 | 2026-03-25 | 初始版本，基于工程两论和五维正交系统设计 | AgentOS文档组 |
+
+---
+
+## 附录：跨文档规范引用
+
+本规范与以下 AgentOS 工程规范一致，所有代码注释须同时遵循：
+
+| 规范集 | 说明 | 来源文档 |
+|--------|------|---------|
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_coding_style_standard.md) |
+| **REQ-01~08** | 8 项强制规范 | [C编码规范 §1.2](./C_coding_style_standard.md) |
+| **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
 
 ---
 

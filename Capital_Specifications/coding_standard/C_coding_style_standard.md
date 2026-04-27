@@ -131,7 +131,12 @@ ptr = tmp;
 - **热路径优化：** 优先无锁/原子实现，并提供锁保护的安全回退（System2）。
 - **并发合约：** 为每个 API 明确并发合约：线程安全/不可重入/需外部同步等。
 - **锁顺序：** 避免锁嵌套；若必须嵌套，定义并文档化全局锁顺序。
-- **线程局部存储：** 使用 `pthread_key_t` 保存 per-request 上下文（如 `trace_id`/`request_id`）。
+- **跨平台线程抽象：** 禁止直接使用 `pthread.h` API（违反 CROSS-01）。必须通过 `platform.h` 抽象层使用：
+  - `agentos_thread_create()` 替代 `pthread_create()`
+  - `agentos_mutex_lock()` 替代 `pthread_mutex_lock()`
+  - `agentos_cond_wait()` 替代 `pthread_cond_wait()`
+  - `agentos_tls_get/set()` 替代 `pthread_key_t` 保存 per-request 上下文（如 `trace_id`/`request_id`）
+- **线程局部存储：** 使用 `AGENTOS_THREAD_LOCAL` 宏（`platform.h` 提供跨平台实现），禁止直接使用 `__thread` 或 `pthread_key_t`。
 
 ---
 
@@ -236,6 +241,65 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 - **提交规范：** 提交与 PR 遵循 Conventional Commits。PR 必包含相应测试与文档更新。
 - **CODEOWNERS：** 在仓库中设置 CODEOWNERS，关键模块由指定人员审查；关键模块 PR 至少需要两位 reviewer。
 - **Review 清单（必检项）：** API/ABI 影响、测试覆盖、格式/静态分析/sanitizer 结果、SBOM/第三方许可影响与安全考虑。
+- **BAN 检查：** PR 合并前必须通过 BAN-01~BAN-13 自动扫描（零违规）。
+- **CROSS 检查：** PR 合并前必须通过 CROSS-01~CROSS-06 跨平台规范检查。
+
+---
+
+## 十七、跨平台编译规范（CROSS-01~06）
+
+所有 C 代码必须遵循以下跨平台规范，确保在 MSVC（Windows）和 GCC/Clang（Linux/macOS）上均可编译通过：
+
+### CROSS-01：禁止直接使用 POSIX 线程 API
+
+**违规示例**: `pthread_create()`, `pthread_mutex_lock()`, `pthread_cond_wait()`
+**正确做法**: 全部替换为 `platform.h` 提供的 `agentos_thread_create()`, `agentos_mutex_lock()`, `agentos_cond_wait()`
+
+### CROSS-02：禁止使用 C99 VLA 变长数组
+
+**违规示例**: `int arr[n]`
+**正确做法**: `int* arr = AGENTOS_MALLOC(n * sizeof(int))` + 对应 `AGENTOS_FREE`
+
+### CROSS-03：禁止直接使用 POSIX 时间函数
+
+**违规示例**: `clock_gettime(CLOCK_MONOTONIC, &ts)`
+**正确做法**: 使用 `agentos_time_ns()`, `agentos_time_ms()`
+
+### CROSS-04：禁止使用 GCC 扩展语法
+
+**违规示例**: 嵌套函数指针、语句表达式
+**正确做法**: 使用 ANSI C 标准语法
+
+### CROSS-05：Windows 头文件保护
+
+**违规示例**: `#define NOMINMAX` 缺少 `#ifndef`
+**正确做法**: 使用 `#ifndef NOMINMAX` / `#define NOMINMAX` / `#endif` 三行保护
+
+### CROSS-06：MSVC /WX 级别零警告
+
+**要求**: MSVC 编译必须 `/WX` 标志零警告通过，应移除所有未使用变量和隐式类型转换
+
+---
+
+## 十八、禁止模式清单（BAN-01~13）
+
+所有 PR 必须通过以下 13 项禁止模式的自动扫描：
+
+| 编号 | 禁止模式 | 检测命令 |
+|------|---------|----------|
+| BAN-01 | `return AGENTOS_SUCCESS` 占位返回 | `grep -rn "return AGENTOS_SUCCESS" --include="*.c"` |
+| BAN-02 | `(void)param` 忽略参数 | `grep -rn "(void)" --include="*.c"` |
+| BAN-03 | 空函数体 `{}` | 代码审查 |
+| BAN-04 | TODO/FIXME 无关联 Issue | `grep -rn "TODO\|FIXME" --include="*.c"` |
+| BAN-05 | simplified/placeholder/stub 注释 | `grep -rn "simplified\|placeholder\|stub" --include="*.c"` |
+| BAN-06 | `return STRDUP(input)` 回显 | 代码审查 |
+| BAN-07 | `(void*)1` 假指针 | 代码审查 |
+| BAN-08 | `while(cond){break;}` 假循环 | 代码审查 |
+| BAN-09 | `free("literal")` 释放字符串字面量 | `grep -rn 'free("' --include="*.c"` |
+| BAN-10 | `*(ptr)=val` 假原子操作 | 代码审查 + TSan |
+| BAN-11 | `*_stub.h` 桩头文件 | `find . -name "*_stub.h"` |
+| BAN-12 | 降级模式返回假成功 | `grep -rn "degraded\|fallback.*SUCCESS" --include="*.c"` |
+| BAN-13 | DUMMY 假数据 | `grep -rn "DUMMY\|dummy" --include="*.c" --include="*.h"` |
 
 ---
 

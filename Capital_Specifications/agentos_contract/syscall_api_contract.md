@@ -67,7 +67,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 术语 | 简要定义 | 来源 |
 |------|---------|------|
 | 系统调用 (Syscall) | 用户态进入内核的唯一入口 | 本规范 |
-| 微内核/原子内核 (Microkernel/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../architecture/folder/architectural_design_principles.md) |
+| 微内核/原子内核 (Microkernel/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
 | TraceID | 分布式追踪的唯一标识 | [日志打印规范](../coding_standard/Log_standard.md) |
 
 ---
@@ -994,7 +994,7 @@ ERROR_MAP = {
 | 引用规范 | 关系说明 |
 |---------|---------|
 | [通信协议规范](./protocol_contract.md) | 本规范定义系统调用的 API 接口，protocol_contract.md 定义了传输协议 |
-| [架构设计原则](../../../architecture/folder/architectural_design_principles.md) | 本规范是架构原则在系统调用层面的具体实现 |
+| [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) | 本规范是架构原则在系统调用层面的具体实现 |
 | [日志格式规范](./logging_format.md) | 系统调用的日志记录应遵循统一的日志格式 |
 | [日志打印规范](../coding_standard/Log_standard.md) | 错误处理和审计日志的记录规范 |
 | [统一术语表](../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
@@ -1003,8 +1003,8 @@ ERROR_MAP = {
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../philosophy/Design_Principles.md  
-[2] 架构设计原则。../../../architecture/folder/architectural_design_principles.md  
+[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] Microkernel Architecture. https://en.wikipedia.org/wiki/Microkernel  
 [5] POSIX System Call Interface. https://pubs.opengroup.org/onlinepubs/9699919799/  

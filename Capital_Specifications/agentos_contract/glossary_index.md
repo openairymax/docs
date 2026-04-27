@@ -202,7 +202,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 ## 参考文献与理论基础
 
 [1] AgentOS 统一术语表。./TERMINOLOGY.md  
-[2] 架构设计原则。../../../architecture/folder/architectural_design_principles.md  
+[2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
 [3] 《工程控制论》. 科学出版社. 1954  
 [4] 《论系统工程》. 湖南科学技术出版社. 1982  
 [5] 《思考，快与慢》. 中信出版社. 2012  

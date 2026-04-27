@@ -710,7 +710,7 @@ if (ret != 0) {
 - [架构设计原则](../architecture/ARCHITECTURAL_PRINCIPLES.md)
 - [Skill 创建指南](create_skill.md)
 - [编码规范](../Capital_Specifications/coding_standard/C_coding_style_standard.md)
-- [系统调用 API](../architecture/folder/syscall.md)
+- [系统调用 API](../Capital_Architecture/syscall.md)
 
 ---
 

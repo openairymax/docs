@@ -519,7 +519,7 @@ async def test_agent_submit_task():
 - [系统调用 API](../../syscalls/) - 底层 C API 参考
 - [Rust SDK](../rust/README.md) - Rust SDK 文档
 - [Go SDK](../go/README.md) - Go SDK 文档
-- [开发指南：创建 Agent](../../../guides/folder/create_agent.md) - Agent 开发教程
+- [开发指南：创建 Agent](../../../../Capital_Guides/create_agent.md) - Agent 开发教程
 
 ---
 

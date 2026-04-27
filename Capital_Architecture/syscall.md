@@ -3,8 +3,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 系统调用接口详解
 
-**版本**: Doc V1.8
-**更新日期**: 2026-04-09
+**版本**: Doc V2.0
+**更新日期**: 2026-04-27
 **作者**: Team
   - Zhixian Zhou | Spharx Ltd. zhouzhixian@spharx.cn
   - Liren Wang | Spharx Ltd. wangliren@spharx.cn
@@ -30,7 +30,7 @@ AgentOS 系统调用接口遵循微内核架构的 **机制与策略分离** 原
 ```
 ┌─────────────────────────────────────────┐
 │      应用层 (openlab/app/daemon)          │
-│  • 智能体应用 • 服务守护进程                │
+│  • 智能体应用 • 用户态服务层服务                │
 └───────────────↓─────────────────────────┘
          系统调用接口
 ┌─────────────────────────────────────────┐

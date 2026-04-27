@@ -437,7 +437,7 @@ func TestAgentSubmitTask(t *testing.T) {
 - [系统调用 API](../../syscalls/) - 底层 C API 参考
 - [Python SDK](../python/README.md) - Python SDK 文档
 - [Rust SDK](../rust/README.md) - Rust SDK 文档
-- [开发指南：创建 Agent](../../../guides/folder/create_agent.md) - Agent 开发教程
+- [开发指南：创建 Agent](../../../../Capital_Guides/create_agent.md) - Agent 开发教程
 
 ---
 

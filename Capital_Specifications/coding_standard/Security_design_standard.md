@@ -3,11 +3,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 安全设计指南
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有组件和模块  
 **理论基础**: 工程两论（反馈闭环）、安全穹顶（cupolas）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: D-1至D-4（安全工程）、S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
 ---
@@ -1253,18 +1254,31 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 
 ## 十一、参考文献
 
-1. **AgentOS 架构设计原则**: [architectural_design_principles.md](../../architecture/folder/architectural_design_principles.md)
-2. **AgentOS 微内核设计**: [microkernel.md](../../architecture/folder/microkernel.md)
+1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
+2. **AgentOS 微内核设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
 3. **AgentOS 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
 4. **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 5. **NIST Cybersecurity Framework**: https://www.nist.gov/cyberframework
 6. **ISO 27001**: https://www.iso.org/isoiec-27001-information-security.html
 7. **AgentOS 核心架构文档**:
-   - [coreloopthree.md](../../architecture/folder/coreloopthree.md)
-   - [memoryrovol.md](../../architecture/folder/memoryrovol.md)
-   - [ipc.md](../../architecture/folder/ipc.md)
-   - [syscall.md](../../architecture/folder/syscall.md)
-   - [logging_system.md](../../architecture/folder/logging_system.md)
+   - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
+   - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
+   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [syscall.md](../../Capital_Architecture/syscall.md)
+   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+
+---
+
+## 附录：跨文档规范引用
+
+本规范与以下 AgentOS 工程规范一致，所有安全设计须同时遵循：
+
+| 规范集 | 说明 | 来源文档 |
+|--------|------|---------|
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_coding_style_standard.md) |
+| **CROSS-01~06** | 6 项跨平台编译规则 | [C编码规范 §17](./C_coding_style_standard.md) |
+| **REQ-01~08** | 8 项强制规范 | [C编码规范 §1.2](./C_coding_style_standard.md) |
+| **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
 
 ---
 

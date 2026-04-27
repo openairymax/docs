@@ -859,7 +859,7 @@ curl -X POST http://localhost:18789/rpc \
 
 | 引用规范 | 关系说明 |
 |---------|---------|
-| [架构设计原则](../架构设计原则.md) | 本规范是架构原则在通信层面的具体实现，特别是层次分解和接口稳定原则 |
+| [架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md) | 本规范是架构原则在通信层面的具体实现，特别是层次分解和接口稳定原则 |
 | [系统调用 API 规范](./syscall_api_contract.md) | 本规范定义了系统调用的传输协议，syscall_api_contract.md 定义了具体的 API 接口 |
 | [日志格式规范](./logging_format.md) | 本规范要求所有组件使用统一的日志格式，支持 TraceID 贯穿 |
 | [日志打印规范](../coding_standard/Log_standard.md) | 通信过程中的日志记录应遵循日志打印规范 |
@@ -869,8 +869,8 @@ curl -X POST http://localhost:18789/rpc \
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../philosophy/Design_Principles.md  
-[2] 架构设计原则。../架构设计原则.md  
+[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[2] 架构设计原则。../../ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] JSON-RPC 2.0 Specification. https://www.jsonrpc.org/specification  
 [5] RFC 6455: The WebSocket Protocol. https://tools.ietf.org/html/rfc6455  

@@ -935,14 +935,14 @@ class BatchHandler:
 | [系统调用 API 规范](./syscall_api_contract.md) | 系统调用的错误处理和审计日志应遵循本规范 |
 | [日志打印规范](../coding_standard/Log_standard.md) | 本规范定义日志格式，Log_standard.md 定义打印方法和最佳实践 |
 | [统一术语表](../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
-| [架构设计原则](../../../architecture/folder/architectural_design_principles.md) | 本规范的设计原则基于五维正交体系，是可观测性原则的具体实现 |
+| [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) | 本规范的设计原则基于五维正交体系，是可观测性原则的具体实现 |
 
 ---
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../philosophy/Design_Principles.md  
-[2] 架构设计原则。../../../architecture/folder/architectural_design_principles.md  
+[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] OpenTelemetry Specification. https://opentelemetry.io/docs/specs/otel/  
 [5] Structured Logging Best Practices. https://github.com/open-telemetry/community/blob/main/cross-specification/stable/telemetry-specification.md  

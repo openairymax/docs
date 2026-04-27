@@ -3,11 +3,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Python 编码规范
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 Python 代码  
 **理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
 ---
@@ -49,13 +50,13 @@ Python 代码在 AgentOS 中主要应用于以下场景：
 
 | 场景 | 位置 | 关联原则 | Python 特性 |
 |------|------|---------|------------|
-| 守护进程 | `agentos/daemon/` | S-3, K-3 | asyncio, multiprocessing |
+| 用户态服务层 | `agentos/daemon/` | S-3, K-3 | asyncio, multiprocessing |
 | 工具脚本 | `agentos/toolkit/` | E-7 | 快速原型，脚本自动化 |
 | SDK Python | `sdks/python/` | K-2, E-2 | 类型提示，数据类 |
 | 机器学习 | `ml/` | C-1, C-4 | NumPy, PyTorch |
 
 **层次纪律**（原则 S-2）:
-- Python 守护进程必须通过 `syscalls.h` 的 C API 绑定与内核交互
+- 用户态服务层 Python 代码必须通过 `syscalls.h` 的 C API 绑定与内核交互
 - 禁止 Python 代码直接访问内核内部结构
 - 所有跨语言边界必须进行参数验证和类型转换
 
@@ -1128,16 +1129,34 @@ class VectorDBClient:
 
 ## 十二、参考文献
 
-1. **AgentOS 架构设计原则**: [architectural_design_principles.md](../../architecture/folder/architectural_design_principles.md)
-2. **PEP 8 Style Guide**: https://pep8.org/
-3. **Google Python Style Guide**: https://google.github.io/styleguide/pyguide.html
-4. **Python typing documentation**: https://docs.python.org/3/library/typing.html
+1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
+2. **Google Python Style Guide**: https://google.github.io/styleguide/pyguide.html
+3. **Python PEP 8**: https://www.python.org/dev/peps/pep-0008/
+4. **Python PEP 484**: https://www.python.org/dev/peps/pep-0484/
 5. **AgentOS 核心架构文档**:
-   - [coreloopthree.md](../../architecture/folder/coreloopthree.md)
-   - [memoryrovol.md](../../architecture/folder/memoryrovol.md)
-   - [microkernel.md](../../architecture/folder/microkernel.md)
-   - [ipc.md](../../architecture/folder/ipc.md)
-   - [logging_system.md](../../architecture/folder/logging_system.md)
+   - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
+   - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
+   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+
+---
+
+## 附录：跨文档规范引用
+
+本规范与以下 AgentOS 工程规范一致，所有 Python 代码须同时遵循：
+
+| 规范集 | 说明 | 来源文档 |
+|--------|------|---------|
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_coding_style_standard.md) |
+| **SDK-01~05** | 4 SDK 编译验证规范 | [工程规范化标准手册 v10.5](../../../Docs-closed/工程规范化标准手册08.md) |
+| **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
+
+**关键术语映射**（需在代码和文档中使用标准名称）：
+- `daemon` → **用户态服务层**（禁止使用"守护进程"）
+- `coreloopthree` → **认知循环运行时**
+- `memoryrovol` → **记忆卷载**
+- `triple_coordinator` → **认知层双思考功能**
 
 ---
 

@@ -896,7 +896,7 @@ void session_search_example(void)
 - [记忆管理 API](memory.md) - 记忆读写和查询 API
 - [可观测性 API](telemetry.md) - 指标、日志和追踪 API
 - [Agent 管理 API](agent.md) - Agent 生命周期管理 API
-- [架构设计：三层运行时](../../architecture/folder/coreloopthree.md) - CoreLoopThree 架构详解
+- [架构设计：三层运行时](../../Capital_Architecture/coreloopthree.md) - CoreLoopThree 架构详解
 
 ---
 

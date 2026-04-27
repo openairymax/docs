@@ -3,11 +3,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 日志打印规范
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有模块的日志打印活动  
 **理论基础**: 工程两论（《工程控制论》反馈理论、《论系统工程》可观测性）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **关联原则**: 架构设计原则 E-2（可观测性原则）、E-4（运维友好）、C-1（认知友好）、A-1（设计美学）  
 **原则映射**: E-2（可观测性）、E-4（运维友好）、C-1（认知友好）、A-1（极简主义）
 
@@ -716,7 +717,7 @@ Backs模块作为系统服务，强调可靠性和可观测性：
 #### 7.2.1 IPC通信服务日志（映射原则：E-3 通信基础设施）
 ```python
 class IpcDaemon:
-    """IPC守护进程日志 - 体现系统观（S-3）和工程观（E-4）原则
+    """IPC用户态服务层日志 - 体现系统观（S-3）和工程观（E-4）原则
     
     结构化日志支持OpenTelemetry集成和分布式追踪。
     安全相关日志必须包含完整上下文用于审计。
@@ -886,10 +887,10 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 
 | 引用文档 | 关系说明 |
 |---------|---------|
-| [架构设计原则](../../architecture/folder/architectural_design_principles.md) | 本规范是原则 E-2（可观测性原则）和 E-4（运维友好原则）在日志打印方面的具体实施 |
+| [架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md) | 本规范是原则 E-2（可观测性原则）和 E-4（运维友好原则）在日志打印方面的具体实施 |
 | [C&C++安全编程指南](./C_Cpp_secure_coding_standard.md) | 日志中的错误处理应遵循安全编程指南的异常处理规范 |
 | [统一术语表](../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
-| [AgentOS 核心架构文档](../../architecture/folder/) | 与本规范密切相关的架构文档：<br>- logging_system.md（可观测性核心架构）<br>- coreloopthree.md（运行时日志）<br>- memoryrovol.md（内存相关日志）<br>- microkernel.md（内核日志） |
+| [AgentOS 核心架构文档](../../Capital_Architecture/) | 与本规范密切相关的架构文档：<br>- logging_system.md（可观测性核心架构）<br>- coreloopthree.md（运行时日志）<br>- memoryrovol.md（内存相关日志）<br>- microkernel.md（内核日志） |
 
 ---
 
@@ -921,4 +922,21 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 **内容规范**：3.1-3.5  
 **打印策略**：4.1-4.5  
 **HiLog 接口**：5.1-5.4  
+
+---
+
+## 附录：跨文档规范引用
+
+本规范与以下 AgentOS 工程规范一致，所有日志打印须同时遵循：
+
+| 规范集 | 说明 | 来源文档 |
+|--------|------|---------|
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_coding_style_standard.md) |
+| **REQ-01~08** | 8 项强制规范 | [C编码规范 §1.2](./C_coding_style_standard.md) |
+| **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
+
+---
+
+© 2026 SPHARX Ltd. All Rights Reserved.  
+"From data intelligence emerges."
 **质量管理**：6.1-6.3

@@ -3,12 +3,13 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Java 安全编码指南
 
-**版本**: Doc V1.8  
-**最后更新**: 2026-04-09  
+**版本**: Doc V2.0  
+**最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS Java SDK、所有 Java 语言实现  
 **理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论、安全穹顶（cupolas）防御深度  
-**原则映射**: D-1至D-4（安全工程）、S-2（模块化设计）、C-3（认知偏差防护）、E-1（安全内生）、E-8（可测试性）
+**原则映射**: D-1至D-4（安全工程）、S-2（模块化设计）、C-3（认知偏差防护）、E-1（安全内生）、E-8（可测试性）  
+**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语
 
 ---
 
@@ -1180,17 +1181,17 @@ public class SecureKernelBinding {
 ---
 ## 十一、参考文献
 
-1. **AgentOS 架构设计原则**: [architectural_design_principles.md](../../architecture/folder/architectural_design_principles.md)
+1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
 2. **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 3. **Java Secure Coding Guidelines**: https://wiki.sei.cmu.edu/confluence/display/java
 4. **Spring Security Documentation**: https://docs.spring.io/spring-security/site/docs/current/reference/html5/
 5. **AgentOS 核心架构文档**:
-   - [coreloopthree.md](../../architecture/folder/coreloopthree.md)
-   - [memoryrovol.md](../../architecture/folder/memoryrovol.md)
-   - [microkernel.md](../../architecture/folder/microkernel.md)
-   - [ipc.md](../../architecture/folder/ipc.md)
-   - [syscall.md](../../architecture/folder/syscall.md)
-   - [logging_system.md](../../architecture/folder/logging_system.md)
+   - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
+   - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
+   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [syscall.md](../../Capital_Architecture/syscall.md)
+   - [logging_system.md](../../Capital_Architecture/logging_system.md)
    - [Security_design_standard.md](../Security_design_standard.md)
 
 ---

@@ -835,7 +835,7 @@ void batch_import_example(void)
 - [会话管理 API](session.md) - 会话生命周期管理 API
 - [可观测性 API](telemetry.md) - 指标、日志和追踪 API
 - [Agent 管理 API](agent.md) - Agent 生命周期管理 API
-- [架构设计：记忆系统](../../architecture/folder/memoryrovol.md) - MemoryRovol 架构详解
+- [架构设计：记忆系统](../../Capital_Architecture/memoryrovol.md) - MemoryRovol 架构详解
 
 ---
 
