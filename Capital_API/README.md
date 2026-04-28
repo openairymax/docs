@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges."
 title: "AgentOS API 参考文档"
-version: "Doc V1.8"
+version: "Doc V2.0"
 last_updated: "2026-04-10"
 author: "LirenWang"
 status: "production_ready"
@@ -480,7 +480,7 @@ AGENTOS_API int agentos_module_function(
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V1.7 | 2026-03-31 | LirenWang | 初始版本，建立完整API文档体系 |
+| Doc V2.0 | 2026-03-31 | LirenWang | 初始版本，建立完整API文档体系 |
 
 ---
 

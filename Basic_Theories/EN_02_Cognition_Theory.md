@@ -3,7 +3,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Cognitive Layer Theory
 
-**Version**: Doc V1.8  
+**Version**: Doc V2.0  
 **Last Updated**: 2026-04-10  
 **Author**: LirenWang
 

@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges 始于数据，终于智能。"
 title: "AgentOS 官方技术白皮书"
-version: "Doc V1.8"
+version: "Doc V2.0"
 last_updated: "2026-04-10"
 author: "LirenWang"
 status: "production_ready"
@@ -265,7 +265,7 @@ white_paper/
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V1.7 | 2026-03-31 | LirenWang | 初始版本，建立白皮书发布体系 |
+| Doc V2.0 | 2026-03-31 | LirenWang | 初始版本，建立白皮书发布体系 |
 
 ---
 

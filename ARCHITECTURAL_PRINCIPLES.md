@@ -36,14 +36,14 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
 | **Doc V2.0** | **2026-04-27** | **架构委员会** | **术语标准化：CoreLoopThree→认知循环运行时, MemoryRovol→记忆卷载, daemon→用户态服务层, 双思考系统→认知层双思考功能; 新增CROSS跨平台规范与BAN禁止模式引用** |
-| Doc V1.9 | 2026-04-09 | ZhixianZhou | 引入体系并行论 |
-| Doc V1.8 | 2026-04-02 | DechengLi | 工程化改进 |
-| Doc V1.6 | 2026-03-25 | DechengLi | 优化理论基础 |
-| Doc V1.5 | 2026-03-24 | DechengLi | 增加起源章节 |
-| Doc V1.4 | 2026-03-24 | LirenWang | 按规范重新编写 |
-| Doc V1.3 | 2026-03-23 | Chenzhang | 基于实际架构编写 |
-| Doc V1.2 | 2026-03-21 | DechengLi | 基于系统工程理论编写 |
-| Doc V1.1 | 2026-02-01 | DechengLi | 原始架构设计原则 |
+| Doc V2.0 | 2026-04-09 | ZhixianZhou | 引入体系并行论 |
+| Doc V2.0 | 2026-04-02 | DechengLi | 工程化改进 |
+| Doc V2.0 | 2026-03-25 | DechengLi | 优化理论基础 |
+| Doc V2.0 | 2026-03-24 | DechengLi | 增加起源章节 |
+| Doc V2.0 | 2026-03-24 | LirenWang | 按规范重新编写 |
+| Doc V2.0 | 2026-03-23 | Chenzhang | 基于实际架构编写 |
+| Doc V2.0 | 2026-03-21 | DechengLi | 基于系统工程理论编写 |
+| Doc V2.0 | 2026-02-01 | DechengLi | 原始架构设计原则 |
 
 ---
 

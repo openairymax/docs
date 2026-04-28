@@ -12,7 +12,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 字段 | 值 |
 |------|-----|
 | 文档名称 | AgentOS 软件物料清单 |
-| 版本 | Doc V1.8 |
+| 版本 | Doc V2.0 |
 | 作者 | LirenWang |
 | 理论基础 | 五维正交系统(安全观D-1至D-4、 工程观E-8)、系统工程(供应链管理) |
 | 生成日期 | 2026-04-10 |

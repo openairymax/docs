@@ -3,10 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # Multibody Cybernetic Intelligent System
 
-**Version**: Doc V1.8  
-**Last updated**: 2026-04-10  
+**Version**: Doc V2.0  
+**Last updated**: 2026-04-27  
 **Author**: ZhixianZhou  
 **Theoretical basis**: Engineering Cybernetics, System Engineering, Five-Dimensional Orthogonal System
+**Related standards**: [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) Standard terminology
 
 ## Preface
 

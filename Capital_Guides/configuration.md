@@ -3,7 +3,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # 配置指南
 
-**版本**: Doc V1.8
+**版本**: Doc V2.0
 **最后更新**: 2026-04-10
 **适用范围**: 所有部署环境
 **作者**: Team  

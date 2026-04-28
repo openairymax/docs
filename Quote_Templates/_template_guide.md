@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges."
 title: "[指南标题]"
-version: "Doc V1.0"
+version: "Doc V2.0"
 last_updated: "[YYYY-MM-DD]"
 author: "[作者姓名]"
 status: "production_ready"  # 可选值：production_ready/under_development/deprecated

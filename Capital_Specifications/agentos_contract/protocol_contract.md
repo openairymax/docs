@@ -3,7 +3,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 通信协议规范
 
-**版本**: Doc V1.8  
+**版本**: Doc V2.0  
 **状态**: 正式发布  
 **归属**: AgentOS 技术规范核心组成部分  
 **作者**: LirenWang  

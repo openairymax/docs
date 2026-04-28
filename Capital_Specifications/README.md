@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges."
 title: "AgentOS 技术规范"
-version: "Doc V1.8"
+version: "Doc V2.0"
 last_updated: "2026-04-10"
 author: "LirenWang"
 status: "production_ready"
@@ -422,8 +422,8 @@ python scripts/license_compliance.py --report
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V1.7 | 2026-03-31 | LirenWang | 更新规范版本，完善内容结构 |
-| Doc V1.6 | 2026-03-23 | AgentOS 规范委员会 | 初始版本，建立技术规范体系 |
+| Doc V2.0 | 2026-03-31 | LirenWang | 更新规范版本，完善内容结构 |
+| Doc V2.0 | 2026-03-23 | AgentOS 规范委员会 | 初始版本，建立技术规范体系 |
 
 ---
 

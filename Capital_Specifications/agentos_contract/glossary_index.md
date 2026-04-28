@@ -3,7 +3,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 规范集术语表与快速索引
 
-**版本**: Doc V1.8  
+**版本**: Doc V2.0  
 **状态**: 正式发布  
 **维护者**: AgentOS 架构委员会  
 **作者**: LirenWang  

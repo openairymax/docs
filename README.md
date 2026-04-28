@@ -3,8 +3,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 文档中心
 
-**版本**: Doc V1.9
-**最后更新**: 2026-04-13
+**版本**: Doc V2.0
+**最后更新**: 2026-04-27
 **维护者**: Team
   - Zhixian Zhou | Spharx Ltd. zhouzhixian@spharx.cn
   - Liren Wang | Spharx Ltd. wangliren@spharx.cn
