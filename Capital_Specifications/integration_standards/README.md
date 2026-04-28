@@ -46,7 +46,7 @@ This directory contains integration standards and best practices between AgentOS
 
 ## 📐 架构原则对齐 / Architecture Principles Alignment
 
-基于 **ARCHITECTURAL_PRINCIPLES.md V1.8** 五维正交系统。
+基于 **ARCHITECTURAL_PRINCIPLES.md V2.0** 五维正交系统。
 
 ### 应用的核心原则 / Key Principles Applied
 

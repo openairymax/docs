@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 概述
 
-本文档提供了 AgentOS 的软件物料清单（Software Bill of Materials，SBOM），详细列出了 AgentOS 的所有组件、依赖项及其相关元数据。SBOM 对于供应链管理、安全漏洞跟踪和合规性验证至关重要。本清单基于 AgentOS 架构设计原则 V1.8，特别是 **D-1 至 D-4 安全工程原则** 和 **E-8 可测试性原则**，确保软件供应链的安全可控。
+本文档提供了 AgentOS 的软件物料清单（Software Bill of Materials，SBOM），详细列出了 AgentOS 的所有组件、依赖项及其相关元数据。SBOM 对于供应链管理、安全漏洞跟踪和合规性验证至关重要。本清单基于 AgentOS 架构设计原则 V2.0，特别是 **D-1 至 D-4 安全工程原则** 和 **E-8 可测试性原则**，确保软件供应链的安全可控。
 
 ## 2. 文档信息
 
