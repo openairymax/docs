@@ -1,0 +1,737 @@
+# AgentOS Docker 部署指南
+
+> **版本**: v0.0.4  
+> **镜像大小**: ~150MB (Alpine基础) / ~500MB (Ubuntu基础)  
+> **支持平台**: linux/amd64, linux/arm64
+
+---
+
+## 🚀 快速启动
+
+### 方式1: 使用docker-compose（推荐）
+
+```bash
+# 克隆项目
+git clone https://github.com/spharx/AgentOS.git
+cd AgentOS
+
+# 启动所有服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f gateway_d
+```
+
+### 方式2: 单独运行网关服务
+
+```bash
+# 构建镜像
+docker build -t agentos:v0.0.4 -f Docs/Capital_API/docker/Dockerfile .
+
+# 运行网关守护进程
+docker run -d \
+  --name agentos-gateway \
+  -p 8080:8080 \
+  -p 8081:8081 \
+  -v $(pwd)/config:/etc/agentos \
+  -e AGENTOS_LOG_LEVEL=info \
+  agentos:v0.0.4 gateway_d
+```
+
+### 方式3: 开发环境（挂载源码）
+
+```bash
+docker run -it --rm \
+  -v $(pwd):/workspace/AgentOS \
+  -w /workspace/AgentOS/build \
+  agentos:v0.0.4 \
+  bash -c "cmake .. && make -j$(nproc) && ctest --output-on-failure"
+```
+
+---
+
+## 📦 Dockerfile 参考
+
+### 完整版 Dockerfile (Ubuntu)
+
+```dockerfile
+# ============================================================
+# AgentOS v0.0.4 - Production Dockerfile
+# 基础镜像: Ubuntu 22.04 LTS
+# ============================================================
+
+FROM ubuntu:22.04 AS builder
+
+LABEL maintainer="SPHARX Ltd."
+LABEL version="0.0.4"
+LABEL description="AgentOS - AI Agent Operating System"
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    libssl-dev \
+    libsqlite3-dev \
+    libcjson-dev \
+    libcurl4-openssl-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置工作目录
+WORKDIR /build
+
+# 复制源代码
+COPY . .
+
+# 配置构建
+RUN cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DBUILD_TESTING=ON \
+    -DAGENTOS_ENABLE_EXAMPLES=ON
+
+# 编译
+RUN cmake --build build -j$(nproc)
+
+# 运行测试（可选，取消注释以启用）
+# RUN cd build && ctest --output-on-failure
+
+# 安装到系统目录
+RUN cmake --install build
+
+# ============================================================
+# 运行时镜像（更小）
+# ============================================================
+FROM ubuntu:22.04 AS runtime
+
+LABEL maintainer="SPHARX Ltd."
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libsqlite3-0 \
+    libcjson1 \
+    libcurl4 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建非root用户
+RUN groupadd -r agentos && useradd -r -g agentos -d /home/agentos -m agentos
+
+# 从builder阶段复制安装结果
+COPY --from=builder /usr/local /usr/local
+
+# 创建必要目录
+RUN mkdir -p /etc/agentos /var/log/agentos /var/lib/agentos/data \
+    && chown -R agentos:agentos /etc/agentos /var/log/agentos /var/lib/agentos
+
+# 复制默认配置
+COPY docker/config/*.conf /etc/agentos/
+
+# 切换到非root用户
+USER agentos
+
+# 设置环境变量
+ENV AGENTOS_HOME=/usr/local
+ENV AGENTOS_CONFIG_DIR=/etc/agentos
+ENV AGENTOS_DATA_DIR=/var/lib/agentos/data
+ENV AGENTOS_LOG_DIR=/var/log/agentos
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+# 暴露端口
+EXPOSE 8080 8081 9000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# 默认启动命令
+CMD ["gateway_d", "-c", "/etc/agentos/gateway.conf"]
+```
+
+### 轻量版 Dockerfile (Alpine)
+
+```dockerfile
+# AgentOS v0.0.4 - Alpine Linux (轻量版)
+FROM alpine:3.19 AS builder
+
+RUN apk add --no-cache \
+    build-base \
+    cmake \
+    ninja \
+    pkgconfig \
+    openssl-dev \
+    sqlite-dev \
+    cjson-dev \
+    curl-dev \
+    musl-dev
+
+WORKDIR /build
+COPY . .
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j$(nproc) && \
+    cmake --install build
+
+FROM alpine:3.19
+RUN apk add --no-cache \
+    libssl3 \
+    sqlite-libs \
+    cjson \
+    curl \
+    ca-certificates
+
+COPY --from=builder /usr/local /usr/local
+RUN mkdir -p /etc/agentos /var/log/agentos
+
+ENV LD_LIBRARY_PATH=/usr/local/lib
+EXPOSE 8080 8081
+CMD ["gateway_d"]
+```
+
+---
+
+## 🐳 docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  # ===========================================
+  # 网关服务 (Gateway)
+  # ===========================================
+  gateway:
+    build:
+      context: ../../
+      dockerfile: Docs/Capital_API/docker/Dockerfile
+    image: agentos:v0.0.4
+    container_name: agentos-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # HTTP API
+      - "8081:8081"   # WebSocket
+    volumes:
+      - ./config/gateway.conf:/etc/agentos/gateway.conf:ro
+      - gateway-data:/var/lib/agentos/data
+      - gateway-logs:/var/log/agentos
+    environment:
+      - AGENTOS_LOG_LEVEL=${LOG_LEVEL:-info}
+      - AGENTOS_HTTP_HOST=0.0.0.0
+      - AGENTOS_HTTP_PORT=8080
+      - AGENTOS_WS_PORT=8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - agentos-network
+    depends_on:
+      - llm-service
+
+  # ===========================================
+  # LLM 服务 (LLM Daemon)
+  # ===========================================
+  llm-service:
+    build:
+      context: ../../
+      dockerfile: Docs/Capital_API/docker/Dockerfile
+    image: agentos:v0.0.4
+    container_name: agentos-llm
+    restart: unless-stopped
+    volumes:
+      - ./config/llm.conf:/etc/agentos/llm.conf:ro
+      - llm-cache:/var/cache/agentos/llm
+    environment:
+      - AGENTOS_LLM_CACHE_SIZE=1000
+      - AGENTOS_LLM_DEFAULT_MODEL=gpt-4
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    command: ["agentos-llm-d", "-c", "/etc/agentos/llm.conf"]
+    networks:
+      - agentos-network
+
+  # ===========================================
+  # 调度器 (Scheduler)
+  # ===========================================
+  scheduler:
+    build:
+      context: ../../
+      dockerfile: Docs/Capital_API/docker/Dockerfile
+    image: agentos:v0.0.4
+    container_name: agentos-scheduler
+    restart: unless-stopped
+    volumes:
+      - ./config/scheduler.conf:/etc/agentos/scheduler.conf:ro
+    environment:
+      - AGENTOS_SCHED_MAX_CONCURRENT=10
+      - AGENTOS_SCHED_QUEUE_SIZE=1000
+    command: ["agentos-sched-d", "-c", "/etc/agentos/scheduler.conf"]
+    networks:
+      - agentos-network
+
+  # ===========================================
+  # 监控服务 (Monitor)
+  # ===========================================
+  monitor:
+    build:
+      context: ../../
+      dockerfile: Docs/Capital_API/docker/Dockerfile
+    image: agentos:v0.0.4
+    container_name: agentos-monitor
+    restart: unless-stopped
+    ports:
+      - "9090:9090"   # Metrics endpoint
+    volumes:
+      - monitor-data:/var/lib/agentos/monitor
+    environment:
+      - AGENTOS_MONIT_METRICS_INTERVAL=5000
+      - AGENTOS_MONIT_ALERT_ENABLED=true
+    command: ["agentos-monit-d"]
+    networks:
+      - agentos-network
+
+  # ===========================================
+  # 市场服务 (Market)
+  # ===========================================
+  market:
+    build:
+      context: ../../
+      dockerfile: Docs/Capital_API/docker/Dockerfile
+    image: agentos:v0.0.4
+    container_name: agentos-market
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # Market API
+    volumes:
+      - market-db:/var/lib/agentos/market
+    command: ["agentos-market-d"]
+    networks:
+      - agentos-network
+
+volumes:
+  gateway-data:
+    driver: local
+  gateway-logs:
+    driver: local
+  llm-cache:
+    driver: local
+  monitor-data:
+    driver: local
+  market-db:
+    driver: local
+
+networks:
+  agentos-network:
+    driver: bridge
+```
+
+---
+
+## 🔧 环境变量配置
+
+### 全局变量
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `AGENTOS_LOG_LEVEL` | `info` | 日志级别: debug/info/warn/error |
+| `AGENTOS_CONFIG_DIR` | `/etc/agentos` | 配置文件目录 |
+| `AGENTOS_DATA_DIR` | `/var/lib/agentos/data` | 数据存储目录 |
+| `AGENTOS_LOG_DIR` | `/var/log/agentos` | 日志输出目录 |
+
+### 网关服务 (gateway_d)
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `AGENTOS_HTTP_HOST` | `0.0.0.0` | HTTP监听地址 |
+| `AGENTOS_HTTP_PORT` | `8080` | HTTP端口 |
+| `AGENTOS_WS_PORT` | `8081` | WebSocket端口 |
+| `AGENTOS_STDIO_ENABLED` | `true` | 是否启用Stdio模式 |
+| `AGENTOS_MAX_REQUEST_SIZE` | `1048576` | 最大请求大小(字节) |
+| `AGENTOS_REQUEST_TIMEOUT` | `30000` | 请求超时(ms) |
+
+### LLM服务 (llm_d)
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `OPENAI_API_KEY` | - | OpenAI API密钥 |
+| `AGENTOS_LLM_DEFAULT_MODEL` | `gpt-4` | 默认模型 |
+| `AGENTOS_LLM_CACHE_SIZE` | `1000` | 缓存容量 |
+| `AGENTOS_LLM_CACHE_TTL` | `3600` | 缓存过期时间(秒) |
+| `AGENTOS_LLM_MAX_RETRIES` | `3` | 最大重试次数 |
+| `AGENTOS_LLM_TIMEOUT` | `30000` | 请求超时(ms) |
+
+### 调度器 (sched_d)
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `AGENTOS_SCHED_STRATEGY` | `priority` | 调度策略: priority/fifo/lifo |
+| `AGENTOS_SCHED_MAX_CONCURRENT` | `10` | 最大并发任务数 |
+| `AGENTOS_SCHED_QUEUE_SIZE` | `1000` | 任务队列容量 |
+
+### 监控服务 (monit_d)
+
+| 变量名 | 默认值 | 说明 |
+|--------|--------|------|
+| `AGENTOS_MONIT_METRICS_INTERVAL` | `5000` | 指标收集间隔(ms) |
+| `AGENTOS_MONIT_TRACING_ENABLED` | `false` | 是否启用追踪 |
+| `AGENTOS_MONIT_ALERT_ENABLED` | `true` | 是否启用告警 |
+
+---
+
+## 📁 配置文件示例
+
+### gateway.conf
+
+```ini
+[service]
+name = agentos-gateway
+version = 0.0.4
+
+[http]
+enabled = true
+host = 0.0.0.0
+port = 8080
+max_request_size = 1048576
+timeout_ms = 30000
+
+[websocket]
+enabled = true
+host = 0.0.0.0
+port = 8081
+
+[stdio]
+enabled = true
+
+[metrics]
+enabled = true
+interval_ms = 60000
+
+[logging]
+level = info
+output = /var/log/agentos/gateway.log
+max_size_mb = 100
+rotate_count = 5
+
+[protocols]
+mcp_enabled = true
+a2a_enabled = true
+openai_enabled = true
+```
+
+### llm.conf
+
+```ini
+[service]
+name = agentos-llm
+cache_capacity = 1000
+cache_ttl_sec = 3600
+max_retries = 3
+timeout_ms = 30000
+
+[pricing]
+default_model = gpt-4
+fallback_model = gpt-3.5-turbo
+
+[model.gpt-4]
+input_price_per_1k = 0.03
+output_price_per_1k = 0.06
+context_window = 128000
+
+[model.gpt-3.5-turbo]
+input_price_per_1k = 0.0015
+output_price_per_1k = 0.002
+context_window = 16385
+
+[token_counter]
+encoding = cl100k_base
+```
+
+---
+
+## 🔐 安全配置建议
+
+### 1. 生产环境安全加固
+
+```bash
+# 使用非root用户运行（已在Dockerfile中配置）
+# USER agentos
+
+# 限制容器权限
+docker run --cap-drop=ALL --cap-add=NET_BIND_SERVICE \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+  --security-opt=no-new-privileges \
+  agentos:v0.0.4
+
+# 网络隔离
+docker network create agentos-isolated --driver bridge --internal
+docker run --network agentos-isolated agentos:v0.0.4
+```
+
+### 2. 敏感信息管理
+
+```bash
+# 不要在docker-compose.yml中硬编码密钥
+# ❌ 错误: OPENAI_API_KEY=sk-xxx
+
+# ✅ 正确: 使用.env文件或Docker secrets
+echo "OPENAI_API_KEY=sk-xxx" >> .env
+docker-compose --env-file .env up -d
+
+# 或使用Docker secrets (Swarm mode)
+echo "sk-xxx" | docker secret create openai_api_key -
+```
+
+### 3. TLS终止
+
+```yaml
+# 在反向代理层处理TLS (推荐nginx/caddy)
+services:
+  gateway:
+    # ... 其他配置
+    environment:
+      - AGENTOS_HTTP_PORT=8080  # 内部使用HTTP
+      # TLS由外部代理处理
+      
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - gateway
+```
+
+nginx.conf 示例:
+```nginx
+server {
+    listen 443 ssl;
+    server_name agentos.example.com;
+    
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    
+    location / {
+        proxy_pass http://gateway:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket支持
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # 超时设置
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}
+```
+
+---
+
+## 📊 监控与日志
+
+### 查看实时日志
+
+```bash
+# 所有服务日志
+docker-compose logs -f
+
+# 单个服务日志
+docker-compose logs -f gateway
+
+# 最近100行
+docker-compose logs --tail=100 gateway
+```
+
+### 收集指标 (Prometheus格式)
+
+```bash
+# 访问metrics端点
+curl http://localhost:9090/metrics
+
+# 输出示例:
+# HELP agentos_requests_total Total number of requests
+# TYPE agentos_requests_total counter
+agentos_requests_total{service="gateway"} 1234
+
+# HELP agentos_request_duration_seconds Request duration
+# TYPE agentos_request_duration_seconds histogram
+agentos_request_duration_seconds_bucket{le="0.1"} 100
+agentos_request_duration_seconds_bucket{le="0.5"} 200
+agentos_request_duration_seconds_bucket{le="1.0"} 250
+agentos_request_duration_seconds_sum 125.5
+agentos_request_duration_count 300
+```
+
+### Grafana Dashboard (可选)
+
+```yaml
+# docker-compose.yml 中添加grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - monitor
+```
+
+---
+
+## 🔄 升级与回滚
+
+### 滚动升级
+
+```bash
+# 1. 拉取新镜像
+docker pull agentos:v0.0.5
+
+# 2. 更新docker-compose中的镜像版本
+sed -i 's/v0.0.4/v0.0.5/' docker-compose.yml
+
+# 3. 逐个重启服务（无停机）
+docker-compose up -d --no-deps gateway
+# 等待健康检查通过后...
+docker-compose up -d --no-deps llm-service
+# ...其他服务
+```
+
+### 数据备份
+
+```bash
+# 备份数据卷
+docker run --rm \
+  -v agentos-gateway-data:/data \
+  -v $(pwd)/backup:/backup \
+  alpine tar czf /backup/agentos-data-$(date +%Y%m%d).tar.gz -C /data .
+
+# 恢复数据
+docker run --rm \
+  -v agentos-gateway-data:/data \
+  -v $(pwd)/backup:/backup \
+  alpine sh -c "tar xzf /backup/agentos-data-20260428.tar.gz -C /data"
+```
+
+---
+
+## 🐛 故障排查
+
+### 常见问题
+
+#### 1. 容器无法启动
+
+```bash
+# 查看容器日志
+docker logs agentos-gateway
+
+# 进入容器调试
+docker run -it --rm --entrypoint=bash agentos:v0.0.4
+
+# 检查配置文件
+docker exec agentos-gateway cat /etc/agentos/gateway.conf
+```
+
+#### 2. 端口冲突
+
+```bash
+# 检查端口占用
+netstat -tlnp | grep 8080
+
+# 修改docker-compose.yml中的端口映射
+ports:
+  - "9090:8080"  # 映射到主机9090端口
+```
+
+#### 3. 内存不足
+
+```bash
+# 查看容器资源使用
+docker stats agentos-gateway
+
+# 限制内存使用
+docker run -m 512m agentos:v0.0.4
+
+# 在docker-compose中添加
+deploy:
+  resources:
+    limits:
+      memory: 512M
+```
+
+#### 4. 权限问题
+
+```bash
+# 确保数据目录权限正确
+docker exec agentos-gateway ls -la /var/lib/agentos/
+
+# 修复权限
+docker exec -u root agentos-gateway chown -R agentos:agentos /var/lib/agentos/
+```
+
+---
+
+## 📈 性能优化建议
+
+### 1. 多阶段构建缓存
+
+```dockerfile
+# 利用Docker层缓存加速构建
+FROM ubuntu:22.04 AS deps
+# 安装依赖（变化不频繁）
+RUN apt-get update && apt-get install -y ...
+
+FROM deps AS build
+COPY . .
+# 只有源代码变化时才重新编译
+RUN cmake --build build -j$(nproc)
+```
+
+### 2. 镜像瘦身
+
+```bash
+# 清理APT缓存
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 使用多阶段构建只复制必需文件
+COPY --from=builder /usr/local/bin/* /usr/local/bin/
+COPY --from=builder /usr/local/lib/*.so* /usr/local/lib/
+```
+
+### 3. 资源限制最佳实践
+
+```yaml
+# docker-compose.yml
+services:
+  gateway:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '1.0'
+          memory: 256M
+```
+
+---
+
+## 📞 支持与反馈
+
+- **Docker Hub**: [spharx/agentos](https://hub.docker.com/r/spharx/agentos)
+- **文档问题**: [GitHub Issues](https://github.com/spharx/AgentOS/issues)
+- **Docker相关问题**: [Discussions](https://github.com/spharx/AgentOS/discussions)
+
+---
+
+**最后更新**: 2026-04-28  
+**适用版本**: AgentOS v0.0.4+
