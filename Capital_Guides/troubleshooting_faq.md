@@ -402,7 +402,7 @@ curl -s 'http://localhost:9090/api/v1/query?query=up'
 **A**: 参见 [CONTRIBUTING.md](../../CONTRIBUTING.md)，遵循Conventional Commits规范。
 
 ### Q12: 如何报告安全漏洞？
-**A**: 发送邮件至 wangliren@spharx.cn，不要公开提交Issue。
+**A**: 发送邮件至 team@spharx.cn，不要公开提交Issue。
 
 ---
 

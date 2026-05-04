@@ -384,7 +384,7 @@ docker exec agentos-postgres-dev psql -U agentos -d agentos -c "SELECT 1;"
 
 1. **不要公开发布漏洞详情**
 2. **通过安全渠道报告**:
-   - Email: wangliren@spharx.cn
+   - Email: team@spharx.cn
    - PGP公钥: [SECURITY.md](../../.gitcode/SECURITY.md)
 3. **等待确认**:
    - Critical: 24小时内响应

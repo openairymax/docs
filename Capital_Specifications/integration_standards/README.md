@@ -6,7 +6,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: v1.0.0  
 > **创建日期**: 2026-04-03  
 > **状态**: 活跃 (Active)  
-> **维护者**: @zhouzhixian, @wangliren
+> **维护者**: @SpharxTeam
 
 ---
 

@@ -8,8 +8,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **状态**: 正式发布  
 **路径**: `docs/ARCHITECTURAL_PRINCIPLES.md`  
 **作者**: Team  
-  - Zhixian Zhou | Spharx Ltd. zhouzhixian@spharx.cn
-  - Liren Wang | Spharx Ltd. wangliren@spharx.cn
+  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
+  - Liren Wang | Spharx Ltd. team@spharx.cn
   - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
   - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
   - Daxiang Zhu | IndieBros. zdxever@sina.com

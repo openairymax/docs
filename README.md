@@ -6,8 +6,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **版本**: Doc V2.0
 **最后更新**: 2026-04-27
 **维护者**: Team
-  - Zhixian Zhou | Spharx Ltd. zhouzhixian@spharx.cn
-  - Liren Wang | Spharx Ltd. wangliren@spharx.cn
+  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
+  - Liren Wang | Spharx Ltd. team@spharx.cn
   - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
   - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
   - Daxiang Zhu | IndieBros. zdxever@sina.com
@@ -360,7 +360,7 @@ AgentOS文档遵循**完美主义原则 (A-4)**：
 
 ## 📞 联系方式
 
-- **问题**: wangliren@spharx.cn
+- **问题**: team@spharx.cn
 
 ---
 
