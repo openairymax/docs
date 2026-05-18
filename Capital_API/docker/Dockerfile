@@ -7,7 +7,7 @@
 FROM ubuntu:22.04 AS builder
 
 LABEL maintainer="SPHARX Ltd. <dev@spharx.com>"
-LABEL version="0.0.4"
+LABEL version="0.0.5"
 LABEL description="AgentOS - AI Agent Operating System Foundation Release"
 LABEL org.opencontainers.image.source="https://github.com/spharx/AgentOS"
 
