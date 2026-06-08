@@ -8,7 +8,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 中的所有 C 语言模块  
-**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、双系统认知理论、微内核哲学、设计美学
+**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、Thinkdual 认知双思系统、微内核哲学、设计美学
 
 ---
 
@@ -18,7 +18,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
-- **双系统认知理论**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
+- **Thinkdual 认知双思系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
 - **微内核哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 - **设计美学**（原则 A-1, A-2, A-4）：代码结构简约对称，命名自解释，注释清晰优雅，追求完美主义
 
@@ -61,7 +61,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **命名风格：** 函数/变量使用 snake_case；宏/常量使用 UPPER_CASE；类型以 `_t` 结尾。
 - **公共符号：** 需带模块前缀（如 `atoms_`、`cupolas_`、`cognition_`、`llm_`）。
 - **私有符号：** 跨文件符号使用 `_module_` 前缀或声明为 `static` 并置于 internal header。
-- **可见性控制：** 建议在构建中启用 `-fvisibility=hidden` 并显式导出公共符号。
+- **可见性控制：** 必须在release构建中启用 `-fvisibility=hidden` 并显式导出公共符号。
 
 ---
 
@@ -76,7 +76,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 六、函数设计与文档
 
-- **单一职责且短小：** 推荐 ≤50 行；若 >80 行必须重构并添加单元测试。
+- **单一职责且短小：** 必须 ≤80 行；推荐 ≤50 行。若 >80 行必须重构并添加单元测试。
 - **参数数量：** 不超过 5 个，若超过请封装成结构体。
 - **文档要求：** 公共 API 必须使用 Doxygen 风格注释，且明确 ownership（谁释放）、线程语义与错误语义。
 - **返回约定：** 优先使用 `agentos_error_t`（int32_t），或返回指针（失败返回 NULL 并记录日志）。提供常用错误定义与辅助宏。
@@ -161,7 +161,7 @@ ptr = tmp;
 
 ### 12.1 编译/链接硬化（release 构建）
 
-建议的编译/链接硬化选项：
+必须在release构建中启用以下编译/链接硬化选项：
 
 - `-fstack-protector-strong`
 - `-D_FORTIFY_SOURCE=2`
@@ -205,7 +205,7 @@ ptr = tmp;
 
 ### 13.2 pre-commit 钩子
 
-建议的 pre-commit 钩子：
+必须配置以下 pre-commit 钩子：
 
 - clang-format
 - license header 检查
@@ -260,6 +260,43 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 **违规示例**: `int arr[n]`
 **正确做法**: `int* arr = AGENTOS_MALLOC(n * sizeof(int))` + 对应 `AGENTOS_FREE`
 
+> **AgentOS 内存宏完整列表**（定义在 `memory_compat.h`）：
+> - `AGENTOS_MALLOC(size)` —— 带返回值检查的 malloc
+> - `AGENTOS_CALLOC(nmemb, size)` —— 带返回值检查的 calloc（零初始化）
+> - `AGENTOS_REALLOC(ptr, size)` —— 安全 realloc（使用临时指针，避免原指针丢失）
+> - `AGENTOS_STRDUP(s)` —— 带返回值检查的 strdup
+> - `AGENTOS_STRNDUP(s, n)` —— 带返回值检查的 strndup
+> - `AGENTOS_FREE(ptr)` —— 安全释放（释放后置 NULL）
+> - `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` —— 安全字符串拷贝（保证 null 终止）
+> - `AGENTOS_MEMCPY_SAFE(dst, dst_size, src, src_size)` —— 安全内存拷贝（带边界检查）
+> - `SAFE_MALLOC_ARRAY(type, count)` —— 安全数组分配（带整数溢出检查）
+> - `AGENTOS_SECURE_ZERO(ptr, size)` —— 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`）
+
+> **安全释放宏**（定义在 `agentos_memory.h`）：
+> - `MEMORY_FREE_SAFE(pptr)` —— 安全释放宏，接受**指针的指针**，释放后自动将原指针置 NULL。相比 `AGENTOS_FREE`（接受指针本身），`MEMORY_FREE_SAFE` 通过二级指针彻底消除悬垂指针风险：
+>   ```c
+>   char* buf = AGENTOS_MALLOC(1024);
+>   MEMORY_FREE_SAFE(&buf);  // 释放并置 buf = NULL
+>   // 此时 buf 一定为 NULL，不会误用
+>   ```
+
+> **禁止函数清单**（定义在 `banned_functions.h`）：
+> AgentOS 在严格模式下禁止使用以下 30 个不安全函数，编译时由 `banned_functions.h` 触发编译错误：
+> - 字符串操作：`strcpy`, `strcat`, `sprintf`, `vsprintf`, `gets`, `scanf`, `sscanf` 等
+> - 内存操作：直接使用 `malloc`/`free`/`realloc`/`calloc`/`strdup`（必须使用 `AGENTOS_*` 宏替代）
+> - 格式化输出：`printf`（生产代码应使用日志宏 `AGENTOS_LOG_*` / `SVC_LOG_*`）
+> - 时间函数：`localtime`, `ctime`, `asctime`（非线程安全）
+> - 其他：`rand`, `strtok`, `tmpnam` 等
+>
+> **BAN 规则交叉引用**：
+> | BAN 编号 | 禁止模式 | 对应宏/替代方案 |
+> |----------|---------|---------------|
+> | BAN-70 | 禁止使用 `printf` 系列直接输出 | 使用 `AGENTOS_LOG_*` 或 `SVC_LOG_*` 日志宏 |
+> | BAN-71 | 禁止直接使用 `malloc`/`free` | 使用 `AGENTOS_MALLOC`/`AGENTOS_FREE`（memory_compat.h） |
+> | BAN-72 | 禁止直接使用 `realloc` | 使用 `AGENTOS_REALLOC`（使用临时指针，避免原指针丢失） |
+> | BAN-73 | 禁止使用 `strcpy`/`strcat`/`sprintf` | 使用 `AGENTOS_STRNCPY_TERM`/`AGENTOS_MEMCPY_SAFE`（memory_compat.h） |
+> | BAN-74 | 禁止使用 `memset` 清零敏感数据 | 使用 `AGENTOS_SECURE_ZERO`（memory_compat.h） |
+
 ### CROSS-03：禁止直接使用 POSIX 时间函数
 
 **违规示例**: `clock_gettime(CLOCK_MONOTONIC, &ts)`
@@ -281,9 +318,9 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 
 ---
 
-## 十八、禁止模式清单（BAN-01~13）
+## 十八、禁止模式清单（BAN-01~74）
 
-所有 PR 必须通过以下 13 项禁止模式的自动扫描：
+所有 PR 必须通过以下禁止模式的自动扫描：
 
 | 编号 | 禁止模式 | 检测命令 |
 |------|---------|----------|
@@ -300,6 +337,13 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 | BAN-11 | `*_stub.h` 桩头文件 | `find . -name "*_stub.h"` |
 | BAN-12 | 降级模式返回假成功 | `grep -rn "degraded\|fallback.*SUCCESS" --include="*.c"` |
 | BAN-13 | DUMMY 假数据 | `grep -rn "DUMMY\|dummy" --include="*.c" --include="*.h"` |
+| BAN-70 | 直接使用 `printf` 系列输出 | `grep -rn "printf(" --include="*.c" --include="*.h"` |
+| BAN-71 | 直接使用 `malloc`/`free` | `grep -rn "\\bmalloc\\b\|\\bfree\\b" --include="*.c" --include="*.h"` |
+| BAN-72 | 直接使用 `realloc` | `grep -rn "\\brealloc\\b" --include="*.c" --include="*.h"` |
+| BAN-73 | 使用 `strcpy`/`strcat`/`sprintf` | `grep -rn "\\bstrcpy\\b\|\\bstrcat\\b\|\\bsprintf\\b" --include="*.c" --include="*.h"` |
+| BAN-74 | 使用 `memset` 清零敏感数据 | `grep -rn "memset.*key\|memset.*password\|memset.*secret\|memset.*token" --include="*.c"` |
+
+> **替代方案**：BAN-70~74 的替代方案见 §17 CROSS-02 中的宏列表和 BAN 规则交叉引用表。
 
 ---
 
@@ -378,14 +422,16 @@ char* module_health_check(void) {
 
 ---
 
-## 附录 C — 常用错误码（示例，请集中管理并扩展）
+## 附录 C — 常用错误码（示例）
+
+> 错误码权威定义见 agentos/commons/utils/error/include/error.h，以下仅为示例。
 
 ```c
-#define AGENTOS_OK           0
-#define AGENTOS_EINVAL      -22
-#define AGENTOS_ENOMEM      -12
-#define AGENTOS_EBUSY       -16
-#define AGENTOS_ETIMEDOUT  -110
+#define AGENTOS_OK                       0
+#define AGENTOS_ERR_INVALID_PARAM       -2
+#define AGENTOS_ERR_OUT_OF_MEMORY       -4
+#define AGENTOS_ERR_BUSY                -17
+#define AGENTOS_ERR_TIMEOUT             -8
 ```
 
 ---

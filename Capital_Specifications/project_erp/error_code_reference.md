@@ -3,6 +3,16 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 错误码参考文档
 
+> **错误码体系说明**
+>
+> AgentOS 采用双错误码体系：
+> - **首要体系（C 内核）**：负整数错误码，定义于 `agentos/commons/utils/error/include/error.h`，格式为 `AGENTOS_E*`（如 `AGENTOS_SUCCESS=0`, `AGENTOS_EINVAL=-2`）。C 内核、daemon 层、atoms 模块必须使用此体系。
+> - **次要体系（SDK/外部）**：十六进制分段错误码，定义于本文档，格式为 `AGENTOS_ERROR_*`（如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`）。Python/Rust/Go/TypeScript SDK 和外部接口使用此体系。
+>
+> **映射关系**：`AGENTOS_EINVAL` (-2) ↔ `AGENTOS_ERROR_INVALID_PARAMETER` (0x0003)
+>
+> **禁止**：在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+
 ## 1. 概述
 
 本文档提供了 AgentOS 中所有错误码的统一参考，包括错误码的分类、定义、使用方法和最佳实践。错误码是系统中错误处理的重要组成部分，统一的错误码管理可以提高系统的可维护性和可扩展性。本规范基于 AgentOS 架构设计原则 V2.0，特别是工程观中的 **E-6 错误可追溯原则** 和 **E-8 可测试性原则**。
@@ -14,7 +24,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 文档名称 | AgentOS 错误码参考文档 |
 | 版本 | Doc V2.0 |
 | 作者 | LirenWang |
-| 理论基础 | 工程两论（反馈闭环）、五维正交系统（工程观E-6、E-8）、双系统认知理论 |
+| 理论基础 | 工程两论（反馈闭环）、五维正交系统（工程观E-6、E-8）、Thinkdual 认知双思系统 |
 | 最后更新 | 2026-04-27 |
 | 状态 | 🟢 生产就绪 |
 | 适用版本 | v1.2.0+ |
@@ -40,9 +50,69 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **可读性**：错误码名称和描述清晰易懂
 - **一致性**：在整个系统中保持错误码的一致性
 
-## 3. 错误码分类
+## 6. C 内核首要体系错误码映射表（error.h）
 
-AgentOS的错误码分为以下几类：
+以下为 `agentos/commons/utils/error/include/error.h` 中定义的 C 内核负整数错误码与 SDK 十六进制错误码的对应关系：
+
+### 6.1 通用基础错误码（-1 ~ -99）
+
+| C 内核宏定义 | C 内核值 | SDK 十六进制值 | SDK 宏定义 | 描述 |
+|-------------|---------|--------------|-----------|------|
+| `AGENTOS_SUCCESS` | 0 | 0x0000 | `AGENTOS_ERROR_SUCCESS` | 操作成功 |
+| `AGENTOS_ERR_UNKNOWN` | -1 | 0x0001 | `AGENTOS_ERROR_UNKNOWN` | 未知错误 |
+| `AGENTOS_ERR_INVALID_PARAM` | -2 | 0x0003 | `AGENTOS_ERROR_INVALID_PARAMETER` | 参数无效 |
+| `AGENTOS_ERR_NULL_POINTER` | -3 | 0x0004 | `AGENTOS_ERROR_NULL_POINTER` | 空指针 |
+| `AGENTOS_ERR_OUT_OF_MEMORY` | -4 | 0x0002 | `AGENTOS_ERROR_OUT_OF_MEMORY` | 内存不足 |
+| `AGENTOS_ERR_BUFFER_TOO_SMALL` | -5 | — | — | 缓冲区过小 |
+| `AGENTOS_ERR_NOT_FOUND` | -6 | 0x0006 | `AGENTOS_ERROR_NOT_FOUND` | 资源未找到 |
+| `AGENTOS_ERR_ALREADY_EXISTS` | -7 | 0x0007 | `AGENTOS_ERROR_ALREADY_EXISTS` | 资源已存在 |
+| `AGENTOS_ERR_TIMEOUT` | -8 | 0x0005 | `AGENTOS_ERROR_TIMEOUT` | 操作超时 |
+| `AGENTOS_ERR_NOT_SUPPORTED` | -9 | 0x000A | `AGENTOS_ERROR_NOT_SUPPORTED` | 不支持的操作 |
+| `AGENTOS_ERR_PERMISSION_DENIED` | -10 | 0x0008 | `AGENTOS_ERROR_PERMISSION_DENIED` | 权限拒绝 |
+| `AGENTOS_ERR_IO` | -11 | 0x0009 | `AGENTOS_ERROR_IO_ERROR` | I/O 错误 |
+| `AGENTOS_ERR_PARSE_ERROR` | -12 | — | — | 解析错误 |
+| `AGENTOS_ERR_STATE_ERROR` | -13 | — | — | 状态错误 |
+| `AGENTOS_ERR_OVERFLOW` | -14 | 0x000E | `AGENTOS_ERROR_OVERFLOW` | 缓冲区溢出 |
+| `AGENTOS_ERR_CANCELED` | -16 | — | — | 操作取消 |
+| `AGENTOS_ERR_BUSY` | -17 | 0x000B | `AGENTOS_ERROR_BUSY` | 资源忙 |
+
+### 6.2 C 内核分段编码范围
+
+| 段名称 | 值范围 | 描述 |
+|--------|--------|------|
+| 通用基础 | -1 ~ -99 | 适用于所有模块的通用错误 |
+| 系统与平台 | -100 ~ -199 | 系统与平台层错误 |
+| 内核层 | -200 ~ -299 | 内核层（atoms）错误 |
+| 服务层 | -300 ~ -399 | 用户态服务层（daemon）错误 |
+| LLM/AI | -400 ~ -499 | LLM 与 AI 推理相关错误 |
+| 执行/工具 | -500 ~ -599 | 执行引擎与工具调用错误 |
+| 记忆/存储 | -600 ~ -699 | 记忆引擎与存储错误 |
+| 安全/沙箱 | -700 ~ -799 | 安全穹顶（Cupolas）与沙箱错误 |
+| 协调/规划 | -800 ~ -899 | 协调器与规划器错误 |
+
+### 6.3 向后兼容别名表（AGENTOS_E* 系列）
+
+为保持与早期代码的兼容性，error.h 定义了以下 POSIX 风格别名。**新代码应使用 `AGENTOS_ERR_*` 主名称，`AGENTOS_E*` 别名仅用于向后兼容。**
+
+| 别名宏定义 | 等价主名称 | 值 | 描述 |
+|-----------|-----------|-----|------|
+| `AGENTOS_EINVAL` | `AGENTOS_ERR_INVALID_PARAM` | -2 | 参数无效 |
+| `AGENTOS_ENOMEM` | `AGENTOS_ERR_OUT_OF_MEMORY` | -4 | 内存不足 |
+| `AGENTOS_ENOENT` | `AGENTOS_ERR_NOT_FOUND` | -6 | 资源未找到 |
+| `AGENTOS_EEXIST` | `AGENTOS_ERR_ALREADY_EXISTS` | -7 | 资源已存在 |
+| `AGENTOS_ETIMEDOUT` | `AGENTOS_ERR_TIMEOUT` | -8 | 操作超时 |
+| `AGENTOS_ENOTSUP` | `AGENTOS_ERR_NOT_SUPPORTED` | -9 | 不支持的操作 |
+| `AGENTOS_EPERM` | `AGENTOS_ERR_PERMISSION_DENIED` | -10 | 权限拒绝 |
+| `AGENTOS_EIO` | `AGENTOS_ERR_IO` | -11 | I/O 错误 |
+| `AGENTOS_EOVERFLOW` | `AGENTOS_ERR_OVERFLOW` | -14 | 缓冲区溢出 |
+| `AGENTOS_ECANCELED` | `AGENTOS_ERR_CANCELED` | -16 | 操作取消 |
+| `AGENTOS_EBUSY` | `AGENTOS_ERR_BUSY` | -17 | 资源忙 |
+
+> **⚠️ memory_compat.h 冲突说明**
+>
+> 旧版头文件 `memory_compat.h` 中曾定义 `AGENTOS_ENOMEM = -2`，与 error.h 中 `AGENTOS_ERR_OUT_OF_MEMORY = -4`（即 `AGENTOS_ENOMEM = -4`）存在冲突。**error.h 是权威来源**，`memory_compat.h` 中的旧定义已废弃。如遇编译冲突，应确保 error.h 在 memory_compat.h 之后包含，或移除对 memory_compat.h 的依赖。
+
+## 7. SDK 次要体系错误码分类
 
 | 分类 | 范围 | 描述 |
 |------|------|------|
@@ -57,7 +127,7 @@ AgentOS的错误码分为以下几类：
 | 动态模块错误 | 0x7000 - 0x7FFF | 动态模块相关错误 |
 | 预留 | 0x8000 - 0xFFFF | 预留用于未来扩展 |
 
-## 4. 通用错误码
+## 6. 通用错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -78,7 +148,7 @@ AgentOS的错误码分为以下几类：
 | 0x000E | AGENTOS_ERROR_OVERFLOW | 缓冲区溢出 | 检查缓冲区大小 |
 | 0x000F | AGENTOS_ERROR_UNDERFLOW | 缓冲区下溢 | 检查缓冲区操作 |
 
-## 5. 核心循环错误码
+## 7. 核心循环错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -91,7 +161,7 @@ AgentOS的错误码分为以下几类：
 | 0x1007 | AGENTOS_ERROR_ENGINE_DESTROY_FAILED | 引擎销毁失败 | 检查引擎状态 |
 | 0x1008 | AGENTOS_ERROR_ENGINE_NOT_INITIALIZED | 引擎未初始化 | 确保引擎已正确初始化 |
 
-## 6. 认知层错误码
+## 8. 认知层错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -104,7 +174,7 @@ AgentOS的错误码分为以下几类：
 | 0x2007 | AGENTOS_ERROR_COGNITION_CONTEXT_FAILED | 上下文处理失败 | 检查上下文数据 |
 | 0x2008 | AGENTOS_ERROR_COGNITION_PRIORITY_FAILED | 优先级处理失败 | 检查优先级设置 |
 
-## 7. 执行层错误码
+## 9. 执行层错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -117,7 +187,7 @@ AgentOS的错误码分为以下几类：
 | 0x3007 | AGENTOS_ERROR_COMPENSATION_EXECUTE_FAILED | 补偿执行失败 | 检查补偿逻辑和资源 |
 | 0x3008 | AGENTOS_ERROR_COMPENSATION_QUEUE_FULL | 补偿队列已满 | 增加队列大小或处理队列中的任务 |
 
-## 8. 记忆层错误码
+## 12. SDK 记忆层错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -130,7 +200,7 @@ AgentOS的错误码分为以下几类：
 | 0x4007 | AGENTOS_ERROR_MEMORY_CORRUPTED | 记忆数据损坏 | 检查存储介质和数据完整性 |
 | 0x4008 | AGENTOS_ERROR_MEMORY_FULL | 记忆存储已满 | 清理旧数据或增加存储容量 |
 
-## 9. 系统调用错误码
+## 11. 系统调用错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -143,7 +213,7 @@ AgentOS的错误码分为以下几类：
 | 0x5007 | AGENTOS_ERROR_SYSCALL_TIMEOUT | 系统调用超时 | 检查调用实现和资源状态 |
 | 0x5008 | AGENTOS_ERROR_SYSCALL_INVALID_PARAMETER | 系统调用参数无效 | 检查调用参数 |
 
-## 10. 安全域错误码
+## 12. 安全域错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -156,7 +226,7 @@ AgentOS的错误码分为以下几类：
 | 0x6007 | AGENTOS_ERROR_CUPOLA_POLICY_VIOLATION | 策略违反 | 检查安全策略设置 |
 | 0x6008 | AGENTOS_ERROR_CUPOLA_RESOURCE_EXHAUSTED | 资源耗尽 | 检查资源使用情况 |
 
-## 11. 动态模块错误码
+## 13. 动态模块错误码
 
 | 错误码 | 宏定义 | 描述 | 处理建议 |
 |--------|--------|------|----------|
@@ -169,11 +239,11 @@ AgentOS的错误码分为以下几类：
 | 0x7007 | AGENTOS_ERROR_DYNAMIC_DEINIT_FAILED | 模块反初始化失败 | 检查模块反初始化函数 |
 | 0x7008 | AGENTOS_ERROR_DYNAMIC_RESOURCE_LEAK | 资源泄漏 | 检查模块资源管理 |
 
-## 12. 错误码使用方法
+## 16. 错误码使用方法
 
-### 12.1 错误码定义
+### 16.1 错误码定义
 
-错误码在 `agentos_error.h` 文件中定义，使用以下格式：
+错误码在 `agentos/commons/utils/error/include/error.h` 文件中定义，使用以下格式：
 
 ```c
 #define AGENTOS_SUCCESS                    0x0000
@@ -182,7 +252,7 @@ AgentOS的错误码分为以下几类：
 // 其他错误码...
 ```
 
-### 12.2 错误码返回
+### 14.2 错误码返回
 
 函数应返回 `agentos_error_t` 类型的错误码：
 
@@ -199,7 +269,7 @@ agentos_error_t agentos_function(void) {
 }
 ```
 
-### 12.3 错误码检查
+### 14.3 错误码检查
 
 调用函数时应检查返回的错误码：
 
@@ -212,7 +282,7 @@ if (err != AGENTOS_SUCCESS) {
 }
 ```
 
-### 12.4 错误码转换
+### 14.4 错误码转换
 
 可以使用 `agentos_error_to_string()` 函数将错误码转换为字符串描述：
 
@@ -225,41 +295,41 @@ if (err != AGENTOS_SUCCESS) {
 }
 ```
 
-## 13. 错误处理最佳实践
+## 17. 错误处理最佳实践
 
-### 13.1 错误传播
+### 17.1 错误传播
 
 - 底层函数应返回具体的错误码
 - 上层函数可以根据需要转换或包装错误码
 - 避免在错误处理中丢失原始错误信息
 
-### 13.2 错误日志
+### 15.2 错误日志
 
 - 在关键操作失败时记录详细的错误信息
 - 包含错误码、错误描述、操作上下文等信息
 - 使用适当的日志级别（error、warning、info等）
 
-### 13.3 错误恢复
+### 15.3 错误恢复
 
 - 对于可恢复的错误，实现适当的恢复机制
 - 对于不可恢复的错误，优雅地终止操作并释放资源
 - 提供错误恢复的策略和方法
 
-### 13.4 错误预防
+### 15.4 错误预防
 
 - 进行输入参数验证，防止错误发生
 - 使用防御性编程技术，处理边界情况
 - 定期检查系统状态，预防潜在错误
 
-## 14. 错误码扩展
+## 16. 错误码扩展
 
 当需要添加新的错误码时，应遵循以下步骤：
 
 1. 在相应的错误码范围内选择一个未使用的错误码
-2. 在 `agentos_error.h` 文件中添加错误码定义
+2. 在 `agentos/commons/utils/error/include/error.h` 文件中添加错误码定义
 3. 在本文档中添加错误码的描述和处理建议
 4. 确保错误码的使用符合本文档中的规范
 
-## 15. 结论
+## 19. 结论
 
 统一的错误码管理是AgentOS系统稳定性和可靠性的重要组成部分。通过本文档提供的错误码参考，开发者可以更加规范地处理错误，提高系统的可维护性和可扩展性。所有开发者必须严格遵循本文档中的错误码规范，确保错误处理的一致性和有效性。

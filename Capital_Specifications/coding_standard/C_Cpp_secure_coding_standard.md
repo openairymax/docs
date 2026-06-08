@@ -7,7 +7,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 C/C++代码开发活动  
-**理论基础**: 工程控制论（信任边界、防御深度）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**理论基础**: 工程控制论（信任边界、防御深度）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: D-1（最小权限）、D-2（安全隔离）、D-3（纵深防御）、D-4（安全审计）、C-3（认知偏差防护）
 
@@ -26,6 +26,15 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | `sprintf(buf, fmt, ...)` | `snprintf(buf, buf_size, fmt, ...)` |
 | `gets(buf)` | 禁止使用 `fgets(buf, buf_size, stdin)` |
 | `scanf("%s", buf)` | `fgets(buf, buf_size, stdin)` 或限制宽度 `scanf("%Ns", buf)` |
+
+> **⚠️ strncpy 已知问题**：`strncpy` 本身存在以下缺陷：
+> 1. **不保证 null 终止**：当源字符串长度 ≥ 目标缓冲区大小时，目标缓冲区不会以 `'\0'` 结尾
+> 2. **性能问题**：当源字符串远短于目标缓冲区时，`strncpy` 会用 `'\0'` 填充剩余空间，造成不必要的开销
+>
+> **推荐替代方案**（优先级从高到低）：
+> - `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` —— AgentOS 安全拷贝宏，自动保证 null 终止（定义在 `memory_compat.h`）
+> - `snprintf(dst, dst_size, "%s", src)` —— 标准库方案，始终保证 null 终止
+> - `strncpy(dst, src, dst_size - 1); dst[dst_size - 1] = '\0';` —— 手动补零，仅在前两者不可用时使用
 
 **违规示例**：
 ```c
@@ -57,6 +66,22 @@ void* ptr = AGENTOS_MALLOC(size);
 ```
 
 **禁止**：直接使用 `malloc` 而不检查返回值；使用 `calloc` 而不初始化。
+
+### 1.2.1 AgentOS 安全宏（推荐）
+
+AgentOS 在 `memory_compat.h` 中提供以下安全宏，所有 C 代码应优先使用：
+
+| 宏名称 | 功能 | 说明 |
+|--------|------|------|
+| `AGENTOS_MALLOC(size)` | 带返回值检查的 malloc | 分配失败时自动记录日志并返回 NULL |
+| `AGENTOS_CALLOC(nmemb, size)` | 带返回值检查的 calloc | 零初始化内存，分配失败时自动记录日志 |
+| `AGENTOS_REALLOC(ptr, size)` | 安全 realloc（使用临时指针） | 避免原指针丢失 |
+| `AGENTOS_STRDUP(s)` | 带返回值检查的 strdup | 分配失败时自动记录日志 |
+| `AGENTOS_STRNDUP(s, n)` | 带返回值检查的 strndup | 分配失败时自动记录日志 |
+| `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` | 安全字符串拷贝 | 自动保证 null 终止 |
+| `AGENTOS_MEMCPY_SAFE(dst, dst_size, src, src_size)` | 安全内存拷贝 | 带边界检查，防止缓冲区溢出 |
+| `SAFE_MALLOC_ARRAY(type, count)` | 安全数组分配 | 带整数溢出检查的数组分配 |
+| `AGENTOS_SECURE_ZERO(ptr, size)` | 安全内存清零 | 防止编译器优化，跨平台替代 `explicit_bzero` |
 
 ### 1.3 释放后使用（Use-After-Free）防护
 
@@ -197,6 +222,59 @@ agentos_mutex_unlock(&registry_lock);
 agentos_mutex_unlock(&cache_lock);
 ```
 
+### 3.4 TOCTOU 竞态条件防护
+
+检查与使用之间的时间差（Time-of-Check to Time-of-Use）可能导致竞态条件：
+
+```c
+// ❌ 错误：检查与使用分离，存在 TOCTOU 竞态
+if (access(filepath, R_OK) == 0) {
+    // 攻击者可能在此窗口替换 filepath 为符号链接
+    FILE* f = fopen(filepath, "r");  // 不安全
+}
+
+// ✅ 正确：直接尝试操作，依赖内核原子性
+int fd = open(filepath, O_RDONLY | O_NOFOLLOW);
+if (fd < 0) {
+    return AGENTOS_EINVAL;
+}
+// 使用 fd 而非 filepath 进行后续操作
+```
+
+**规则**：
+- 禁止先检查后使用的模式（`access()` + `open()`、`stat()` + `open()`）
+- 使用 `O_NOFOLLOW` 防止符号链接攻击
+- 使用文件描述符（fd）而非文件路径进行后续操作
+- 对共享资源使用 `agentos_mutex_t` 或原子操作保护
+
+### 3.5 信号处理器安全
+
+信号处理器中只能调用异步信号安全（async-signal-safe）函数：
+
+```c
+// ❌ 错误：信号处理器中调用非 async-signal-safe 函数
+void signal_handler(int sig) {
+    printf("Received signal %d\n", sig);  // ❌ printf 非异步信号安全
+    syslog(LOG_ERR, "Signal %d", sig);    // ❌ syslog 非异步信号安全
+    free(ptr);                            // ❌ free 非异步信号安全
+}
+
+// ✅ 正确：仅使用 async-signal-safe 函数
+volatile sig_atomic_t g_signal_received = 0;
+
+void signal_handler(int sig) {
+    // 仅设置 volatile sig_atomic_t 标志
+    g_signal_received = sig;
+    // 写入 pipe 通知主循环（write 是 async-signal-safe）
+    char c = (char)sig;
+    write(g_signal_pipe[1], &c, 1);  // ✅ write 是 async-signal-safe
+}
+```
+
+**异步信号安全函数白名单**（POSIX 定义）：`write`、`read`、`_exit`、`signal`、`sigprocmask`、`kill`、`getpid`、`alarm` 等。完整列表参见 POSIX.1-2008 §2.4.3。
+
+**禁止在信号处理器中调用**：`printf`、`malloc`、`free`、`syslog`、`pthread_mutex_lock`、任何非可重入函数。
+
 ---
 
 ## 4. 输入验证
@@ -251,6 +329,38 @@ char safe_path[256];
 snprintf(safe_path, sizeof(safe_path), "./data/%s", user_path);
 ```
 
+### 4.4 有符号/无符号整数混用防护
+
+有符号与无符号整数之间的隐式转换可能导致安全漏洞：
+
+```c
+// ❌ 错误：有符号/无符号比较，条件永远为真
+int length = get_length();         // 可能返回负值
+size_t buf_size = 1024;
+if (length > (int)buf_size) { ... }  // 当 length < 0 时，隐式转换为极大无符号值
+
+// ❌ 错误：无符号回绕
+unsigned int remaining = total - consumed;  // 当 consumed > total 时回绕
+
+// ✅ 正确：统一使用有符号类型进行范围检查
+int length = get_length();
+if (length < 0 || length > MAX_LENGTH) {
+    return AGENTOS_EINVAL;
+}
+
+// ✅ 正确：使用显式范围检查防止回绕
+if (consumed > total) {
+    return AGENTOS_EINVAL;  // 防止无符号回绕
+}
+size_t remaining = total - consumed;
+```
+
+**规则**：
+- 禁止有符号/无符号整数之间的隐式转换，必须显式转换并添加范围检查
+- 比较操作中两操作数类型必须一致（同为有符号或同为无符号）
+- 使用 `-Wsign-compare -Wsign-conversion` 编译选项检测隐式转换
+- 循环变量与数组索引统一使用 `size_t`
+
 ---
 
 ## 5. 字符串安全
@@ -284,6 +394,19 @@ syslog(LOG_ERR, user_input);  // 格式化字符串漏洞
 syslog(LOG_ERR, "%s", user_input);
 ```
 
+**格式化字符串完整防护规则**：
+
+| 场景 | 禁止 | 正确做法 |
+|------|------|----------|
+| `printf` 族 | `printf(user_input)` | `printf("%s", user_input)` |
+| `syslog` | `syslog(pri, user_msg)` | `syslog(pri, "%s", user_msg)` |
+| `fprintf` | `fprintf(fp, user_fmt)` | `fprintf(fp, "%s", user_msg)` |
+| `snprintf` | `snprintf(buf, n, user_fmt)` | `snprintf(buf, n, "%s", user_msg)` |
+| `errx/err` | `errx(1, user_msg)` | `errx(1, "%s", user_msg)` |
+| 自定义日志 | `log_fn(user_msg)` | `log_fn("%s", user_msg)` |
+
+**禁止使用 `%n`**：`%n` 可写入任意内存地址，所有格式化字符串中禁止使用 `%n`。编译时应添加 `-Wformat=2 -Wno-format-extra-args` 开启格式化字符串检查。
+
 ---
 
 ## 6. 安全配置
@@ -310,16 +433,49 @@ open(path, O_RDWR, S_IRUSR);       // 读写但仅所有者可读
 char password[64];
 get_password(password, sizeof(password));
 // ... 使用密码 ...
-explicit_bzero(password, sizeof(password));  // 防止编译器优化掉清除
-// 或使用 volatile 指针：
-volatile char* p = password;
-memset((void*)p, 0, sizeof(password));
+AGENTOS_SECURE_ZERO(password, sizeof(password));  // 推荐：跨平台安全清零宏
+// 或使用 explicit_bzero（注意：Windows/MSVC 不可用）：
+// explicit_bzero(password, sizeof(password));
+// 或使用 volatile 指针（兼容性回退）：
+// volatile char* p = password;
+// memset((void*)p, 0, sizeof(password));
 ```
+
+> **⚠️ explicit_bzero 可移植性说明**：`explicit_bzero` 在 Linux/glibc 上可用，但在 Windows/MSVC 上不可用。AgentOS 提供 `AGENTOS_SECURE_ZERO` 宏（定义在 `memory_compat.h`）作为跨平台替代方案，在 Linux 上使用 `explicit_bzero`，在 Windows 上使用 `SecureZeroMemory` 或 volatile 指针方案。所有需要安全清零的代码必须使用 `AGENTOS_SECURE_ZERO` 而非直接调用 `explicit_bzero`。
 
 **禁止**：
 - 在日志中输出密钥或密码
 - 将敏感数据存储在全局变量中
 - 敏感数据释放前不清零
+
+### 6.3 动态库加载安全
+
+动态库搜索路径可能被攻击者利用，实现代码注入：
+
+```c
+// ❌ 错误：未清理环境变量，攻击者可通过 LD_LIBRARY_PATH 注入恶意库
+void* handle = dlopen("libplugin.so", RTLD_NOW);  // 受 LD_LIBRARY_PATH 影响
+
+// ✅ 正确：使用绝对路径加载，并清理环境变量
+// 1. 启动时清理危险环境变量
+unsetenv("LD_LIBRARY_PATH");
+unsetenv("LD_PRELOAD");
+unsetenv("DYLD_INSERT_LIBRARIES");
+
+// 2. 使用绝对路径加载动态库
+void* handle = dlopen("/usr/lib/agentos/libplugin.so", RTLD_NOW);
+if (!handle) {
+    log_error("dlopen failed: %s", dlerror());
+    return AGENTOS_ELOAD;
+}
+```
+
+**规则**：
+- 禁止依赖 `LD_LIBRARY_PATH`、`LD_PRELOAD`、`DYLD_INSERT_LIBRARIES` 等环境变量定位库
+- `dlopen()` 必须使用绝对路径
+- 程序启动时必须清理上述危险环境变量
+- 使用 `RPATH`/`RUNPATH`（`-Wl,-rpath,/usr/lib/agentos`）替代 `LD_LIBRARY_PATH`
+- 禁止加载来自可写目录（如 `/tmp`、用户 home 目录）的动态库
 
 ---
 
@@ -361,6 +517,32 @@ Release 构建必须启用以下安全选项：
 | **CROSS-01~06** | 6 项跨平台编译规则 | [C编码规范 §17](./C_coding_style_standard.md) |
 | **REQ-01~08** | 8 项强制规范 | [C编码规范 §1.2](./C_coding_style_standard.md) |
 | **标准术语** | 8 个架构组件标准名称 | [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) |
+
+### BAN 规则安全交叉引用
+
+以下 BAN 规则与本安全编程指南直接相关，违反即构成安全漏洞：
+
+| BAN 规则 | 安全影响 | 本文档对应章节 |
+|----------|----------|---------------|
+| **BAN-09** 禁止 `free("literal")` | 释放字符串字面量导致未定义行为，可被利用执行任意代码 | §1.3 释放后使用防护 |
+| **BAN-10** 禁止假原子操作 | 自定义原子操作缺乏内存屏障，导致竞态条件和数据损坏 | §3.2 原子操作 |
+| **BAN-04** 禁止无 Issue 引用的 TODO/FIXME | 安全修复缺乏跟踪，漏洞可能被遗忘 | [注释规范 §7.1-7.2](./Code_comment_template.md) |
+| **BAN-01** 禁止桩函数 | 安全检查桩函数返回"成功"使防护形同虚设 | §4.1 边界值检查 |
+
+### CI 安全规则执行
+
+所有安全规则必须在 CI 流水线中强制执行，禁止绕过：
+
+| 检查类型 | 工具 | 触发时机 | 阻断规则 |
+|----------|------|----------|----------|
+| 静态安全分析 | CodeQL（必选） | 每次 PR 提交 | Critical/High 阻断合并 |
+| 静态安全分析 | Coverity（推荐） | 每日全量扫描 | Critical 阻断发布 |
+| 内存安全 | AddressSanitizer (ASan) | CI 测试阶段 | 任何发现阻断合并 |
+| 未定义行为 | UndefinedBehaviorSanitizer (UBSan) | CI 测试阶段 | 任何发现阻断合并 |
+| 编译警告 | `-Wall -Wextra -Werror` | 每次构建 | 警告即错误 |
+| 格式化字符串 | `-Wformat=2` | 每次构建 | 任何发现阻断合并 |
+| 整数溢出 | `-ftrapv`（调试构建） | CI 测试阶段 | 运行时陷阱 |
+| 栈保护 | `-fstack-protector-strong` | Release 构建 | 必须启用 |
 
 ---
 

@@ -7,7 +7,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有组件和模块  
-**理论基础**: 工程两论（反馈闭环）、安全穹顶（cupolas）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**理论基础**: 工程两论（反馈闭环）、安全穹顶（cupolas）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: D-1至D-4（安全工程）、S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
@@ -123,7 +123,7 @@ typedef struct agentos_workspace {
     struct {
         bool initialized;
         bool is_isolated;
-        pid_t pid;
+        agentos_pid_t pid;  // 使用平台抽象层，禁止直接使用 pid_t（违反 CROSS-01）
     } isolation;
 } agentos_workspace_t;
 
@@ -239,6 +239,10 @@ sanitization_rules:
   # SQL 注入防护
   sql_injection:
     enabled: true
+    # ⚠️ 重要：关键字黑名单 NOT sufficient，仅作为辅助防御层。
+    # SQL 注入防护必须使用参数化查询（parameterized queries / prepared statements），
+    # 黑名单可被编码绕过（如 URL 编码、Unicode、注释注入等）。
+    # 参见第八章漏洞防护中的 SQL 注入条目。
     patterns:
       - "'"
       - "\""
@@ -447,6 +451,31 @@ int audit_query(
 | 密钥交换 | ECDH | 256 位 | - |
 | 签名 | ECDSA | 256 位 | - |
 
+### 3.3 加密接口错误返回值语义
+
+所有加密相关函数遵循统一的错误返回值语义：
+
+| 返回值 | 含义 | 示例错误码 |
+|--------|------|-----------|
+| `0` | 成功 | - |
+| 负值 | 错误码（定义于 `error.h`） | `AGENTOS_EINVAL`（参数无效）、`AGENTOS_ENOMEM`（内存不足）、`AGENTOS_EDECRYPT`（解密失败）、`AGENTOS_EKEYREVOKED`（密钥已吊销） |
+
+**规则**：
+- 调用方必须检查返回值，不得忽略错误
+- 负值错误码与 `error.h` 中定义的 `AGENTOS_E*` 常量一致
+- 禁止使用正数表示部分成功（违反一致性原则）
+
+### 3.4 密钥轮换策略
+
+| 策略项 | 要求 |
+|--------|------|
+| **常规轮换周期** | DEK 每 90 天轮换一次；KEK 每 365 天轮换一次 |
+| **轮换触发条件** | 密钥使用次数达到阈值、密钥疑似泄露、算法安全等级下降 |
+| **轮换过程** | 1. 生成新密钥 → 2. 使用新密钥加密新数据 → 3. 旧数据按需重新加密 → 4. 旧密钥标记为"过渡期"（保留 30 天用于解密） → 5. 过渡期结束后安全擦除旧密钥 |
+| **紧急轮换** | 密钥泄露确认后 4 小时内完成轮换；紧急轮换跳过过渡期，立即吊销旧密钥并强制重新加密所有受影响数据 |
+| **密钥吊销** | 吊销的密钥立即加入 CRL（证书吊销列表），所有使用该密钥的会话和令牌强制失效 |
+| **密钥归档** | 已轮换密钥的安全擦除必须使用 `AGENTOS_SECURE_ZERO`，禁止依赖 `memset`（编译器可能优化掉） |
+
 ```c
 // agentos/atoms/security/crypto.h
 /**
@@ -471,6 +500,8 @@ typedef struct crypto_config {
 
 /**
  * @brief 对称加密
+ *
+ * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTOS_EINVAL、AGENTOS_ENOMEM）
  */
 int crypto_encrypt_symmetric(
     const uint8_t* plaintext,
@@ -483,6 +514,8 @@ int crypto_encrypt_symmetric(
 
 /**
  * @brief 对称解密
+ *
+ * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTOS_EINVAL、AGENTOS_EDECRYPT）
  */
 int crypto_decrypt_symmetric(
     const uint8_t* ciphertext,
@@ -813,7 +846,7 @@ threat_detection:
 
 | 漏洞类型 | 防护措施 | 实现层 |
 |----------|----------|--------|
-| SQL 注入 | 参数化查询 | D3 输入净化 |
+| SQL 注入 | 参数化查询（必须）；关键字黑名单仅辅助 | D3 输入净化 |
 | XSS | 输出编码 | D3 输入净化 |
 | CSRF | Token 验证 | D2 权限裁决 |
 | 命令注入 | 白名单验证 | D3 输入净化 |
@@ -856,9 +889,65 @@ void* secure_calloc(size_t nmemb, size_t size);
 
 ---
 
-## 九、合规性
+## 九、安全威胁建模（STRIDE）
 
-### 9.1 数据保护合规
+### 9.1 建模方法论
+
+所有 AgentOS 组件在安全设计阶段**必须**进行 STRIDE 威胁建模，识别并记录潜在威胁后再制定防护措施。
+
+| 威胁类型 | 英文 | 安全属性 | AgentOS 典型场景 |
+|----------|------|----------|-----------------|
+| **欺骗** | Spoofing | 身份认证 | 伪造 JWT 令牌、冒充合法进程 |
+| **篡改** | Tampering | 完整性 | 修改审计日志、注入恶意配置 |
+| **否认** | Repudiation | 不可抵赖 | 否认执行过危险操作、删除操作记录 |
+| **信息泄露** | Information Disclosure | 机密性 | 密钥明文写入日志、内存未清零导致泄露 |
+| **拒绝服务** | Denial of Service | 可用性 | 资源耗尽攻击、死锁导致服务不可用 |
+| **权限提升** | Elevation of Privilege | 授权 | 容器逃逸、利用漏洞获取 root 权限 |
+
+### 9.2 建模流程（强制）
+
+1. **绘制数据流图（DFD）**：标识信任边界、数据流、数据存储和外部实体
+2. **逐元素应用 STRIDE**：对 DFD 中每个元素逐一分析六类威胁
+3. **威胁评级**：使用风险矩阵（影响 × 可能性）对威胁排序
+4. **制定防护措施**：高/中风险威胁必须有对应防护措施并映射到安全穹顶（D1-D4）层
+5. **文档化**：威胁建模结果记录在 `docs/security/threat_model/` 目录，随架构变更更新
+
+---
+
+## 十、安全测试要求
+
+### 10.1 静态应用安全测试（SAST）
+
+| 要求 | 说明 |
+|------|------|
+| **工具** | CodeQL（必选）、Coverity（推荐）、cppcheck（C/C++ 基础检查） |
+| **触发时机** | 每次 PR/MR 提交自动运行；主分支每日全量扫描 |
+| **阻断规则** | 高严重度（Critical/High）发现必须阻断合并；中严重度需在 7 天内修复 |
+| **自定义规则** | 针对 AgentOS BAN-01~13 禁止模式编写 CodeQL 自定义查询 |
+| **误报处理** | 标记为误报的发现需经安全团队审核确认，不得由开发者单方面关闭 |
+
+### 10.2 动态应用安全测试（DAST）
+
+| 要求 | 说明 |
+|------|------|
+| **工具** | OWASP ZAP（API 扫描）、Burp Suite（深度渗透测试） |
+| **触发时机** | 每次发布前必须完成 DAST 扫描；staging 环境每周自动扫描 |
+| **覆盖范围** | 所有对外暴露的 HTTP/gRPC 接口 |
+
+### 10.3 渗透测试
+
+| 要求 | 说明 |
+|------|------|
+| **频率** | 每季度至少一次外部渗透测试；重大版本发布前必须进行 |
+| **范围** | 覆盖安全穹顶四层（D1-D4）、加密模块、认证模块 |
+| **报告** | 渗透测试报告归档于 `docs/security/pentest/`，发现的问题录入 Issue 跟踪 |
+| **修复时限** | Critical 级别 24 小时内修复；High 级别 7 天内修复 |
+
+---
+
+## 十一、合规性
+
+### 11.1 数据保护合规
 
 | 法规 | 要求 | AgentOS 实现 |
 |------|------|--------------|
@@ -867,7 +956,7 @@ void* secure_calloc(size_t nmemb, size_t size);
 | 数据保留 | 定期删除过期数据 | 保留策略配置 |
 | 数据可携 | 支持数据导出 | 数据导出 API |
 
-### 9.2 审计合规
+### 11.2 审计合规
 
 ```yaml
 # compliance/audit_requirements.yaml
@@ -899,12 +988,12 @@ compliance:
 
 ---
 
-## 十、AgentOS 模块安全设计示例
+## 十二、AgentOS 模块安全设计示例
 
-### 10.1 安全穹顶 (cupolas) 安全设计
+### 12.1 安全穹顶 (cupolas) 安全设计
 安全穹顶 (cupolas) 模块实现AgentOS的安全穹顶，是安全设计的核心：
 
-#### 10.1.1 虚拟工位（Virtual Workbench）安全设计（映射原则：D-2 安全隔离）
+#### 12.1.1 虚拟工位（Virtual Workbench）安全设计（映射原则：D-2 安全隔离）
 ```python
 """
 虚拟工位安全设计 - 体现系统观（S-1）和工程观（E-2）原则
@@ -980,7 +1069,7 @@ class VirtualWorkbench:
             self.audit_logger.log_sandbox_cleanup(sandbox_id)
 ```
 
-#### 10.1.2 权限裁决引擎安全设计（映射原则：D-1 最小权限）
+#### 12.1.2 权限裁决引擎安全设计（映射原则：D-1 最小权限）
 ```typescript
 /**
  * 权限裁决引擎安全设计 - 体现安全工程（D-1, D-4）原则
@@ -1088,10 +1177,13 @@ class PermissionArbiter {
 }
 ```
 
-### 10.2 Atoms（原子层）安全设计
+### 12.2 Atoms（原子层）安全设计
 Atoms模块作为微内核核心，需要实现基础安全原语：
 
-#### 10.2.1 安全内存管理（映射原则：M-3 拓扑优化）
+#### 12.2.1 安全内存管理（映射原则：M-3 拓扑优化）
+
+> **跨平台合规说明**：本节代码中 `secure_memory_pool_t` 使用 `agentos_mutex_t` 而非 `pthread_mutex_t`，遵循 [C编码规范 CROSS-01](./C_coding_style_standard.md) 的跨平台规则。直接使用 POSIX 线程 API（如 `pthread_mutex_t`）违反 CROSS-01，必须使用 `platform.h` 提供的 `agentos_mutex_lock()`/`agentos_mutex_unlock()` 抽象。
+
 ```c
 /**
  * @brief 安全内存管理器 - 体现内核观（K-1）和工程观（E-3）原则
@@ -1106,7 +1198,7 @@ typedef struct secure_memory_pool {
     size_t allocated;
     size_t watermark;
     uint8_t canary[SECURITY_CANARY_SIZE];
-    pthread_mutex_t lock;
+    agentos_mutex_t lock;  // 使用平台抽象层，禁止直接使用 pthread_mutex_t（违反 CROSS-01）
     numa_node_t numa_node;
 } secure_memory_pool_t;
 
@@ -1189,10 +1281,10 @@ void atoms_secure_free(void* ptr, size_t size) {
 }
 ```
 
-### 10.3 跨模块安全集成
+### 12.3 跨模块安全集成
 重要跨模块接口必须实现额外的安全防护：
 
-#### 10.3.1 核心三循环安全集成（映射原则：S-1 垂直分层）
+#### 12.3.1 核心三循环安全集成（映射原则：S-1 垂直分层）
 ```go
 // 核心三循环安全集成 - 体现系统观（S-1）和工程观（E-2）原则
 //
@@ -1252,7 +1344,7 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 
 ---
 
-## 十一、参考文献
+## 十三、参考文献
 
 1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
 2. **AgentOS 微内核设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)

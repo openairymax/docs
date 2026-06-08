@@ -7,10 +7,83 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有模块的日志打印活动  
-**理论基础**: 工程两论（《工程控制论》反馈理论、《论系统工程》可观测性）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**理论基础**: 工程两论（《工程控制论》反馈理论、《论系统工程》可观测性）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **关联原则**: 架构设计原则 E-2（可观测性原则）、E-4（运维友好）、C-1（认知友好）、A-1（设计美学）  
 **原则映射**: E-2（可观测性）、E-4（运维友好）、C-1（认知友好）、A-1（极简主义）
+
+---
+
+## 第 0 章 AgentOS 日志体系总览
+
+### 0.1 日志层级与对应宏
+
+AgentOS 采用分层日志架构，各层使用不同的日志宏和头文件：
+
+| 层级 | 日志宏 | 头文件 | 说明 |
+|------|--------|--------|------|
+| daemon 服务层 | `SVC_LOG_*` | `svc_log.h` | 系统守护进程日志，如 IPC 服务、资源管理 |
+| atoms/gateway/protocols | `AGENTOS_LOG_*` | `agentos_log.h` | 微内核核心、网关、协议层日志 |
+| cupolas 安全穹顶 | `AGENTOS_LOG_AUDIT` / `SVC_LOG_AUDIT` | `agentos_log.h` / `svc_log.h` | 安全审计日志，用于合规审查和取证分析 |
+| Desktop | `logger.*()` | `logger.ts` | 桌面端 TypeScript 日志 |
+| Python SDK | `logging.*` | Python `logging` 模块 | Python 绑定层日志 |
+| Go SDK | `zap.*` | `zap` logger | Go 绑定层日志 |
+| Rust SDK | `tracing::*` | `tracing` crate | Rust 绑定层日志 |
+
+### 0.2 HiLog 与 AgentOS 日志系统的关系
+
+> **⚠️ 重要说明**：HiLog 是 OpenHarmony 的日志系统，**不是** AgentOS 的日志系统。本文档中出现的 HiLog 示例仅作为日志用法参考，AgentOS 实际代码中应使用对应的 `AGENTOS_LOG_*`（atoms/gateway/protocols 层）或 `SVC_LOG_*`（daemon 服务层）宏。
+>
+> 对应关系：
+> - `HiLog::FATAL(LABEL, ...)` → `AGENTOS_LOG_FATAL(MODULE, ...)` 或 `SVC_LOG_FATAL(TAG, ...)`
+> - `HiLog::ERROR(LABEL, ...)` → `AGENTOS_LOG_ERROR(MODULE, ...)` 或 `SVC_LOG_ERROR(TAG, ...)`
+> - `HiLog::WARN(LABEL, ...)` → `AGENTOS_LOG_WARN(MODULE, ...)` 或 `SVC_LOG_WARN(TAG, ...)`
+> - `HiLog::INFO(LABEL, ...)` → `AGENTOS_LOG_INFO(MODULE, ...)` 或 `SVC_LOG_INFO(TAG, ...)`
+> - `HiLog::DEBUG(LABEL, ...)` → `AGENTOS_LOG_DEBUG(MODULE, ...)` 或 `SVC_LOG_DEBUG(TAG, ...)`
+> - `HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)` 或 `SVC_LOG_AUDIT(TAG, ...)`
+
+### 0.3 结构化 JSON 日志格式（v0.1.0+ 标准）
+
+自 v0.1.0 起，AgentOS 所有模块必须采用结构化 JSON 日志格式，兼容 OpenTelemetry Logs 规范。最小必填字段：
+
+```json
+{
+  "timestamp": "2026-04-27T12:34:56.789Z",
+  "level": "ERROR",
+  "module": "atoms",
+  "function": "atoms_secure_alloc",
+  "trace_id": "0af7651916cd43dd8448eb211c80319c",
+  "request_id": "req-abc123",
+  "message": "NUMA allocation failed",
+  "err_code": -12
+}
+```
+
+**要求**：
+- 所有日志输出必须为合法 JSON（每行一条，NDJSON 格式）
+- `trace_id` 和 `request_id` 为必填字段，若无上下文则填 `"0"` 占位
+- 兼容 OpenTelemetry Logs 数据模型，支持直接导入 OTel Collector
+
+### 0.4 trace_id / request_id 传播规范
+
+所有跨模块、跨进程调用必须传播 `trace_id` 和 `request_id`，以实现全链路追踪：
+
+**传播规则**：
+1. **请求入口**：在请求入口（如 IPC 网关、HTTP handler）生成 `trace_id`（W3C Trace Context 格式，32 位 hex）和 `request_id`（UUID v4）
+2. **进程内传播**：通过 `agentos_tls_get/set()`（参见 `platform.h`）在线程局部存储中保存当前 `trace_id`/`request_id`
+3. **跨进程传播**：通过 IPC 消息头或 HTTP header（`traceparent` / `x-request-id`）传递
+4. **日志输出**：每条日志必须包含当前 `trace_id` 和 `request_id`
+
+**示例**：
+```c
+// 请求入口生成
+agentos_tls_set(AGENTOS_TLS_KEY_TRACE_ID, trace_id);
+agentos_tls_set(AGENTOS_TLS_KEY_REQUEST_ID, request_id);
+
+// 日志中自动携带
+AGENTOS_LOG_INFO(MODULE, "Processing request: op=%s", operation);
+// 输出: {"trace_id":"0af765...","request_id":"req-abc123","message":"Processing request: op=submit",...}
+```
 
 ---
 
@@ -58,6 +131,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ```
 战略层（FATAL/ERROR）   → 系统级异常，需要立即干预
+审计层（AUDIT）         → 安全审计事件，合规审查和取证分析
 战术层（WARN）          → 功能级异常，需要关注和处理
 操作层（INFO）          → 业务流程记录，用于审计和追溯
 调试层（DEBUG/TRACE）   → 详细技术信息，用于问题定位
@@ -75,6 +149,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 ---
 
 ## 第 2 章 日志分级与分类
+
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 2.1 日志级别定义
 
@@ -170,6 +246,28 @@ HiLog::DEBUG(LABEL, "Cache hit for key=user_profile_12345");
 
 **使用要求**：正式发布版本默认关闭，按需开启
 
+#### AUDIT（审计级）
+
+**定义**：记录安全审计事件，用于合规审查和取证分析。cupolas 安全穹顶模块的审计日志必须使用此级别。
+
+**特征**：
+- 安全相关操作（认证、授权、密钥操作）
+- 不可篡改，必须持久化存储
+- 包含完整的操作上下文（主体、客体、操作、结果）
+- 受合规法规约束（如 PCI-DSS、GDPR、HIPAA）
+
+**示例**：
+```cpp
+HiLog::AUDIT(LABEL, "Access granted: subject=%s, resource=%s, action=%s, risk_score=%.2f",
+             subject_id, resource_id, action, risk_score);
+HiLog::AUDIT(LABEL, "Capability created: subject=%s, resource=%s, permissions=0x%x",
+             subject_id, resource_id, permissions);
+```
+
+**响应要求**：审计日志必须持久化，保留期限符合合规要求，不可被应用层删除
+
+> **AgentOS 映射**：`HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)`（atoms 层）或 `SVC_LOG_AUDIT(TAG, ...)`（daemon 层）
+
 ### 2.2 日志级别选择矩阵
 
 | 场景类型 | 频率 | 影响范围 | 推荐级别 | 示例 |
@@ -178,11 +276,14 @@ HiLog::DEBUG(LABEL, "Cache hit for key=user_profile_12345");
 | 功能失效 | 低 | 局部 | ERROR | 数据库连接失败 |
 | 性能下降 | 中 | 局部 | WARN | 内存使用率高 |
 | 业务流程 | 高 | 单请求 | INFO | 订单创建成功 |
+| 安全审计 | 低 | 单操作 | AUDIT | 访问授权/拒绝 |
 | 详细跟踪 | 很高 | 单操作 | DEBUG | 函数参数值 |
 
 ---
 
 ## 第 3 章 日志内容规范
+
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 3.1 信息论视角下的日志内容
 
@@ -316,6 +417,8 @@ HiLog::ERROR(LABEL, "Connect to server failed, please check network configuratio
 
 ## 第 4 章 日志打印策略
 
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+
 ### 4.1 打印时机控制
 
 #### 规则 4-1【高频代码禁打日志】：高频代码的正常流程中禁止打印日志
@@ -398,9 +501,14 @@ HiLog::DEBUG(LABEL, "%s", detailed_info.c_str());     // 但 DEBUG 可能关闭
 
 **【正例】**
 ```cpp
-// 使用 lambda 延迟生成
-HiLog::DEBUG(LABEL, "%s", [](){ return GenerateDetailedInfo(); }());
+// 使用条件判断延迟生成：仅当日志级别启用时才生成字符串
+if (AGENTOS_LOG_DEBUG_ENABLED()) {
+    std::string detailed_info = GenerateDetailedInfo();
+    AGENTOS_LOG_DEBUG(MODULE, "%s", detailed_info.c_str());
+}
 ```
+
+> **注意**：原示例 `HiLog::DEBUG(LABEL, "%s", [](){ return GenerateDetailedInfo(); }())` 中的 lambda 被 `()` 立即调用，实际上并未实现延迟求值。正确的延迟求值方式是先检查日志级别是否启用，再生成字符串。
 
 #### 规则 4-5【避免长日志】：日志打印长度不要过长，尽可能使日志记录显示在一行以内
 
@@ -412,6 +520,8 @@ HiLog::DEBUG(LABEL, "%s", [](){ return GenerateDetailedInfo(); }());
 ---
 
 ## 第 5 章 HiLog 接口使用规范
+
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 5.1 Domain ID 分配的系统工程方法
 
@@ -644,6 +754,8 @@ HiLog::WARN(LABEL, "TCP connection closed: reason=peer_timeout, duration=300s");
 ---
 ## 第 7 章 AgentOS 模块日志示例
 
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+
 ### 7.1 Atoms（原子层）日志规范
 Atoms模块实现微内核核心功能，日志要求最高级别的性能和精度：
 
@@ -711,8 +823,8 @@ void schedule_task(Task* task) {
 }
 ```
 
-### 7.2 daemon（守护层）日志规范
-Backs模块作为系统服务，强调可靠性和可观测性：
+### 7.2 daemon（用户态服务层）日志规范
+daemon 用户态服务层作为系统服务，强调可靠性和可观测性：
 
 #### 7.2.1 IPC通信服务日志（映射原则：E-3 通信基础设施）
 ```python
@@ -898,6 +1010,10 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 
 ### 按规则编号
 
+- **0-1** 日志层级与对应宏
+- **0-2** HiLog 与 AgentOS 日志系统的关系
+- **0-3** 结构化 JSON 日志格式
+- **0-4** trace_id / request_id 传播规范
 - **1-1** 信噪比最大化
 - **1-2** 分层观测
 - **1-3** 自适应调节
@@ -918,7 +1034,8 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 
 ### 按主题分类
 
-**日志级别**：2.1 节  
+**日志体系总览**：0.1-0.4
+**日志级别**：2.1 节（含 AUDIT 审计级）
 **内容规范**：3.1-3.5  
 **打印策略**：4.1-4.5  
 **HiLog 接口**：5.1-5.4  

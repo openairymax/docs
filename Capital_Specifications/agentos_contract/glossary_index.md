@@ -84,41 +84,50 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 示例 | 位置 |
 |------|------|
-| 产品经理 Agent 完整契约 | [agent_contract.md - 附录 B](./agent/agent_contract.md) |
-| 能力定义示例 | [agent_contract.md - 4.1 节](./agent/agent_contract.md) |
-| 成本画像示例 | [agent_contract.md - 3.7 节](./agent/agent_contract.md) |
+| 产品经理 Agent 完整契约 | [agent_contract.md - 附录 B](./agent_contract.md) |
+| 能力定义示例 | [agent_contract.md - 4.1 节](./agent_contract.md) |
+| 成本画像示例 | [agent_contract.md - 3.7 节](./agent_contract.md) |
 
 ### Skill 契约示例
 
 | 示例 | 位置 |
 |------|------|
-| GitHub 集成技能完整契约 | [skill_contract.md - 附录 B](./skill/skill_contract.md) |
-| 工具定义示例 | [skill_contract.md - 4.1 节](./skill/skill_contract.md) |
-| 依赖声明示例 | [skill_contract.md - 3.3 节](./skill/skill_contract.md) |
+| GitHub 集成技能完整契约 | [skill_contract.md - 附录 B](./skill_contract.md) |
+| 工具定义示例 | [skill_contract.md - 4.1 节](./skill_contract.md) |
+| 依赖声明示例 | [skill_contract.md - 3.3 节](./skill_contract.md) |
 
 ### 通信协议示例
 
 | 示例 | 位置 |
 |------|------|
-| HTTP 请求示例 | [protocol_contract.md - 8.2 节](./protocol/protocol_contract.md) |
-| WebSocket 流式示例 | [protocol_contract.md - 8.3 节](./protocol/protocol_contract.md) |
-| 系统调用示例 | [protocol_contract.md - 8.1 节](./protocol/protocol_contract.md) |
+| HTTP 请求示例 | [protocol_contract.md - 8.2 节](./protocol_contract.md) |
+| WebSocket 流式示例 | [protocol_contract.md - 8.3 节](./protocol_contract.md) |
+| 系统调用示例 | [protocol_contract.md - 8.1 节](./protocol_contract.md) |
 
 ### 系统调用示例
 
 | 示例 | 位置 |
 |------|------|
-| 任务提交示例 | [syscall_api_contract.md - 3.2.1 节](./syscall/syscall_api_contract.md) |
-| 记忆搜索示例 | [syscall_api_contract.md - 3.3.2 节](./syscall/syscall_api_contract.md) |
-| 会话创建示例 | [syscall_api_contract.md - 3.4.1 节](./syscall/syscall_api_contract.md) |
+| 任务提交示例 | [syscall_api_contract.md - 3.2.1 节](./syscall_api_contract.md) |
+| 记忆搜索示例 | [syscall_api_contract.md - 3.3.2 节](./syscall_api_contract.md) |
+| 会话创建示例 | [syscall_api_contract.md - 3.4.1 节](./syscall_api_contract.md) |
 
 ### 日志格式示例
 
 | 示例 | 位置 |
 |------|------|
-| 基本日志格式 | [logging_format.md - 2.1 节](./log/logging_format.md) |
-| 审计日志格式 | [logging_format.md - 6.2 节](./log/logging_format.md) |
-| Span 层级示例 | [logging_format.md - 5.2 节](./log/logging_format.md) |
+| 基本日志格式 | [logging_format.md - 2.1 节](./logging_format.md) |
+| 审计日志格式 | [logging_format.md - 6.2 节](./logging_format.md) |
+| Span 层级示例 | [logging_format.md - 5.2 节](./logging_format.md) |
+
+### 编码风格与安全编码示例
+
+| 示例 | 位置 |
+|------|------|
+| Rust 编码风格 | [Rust_coding_style_standard.md](../coding_standard/Rust_coding_style_standard.md) |
+| Rust 安全编码 | [Rust_secure_coding_standard.md](../coding_standard/Rust_secure_coding_standard.md) |
+| Go 编码风格 | [Go_coding_style_standard.md](../coding_standard/Go_coding_style_standard.md) |
+| Go 安全编码 | [Go_secure_coding_standard.md](../coding_standard/Go_secure_coding_standard.md) |
 
 ---
 
@@ -128,28 +137,35 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 实践 | 位置 |
 |------|------|
-| 明确能力边界 | [agent_contract.md - 6.1 节](./agent/agent_contract.md) |
-| 提供清晰示例 | [agent_contract.md - 6.2 节](./agent/agent_contract.md) |
-| 合理预估成本 | [agent_contract.md - 6.3 节](./agent/agent_contract.md) |
-| 定期审计更新 | [agent_contract.md - 6.4 节](./agent/agent_contract.md) |
+| 明确能力边界 | [agent_contract.md - 6.1 节](./agent_contract.md) |
+| 提供清晰示例 | [agent_contract.md - 6.2 节](./agent_contract.md) |
+| 合理预估成本 | [agent_contract.md - 6.3 节](./agent_contract.md) |
+| 定期审计更新 | [agent_contract.md - 6.4 节](./agent_contract.md) |
 
 ### Skill 契约最佳实践
 
 | 实践 | 位置 |
 |------|------|
-| 单一职责 | [skill_contract.md - 7.1 节](./skill/skill_contract.md) |
-| 精确权限限定 | [skill_contract.md - 7.2 节](./skill/skill_contract.md) |
-| 完整依赖声明 | [skill_contract.md - 7.3 节](./skill/skill_contract.md) |
-| 详细文档注释 | [skill_contract.md - 7.4 节](./skill/skill_contract.md) |
+| 单一职责 | [skill_contract.md - 7.1 节](./skill_contract.md) |
+| 精确权限限定 | [skill_contract.md - 7.2 节](./skill_contract.md) |
+| 完整依赖声明 | [skill_contract.md - 7.3 节](./skill_contract.md) |
+| 详细文档注释 | [skill_contract.md - 7.4 节](./skill_contract.md) |
 
 ### 日志最佳实践
 
 | 实践 | 位置 |
 |------|------|
-| 结构化消息 | [logging_format.md - 7.1 节](./log/logging_format.md) |
-| 控制日志量 | [logging_format.md - 7.2 节](./log/logging_format.md) |
-| 使用上下文管理器 | [logging_format.md - 7.3 节](./log/logging_format.md) |
-| 异步日志 | [logging_format.md - 7.4 节](./log/logging_format.md) |
+| 结构化消息 | [logging_format.md - 7.1 节](./logging_format.md) |
+| 控制日志量 | [logging_format.md - 7.2 节](./logging_format.md) |
+| 使用上下文管理器 | [logging_format.md - 7.3 节](./logging_format.md) |
+| 异步日志 | [logging_format.md - 7.4 节](./logging_format.md) |
+
+### 安全编码工具宏
+
+| 宏 | 用途 | 定义位置 |
+|----|------|---------|
+| `MEMORY_FREE_SAFE(pptr)` | 安全释放内存并置指针为 NULL（接受指针的指针） | [C_coding_style_standard.md](../coding_standard/C_coding_style_standard.md) / `memory_compat.h` |
+| `AGENTOS_SECURE_ZERO(ptr, size)` | 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`） | [C_Cpp_secure_coding_standard.md](../coding_standard/C_Cpp_secure_coding_standard.md) / `memory_compat.h` |
 
 ---
 
@@ -157,16 +173,19 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 系统调用错误码
 
-| 错误码 | 值 | 说明 |
-|--------|-----|------|
-| AGENTOS_SUCCESS | 0 | 成功 |
-| AGENTOS_EINVAL | -1 | 参数无效 |
-| AGENTOS_ENOMEM | -2 | 内存不足 |
-| AGENTOS_ENOENT | -4 | 资源不存在 |
-| AGENTOS_EPERM | -5 | 权限不足 |
-| AGENTOS_ETIMEDOUT | -6 | 操作超时 |
+| 错误码 | C 内核值 | SDK 十六进制值 | 说明 |
+|--------|---------|--------------|------|
+| AGENTOS_SUCCESS | 0 | 0x0000 | 成功 |
+| AGENTOS_EINVAL | -1 | 0x0003 | 参数无效 |
+| AGENTOS_ENOMEM | -2 | 0x0002 | 内存不足 |
+| AGENTOS_ENOENT | -4 | 0x0004 | 资源不存在 |
+| AGENTOS_EPERM | -5 | 0x0005 | 权限不足 |
+| AGENTOS_ETIMEDOUT | -6 | 0x0006 | 操作超时 |
 
-**完整列表**: [syscall_api_contract.md - 第 7 章](./syscall/syscall_api_contract.md)
+> **📝 双错误码体系说明**  
+> AgentOS 采用双错误码体系：C 内核使用负整数（定义于 `error.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../project_erp/error_code_reference.md)。
+
+**完整列表**: [syscall_api_contract.md - 第 7 章](./syscall_api_contract.md) | [error_code_reference.md](../project_erp/error_code_reference.md)
 
 ### JSON-RPC 错误码
 
@@ -178,7 +197,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | -32602 | Invalid params |
 | -32603 | Internal error |
 
-**完整列表**: [protocol_contract.md - 4.3 节](./protocol/protocol_contract.md)
+**完整列表**: [protocol_contract.md - 4.3 节](./protocol_contract.md)
 
 ---
 
@@ -201,8 +220,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 参考文献与理论基础
 
-[1] AgentOS 统一术语表。./TERMINOLOGY.md  
-[2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
+[1] AgentOS 统一术语表。../TERMINOLOGY.md  
+[2] 架构设计原则。../../ARCHITECTURAL_PRINCIPLES.md  
 [3] 《工程控制论》. 科学出版社. 1954  
 [4] 《论系统工程》. 湖南科学技术出版社. 1982  
 [5] 《思考，快与慢》. 中信出版社. 2012  

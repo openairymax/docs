@@ -7,7 +7,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 C++ 代码模块  
-**理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论、微内核哲学  
+**理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统、微内核哲学  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: S-1至S-4（系统设计）、K-1至K-4（内核设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
@@ -25,7 +25,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
-- **双系统认知理论**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
+- **Thinkdual 认知双思系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
 - **微内核哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 
 **关联原则**:
@@ -586,11 +586,12 @@ private:
 };
 
 // 安全内存操作
+// 注意：volatile 指针方式不可靠（编译器仍可能优化），应使用 AGENTOS_SECURE_ZERO 宏
+// 定义在 memory_compat.h，跨平台替代 explicit_bzero
 inline void secure_memset(void* ptr, uint8_t value, size_t size) {
-    volatile uint8_t* p = static_cast<volatile uint8_t*>(ptr);
-    while (size--) {
-        *p++ = value;
-    }
+    // 生产代码应直接使用 AGENTOS_SECURE_ZERO(ptr, size)
+    // 此处仅展示等价逻辑：
+    AGENTOS_SECURE_ZERO(ptr, size);
 }
 ```
 
@@ -665,7 +666,11 @@ int memory_alloc(size_t size, void** out_ptr) {
 
 ```cpp
 // AgentOS C++ 代码中，公共 API 禁止抛出异常
-// 内部实现可以使用异常，但必须转换为错误码
+// ⚠️ 澄清：公共 C API 边界（extern "C" 函数）禁止异常逃逸；C++ 内部 API 可使用异常但必须捕获并转换为错误码。
+// 具体规则：
+//   1. extern "C" 函数：异常不得跨越 C 链接边界，必须 try-catch 全包并返回 agentos_error_t
+//   2. C++ 内部 API（命名空间内）：可使用异常，但调用链最终到达 C 边界时必须转换
+//   3. @throws 文档标注仅适用于 C++ 内部 API，不适用于 extern "C" 函数
 
 class InternalParser {
 public:
@@ -702,6 +707,100 @@ private:
     std::function<void()> cleanup_;
 };
 ```
+
+---
+
+## 八-B、C/C++ 互操作规范（extern "C" 包装规则）
+
+### 8-B.1 extern "C" 函数包装模板
+
+所有 C++ 模块对外暴露 C API 时，必须遵循以下包装规则：
+
+```cpp
+// module/include/module_api.h
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief 创建调度器实例
+ * @param config 配置参数
+ * @return 调度器句柄，失败返回 NULL
+ */
+agentos_error_t module_scheduler_create(const SchedulerConfig* config,
+                                         SchedulerHandle* out_handle);
+
+/**
+ * @brief 销毁调度器实例
+ * @param handle 调度器句柄
+ */
+void module_scheduler_destroy(SchedulerHandle handle);
+
+#ifdef __cplusplus
+}
+#endif
+```
+
+### 8-B.2 C++ 实现侧包装模式
+
+```cpp
+// module/src/module_api.cpp
+#include "module_api.h"
+#include "scheduler.hpp"  // C++ 内部实现
+
+extern "C" {
+
+agentos_error_t module_scheduler_create(const SchedulerConfig* config,
+                                         SchedulerHandle* out_handle) {
+    // 规则1：入口参数验证
+    if (!config || !out_handle) {
+        return AGENTOS_ERR_INVALID_PARAM;
+    }
+    
+    try {
+        // 规则2：C 结构体 → C++ 对象转换
+        auto cpp_config = Scheduler::Config::from_c(config);
+        
+        // 规则3：C++ 异常必须在 C 边界捕获
+        auto scheduler = std::make_unique<Scheduler>(cpp_config);
+        
+        // 规则4：C++ 对象 → 不透明 C 句柄
+        *out_handle = scheduler.release();
+        return AGENTOS_OK;
+        
+    } catch (const std::bad_alloc&) {
+        return AGENTOS_ERR_OUT_OF_MEMORY;
+    } catch (const std::invalid_argument& e) {
+        return AGENTOS_ERR_INVALID_PARAM;
+    } catch (const std::exception& e) {
+        AGENTOS_LOG_ERROR("Unexpected exception in module_scheduler_create: %s", e.what());
+        return AGENTOS_ERR_GENERAL;
+    } catch (...) {
+        AGENTOS_LOG_ERROR("Unknown exception in module_scheduler_create");
+        return AGENTOS_ERR_GENERAL;
+    }
+}
+
+void module_scheduler_destroy(SchedulerHandle handle) {
+    // 规则5：所有权转移回 C++ 并释放
+    if (handle) {
+        std::unique_ptr<Scheduler> scheduler(static_cast<Scheduler*>(handle));
+        // unique_ptr 析构自动释放
+    }
+}
+
+} // extern "C"
+```
+
+### 8-B.3 互操作关键规则
+
+| 规则 | 说明 |
+|------|------|
+| 异常不得跨越 C 边界 | 所有 `extern "C"` 函数必须 `try-catch` 全包，将异常转换为 `agentos_error_t` |
+| 内存所有权明确 | C 侧分配的内存由 C 侧释放，C++ 侧分配的内存由 C++ 侧释放；跨边界传递使用不透明句柄 |
+| 禁止跨边界传递 STL | 不得在 `extern "C"` 函数签名中使用 `std::string`、`std::vector` 等 STL 类型 |
+| 禁止跨边界传递异常类 | 不得将 C++ 异常对象传递给 C 调用者 |
+| POD 类型安全传递 | 跨边界仅传递 POD 类型或 `agentos_error_t`、不透明指针 |
 
 ---
 
@@ -779,6 +878,9 @@ public:
     }
     
 private:
+    // ⚠️ 注意：static std::mutex 仅作示例。生产代码应使用 agentos_mutex_t
+    // （定义在 platform.h），以确保跨平台兼容性（参见 CROSS-01）。
+    // 示例：static agentos_mutex_t FAST_LOCK;
     static std::mutex FAST_LOCK;
 };
 

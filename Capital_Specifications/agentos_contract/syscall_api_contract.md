@@ -9,7 +9,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **作者**: LirenWang  
 **最后更新**: 2026-04-09  
 **许可证**: GPL-3.0  
-**理论基础**: 工程两论（控制论与系统工程）、双系统认知理论、微内核哲学、设计美学  
+**理论基础**: 工程两论（控制论与系统工程）、Thinkdual 认知双思系统、微内核哲学、设计美学  
 **关联规范**: [通信协议规范](./protocol_contract.md)、[架构设计原则](../../../architecture/ARCHITECTURAL_PRINCIPLES.md)、[统一术语表](../../TERMINOLOGY.md)
 
 ---
@@ -32,8 +32,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | | S-1 反馈闭环原则 | 所有系统调用都内置可观测性数据采集，为系统层面的反馈闭环提供数据支持 |
 | **内核观（K维度）** | K-1 内核极简原则 | 系统调用只暴露最核心的内核功能（任务管理、记忆管理、会话管理），其他功能外置为服务 |
 | | K-2 接口契约化原则 | 每个系统调用都有完整的契约定义，包括参数方向、所有权语义、线程安全性等 |
-| | K-3 服务隔离原则 | 守护进程必须通过系统调用与内核交互，禁止直接通信 |
-| **认知观（C维度）** | C-1 双系统协同原则 | 系统调用支持不同的调用策略，允许在快速路径（System 1）和慢速路径（System 2）之间权衡 |
+| | K-3 服务隔离原则 | 用户态服务层（daemon）必须通过系统调用与内核交互，禁止直接通信 |
+| **认知观（C维度）** | C-1 双系统协同原则 | 系统调用支持不同的调用策略，允许在快速路径（t1-f）和慢速路径（t2）之间权衡 |
 | **工程观（E维度）** | E-1 安全内生原则 | 每个系统调用都内置参数校验、权限检查和审计日志记录 |
 | | E-2 可观测性原则 | 所有系统调用自动记录 TraceID、耗时、错误码等可观测数据 |
 | | E-3 资源确定性原则 | 系统调用遵循明确的内存管理规则，输入输出参数所有权清晰 |
@@ -47,7 +47,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 系统调用规范是多重理论融合的产物：
 - **工程两论**：通过层次分解（系统工程）和反馈机制（控制论）构建稳定的系统调用架构
-- **双系统认知**：支持不同认知需求的调用策略，平衡效率与精度
+- **双系统认知**：支持不同认知需求的调用策略，平衡效率与精度（Thinkdual 认知双思系统）
 - **微内核哲学**：最小化内核接口，最大化服务隔离
 - **设计美学**：追求接口的简约、对称和自解释性
 
@@ -56,7 +56,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **应用开发者**: 使用系统调用开发上层应用
-2. **服务开发者**: agentos/daemon/守护进程通过系统调用访问内核功能
+2. **服务开发者**: agentos/daemon/ 用户态服务层通过系统调用访问内核功能
 3. **内核开发者**: 实现和维护系统调用接口
 4. **安全审计人员**: 审查系统调用的安全性和合规性
 
@@ -747,7 +747,7 @@ if (agentos_sys_telemetry_traces(&traces) == AGENTOS_SUCCESS) {
 
 ### 4.1 错误码定义
 
-错误码定义在 [`agentos/atoms/corekern/include/error.h`](../../agentos/atoms/corekern/include/error.h) 中，详见 [第 7 章 错误码](#第 7 章 错误码)。
+错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../agentos/commons/utils/error/include/error.h) 中，详见 [第 7 章 错误码](#第 7 章 错误码)。
 
 ### 4.2 错误处理策略
 
@@ -930,7 +930,11 @@ agentos_error_t agentos_sys_task_submit(const char* input, size_t input_len, ...
 
 ## 第 7 章 错误码
 
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 AgentOS **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+
 ### 7.1 完整错误码列表
+
+> **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentos/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTOS_EINVAL = -2, AGENTOS_ENOMEM = -4, AGENTOS_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
 
 | 错误码 | 值 | 说明 | 常见原因 |
 |--------|-----|------|---------|

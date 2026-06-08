@@ -9,7 +9,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **作者**: LirenWang  
 **最后更新**: 2026-04-09  
 **许可证**: GPL-3.0  
-**理论基础**: 工程两论（控制论与系统工程）、双系统认知理论、微内核哲学、设计美学  
+**理论基础**: 工程两论（控制论与系统工程）、Thinkdual 认知双思系统、微内核哲学、设计美学  
 **关联规范**: [架构设计原则](../architecture/ARCHITECTURAL_PRINCIPLES.md)、[系统调用 API 规范](./syscall_api_contract.md)、[统一术语表](../TERMINOLOGY.md)
 
 ---
@@ -26,7 +26,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **系统观（S维度）**: 协议栈按层次组织（外部网关、服务间通信、系统调用），体现层次分解方法，每层有明确的职责边界
 - **内核观（K维度）**: 通信接口保持长期稳定，支持向后兼容和渐进式演进，体现微内核的接口稳定原则
-- **认知观（C维度）**: 协议设计支持双系统认知模型的效率与精度权衡，通过不同的传输策略适配不同认知需求
+- **认知观（C维度）**: 协议设计支持 Thinkdual 认知双思系统的效率与精度权衡，通过不同的传输策略适配不同认知需求
 - **工程观（E维度）**: 每一层都内置安全机制（认证、授权、审计），体现安全内生原则；协议设计考虑 TraceID 贯穿、结构化日志、指标收集等可观测性需求
 - **设计美学（A维度）**: 协议消息格式遵循简约、对称、自解释的美学原则，确保人类可读性和机器可处理性的平衡
 
@@ -35,7 +35,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **系统集成商**: 实现客户端与 AgentOS 的通信对接
-2. **服务开发者**: 开发 agentos/daemon/守护进程，实现服务间通信
+2. **服务开发者**: 开发 agentos/daemon/ 用户态服务层，实现服务间通信
 3. **内核开发者**: 实现和维护 syscall 层接口
 4. **安全审计人员**: 审查通信安全性和权限控制
 
@@ -59,7 +59,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 AgentOS 采用分层架构，各层之间以及层与外部世界之间通过明确的协议通信。清晰的协议设计是系统稳定性、安全性和可维护性的基础。本规范定义了以下通信场景：
 
 1. **系统调用**: 用户态服务与内核之间的交互 (通过 syscall 层)
-2. **服务间通信**: agentos/daemon/ 各守护进程之间的通信 (通过 Habitat 网关或直接 RPC)
+2. **服务间通信**: agentos/daemon/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
 3. **外部网关**: 客户端 (如 CLI、SDK、Web 应用) 与 Habitat 网关的交互
 
 协议设计遵循 AgentOS 的一贯思想：**层次分明、接口稳定、安全内生、可观测**。
@@ -120,7 +120,7 @@ AgentOS 采用四层协议栈，自顶向下分别为：
 │                    HTTP/1.1, HTTP/2, WebSocket, stdio        │
 ├─────────────────────────────────────────────────────────────┤
 │                         服务层 (JSON-RPC 2.0)                 │
-│                    agentos/daemon/ 各守护进程之间的通信                │
+│                    agentos/daemon/ 各用户态服务之间的通信                │
 ├─────────────────────────────────────────────────────────────┤
 │                         系统调用层 (C ABI)                    │
 │                    agentos/atoms/syscall/include/syscalls.h          │
@@ -688,9 +688,13 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 ## 第 7 章 错误码
 
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 AgentOS **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+
 ### 7.1 系统调用错误码
 
-错误码定义在 [`agentos/atoms/corekern/include/error.h`](../../agentos/atoms/corekern/include/error.h) 中：
+> **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentos/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTOS_EINVAL = -2, AGENTOS_ENOMEM = -4, AGENTOS_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
+
+错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../agentos/commons/utils/error/include/error.h) 中：
 
 | 错误码 | 值 | 说明 |
 |--------|-----|------|

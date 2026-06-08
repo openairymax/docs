@@ -8,7 +8,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **维护者**: AgentOS 架构委员会  
 **作者**: LirenWang  
 **最后更新**: 2026-04-27  
-**理论基础**: 工程两论（工程控制论、系统工程）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论、微内核哲学、体系并行论（MCIS）
+**理论基础**: 工程两论（工程控制论、系统工程）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统、微内核哲学、体系并行论（MCIS）
 
 ---
 
@@ -97,15 +97,15 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 #### Cognitive Layer Dual-Thinking / 认知层双思考功能
 
-**定义**: 认知循环运行时认知层的核心功能，由 triple_coordinator 实现 t2（主思考/深度推理）、t1-f（快思考/流式验证）、t1-p（专业思考/仲裁）三组件协同。
+**定义**: 认知循环运行时认知层的核心功能，由 triple_coordinator 实现 t2（主思考/深度推理）、t1-f（快思考/流式验证）、t1-p（专业思考/仲裁）三组件协同。该系统称为"Thinkdual 认知双思系统"——"双思"指深度思考（t2）与快速思考（t1）两大思维模式，而 t1-f 与 t1-p 是 t1 模式下的两个子组件，三组件通过 triple_coordinator 协同工作。
 
-**标准名称**: 认知层双思考功能
+**标准名称**: Thinkdual 认知双思系统（正式）/ Thinkdual（简称）
 
-**旧称/禁止使用**: "双思考系统"（会误导为独立系统）
+**旧称/禁止使用**: "双思考系统"（会误导为独立系统）、"双系统认知模型"（已废弃）、"认知双思系统"（缺少 Thinkdual 前缀）、"Triple Coordinator"（triple_coordinator 是协调器而非系统名称）
 
-**代码目录**: `atoms/coreloopthree/src/cognition/triple_coordinator`
+**代码目录**: `agentos/atoms/coreloopthree/src/cognition/`
 
-**来源**: 架构设计原则、CoreLoopThree 具体方案  
+**来源**: 架构设计原则、CoreLoopThree 具体方案
 **参见**: 认知循环运行时、triple_coordinator
 
 #### Contract (契约)
@@ -136,7 +136,9 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 用户态服务层（daemon）
 
-**旧称/禁止使用**: "后端服务层"、 "守护进程"、 "daemon进程"
+**旧称/禁止使用**: "后端服务层"、"守护进程"、"daemon进程"
+
+**强制说明**: 在所有文档中必须使用"用户态服务层（daemon）"，**严禁使用"守护进程"**。"守护进程"一词在 AgentOS 语境中具有误导性，会与操作系统传统守护进程概念混淆。所有规范、文档、代码注释中均不得出现"守护进程"。
 
 **代码目录**: `daemon/`
 
@@ -145,13 +147,16 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### E
 
-#### Error Code (错误码)
+#### Error Code System / 错误码体系
 
-**定义**: 标准化的错误标识符，用于跨组件错误传递和处理。
+**定义**: AgentOS 采用双错误码体系：C 语言负整数体系（首要，定义于 `agentos/commons/utils/error/include/error.h`，AGENTOS_SUCCESS=0, AGENTOS_EINVAL=-2 等）和 SDK 十六进制体系（次要，定义于 error_code_reference.md，0x0000-0x7FFF 分段）。C 内核和 daemon 层必须使用负整数体系；SDK 和外部接口可使用十六进制体系。
 
-**标准名称**: 错误码 (Error Code)
+**标准名称**: 错误码体系 (Error Code System)
 
-**完整列表**: error_code_reference.md
+**禁止**: 在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码
+
+**来源**: error_code_reference.md、error.h
+**参见**: Error Code（错误码）
 
 ### F
 
@@ -218,6 +223,49 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **来源**: 架构设计原则、MemoryRovol 具体方案  
 **参见**: 认知循环运行时
+
+#### MEMORY_FREE_SAFE
+
+**定义**: AgentOS 安全释放宏，定义于 `agentos_memory.h`，接受指向指针的指针（ptr-to-ptr），在释放内存后将指针置 NULL，防止悬垂指针（dangling pointer）。是安全宏体系的核心宏之一。
+
+**标准名称**: MEMORY_FREE_SAFE
+
+**签名**: `MEMORY_FREE_SAFE(ptr_to_ptr)` — 参数为指向待释放指针的指针
+
+**代码目录**: `agentos/atoms/corekern/include/agentos_memory.h`
+
+**来源**: agentos_memory.h、安全编码规范
+**参见**: 安全宏体系
+
+#### Memory Safety Macro System / 安全宏体系
+
+**定义**: AgentOS 的完整内存安全宏体系，覆盖内存分配、释放、字符串操作和禁止函数，确保内存操作的类型安全和空指针安全。
+
+**标准名称**: 安全宏体系 (Memory Safety Macro System)
+
+**包含以下宏族**:
+
+1. **AGENTOS_* 内存操作宏**（定义于 `memory_compat.h`）:
+   - `AGENTOS_MALLOC` / `AGENTOS_FREE` / `AGENTOS_CALLOC` / `AGENTOS_REALLOC` / `AGENTOS_STRDUP` / `AGENTOS_STRNDUP`
+
+2. **安全操作宏**（定义于 `memory_compat.h`）:
+   - `AGENTOS_STRNCPY_TERM` — 安全 strncpy 并保证终止符
+   - `AGENTOS_MEMCPY_SAFE` — 安全 memcpy 带边界检查
+   - `SAFE_MALLOC_ARRAY` — 安全数组分配带溢出检查
+
+3. **安全释放宏**（定义于 `agentos_memory.h`）:
+   - `MEMORY_FREE_SAFE` — 释放内存并置指针为 NULL（接受 ptr-to-ptr）
+
+4. **禁止函数列表**（定义于 `banned_functions.h`）:
+   - `malloc` / `free` / `calloc` / `realloc` / `strdup`
+   - `printf` / `fprintf` / `strcpy` / `strcat` / `sprintf` / `gets`
+
+**强制要求**: 所有 AgentOS 代码必须使用安全宏体系，严禁直接调用禁止函数列表中的函数。
+
+**代码目录**: `agentos/atoms/corekern/include/memory_compat.h`、`agentos/atoms/corekern/include/agentos_memory.h`、`agentos/atoms/corekern/include/banned_functions.h`
+
+**来源**: 安全编码规范、memory_compat.h、agentos_memory.h、banned_functions.h
+**参见**: MEMORY_FREE_SAFE、Security by Design
 
 #### Microkernel / 微内核
 
@@ -314,6 +362,21 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### T
 
+#### Thinkdual / Thinkdual 认知双思系统
+
+**定义**: AgentOS 的核心认知创新，由 t2 主思考、t1-f 快思考、t1-p 专业思考三组件构成的认知架构。t2 负责深度推理与反思调整，t1-f 负责快速响应与流式验证，t1-p 负责专业领域仲裁。三组件通过 triple_coordinator 协同工作，实现效率与精度的动态平衡。
+
+**标准名称**: Thinkdual 认知双思系统（正式）/ Thinkdual（简称）
+
+**标准英文名**: Thinkdual Cognitive Dual-Thinking System
+
+**旧称/禁止使用**: "双思考系统"、"双系统认知模型"、"认知双思系统"（缺少 Thinkdual 前缀）
+
+**代码目录**: `agentos/atoms/coreloopthree/src/cognition/`
+
+**来源**: 架构设计原则、CoreLoopThree 具体方案
+**参见**: 认知循环运行时、triple_coordinator
+
 #### TaskFlow / 任务流引擎
 
 **定义**: AgentOS 的任务流引擎，提供 Pregel BSP 图计算引擎、工作流模式、上下文处理器、并行调度器等功能，支撑复杂任务编排。
@@ -345,11 +408,13 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 认知循环运行时 | CoreLoopThree | `atoms/coreloopthree/` | 第三循环内核 |
 | 记忆卷载 | MemoryRovol | `atoms/memoryrovol/` | 记忆漩涡引擎 |
 | 用户态服务层 | daemon | `daemon/` | 守护进程、后端服务层 |
-| 认知层双思考功能 | Triple Coordinator | `cognition/triple_coordinator` | 双思考系统 |
+| Thinkdual 认知双思系统 | Thinkdual Cognitive Dual-Thinking System | `agentos/atoms/coreloopthree/src/cognition/` | 双思考系统、双系统认知模型、认知双思系统（无前缀）、Triple Coordinator |
+| 错误码体系 | Error Code System | — | — |
 | 微内核 | Microkernel | `atoms/corekern/` | — |
 | 系统调用层 | Syscall | `atoms/syscall/` | — |
 | 任务流引擎 | TaskFlow | `atoms/taskflow/` | — |
 | 安全穹顶 | Cupolas | `cupolas/` | Cupolas安全模块 |
+| 安全宏体系 | Memory Safety Macro System | `atoms/corekern/include/` | — |
 
 ---
 

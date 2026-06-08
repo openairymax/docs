@@ -1,3 +1,6 @@
+SPDX-Copyright: Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+SPDX-License-Identifier: GPL-3.0-only
+
 # AgentOS 配置变更审计日志格式规范
 
 **文档版本**: V1.0  
@@ -88,6 +91,12 @@
 - 精确到微秒（6位小数）
 - 格式: `YYYY-MM-DDTHH:MM:SS.ffffffZ`
 
+> **📝 与运行时日志的时间戳格式差异说明**  
+> 本规范（审计日志）使用 ISO 8601 字符串格式（如 `"2026-04-05T10:30:00.123456Z"`），而 [logging_format.md](../agentos_contract/logging_format.md) 中的运行时日志使用 Unix 时间戳数值格式（如 `1701234567.890`）。两者格式不同的原因：
+> - **审计日志**面向合规审查，ISO 8601 格式人类可读，便于安全审计人员直接阅读和比对时间线
+> - **运行时日志**面向机器解析和性能监控，Unix 时间戳数值格式解析效率高、存储紧凑、便于计算时间差
+> - 两种格式可通过标准库函数互相转换，不存在信息丢失
+
 ### 3.2 action（动作类型）
 
 | 值 | 说明 | 触发场景 |
@@ -99,6 +108,10 @@
 | `VALIDATE` | Schema验证 | CI/CD、定期检查 |
 | `EXPORT` | 导出 | 备份、迁移 |
 | `IMPORT` | 导入 | 部署、恢复 |
+| `AUDIT` | 审计检查 | 安全审计、合规检查 |
+
+> **📝 与 logging_format.md 的 AUDIT 级别对齐**  
+> 本规范新增 `AUDIT` 动作类型，与 [logging_format.md](../agentos_contract/logging_format.md) 中定义的 `AUDIT` 日志级别（级别 5）对齐。`AUDIT` 动作用于记录安全审计和合规检查操作，其对应的运行时日志应使用 `audit` 级别输出。
 
 ### 3.3 config_file（配置文件路径）
 
@@ -154,6 +167,19 @@
 }
 ```
 
+> **📝 checksum.before 的 null 处理**  
+> 对于 `LOAD` 动作（首次加载配置文件），由于不存在变更前的文件状态，`checksum.before` 字段应为 `null`：
+> ```json
+> {
+>   "checksum": {
+>     "algorithm": "sha256",
+>     "before": null,
+>     "after": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+>   }
+> }
+> ```
+> `checksum.before` 为 `null` 仅在 `LOAD` 动作时合法，其他动作类型（`CHANGE`、`RELOAD`、`ROLLBACK` 等）的 `checksum.before` 必须为有效的 SHA-256 哈希值。
+
 ### 3.7 metadata（扩展元数据）
 
 | 字段 | 类型 | 说明 |
@@ -171,7 +197,7 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `success` | boolean | 操作是否成功 |
-| `error_code` | string | 错误码 |
+| `error_code` | integer \| string | 错误码（C 内核为负整数如 `-2`，SDK 为十六进制字符串如 `"0x0003"`） |
 | `error_message` | string | 错误消息 |
 | `duration_ms` | integer | 操作耗时（毫秒） |
 

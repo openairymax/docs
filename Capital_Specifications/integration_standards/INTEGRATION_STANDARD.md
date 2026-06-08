@@ -6,7 +6,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **版本**: v1.0.1  
 **最后更新**: 2026-04-09  
 **适用范围**: AgentOS/manager 模块与 agentos/commons/utils/config_unified 的集成  
-**理论基础**: 工程两论（接口契约化）+ 五维正交设计（内核观K-2、工程观E-4/E-8）  
+**理论基础**: 工程两论（接口契约化）+ 五维正交设计（内核观K-2、工程观E-4/E-8）+ Thinkdual 认知双思系统  
 **当前位置**: `docs/Capital_Specifications/integration_standards/` (从 `agentos/manager/` 迁移)
 
 ---
@@ -596,7 +596,25 @@ export AGENTOS_DEBUG=1
 - [config_unified README.md](../../../agentos/commons/utils/config_unified/README.md) ✅
 - [CONFIG_CHANGE_PROCESS.md](../../../agentos/manager/CONFIG_CHANGE_PROCESS.md) ✅
 - [error_code_reference.md](../project_erp/error_code_reference.md) ✅
+- [error.h (C 内核错误码定义)](../../../AgentOS/agentos/commons/utils/error/include/error.h) ✅
 - [Integration Standards README](./README.md) ✅
+
+---
+
+### 环境变量一致性检查
+
+在集成过程中，必须确保 `AGENTOS_CONFIG_DIR` 环境变量在所有模块中的一致性：
+
+1. **启动时校验**: 各模块在初始化时应通过 `getenv("AGENTOS_CONFIG_DIR")` 获取配置目录，并与核心循环注册的值进行比对
+2. **跨模块传播**: 环境变量应在进程启动前统一设置，禁止运行时动态修改
+3. **默认值对齐**: 所有模块的回退策略必须一致（参见 2.1 节默认值定义）
+4. **校验工具**: 使用 `agentos-config-check` 工具验证所有活跃模块的 `AGENTOS_CONFIG_DIR` 值是否一致
+
+```bash
+# 一致性检查示例
+agentos-config-check --verify-env AGENTOS_CONFIG_DIR
+# 输出: [OK] All modules report AGENTOS_CONFIG_DIR=/etc/agentos
+```
 
 ---
 

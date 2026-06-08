@@ -7,7 +7,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 JavaScript/TypeScript 代码  
-**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
@@ -25,7 +25,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **双系统认知理论**（原则 C-1）：TypeScript 提供编译时检查（System 2），JavaScript 提供运行时灵活（System 1）
+- **Thinkdual 认知双思系统**（原则 C-1）：TypeScript 提供编译时检查（System 2），JavaScript 提供运行时灵活（System 1）
 
 **双系统在 JavaScript/TypeScript 中的体现**:
 
@@ -234,6 +234,16 @@ export interface TaskStep {
 ```typescript
 /**
  * 任务状态枚举
+ *
+ * ⚠️ 注意：`const enum` 在 `isolatedModules: true`（Babel/esbuild/swc 等转译器默认模式）
+ * 下存在跨模块问题——每个文件独立编译时无法内联其他模块的 const enum 值，
+ * 导致运行时引用为 undefined。推荐改用普通 enum 或 union type：
+ *
+ *   // 推荐：普通 enum（无跨模块问题）
+ *   export enum TaskStatus { Idle = 'idle', ... }
+ *
+ *   // 或：字符串 union type（零运行时开销）
+ *   export type TaskStatus = 'idle' | 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
  */
 export const enum TaskStatus {
     /** 空闲状态 */
@@ -662,6 +672,11 @@ async function executeSequential(tasks: Task[]): Promise<TaskResult[]> {
 
 /**
  * 并行执行并限制并发数
+ *
+ * ⚠️ 修复说明：原实现中 `executing.findIndex(p => p === promise)` 存在 bug——
+ * 当 Promise 已 resolve 时，`Promise.race` 返回的是最先完成的 Promise，
+ * 但 `findIndex` 查找的是当前迭代的 `promise`（可能尚未 push 到数组），
+ * 导致找到的索引为 -1，splice 删除错误元素。正确做法是追踪已完成 Promise 自身。
  */
 async function executeWithConcurrency(
     tasks: Task[],
@@ -669,23 +684,24 @@ async function executeWithConcurrency(
 ): Promise<TaskResult[]> {
     const results: TaskResult[] = [];
     const executing: Promise<void>[] = [];
-    
+
     for (const task of tasks) {
-        const promise = executeTask(task).then(result => {
+        const p = executeTask(task).then(result => {
             results.push(result);
+            // 从 executing 中移除自身
+            const idx = executing.indexOf(p);
+            if (idx !== -1) {
+                executing.splice(idx, 1);
+            }
         });
-        
-        executing.push(promise);
-        
+
+        executing.push(p);
+
         if (executing.length >= concurrency) {
             await Promise.race(executing);
-            executing.splice(
-                executing.findIndex(p => p === promise),
-                1
-            );
         }
     }
-    
+
     await Promise.all(executing);
     return results;
 }
@@ -953,6 +969,186 @@ describe('TaskScheduler', () => {
 ```
 
 ---
+
+## 十三-A、TypeScript/JavaScript 禁止模式清单（BAN-300~305）
+
+所有 TypeScript/JavaScript PR 必须通过以下禁止模式检查：
+
+| 编号 | 禁止模式 | 检测方式 | 替代方案 |
+|------|---------|----------|---------|
+| BAN-300 | 禁止使用 `any` 类型 | `tsconfig strict: true` + `@typescript-eslint/no-explicit-any` | 使用具体类型、泛型或 `unknown` |
+| BAN-301 | 禁止 `@ts-ignore` / `@ts-expect-error` | `@typescript-eslint/ban-ts-comment` | 修复类型错误，必要时使用类型守卫 |
+| BAN-302 | 禁止 `console.log` | `eslint no-console` / `ruff T201` | 使用 `logger.ts` 封装的日志模块 |
+| BAN-303 | 禁止空 catch 块 | `eslint no-empty` + `no-catch-shadow` | 至少记录 `logger.warn()` 或 `logger.error()` |
+| BAN-304 | 禁止硬编码 URL/端口 | 自定义 ESLint 规则 / 代码审查 | 使用配置文件或环境变量 |
+| BAN-305 | 禁止 `eval()` / `Function()` 构造器 | `eslint no-eval` / `no-new-func` | 使用安全的 JSON.parse 或模板引擎 |
+
+**示例**：
+
+```typescript
+// ❌ BAN-300: 使用 any
+function process(data: any) { ... }  // 禁止！
+
+// ✅ 正确：使用具体类型或泛型
+function process<T>(data: T): Result<T> { ... }
+
+// ❌ BAN-301: 使用 @ts-ignore
+// @ts-ignore
+const result = someFunction();  // 禁止！
+
+// ✅ 正确：修复类型或使用类型守卫
+if (isValidData(data)) {
+    const result = someFunction(data);
+}
+
+// ❌ BAN-302: 使用 console.log
+console.log('Task completed');  // 禁止！
+
+// ✅ 正确：使用 logger
+import { logger } from '../utils/logger';
+logger.info('Task completed', { taskId });
+
+// ❌ BAN-303: 空 catch 块
+try { ... } catch (e) { }  // 禁止！
+
+// ✅ 正确：记录异常
+try { ... } catch (e) {
+    logger.error('Operation failed', { error: e });
+}
+
+// ❌ BAN-304: 硬编码 URL
+const API_URL = 'http://localhost:8080/api';  // 禁止！
+
+// ✅ 正确：使用配置
+const API_URL = config.get('api.url');
+```
+
+---
+
+## 十三-B、C 内核通信规范
+
+### 13-B.1 通信架构
+
+TypeScript/JavaScript 层与 C 内核（atoms 层）通过以下方式通信：
+
+```
+┌─────────────────────┐     WebSocket/HTTP      ┌──────────────────┐
+│  Desktop / Web SDK  │ ◄──────────────────────► │  daemon 服务层    │
+│  (TypeScript)       │     JSON-RPC 2.0         │  (C++ daemon)    │
+└─────────────────────┘                          └────────┬─────────┘
+                                                          │ IPC / syscalls
+                                                 ┌────────▼─────────┐
+                                                 │  atoms 内核层     │
+                                                 │  (C)             │
+                                                 └──────────────────┘
+```
+
+### 13-B.2 WebSocket/HTTP API 规范
+
+daemon 层对外暴露 WebSocket（实时通信）和 HTTP REST（管理操作）两种接口：
+
+```typescript
+/**
+ * daemon 通信客户端
+ */
+export class DaemonClient {
+    private ws?: WebSocket;
+    private readonly baseUrl: string;
+    private requestId = 0;
+
+    constructor(config: DaemonClientConfig) {
+        this.baseUrl = config.daemonUrl;
+    }
+
+    /**
+     * 通过 HTTP REST 发送管理请求
+     */
+    async request(method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+                  path: string, body?: unknown): Promise<unknown> {
+        const response = await fetch(`${this.baseUrl}${path}`, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+        });
+        if (!response.ok) {
+            throw new DaemonError(
+                `HTTP ${response.status}`, this.mapHttpStatus(response.status)
+            );
+        }
+        return response.json();
+    }
+
+    /**
+     * 通过 WebSocket 发送实时指令（JSON-RPC 2.0）
+     */
+    async rpc(method: string, params?: unknown): Promise<unknown> {
+        const id = ++this.requestId;
+        const message: JsonRpcRequest = {
+            jsonrpc: '2.0',
+            id,
+            method,
+            params: params ?? {},
+        };
+        return this.sendWs(message);
+    }
+}
+```
+
+### 13-B.3 错误码映射
+
+AGENTOS_E* 错误码到 HTTP 状态码的映射：
+
+| AGENTOS 错误码 | HTTP 状态码 | 说明 |
+|---------------|------------|------|
+| `AGENTOS_OK` (0) | 200 | 成功 |
+| `AGENTOS_ERR_INVALID_PARAM` (-2) | 400 | 参数无效 |
+| `AGENTOS_ERR_OUT_OF_MEMORY` (-4) | 503 | 资源不足 |
+| `AGENTOS_ERR_TIMEOUT` (-8) | 408 / 504 | 请求超时 |
+| `AGENTOS_ERR_BUSY` (-17) | 429 | 服务繁忙 |
+| `AGENTOS_ERR_NOT_FOUND` | 404 | 资源不存在 |
+| `AGENTOS_ERR_PERMISSION_DENIED` | 403 | 权限不足 |
+| 其他负值 | 500 | 内部错误 |
+
+### 13-B.4 JSON-RPC 2.0 服务层规范
+
+所有 daemon 服务层的 RPC 接口必须遵循 JSON-RPC 2.0 规范：
+
+```typescript
+/**
+ * JSON-RPC 2.0 请求/响应类型
+ */
+export interface JsonRpcRequest {
+    jsonrpc: '2.0';
+    id: number | string;
+    method: string;
+    params?: Record<string, unknown> | unknown[];
+}
+
+export interface JsonRpcResponse<T = unknown> {
+    jsonrpc: '2.0';
+    id: number | string;
+    result?: T;
+    error?: {
+        code: number;
+        message: string;
+        data?: unknown;
+    };
+}
+
+/**
+ * JSON-RPC 2.0 错误码规范
+ *
+ * -32700: Parse error（JSON 解析失败）
+ * -32600: Invalid Request（请求格式无效）
+ * -32601: Method not found（方法不存在）
+ * -32602: Invalid params（参数无效）
+ * -32603: Internal error（内部错误）
+ * -32000 ~ -32099: Server error（服务端自定义错误，映射 AGENTOS_E*）
+ */
+```
+
+---
+
 ## 十四、AgentOS 模块 JavaScript/TypeScript 编码示例
 
 ### 14.1 daemon（守护层）TypeScript 实现

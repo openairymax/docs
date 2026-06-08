@@ -7,7 +7,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最后更新**: 2026-04-27  
 **作者**: LirenWang  
 **适用范围**: AgentOS 所有 Python 代码  
-**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、双系统认知理论  
+**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
 **关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
 **原则映射**: S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
 
@@ -25,7 +25,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **双系统认知理论**（原则 C-1）：Python 简洁语法（System 1）与类型提示（System 2）
+- **Thinkdual 认知双思系统**（原则 C-1）：Python 简洁语法（System 1）与类型提示（System 2）
 
 **双系统在 Python 中的体现**:
 
@@ -881,6 +881,155 @@ class TestTaskScheduler:
 def test_scheduler_with_strategy(strategy: str, scheduler: TaskScheduler) -> None:
     """参数化测试：不同策略。"""
     assert scheduler.strategy == strategy
+```
+
+---
+
+## 十-A、C FFI 绑定规范
+
+### 10-A.1 FFI 框架选择
+
+| 场景 | 推荐框架 | 理由 |
+|------|---------|------|
+| 简单绑定（少量函数、基本类型） | `ctypes` | 标准库内置，零依赖，适合简单 C 函数调用 |
+| 复杂绑定（结构体嵌套、回调、指针运算） | `cffi` | 性能更优，支持 ABI 和 API 两种模式，复杂类型声明更清晰 |
+
+### 10-A.2 绑定代码命名与组织
+
+- **文件命名**：`agentos_<module>_ffi.py`，例如 `agentos_scheduler_ffi.py`、`agentos_memory_ffi.py`
+- **目录位置**：与 C 头文件对应，放置在 `sdks/python/agentos/` 下
+- **导出规范**：FFI 模块仅暴露 Pythonic 接口，不暴露原始 C 指针
+
+```python
+# agentos_scheduler_ffi.py
+"""AgentOS 调度器 FFI 绑定。"""
+
+from ctypes import CDLL, c_int, c_char_p, POINTER, byref
+from agentos.errors import AgentOSError, SchedulerError
+
+# 加载共享库
+_lib = CDLL("libagentos_scheduler.so")
+
+# 函数签名声明
+_lib.cognition_schedule.argtypes = [c_char_p, c_char_p, POINTER(c_char_p)]
+_lib.cognition_schedule.restype = c_int
+
+
+def schedule(plan_json: str) -> str:
+    """提交调度计划（Pythonic 封装）。
+
+    Args:
+        plan_json: 计划 JSON 字符串
+
+    Returns:
+        任务 ID
+
+    Raises:
+        SchedulerError: 调度失败
+    """
+    out_id = c_char_p()
+    rc = _lib.cognition_schedule(
+        plan_json.encode("utf-8"),
+        None,  # 默认配置
+        byref(out_id)
+    )
+    if rc != 0:
+        raise _convert_error(rc, "cognition_schedule")
+    result = out_id.value.decode("utf-8")
+    _lib.agentos_free(out_id)  # C 侧分配的内存由 C 侧释放
+    return result
+```
+
+### 10-A.3 错误码转换
+
+所有 `AGENTOS_E*` C 错误码必须转换为 Python 异常：
+
+```python
+# agentos/errors/ffi_errors.py
+"""FFI 错误码到 Python 异常的映射。"""
+
+from agentos.errors import AgentOSError, ValidationError, ResourceError
+
+# 错误码 → 异常类映射表
+_ERROR_CODE_MAP: dict[int, type[AgentOSError]] = {
+    0: None,                          # AGENTOS_OK
+    -2: ValidationError,              # AGENTOS_ERR_INVALID_PARAM
+    -4: ResourceError,                # AGENTOS_ERR_OUT_OF_MEMORY
+    -8: ResourceError,                # AGENTOS_ERR_TIMEOUT
+    -17: ResourceError,               # AGENTOS_ERR_BUSY
+}
+
+
+def _convert_error(rc: int, context: str) -> AgentOSError:
+    """将 C 错误码转换为 Python 异常。
+
+    Args:
+        rc: C 函数返回的错误码
+        context: 调用上下文描述
+
+    Returns:
+        对应的 Python 异常实例
+    """
+    exc_class = _ERROR_CODE_MAP.get(rc, AgentOSError)
+    return exc_class(f"[{context}] C error code: {rc}")
+```
+
+### 10-A.4 FFI 内存所有权规则
+
+| 所有权 | 规则 | 示例 |
+|--------|------|------|
+| C → Python（C 分配） | Python 使用后必须调用 C 侧释放函数 | `_lib.agentos_free(out_id)` |
+| Python → C（Python 分配） | Python 保持引用，C 侧不得释放 | `byref(c_buffer)` |
+| 共享缓冲区 | 明确文档化生命周期，使用 `memoryview` 避免拷贝 | `memoryview(c_array)` |
+
+> **关键原则**：谁分配谁释放。跨 FFI 边界传递指针时，必须在文档中明确所有权归属。
+
+---
+
+## 十-B、Python 禁止模式清单（BAN-180~186）
+
+所有 Python PR 必须通过以下禁止模式检查：
+
+| 编号 | 禁止模式 | 检测方式 | 替代方案 |
+|------|---------|----------|---------|
+| BAN-180 | 禁止 `bare except:` | `ruff rule E722` / `flake8 E722` | 使用 `except Exception:` 并记录日志 |
+| BAN-185 | 禁止 `bare except:` | `ruff rule E722` | 必须指定异常类型：`except ValueError:` 或 `except Exception:` |
+| BAN-186 | 禁止 `except` 块中 `pass` 且无日志 | 代码审查 / 自定义 ruff 规则 | 至少记录 `logger.warning()` 或 `logger.exception()` |
+| BAN-187 | 禁止生产代码中使用 `print()` | `ruff rule T201` | 使用 `logging` 模块：`logger.info()` / `logger.debug()` |
+
+**示例**：
+
+```python
+# ❌ BAN-185: 裸 except
+try:
+    result = do_something()
+except:  # 禁止！
+    pass
+
+# ✅ 正确：指定异常类型并记录
+try:
+    result = do_something()
+except ValueError as e:
+    logger.warning("Invalid value: %s", e)
+
+# ❌ BAN-186: except 块中 pass 且无日志
+try:
+    result = do_something()
+except Exception:
+    pass  # 禁止！吞掉异常且无记录
+
+# ✅ 正确：记录异常
+try:
+    result = do_something()
+except Exception as e:
+    logger.exception("Failed to do something: %s", e)
+    raise
+
+# ❌ BAN-187: 生产代码中使用 print()
+print(f"Task {task_id} completed")  # 禁止！
+
+# ✅ 正确：使用 logging
+logger.info("Task %s completed", task_id)
 ```
 
 ---
