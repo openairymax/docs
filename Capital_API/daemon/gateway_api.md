@@ -1,8 +1,10 @@
 # 守护进程 API 文档
 
-> **模块路径**: `agentos/daemon/`  
-> **版本**: v0.0.4
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/daemon/gateway_api.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 概述

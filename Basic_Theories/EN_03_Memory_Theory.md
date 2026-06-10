@@ -3,9 +3,10 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Memory Layer Theory
 
-**Version**: Doc V2.0  
-**Last Updated**: 2026-04-10  
-**Author**: LirenWang
+**最新**: 2026-06-09  
+**状态**: Release       
+**路径**: OpenAirymax/Docs/Basic_Theories/EN_03_Memory_Theory.md
+**作者**: SPHARX Team  
 
 ## 1. Introduction
 

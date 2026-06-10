@@ -3,13 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # manuals 模块功能需求与技术规范
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-09  
-**作者**: LirenWang  
-**状态**: 需求分析阶段  
-**理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）  
-**关联原则**: E-7 文档即代码原则、E-8 可测试性原则、A-1 简约至上原则
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/project_erp/manuals_module_requirements.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 1. 概述
@@ -61,7 +59,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 #### 2.2.2 架构文档模块
 - **FR-026**: 支持架构设计原则文档化
-- **FR-027**: 提供微内核架构详细说明
+- **FR-027**: 提供微核心架构详细说明
 - **FR-028**: 支持三层运行时文档
 - **FR-029**: 提供四层记忆系统文档
 - **FR-030**: 支持 IPC 通信机制文档

@@ -1,9 +1,10 @@
 # AgentOS 配置漂移检测器使用指南
 
-**版本**: V1.0  
-**创建日期**: 2026-04-05  
-**工具路径**: `agentos/manager/tools/drift_detector.py`  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/drift_detector_guide.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

@@ -3,11 +3,11 @@ SPDX-License-Identifier: GPL-3.0-only
 
 # AgentOS 配置变更审计日志格式规范
 
-**文档版本**: V1.0  
-**创建日期**: 2026-04-05  
-**适用范围**: AgentOS Manager模块  
-**Schema版本**: config-audit-log.schema.json (Draft-07)  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Config_Audit_Log_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

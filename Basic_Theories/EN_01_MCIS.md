@@ -1,13 +1,12 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# Multibody Cybernetic Intelligent System
+# Multibody Cybernetic Intelligent System  
 
-**Version**: Doc V2.0  
-**Last updated**: 2026-04-27  
-**Author**: ZhixianZhou  
-**Theoretical basis**: Engineering Cybernetics, System Engineering, Five-Dimensional Orthogonal System
-**Related standards**: [TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) Standard terminology
+**最新**: 2026-06-09  
+**状态**: Release    
+**路径**: OpenAirymax/Docs/Basic_Theories/EN_01_MCIS.md
+**作者**: SPHARX Team  
 
 ## Preface
 

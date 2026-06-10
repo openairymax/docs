@@ -1,8 +1,10 @@
 # 测试架构说明
 
-**版本**: v2.2.0  
-**最后更新**: 2026-04-22
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Architecture/test_architecture.md
+**作者**:
+    - Zhixian Zhou、Liren Wang
 ---
 
 ## 📋 概述

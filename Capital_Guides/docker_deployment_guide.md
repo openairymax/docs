@@ -1,9 +1,10 @@
 # AgentOS Docker 部署完整指南
 
-**版本**: 1.0.0.5  
-**发布日期**: 2026-03-20  
-**维护者**: SPHARX-02
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/docker_deployment_guide.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📑 目录

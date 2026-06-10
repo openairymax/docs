@@ -3,10 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 测试编写规范
 
-**版本**: V1.0  
-**最后更新**: 2026-04-12  
-**状态**: 🟢 生产就绪
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/testing_guidelines.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 🎯 概述

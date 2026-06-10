@@ -1,11 +1,10 @@
 # AgentOS 协议系统使用指南
 
-**版本**: 1.0.0
-**最后更新**: 2026-04-14
-**状态**: 稳定
-**许可证**: MIT
-
-AgentOS 协议系统提供统一的 多协议通信能力，支持 **JSON-RPC 2.0**、**MCP v1.0**、**A2A v0.3**、**OpenAI API**、**OpenJiuwen（自定义二进制）**、**OpenClaw（离线AI Agent平台）** 和 **Claude API（Anthropic）** 共 **7种协议**，以及 **LangChain** 和 **AutoGen** 框架适配，具备自动检测、路由和双向转换功能。
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/toolkit/PROTOCOL_GUIDE.md
+**作者**:
+    - Liren Wang
 
 ## 目录
 

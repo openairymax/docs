@@ -3,7 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 白皮书历史版本归档
 
-本目录用于归档 AgentOS 技术白皮书的所有历史正式版本，确保项目演进全程可追溯。
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/White_Paper/history/README.md
+**作者**:
+    - Liren Wang
 
 ## 归档规则
 
@@ -29,7 +33,7 @@ history/
 
 #### 主版本号（Major）
 **升级条件**：架构级重大变更
-- 微内核接口不兼容变更
+- 微核心接口不兼容变更
 - 认知循环模型重构
 - 记忆系统层级调整
 - 安全模型根本性变革

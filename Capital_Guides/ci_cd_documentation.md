@@ -1,12 +1,10 @@
 # AgentOS CI/CD 标准化配置文档
 
-> **版本**: v4.1.0
-> **更新日期**: 2026-05-01
-> **状态**: 生产就绪 (Production Ready)
-> **位置**: `.github/workflows/` (3个核心工作流) + `scripts/pipeline/` (CI编排脚本)
-> **理论框架**: 体系并行论 (MCIS) - 多体控制论智能系统
-> **v4.1变更**: 3条流水线系统性重构——修复protocol触发条件、产物复用、PIPESTATUS可靠性
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/ci_cd_documentation.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 1. 架构概述

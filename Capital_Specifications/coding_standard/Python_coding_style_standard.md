@@ -3,14 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Python 编码规范
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有 Python 代码  
-**理论基础**: 工程两论（反馈闭环）、系统工程（模块化）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**原则映射**: S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Python_coding_style_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述

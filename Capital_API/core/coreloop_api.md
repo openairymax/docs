@@ -1,9 +1,9 @@
-# CoreLoopThree API - 三层循环核心
+# CoreLoopThree API - 三层认知循环  
 
-> **模块路径**: `agentos/atoms/coreloopthree`  
-> **头文件**: `loop.h`, `cognition.h`, `execution.h`, `memory.h`  
-> **版本**: v0.0.4
-
+**最新**: 2026-06-09  
+**状态**: 维护中  
+**路径**: OpenAirymax/Docs/Capital_API/core/coreloop_api.md  
+**作者**: Liren Wang  
 ---
 
 ## 📖 概述
@@ -48,7 +48,7 @@ CoreLoopThree 是 AgentOS 的核心运行时，实现了**认知-执行-记忆**
 ### 数据结构
 
 #### `agentos_core_loop_t`
-三层循环的主句柄（不透明指针）。
+三层认知循环的主句柄（不透明指针）。
 
 #### `agentos_loop_config_t`
 ```c
@@ -72,7 +72,7 @@ typedef struct {
 ### 函数接口
 
 #### `agentos_loop_create`
-创建三层循环实例。
+创建三层认知循环实例。
 
 ```c
 AGENTOS_API agentos_error_t agentos_loop_create(

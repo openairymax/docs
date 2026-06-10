@@ -3,14 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS C++ 编码规范
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有 C++ 代码模块  
-**理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统、微内核哲学  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**原则映射**: S-1至S-4（系统设计）、K-1至K-4（内核设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Cpp_coding_style_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述
@@ -26,7 +23,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
 - **Thinkdual 认知双思系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
-- **微内核哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
+- **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 
 **关联原则**:
 - E-1 安全内生原则
@@ -1144,7 +1141,7 @@ TEST_F(MemoryPoolTest, ExhaustPool) {
 ## 十四、AgentOS 模块 C++ 编码示例
 
 ### 14.1 Atoms（原子层）C++ 编码
-Atoms模块实现微内核核心功能，要求最高级别的性能和可靠性：
+Atoms模块实现微核心核心功能，要求最高级别的性能和可靠性：
 
 #### 14.1.1 内存管理器（映射原则：M-3 拓扑优化）
 ```cpp

@@ -1,10 +1,10 @@
 # AgentOS 配置变更流程
 
-**文档版本**: v1.0.0  
-**最后更新**: 2026-04-01  
-**适用范围**: AgentOS 全部配置文件  
-**管理模块**: Manager  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/config_change_process.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述

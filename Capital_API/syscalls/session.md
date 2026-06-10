@@ -3,10 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 会话管理 API
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-09  
-**状态**: 🟢 生产就绪
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/syscalls/session.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 🎯 概述
@@ -568,7 +569,7 @@ agentos_session_context_set(const char* session_id,
 **上下文 JSON 示例**：
 ```json
 {
-    "conversation_summary": "用户正在讨论微内核架构设计",
+    "conversation_summary": "用户正在讨论微核心架构设计",
     "current_topic": "IPC 机制优化",
     "user_intent": "寻求技术方案",
     "related_memory_ids": ["mem_001", "mem_042"],

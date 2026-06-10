@@ -3,13 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # 安装指南
 
-**版本**: Doc V2.0
-**最后更新**: 2026-04-10
-**难度**: ⭐⭐ 基础
-**预计时间**: 15-30分钟（取决于安装方式）
-**作者**: Team  
-**维护者**: AgentOS 文档团队
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/installation.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 安装方式总览

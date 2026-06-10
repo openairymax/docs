@@ -3,15 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 代码注释与合规规范
 
-
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有编程语言的代码注释  
-**理论基础**: 工程两论、五维正交系统、Thinkdual 认知双思系统、代码合规框架  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**原则映射**: A-1至A-4（设计美学）、C-1至C-4（认知工程）、E-1至E-8（工程基础设施）、D-1至D-4（安全工程）、合规性原则
-
+**最新**: 2026-06-09
+**状态**: 模板
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Code_comment_template.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述

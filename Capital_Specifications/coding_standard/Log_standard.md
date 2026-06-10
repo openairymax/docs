@@ -3,15 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 日志打印规范
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有模块的日志打印活动  
-**理论基础**: 工程两论（《工程控制论》反馈理论、《论系统工程》可观测性）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**关联原则**: 架构设计原则 E-2（可观测性原则）、E-4（运维友好）、C-1（认知友好）、A-1（设计美学）  
-**原则映射**: E-2（可观测性）、E-4（运维友好）、C-1（认知友好）、A-1（极简主义）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Log_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 第 0 章 AgentOS 日志体系总览
@@ -23,7 +19,7 @@ AgentOS 采用分层日志架构，各层使用不同的日志宏和头文件：
 | 层级 | 日志宏 | 头文件 | 说明 |
 |------|--------|--------|------|
 | daemon 服务层 | `SVC_LOG_*` | `svc_log.h` | 系统守护进程日志，如 IPC 服务、资源管理 |
-| atoms/gateway/protocols | `AGENTOS_LOG_*` | `agentos_log.h` | 微内核核心、网关、协议层日志 |
+| atoms/gateway/protocols | `AGENTOS_LOG_*` | `agentos_log.h` | 微核心核心、网关、协议层日志 |
 | cupolas 安全穹顶 | `AGENTOS_LOG_AUDIT` / `SVC_LOG_AUDIT` | `agentos_log.h` / `svc_log.h` | 安全审计日志，用于合规审查和取证分析 |
 | Desktop | `logger.*()` | `logger.ts` | 桌面端 TypeScript 日志 |
 | Python SDK | `logging.*` | Python `logging` 模块 | Python 绑定层日志 |
@@ -757,7 +753,7 @@ HiLog::WARN(LABEL, "TCP connection closed: reason=peer_timeout, duration=300s");
 > **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 7.1 Atoms（原子层）日志规范
-Atoms模块实现微内核核心功能，日志要求最高级别的性能和精度：
+Atoms模块实现微核心核心功能，日志要求最高级别的性能和精度：
 
 #### 7.1.1 内存管理日志（映射原则：M-3 拓扑优化）
 ```cpp

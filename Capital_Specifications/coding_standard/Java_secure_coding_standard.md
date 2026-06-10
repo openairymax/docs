@@ -3,14 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Java 安全编码指南
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS Java SDK、所有 Java 语言实现  
-**理论基础**: 工程两论（反馈闭环）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统、安全穹顶（cupolas）防御深度  
-**原则映射**: D-1至D-4（安全工程）、S-2（模块化设计）、C-3（认知偏差防护）、E-1（安全内生）、E-8（可测试性）  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Java_secure_coding_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述
@@ -46,7 +43,7 @@ AgentOS的五维正交系统为Java安全编码提供了多层次的理论框架
 - **模块化安全设计**：基于S-2原则，安全功能模块化，支持独立部署和升级
 
 #### 1.3.2 内核观（Kernel View）安全
-- **微内核安全模型**：Java代码需与microkernel.md中定义的微内核安全原语保持一致
+- **微核心安全模型**：Java代码需与microkernel.md中定义的微核心安全原语保持一致
 - **系统调用保护**：Java Native Interface（JNI）调用必须严格验证，防止非法跨越用户态-内核态边界
 
 #### 1.3.3 认知观（Cognitive View）安全
@@ -1123,7 +1120,7 @@ Atoms模块通过JNI提供原生接口，需要特殊的安全考虑：
 /**
  * 安全JNI绑定 - 体现K-1（最小特权）和D-2（安全隔离）原则
  * 
- * 封装与Atoms微内核的本地调用，实现严格参数验证和边界检查。
+ * 封装与Atoms微核心的本地调用，实现严格参数验证和边界检查。
  * 防止缓冲区溢出和类型混淆攻击。
  */
 public class SecureKernelBinding {

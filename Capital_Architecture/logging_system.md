@@ -3,19 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 日志系统架构详解
 
-**版本**: Doc V2.0
-**更新日期**: 2026-04-27
-**作者**: Team
-  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
-  - Liren Wang | Spharx Ltd. team@spharx.cn
-  - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
-  - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
-  - Daxiang Zhu | IndieBros. zdxever@sina.com
-**状态**: 正式发布
-**理论依据**: 体系并行论 (MCIS) → 五维正交系统
-**路径**: `agentos/commons/utils/observability/`
-
-本文档详细说明 AgentOS 日志系统的科学设计，包括跨语言可观测性、动态反馈调节、高性能异步写入等关键技术。
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Architecture/logging_system.md
+**作者**:
+    - Zhixian Zhou、Liren Wang
 
 ## 文档信息
 
@@ -34,7 +26,7 @@ AgentOS 日志系统是系统可观测性的核心组件，遵循 **体系并行
 
 从 **体系并行论** 视角分析，日志系统是 MCIS 中的 **可观测体 (Observability Body)**，负责系统状态的全面感知、记录与分析。其四级日志架构（L1原始日志→L2结构化日志→L3聚合指标→L4洞察报告）体现了 **渐进式抽象 (Progressive Abstraction)** 的思想，模拟了从原始数据到高级洞察的认知过程。
 
-该系统不仅是 AgentOS **系统观维度**（全局可观测性）的关键支撑，也是 **工程观维度**（性能与可靠性平衡）的经典实践。通过日志分级压缩与动态采样机制形成控制论负反馈回路，确保日志系统的可持续性与可扩展性，体现了 MCIS 中 **反馈调节 (Feedback Regulation)** 与 **自适应平衡 (Adaptive Balancing)** 的核心原理。同时，日志系统与微内核、CoreLoopThree、MemoryRovol 等核心组件的紧密集成，实现了对整个智能体系统状态的全面监控与智能分析。
+该系统不仅是 AgentOS **系统观维度**（全局可观测性）的关键支撑，也是 **工程观维度**（性能与可靠性平衡）的经典实践。通过日志分级压缩与动态采样机制形成控制论负反馈回路，确保日志系统的可持续性与可扩展性，体现了 MCIS 中 **反馈调节 (Feedback Regulation)** 与 **自适应平衡 (Adaptive Balancing)** 的核心原理。同时，日志系统与微核心、CoreLoopThree、MemoryRovol 等核心组件的紧密集成，实现了对整个智能体系统状态的全面监控与智能分析。
 
 ## 1. 日志文件存储位置
 
@@ -684,11 +676,11 @@ AgentOS 日志系统作为整个系统的可观测性核心，与其他关键模
 - **行动层日志** → 跟踪任务执行、补偿事务、责任链追踪等具体操作
 - **记忆层日志** → 监控记忆写入、查询检索、进化抽象等记忆操作
 
-### 与微内核 (Microkernel) 的关系
-日志系统与微内核共同实现系统级的可观测性：
-- **内核事件日志** → 记录微内核的关键操作（任务调度、内存分配、IPC通信）
-- **性能指标采集** → 通过日志系统收集微内核的调度延迟、内存使用等关键指标
-- **故障诊断** → 结构化日志帮助诊断微内核运行时的异常和性能瓶颈
+### 与微核心 (MicroCoreRT) 的关系
+日志系统与微核心共同实现系统级的可观测性：
+- **内核事件日志** → 记录微核心的关键操作（任务调度、内存分配、IPC通信）
+- **性能指标采集** → 通过日志系统收集微核心的调度延迟、内存使用等关键指标
+- **故障诊断** → 结构化日志帮助诊断微核心运行时的异常和性能瓶颈
 
 ### 与记忆卷载系统 (MemoryRovol) 的关系
 日志系统为 MemoryRovol 提供操作审计与性能监控：
@@ -696,11 +688,11 @@ AgentOS 日志系统作为整个系统的可观测性核心，与其他关键模
 - **检索性能监控** → 监控 MemoryRovol 的检索延迟、向量索引构建时间等关键性能指标
 - **异常追踪** → 结构化异常日志帮助诊断记忆系统的运行故障
 
-### 与系统调用 (Syscall) 层的关系
-日志系统通过 Syscall 层实现跨语言的统一日志接口：
+### 与系统调用 (AirymaxSyscall) 层的关系
+日志系统通过 AirymaxSyscall 层实现跨语言的统一日志接口：
 - **统一日志接口** → 通过 `sys_telemetry_metrics/traces()` 提供系统级的可观测性数据采集
 - **跨语言支持** → 支持 C/Python/Go/Rust/TS 等多种语言的统一日志格式
-- **动态配置** → 通过 Syscall 层实现运行时日志级别的动态调整
+- **动态配置** → 通过 AirymaxSyscall 层实现运行时日志级别的动态调整
 
 ### 与进程通信 (IPC) 系统的关系
 日志系统通过 IPC 机制实现分布式日志聚合：
@@ -711,7 +703,7 @@ AgentOS 日志系统作为整个系统的可观测性核心，与其他关键模
 ### 集成架构视图
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ CoreLoopThree   │    │   MemoryRovol   │    │   Microkernel   │
+│ CoreLoopThree   │    │   MemoryRovol   │    │   MicroCoreRT     │
 │  • Cognition    │←→│  • L1-L4 Layers │←→│  • IPC Binder   │
 │  • Execution    │    │  • Retrieval    │    │  • Memory Mgr   │
 │  • Memory       │    │  • Forgetting   │    │  • Task Sched   │

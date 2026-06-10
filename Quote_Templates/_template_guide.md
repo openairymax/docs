@@ -19,6 +19,13 @@ core_concepts: "关键词1, 关键词2, 关键词3"
 
 # [指南标题]
 
+**最新**: 2026-06-09  
+**状态**: 模板  
+**路径**: OpenAirymax/Docs/Quote_Templates/_template_guide.md  
+**作者**: SPHARX Team   
+
+---
+
 ## 📋 文档信息卡
 - **目标读者**: [初学者/开发者/架构师]
 - **前置知识**: [无/基础概念/相关文档]

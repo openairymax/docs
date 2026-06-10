@@ -1,9 +1,10 @@
 # AgentOS 构建规范文档
 
-> **版本**: 1.1.0  
-> **最后更新**: 2026-04-28  
-> **适用版本**: v0.0.4+
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/build_standards.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 目录

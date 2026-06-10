@@ -3,15 +3,16 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS TypeScript SDK
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-12  
-**状态**: 🟢 生产就绪
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/toolkit/typescript/README.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 🎯 概述
 
-AgentOS TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 AgentOS 微内核系统交互。SDK 遵循 TypeScript 惯用设计，提供完整的类型定义、Promise/async-await 异步支持和自动资源管理。
+AgentOS TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 AgentOS 微核心系统交互。SDK 遵循 TypeScript 惯用设计，提供完整的类型定义、Promise/async-await 异步支持和自动资源管理。
 
 ### 🧩 五维正交原则体现
 

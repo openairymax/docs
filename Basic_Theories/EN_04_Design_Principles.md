@@ -1,11 +1,12 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."
 
-# AgentOS Design Principles
+# AgentOS Design Principles  
 
-**Version**: Doc V2.0  
-**Last Updated**: 2026-04-10  
-**Author**: LirenWang
+**最新**: 2026-06-09  
+**状态**: Release       
+**路径**: OpenAirymax/Docs/Basic_Theories/EN_04_Design_Principles.md
+**作者**: SPHARX Team  
 
 ## 1. Introduction
 
@@ -94,7 +95,7 @@ AgentOS has built-in comprehensive observability support:
 
 ## 8. Summary
 
-AgentOS's design principles integrate the systems thinking of the Two Engineering Theories, the cognitive model of dual-system theory, and the microkernel philosophy of modern operating systems. It pursues **pure kernel, independent services, security by design, and comprehensive observability**, providing a stable, efficient, evolvable operational foundation for agent teams.
+AgentOS's design principles integrate the systems thinking of the Two Engineering Theories, the cognitive model of dual-system theory, and the MicroCoreRT philosophy of modern operating systems. It pursues **pure kernel, independent services, security by design, and comprehensive observability**, providing a stable, efficient, evolvable operational foundation for agent teams.
 
 ---
 

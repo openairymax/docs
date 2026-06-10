@@ -3,10 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 可观测性 API
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-09  
-**状态**: 🟢 生产就绪
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/syscalls/telemetry.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 🎯 概述

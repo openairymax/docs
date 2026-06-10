@@ -1,9 +1,10 @@
 # AgentOS Gateway 安全最佳实践
 
-**版本**: v1.0.0  
-**更新日期**: 2026-04-05  
-**适用模块**: AgentOS Gateway (协议转换层)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/security_gateway.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 目录

@@ -1,12 +1,10 @@
 # AgentOS 协议快速入门指南
 
-**版本**: 1.0.0
-**最后更新**: 2026-04-14
-**预计完成时间**: 10 分钟
-**难度**: 入门级
-
-通过 5 个步骤快速上手 AgentOS 多协议通信系统。
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/toolkit/PROTOCOL_QUICKSTART.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 前置条件

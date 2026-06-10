@@ -3,11 +3,11 @@
 
 # AgentOS Rust 安全编码标准
 
-> **版本**: v1.0.0
-> **生效日期**: 2026-06-08
-> **适用范围**: AgentOS Rust SDK 及所有基于 AgentOS 架构的 Rust 项目
-> **维护者**: Cupolas 安全团队
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Rust_secure_coding_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

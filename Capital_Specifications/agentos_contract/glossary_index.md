@@ -3,12 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 规范集术语表与快速索引
 
-**版本**: Doc V2.0  
-**状态**: 正式发布  
-**维护者**: AgentOS 架构委员会  
-**作者**: LirenWang  
-**最后更新**: 2026-04-09  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/glossary_index.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 使用说明
@@ -212,7 +211,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 5. **安全穹顶 (Cupolas)** - 提供虚拟工位、权限裁决、安全隔离等核心安全机制的内核子系统
 6. **系统调用 (Syscall)** - 用户态程序与内核态交互的唯一接口，遵循最小权限原则
 7. **追踪标识 (TraceID)** - 分布式追踪中请求链路的唯一标识，支持全链路可观测性
-8. **微内核/原子内核 (Microkernel/CoreKern)** - 只提供IPC、内存管理、任务调度、时间服务等原子机制的最小化内核
+8. **微核心/原子内核 (Microkernel/CoreKern)** - 只提供IPC、内存管理、任务调度、时间服务等原子机制的最小化内核
 9. **权限 (Permission)** - 执行特定操作所需的授权，遵循最小权限原则和安全内生设计
 10. **可观测性 (Observability)** - 通过日志、指标、追踪、健康检查实现系统行为的全面透明化
 

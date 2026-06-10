@@ -3,15 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 日志格式规范
 
-**版本**: Doc V2.0  
-**状态**: 正式发布  
-**归属**: AgentOS 可观测性核心规范  
-**作者**: LirenWang  
-**最后更新**: 2026-04-09  
-**许可证**: GPL-3.0  
-**理论基础**: 工程两论（控制论与系统工程）、Thinkdual 认知双思系统、微内核哲学、设计美学  
-**关联规范**: [通信协议规范](./protocol_contract.md)、[系统调用 API 规范](./syscall_api_contract.md)、[日志打印规范](../coding_standard/Log_standard.md)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/logging_format.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 编制说明
@@ -47,7 +43,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 日志格式规范是多重理论融合的产物：
 - **工程两论**：通过统一格式（系统工程）和实时反馈（控制论）构建可观测性体系
 - **双系统认知**：支持不同粒度的日志记录，平衡诊断深度与性能开销
-- **微内核哲学**：日志格式最小化核心字段，扩展通过可选字段实现
+- **微核心哲学**：日志格式最小化核心字段，扩展通过可选字段实现
 - **设计美学**：追求日志格式的简洁性、一致性和机器可读性
 
 ### 适用范围

@@ -1,5 +1,11 @@
 # cupolas Doxygen API 文档生成指南
 
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/DOXYGEN_GUIDE.md
+**作者**:
+    - Liren Wang
+
 ## 概述
 
 本目录包含 cupolas 模块的 Doxygen API 文档配置和生成工具。

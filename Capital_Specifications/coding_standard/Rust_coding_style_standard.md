@@ -3,11 +3,11 @@
 
 # AgentOS Rust 编码风格标准
 
-> **文档版本**: 1.0.0
-> **适用项目**: AgentOS Rust SDK (`agentos-rs`)
-> **最后更新**: 2026-06-08
-> **基于代码版本**: 0.1.0
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Rust_coding_style_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

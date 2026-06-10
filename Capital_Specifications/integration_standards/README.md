@@ -3,11 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS Integration Standards / AgentOS 集成标准集
 
-> **版本**: v1.0.0  
-> **创建日期**: 2026-04-03  
-> **状态**: 活跃 (Active)  
-> **维护者**: @SpharxTeam
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/README.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 目录 / Table of Contents

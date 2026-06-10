@@ -1,10 +1,10 @@
 # AgentOS Daemon 公共库 API 文档
 
-**版本**: 2.0.0  
-**日期**: 2026-04-04  
-**模块**: agentos/daemon/common  
-**遵循规范**: ARCHITECTURAL_PRINCIPLES.md V1.8
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/daemon/API_DOCUMENTATION.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

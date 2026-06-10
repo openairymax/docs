@@ -3,14 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS C&C++安全编程指南
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有 C/C++代码开发活动  
-**理论基础**: 工程控制论（信任边界、防御深度）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**原则映射**: D-1（最小权限）、D-2（安全隔离）、D-3（纵深防御）、D-4（安全审计）、C-3（认知偏差防护）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/C_Cpp_secure_coding_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 1. 内存安全

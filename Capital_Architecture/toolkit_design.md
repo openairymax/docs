@@ -1,5 +1,11 @@
 # AgentOS Tools Module Design
 
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Architecture/toolkit_design.md
+**作者**:
+    - Zhixian Zhou、Liren Wang
+
 ## 1. 设计理念
 
 本设计基于AgentOS的核心哲学：

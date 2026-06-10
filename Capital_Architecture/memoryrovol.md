@@ -3,18 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # 记忆卷载 (MemoryRovol)：记忆卷载系统架构详解
 
-**版本**: Doc V2.0
-**更新日期**: 2026-04-27
-**作者**: Team
-  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
-  - Liren Wang | Spharx Ltd. team@spharx.cn
-  - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
-  - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
-  - Daxiang Zhu | IndieBros. zdxever@sina.com
-**状态**: 正式发布
-**理论依据**: 体系并行论 (MCIS) → 五维正交系统
-**路径**: `agentos/atoms/memoryrovol/`  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Architecture/memoryrovol.md
+**作者**:
+    - Zhixian Zhou、Liren Wang
 ---
 
 ## 1. 概述
@@ -133,10 +126,10 @@ MemoryRovol 是 CoreLoopThree 记忆层的具体实现：
 - **记忆检索** → CoreLoopThree 认知层通过吸引子网络从 MemoryRovol L2-L4 层检索相关经验
 - **记忆进化** → CoreLoopThree 记忆进化委员会定期触发 MemoryRovol L4 模式层的持久同调分析
 
-### 与微内核 (Microkernel) 的关系
-MemoryRovol 运行在微内核提供的资源管理基础设施之上：
-- **内存管理** → 利用微内核的智能指针和内存池机制，优化向量索引的内存使用
-- **进程隔离** → 通过微内核的地址空间隔离，确保记忆数据的安全边界
+### 与微核心 (Microkernel) 的关系
+MemoryRovol 运行在微核心提供的资源管理基础设施之上：
+- **内存管理** → 利用微核心的智能指针和内存池机制，优化向量索引的内存使用
+- **进程隔离** → 通过微核心的地址空间隔离，确保记忆数据的安全边界
 - **系统调用** → 通过统一的 `syscall` 接口访问底层存储和计算资源
 
 ### 与系统调用 (Syscall) 层的关系
@@ -154,7 +147,7 @@ MemoryRovol 通过结构化日志实现全面可观测性：
 ### 集成架构视图
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ CoreLoopThree   │    │   Microkernel   │    │     Syscall     │
+│ CoreLoopThree   │    │   MicroCoreRT     │    │     Syscall     │
 │  • Cognition    │←→│  • Memory        │←→│  • Memory API   │
 │  • Execution    │    │  • IPC          │    │  • Vector API   │
 │  • Memory       │    │  • Task         │    │  • Telemetry    │

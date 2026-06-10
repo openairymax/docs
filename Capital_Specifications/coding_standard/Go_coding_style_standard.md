@@ -3,11 +3,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # AgentOS Go 编码风格规范
 
-> **版本**: 1.0.0
-> **生效日期**: 2026-06-08
-> **适用项目**: AgentOS Go SDK (`agentos/toolkit/go/agentos/`)
-> **架构依据**: `ARCHITECTURAL_PRINCIPLES.md`
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Go_coding_style_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

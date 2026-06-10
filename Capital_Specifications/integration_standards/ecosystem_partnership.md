@@ -1,6 +1,10 @@
 # AgentOS 生态伙伴计划
 
-**版本**: v1.0.0 | **发布日期**: 2026-04-13
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/ecosystem_partnership.md
+**作者**:
+    - Liren Wang
 
 ## 概述
 

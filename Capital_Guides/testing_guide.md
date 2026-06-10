@@ -1,8 +1,10 @@
 # 测试指南
 
-**版本**: v2.2.0  
-**最后更新**: 2026-04-22
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/testing_guide.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 概述

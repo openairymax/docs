@@ -3,14 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 安全设计指南
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-27  
-**作者**: LirenWang  
-**适用范围**: AgentOS 所有组件和模块  
-**理论基础**: 工程两论（反馈闭环）、安全穹顶（cupolas）、系统工程（层次分解）、五维正交系统（系统观、内核观、认知观、工程观、设计美学）、Thinkdual 认知双思系统  
-**关联规范**: [C编码规范](./C_coding_style_standard.md)的 BAN-01~13 禁止模式、CROSS-01~06 跨平台规则；[TERMINOLOGY.md](../../Capital_Specifications/TERMINOLOGY.md) 标准术语  
-**原则映射**: D-1至D-4（安全工程）、S-1至S-4（系统设计）、C-1至C-4（认知设计）、E-1至E-8（工程设计）、A-1至A-4（设计美学）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Security_design_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、概述
@@ -1178,7 +1175,7 @@ class PermissionArbiter {
 ```
 
 ### 12.2 Atoms（原子层）安全设计
-Atoms模块作为微内核核心，需要实现基础安全原语：
+Atoms模块作为微核心核心，需要实现基础安全原语：
 
 #### 12.2.1 安全内存管理（映射原则：M-3 拓扑优化）
 
@@ -1347,7 +1344,7 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 ## 十三、参考文献
 
 1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
-2. **AgentOS 微内核设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
+2. **AgentOS 微核心设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
 3. **AgentOS 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
 4. **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 5. **NIST Cybersecurity Framework**: https://www.nist.gov/cyberframework

@@ -3,11 +3,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # AgentOS Go 安全编码规范
 
-> **版本**: 1.0.0
-> **生效日期**: 2026-06-08
-> **适用范围**: AgentOS Go SDK 及所有基于 AgentOS 平台的 Go 语言模块开发
-> **强制等级**: 所有规则均为 **MUST**（必须遵守），除非明确标注为 **SHOULD**（建议遵守）
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Go_secure_coding_standard.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 目录

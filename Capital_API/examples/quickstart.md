@@ -1,9 +1,10 @@
 # AgentOS 快速入门指南
 
-> **适用版本**: v0.0.4+  
-> **预计时间**: 15分钟  
-> **难度**: ⭐⭐ (初级)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/examples/quickstart.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📋 前置要求

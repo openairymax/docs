@@ -3,12 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # Manager 模块与统一配置库集成标准
 
-**版本**: v1.0.1  
-**最后更新**: 2026-04-09  
-**适用范围**: AgentOS/manager 模块与 agentos/commons/utils/config_unified 的集成  
-**理论基础**: 工程两论（接口契约化）+ 五维正交设计（内核观K-2、工程观E-4/E-8）+ Thinkdual 认知双思系统  
-**当前位置**: `docs/Capital_Specifications/integration_standards/` (从 `agentos/manager/` 迁移)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/INTEGRATION_STANDARD.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 一、集成概述

@@ -1,9 +1,10 @@
 # AgentOS Manager 模块 - 架构与开发指南
 
-**版本**: v1.1.0 (优化版)
-**更新日期**: 2026-04-06
-**状态**: 生产就绪 (Production Ready)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/development_guide_manager.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📚 文档概述
@@ -26,7 +27,7 @@
 agentos/manager/
 │
 ├── 📋 核心配置文件 (9大配置域)
-│   ├── kernel/settings.yaml          # 微内核行为配置
+│   ├── kernel/settings.yaml          # 微核心行为配置
 │   ├── model/model.yaml              # LLM模型提供商配置
 │   ├── agent/registry.yaml           # Agent注册表
 │   ├── skill/registry.yaml           # 技能注册表

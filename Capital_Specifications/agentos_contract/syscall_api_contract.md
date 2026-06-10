@@ -3,22 +3,18 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 系统调用 API 规范
 
-**版本**: Doc V2.0  
-**状态**: 正式发布  
-**归属**: AgentOS 内核接口核心规范  
-**作者**: LirenWang  
-**最后更新**: 2026-04-09  
-**许可证**: GPL-3.0  
-**理论基础**: 工程两论（控制论与系统工程）、Thinkdual 认知双思系统、微内核哲学、设计美学  
-**关联规范**: [通信协议规范](./protocol_contract.md)、[架构设计原则](../../../architecture/ARCHITECTURAL_PRINCIPLES.md)、[统一术语表](../../TERMINOLOGY.md)
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/syscall_api_contract.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 编制说明
 
 ### 本文档定位
 
-系统调用 API 规范是 AgentOS 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 AgentOS 微内核架构的关键实现机制。
+系统调用 API 规范是 AgentOS 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 AgentOS 微核心架构的关键实现机制。
 
 ### 与设计哲学的关系
 
@@ -48,7 +44,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 系统调用规范是多重理论融合的产物：
 - **工程两论**：通过层次分解（系统工程）和反馈机制（控制论）构建稳定的系统调用架构
 - **双系统认知**：支持不同认知需求的调用策略，平衡效率与精度（Thinkdual 认知双思系统）
-- **微内核哲学**：最小化内核接口，最大化服务隔离
+- **微核心哲学**：最小化内核接口，最大化服务隔离
 - **设计美学**：追求接口的简约、对称和自解释性
 
 ### 适用范围
@@ -67,7 +63,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 术语 | 简要定义 | 来源 |
 |------|---------|------|
 | 系统调用 (Syscall) | 用户态进入内核的唯一入口 | 本规范 |
-| 微内核/原子内核 (Microkernel/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
+| 微核心/原子内核 (MicroCoreRT/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
 | TraceID | 分布式追踪的唯一标识 | [日志打印规范](../coding_standard/Log_standard.md) |
 
 ---
@@ -76,7 +72,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 系统调用简介
 
-AgentOS 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循微内核设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
+AgentOS 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循微核心设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
 
 所有系统调用均通过 `agentos_syscall_invoke` 统一入口分发，确保参数校验和权限控制的一致性。
 

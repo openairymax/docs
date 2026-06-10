@@ -3,15 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 错误码参考文档
 
-> **错误码体系说明**
->
-> AgentOS 采用双错误码体系：
-> - **首要体系（C 内核）**：负整数错误码，定义于 `agentos/commons/utils/error/include/error.h`，格式为 `AGENTOS_E*`（如 `AGENTOS_SUCCESS=0`, `AGENTOS_EINVAL=-2`）。C 内核、daemon 层、atoms 模块必须使用此体系。
-> - **次要体系（SDK/外部）**：十六进制分段错误码，定义于本文档，格式为 `AGENTOS_ERROR_*`（如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`）。Python/Rust/Go/TypeScript SDK 和外部接口使用此体系。
->
-> **映射关系**：`AGENTOS_EINVAL` (-2) ↔ `AGENTOS_ERROR_INVALID_PARAMETER` (0x0003)
->
-> **禁止**：在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Specifications/project_erp/error_code_reference.md
+**作者**:
+    - Liren Wang
 
 ## 1. 概述
 

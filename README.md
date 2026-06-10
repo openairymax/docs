@@ -3,15 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 文档中心
 
-**版本**: Doc V2.0
-**最后更新**: 2026-04-27
-**维护者**: Team
-  - Zhixian Zhou | Spharx Ltd. zhouzhixian@spharx.cn
-  - Liren Wang | Spharx Ltd. wangliren@spharx.cn
-  - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
-  - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
-  - Daxiang Zhu | IndieBros. zdxever@sina.com
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/README.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📚 文档导航
@@ -61,7 +57,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 深入理解AgentOS的设计哲学和技术实现：
 
-- [**微内核架构**](Capital_Architecture/microkernel.md) — K-1~K-4 原则的实现
+- [**微核心架构**](Capital_Architecture/microkernel.md) — K-1~K-4 原则的实现
 - [**核心循环三层**](Capital_Architecture/coreloopthree.md) — Cognition→Execution→Memory
 - [**记忆卷载系统**](Capital_Architecture/memoryrovol.md) — L1→L2→L3→L4 四层记忆
 - [**IPC通信机制**](Capital_Architecture/ipc.md) — Binder/Channel/Buffer 进程间通信

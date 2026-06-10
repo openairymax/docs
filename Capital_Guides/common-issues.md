@@ -3,10 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # 常见问题 FAQ
 
-**版本**: Doc V2.0  
-**最后更新**: 2026-04-09  
-**维护者**: @spharx-team/support  
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/common-issues.md
+**作者**:
+    - Liren Wang
 ---
 
 本文档收集了用户和开发者最常遇到的问题及其解决方案。

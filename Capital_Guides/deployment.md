@@ -3,17 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 部署指南
 
-**版本**: Doc V2.0
-**最后更新**: 2026-04-09
-**难度**: ⭐⭐⭐ 高级
-**预计时间**: 45 分钟
-**作者**: Team
-  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
-  - Liren Wang | Spharx Ltd. team@spharx.cn
-  - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
-  - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
-  - Daxiang Zhu | IndieBros. zdxever@sina.com
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/deployment.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 1. 概述

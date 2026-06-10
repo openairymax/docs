@@ -17,7 +17,14 @@ estimated_reading_time: "30分钟"
 core_concepts: "系统调用, API设计, 契约编程, 错误处理"
 ---
 
-# [API名称] API
+# [API名称] API  
+
+**最新**: 2026-06-09  
+**状态**: 模板  
+**路径**: OpenAirymax/Docs/Quote_Templates/_template_api.md  
+**作者**: SPHARX Team  
+
+---
 
 ## 📋 文档信息卡
 - **目标读者**: 开发者/架构师

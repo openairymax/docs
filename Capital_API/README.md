@@ -1,16 +1,16 @@
 # AgentOS Capital API - 完整API参考文档
 
-> **版本**: v0.0.4 (Foundation Release)  
-> **更新日期**: 2026-04-28  
-> **状态**: Developer Preview (Beta)  
-> **适用范围**: 面向开发者社区的完整API参考
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_API/README.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 📚 文档导航
 
 ### 核心模块 API
-- [三层循环核心 (CoreLoopThree)](core/coreloop_api.md)
+- [三层认知循环 (CoreLoopThree)](core/coreloop_api.md)
   - 认知引擎 API
   - 执行引擎 API
   - 记忆引擎 API
@@ -281,7 +281,7 @@ if (mcp->encode) {
 |------|------|----------|
 | v0.0.4 | 2026-04-28 | Foundation Release - 完整API文档 |
 | v0.0.3 | 2026-04-25 | 协议栈v2.1.0集成 |
-| v0.0.2 | 2026-04-20 | 三层循环架构实现 |
+| v0.0.2 | 2026-04-20 | 三层认知循环架构实现 |
 | v0.0.1 | 2026-04-15 | 初始版本 |
 
 ---

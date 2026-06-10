@@ -3,16 +3,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentOS 迁移指南
 
-**版本**: Doc V2.0
-**最后更新**: 2026-04-09
-**适用对象**: 从旧版本迁移的开发者和运维工程师
-**作者**: Team
-  - Zhixian Zhou | Spharx Ltd. team@spharx.cn
-  - Liren Wang | Spharx Ltd. team@spharx.cn
-  - Chen Zhang | SJTU CSC Lab. yoyoke@sjtu.edu.cn
-  - Yunwen Xu | SJTU CSC Lab. willing419@sjtu.edu.cn
-  - Daxiang Zhu | IndieBros. zdxever@sina.com
-
+**最新**: 2026-06-09
+**状态**: 维护中
+**路径**: OpenAirymax/Docs/Capital_Guides/migration_guide.md
+**作者**:
+    - Liren Wang
 ---
 
 ## 1. 概述
@@ -29,7 +24,7 @@ AgentOS 采用语义化版本号（MAJOR.MINOR.PATCH），其中：
 
 AgentOS 的迁移设计遵循三条原则：
 
-1. **分层迁移**：从底层微内核到上层服务，逐层验证，确保每层迁移后的系统稳定性
+1. **分层迁移**：从底层微核心到上层服务，逐层验证，确保每层迁移后的系统稳定性
 2. **双路径并行**：System 1（快速迁移脚本）处理标准化变更；System 2（人工审查）处理架构级变更
 3. **回滚保障**：每一步迁移操作都有对应的回滚方案，保证系统可恢复
 
@@ -43,7 +38,7 @@ AgentOS 的迁移设计遵循三条原则：
 
 ## 2. 从 v0.x 迁移到 v1.0
 
-v1.0 是 AgentOS 的首个生产就绪版本，引入了完整的微内核架构（corekern）、三层运行时（coreloopthree）、四层记忆系统（memoryrovol）和安全穹顶（cupolas）。
+v1.0 是 AgentOS 的首个生产就绪版本，引入了完整的微核心架构（corekern）、三层运行时（coreloopthree）、四层记忆系统（memoryrovol）和安全穹顶（cupolas）。
 
 ### 2.1 架构级变更
 
@@ -60,7 +55,7 @@ core/
 
 /* v1.0 目录结构（分层） */
 agentos/atoms/
-├── corekern/       /* 微内核：仅4个原子机制 */
+├── corekern/       /* 微核心：仅4个原子机制 */
 │   ├── include/    /* 7个头文件 */
 │   └── src/        /* 13个源文件 */
 ├── coreloopthree/  /* 三层认知运行时 */
@@ -411,7 +406,7 @@ agentos-migrate --report --output=migration_report.md
 
 | 版本 | 日期 | 主要变更 |
 |------|------|----------|
-| v1.0.0 | 2026-03-21 | 首个生产就绪版本：微内核 + 三层运行时 + 四层记忆 |
+| v1.0.0 | 2026-03-21 | 首个生产就绪版本：微核心 + 三层认知循环 + 四层记忆 |
 | v1.0.1 | 2026-04-01 | 修复内存泄漏，改进错误处理 |
 | v1.1.0 | 2026-05-01 | 新增记忆进化功能，FAISS 检索优化 30% |
 | v1.2.0 | 2026-06-01 | 新增人工介入补偿队列，LRU 缓存优化 |
