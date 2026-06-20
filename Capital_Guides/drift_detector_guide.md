@@ -55,7 +55,7 @@
 ### 2.1 基本用法
 
 ```bash
-cd agentos/manager/tools
+cd ecosystem/manager/tools
 
 # 创建基线（第一次使用）
 python drift_detector.py --action create-baseline
@@ -174,7 +174,7 @@ python drift_detector.py --action detect --fail-on-drift
 ```yaml
 - name: Check configuration drift
   run: |
-    cd agentos/manager/tools
+    cd ecosystem/manager/tools
     python drift_detector.py --action detect --fail-on-drift --output drift_report.json
     
 - name: Upload drift report
@@ -182,7 +182,7 @@ python drift_detector.py --action detect --fail-on-drift
   uses: actions/upload-artifact@v4
   with:
     name: drift-report
-    path: agentos/manager/tools/drift_report.json
+    path: ecosystem/manager/tools/drift_report.json
 ```
 
 ### 5.2 Jenkins Pipeline
@@ -191,7 +191,7 @@ python drift_detector.py --action detect --fail-on-drift
 stage('Configuration Drift Check') {
     steps {
         sh '''
-            cd agentos/manager/tools
+            cd ecosystem/manager/tools
             python drift_detector.py --action detect --fail-on-drift
         '''
     }

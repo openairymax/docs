@@ -24,26 +24,31 @@
 
 ### 2.1 工作流清单
 
-AgentOS CI/CD 由 3 个核心工作流构成（v4.1）：
+AgentOS CI/CD 由 3 个核心工作流构成（v5.0）：
 
 | 工作流 | 触发条件 | 功能 |
 |--------|---------|------|
-| `ci.yml` | push/PR main,develop | C核心构建(Release+Debug) + CTest + BAN反模式检测 + Protocol兼容性 |
-| `quality-security.yml` | 定时(每日) + manual | 安全审计 + BAN合规检查 + Stale管理 |
-| `release.yml` | tag推送(v*) + manual | C核心+SDK打包 + API文档发布 + GitHub Release |
+| `ci.yml` | push/PR main,develop | C核心构建 + CTest + Sanitizer(ASan/LSan/UBSan) + MemoryRovol验证 + BAN反模式检测 + Clang-Tidy + Cppcheck + 质量门禁 + Python检查 + 合约检查 |
+| `docker-e2e.yml` | push/PR (paths: deploy/**, sdk/typescript/**) | Docker镜像lint/build/push + TypeScript SDK构建 + Docker服务健康检查 |
+| `release.yml` | tag推送(v*) + manual | C核心+SDK打包 + SBOM生成 + 签名 + GitHub Release |
 
-**已移除的冗余工作流**（功能已合并或由GitHub内置功能替代）：
+**已移除的冗余工作流**（功能已合并至3个核心工作流）：
 - `sdk-ci.yml` → 合并入 ci.yml
 - `docs-ci.yml` → 合并入 release.yml
 - `protocol-ci.yml` → 合并入 ci.yml (protocol job)
 - `dependency-update.yml` → 由 Dependabot 替代
-- `quality-monitoring.yml` → 合并入 quality-security.yml
-- `stale.yml` → 合并入 quality-security.yml
+- `quality-monitoring.yml` → 合并入 ci.yml (quality-gate job)
+- `stale.yml` → 由 GitHub 内置功能替代
 - `stub-check.yml` → 合并入 ci.yml (BAN审计)
-- `build-desktop.yml` → 合并入 release.yml
+- `build-desktop.yml` → 合并入 docker-e2e.yml (desktop-build job)
 - `api-docs.yml` → 合并入 release.yml
 - `docs-check.yml` → 合并入 release.yml
 - `tests-test.yml` → 合并入 ci.yml
+- `sanitizer-ci.yml` → 合并入 ci.yml (sanitizer-test job)
+- `memoryrovol-integration.yml` → 合并入 ci.yml (memoryrovol-oss/pro jobs)
+- `docker-ci.yml` → 合并入 docker-e2e.yml
+- `e2e.yml` → 合并入 docker-e2e.yml
+- `quality-security.yml` → 合并入 ci.yml (ban-scan + quality-gate jobs)
 
 ---
 
@@ -64,21 +69,13 @@ scripts/ci/                         # CI/CD 工具集目录
 └── CI_CD_DOCUMENTATION.md          # 本文档
 ```
 
-### 2.2 工作流目录 (`.gitcode/workflows/`)
+### 2.2 工作流目录 (`.github/workflows/`)
 
 ```
-.gitcode/workflows/                 # GitCode Actions 工作流 (MCIS-based)
-├── agentos-mcis-ci.yml             # 主CI流水线 (认知体+执行体+记忆体)
-├── ci.yml                          # 基础CI流水线 (V3.0)
-├── toolkit-ci.yml                  # 多语言SDK CI (SDK扩展体)
-├── quality-gate.yml                # 质量门禁 (V2.0)
-├── quality-monitoring.yml          # 质量监控与趋势分析 (可观测体)
-├── release.yml                     # 发布流水线 (MCIS系统观发布体)
-├── security-audit.yml              # 安全审计 (MCIS安全穹顶体)
-├── dependency-update.yml           # 依赖更新 (MCIS系统维护体)
-├── stale.yml                       # 陈旧Issue/PR管理 (MCIS问题管理体)
-├── tests-test.yml                  # 测试验证 (MCIS系统观验证体)
-└── build-desktop.yml               # 桌面客户端构建
+.github/workflows/                  # GitHub Actions 工作流
+├── ci.yml                          # 主CI流水线 (13个Jobs: 构建/测试/Sanitizer/MemoryRovol/质量门禁/...)
+├── docker-e2e.yml                  # Docker + E2E流水线 (6个Jobs: lint/build/push/desktop/health)
+└── release.yml                     # 发布流水线 (4个Jobs: 打包/SBOM/签名/Release)
 ```
 
 ---
@@ -258,14 +255,10 @@ install-deps.sh 中的重试逻辑:
 
 | MCIS维度 | 工作流 | 触发条件 | 控制论机制 |
 |----------|--------|---------|-----------|
-| 认知体+执行体+记忆体 | agentos-mcis-ci.yml | push/PR | 负反馈:构建失败阻断 |
-| 安全穹顶体 | security-audit.yml | schedule+手动 | 负反馈:安全漏洞阻断 |
-| 可观测体 | quality-monitoring.yml | schedule | 前馈:趋势预测 |
+| 认知体+执行体+记忆体 | ci.yml | push/PR | 负反馈:构建/测试/Sanitizer失败阻断 |
+| 安全穹顶体+可观测体 | ci.yml (ban-scan + quality-gate jobs) | push/PR | 负反馈:安全/BAN合规阻断 |
+| 容器化部署体 | docker-e2e.yml | push/PR (paths) | 负反馈:构建/健康检查失败阻断 |
 | 系统观发布体 | release.yml | tag push | 正反馈:发布加速 |
-| 系统维护体 | dependency-update.yml | schedule+手动 | 前馈:依赖预测 |
-| 问题管理体 | stale.yml | schedule | 负反馈:问题清理 |
-| 系统观验证体 | tests-test.yml | push/PR | 负反馈:测试失败阻断 |
-| SDK扩展体 | toolkit-ci.yml | push/PR | 正反馈:兼容性强化 |
 
 ---
 

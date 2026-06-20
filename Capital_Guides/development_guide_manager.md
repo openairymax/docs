@@ -24,7 +24,7 @@
 ### 整体结构图
 
 ```
-agentos/manager/
+ecosystem/manager/
 │
 ├── 📋 核心配置文件 (9大配置域)
 │   ├── kernel/settings.yaml          # 微核心行为配置
@@ -259,7 +259,7 @@ tests/
 
 ```bash
 # 运行全部测试
-cd agentos/manager/tests && python run_all_tests.py
+cd ecosystem/manager/tests && python run_all_tests.py
 
 # 运行特定测试
 python run_all_tests.py syntax schema  # 仅语法+Schema
@@ -279,7 +279,7 @@ python run_all_tests.py --verbose
 #### Step 1: 创建配置文件
 
 ```yaml
-# agentos/manager/your_module/config.yaml
+# ecosystem/manager/your_module/config.yaml
 _config_version: "1.0.0"
 _owner:
   module: "your-module"
@@ -442,7 +442,7 @@ sys.path.insert(0, '/path/to/AgentOS')
 
 检查 `.gitignore` 是否正确排除了临时文件：
 ```bash
-cat agentos/manager/.gitignore
+cat ecosystem/manager/.gitignore
 # 应包含: __pycache__/, *.log, .baseline/ 等
 ```
 

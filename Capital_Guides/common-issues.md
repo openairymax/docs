@@ -83,7 +83,7 @@ fatal error: killed signal cc1plus (out of memory)
 sudo systemctl restart docker
 
 # 方式2: 限制构建并行度
-# 编辑 docker/Dockerfile.kernel
+# 编辑 deploy/docker/Dockerfile
 RUN cmake --build . --parallel 2  # 从$(nproc)改为固定值
 
 # 方式3: 增加swap空间

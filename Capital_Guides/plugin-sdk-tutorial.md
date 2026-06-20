@@ -1228,7 +1228,7 @@ A: 是的。默认超时时间为 30 秒（可在 `plugin.yaml` 中通过 `timeo
 ### B. 相关资源
 
 - [AgentRT 快速上手指南](./quickstart.md)
-- [AgentRT 架构文档](./architecture.md)
+- [AgentRT 架构文档](../Capital_Architecture/architecture.md)
 - [Plugin Demo 示例项目](../ecosystem/examples/plugin-demo/)
 - [OpenLab Marketplace](https://openlab.agentrt.dev)
 

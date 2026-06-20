@@ -1735,7 +1735,7 @@ algorithms:
 - [API 参考文档](../README.md)
 - [架构设计文档](../../architecture/ARCHITECTURAL_PRINCIPLES.md)
 - [功能需求文档](../../specifications/manuals_module_requirements.md)
-- [TypeScript SDK 文档](../agentos/toolkit/typescript/README.md)
+- [TypeScript SDK 文档](../toolkit/typescript/README.md)
 
 ---
 

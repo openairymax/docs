@@ -54,7 +54,7 @@ cd ../AgentRT-build && ctest --output-on-failure
 
 ```bash
 # 构建镜像
-docker build -f scripts/ops/deploy/Dockerfile.kernel -t agentrt:latest .
+docker build -f deploy/docker/Dockerfile -t agentrt:latest .
 
 # 启动容器
 docker run -d --name agentrt \

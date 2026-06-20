@@ -116,7 +116,7 @@ AgentRT 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层
 
 ### 2.3 生产环境各组件资源限制
 
-参考 `scripts/ops/deploy/docker-compose.prod.yml` 中的生产配置：
+参考 `deploy/docker/docker-compose.prod.yml` 中的生产配置：
 
 | 组件 | CPU Limit | Memory Limit | 副本数 |
 |------|-----------|-------------|--------|
@@ -145,10 +145,9 @@ AgentRT 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层
 ## 3. Docker 部署
 
 AgentRT 提供了两套 Docker 部署方案：
-- **`scripts/ops/deploy/`**：全系统多服务编排（内核 + 服务层 + 基础设施）
-- **`deploy/docker/`**：Gateway 专用轻量部署
+- **`deploy/docker/`**：全系统多服务编排（内核 + 服务层 + 基础设施）
 
-以下以 `scripts/ops/deploy/` 全系统方案为例。
+以下以 `deploy/docker/` 全系统方案为例。
 
 ### 3.1 前置条件
 
@@ -160,7 +159,7 @@ AgentRT 提供了两套 Docker 部署方案：
 
 ```bash
 # 进入部署目录
-cd scripts/ops/deploy
+cd deploy/docker
 
 # 一键部署（环境检查 → 镜像构建 → 服务启动）
 ./quickstart.sh
@@ -171,13 +170,13 @@ cd scripts/ops/deploy
 **Step 1: 配置环境变量**
 
 ```bash
-cd scripts/ops/deploy
-cp .env.example .env
+cd deploy/docker
+cp configs/env.example .env
 # 编辑 .env，填入实际 API 密钥和数据库密码
 vim .env
 ```
 
-关键环境变量（`.env.example`）：
+关键环境变量（`configs/env.example`）：
 
 ```ini
 # API 密钥
@@ -356,8 +355,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./agentos/manager/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./agentos/manager/nginx/ssl:/etc/nginx/ssl:ro
+      - ./ecosystem/manager/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ecosystem/manager/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - agentos-gateway
       - agentos-openlab
@@ -672,7 +671,7 @@ kubectl delete pvc -n agentrt -l app.kubernetes.io/instance=agentrt
 
 ### 5.1 环境变量
 
-AgentRT 通过环境变量进行主要配置。完整的变量列表参考 `.env.example`：
+AgentRT 通过环境变量进行主要配置。完整的变量列表参考 `configs/env.example`：
 
 #### 核心配置
 
@@ -739,24 +738,24 @@ AgentRT 通过环境变量进行主要配置。完整的变量列表参考 `.env
 
 AgentRT 使用 YAML 格式的配置文件管理 daemon 间服务发现和参数：
 
-- **内核配置**: `agentos/manager/kernel/kernel.yaml`
-- **服务配置**: `agentos/manager/services/`
-- **OpenTelemetry 配置**: `agentos/manager/otel-collector-manager.yaml`
-- **Prometheus 配置**: `agentos/manager/prometheus.yml`
-- **Nginx 配置**: `agentos/manager/nginx/nginx.conf`
+- **内核配置**: `ecosystem/manager/kernel/kernel.yaml`
+- **服务配置**: `ecosystem/manager/services/`
+- **OpenTelemetry 配置**: `ecosystem/manager/otel-collector-manager.yaml`
+- **Prometheus 配置**: `ecosystem/manager/prometheus.yml`
+- **Nginx 配置**: `ecosystem/manager/nginx/nginx.conf`
 
 ### 5.3 配置检查
 
 部署前使用配置检查脚本验证环境：
 
 ```bash
-cd scripts/ops/deploy
+cd deploy/docker
 ./check_config.sh
 ```
 
 该脚本检查项包括：
 - Docker 环境是否就绪
-- 必要文件是否存在（Dockerfile.kernel, Dockerfile.service, docker-compose.yml 等）
+- 必要文件是否存在（Dockerfile, docker-compose.yml 等）
 - `.env` 文件是否配置且密钥非默认值
 - 端口占用情况（8080-8084）
 - docker-compose.yml 语法正确性
@@ -767,10 +766,10 @@ cd scripts/ops/deploy
 
 ### 5.4 Secrets 管理
 
-密钥文件存放在 `scripts/ops/deploy/secrets/` 目录：
+密钥文件存放在 `deploy/docker/secrets/` 目录：
 
 ```bash
-scripts/ops/deploy/secrets/
+deploy/docker/secrets/
 └── .gitkeep    # 保持目录结构，实际密钥文件不应提交到 Git
 ```
 
@@ -1224,7 +1223,7 @@ grafana-prod:
     - GF_LOG_LEVEL=warn
   volumes:
     - grafana-data:/var/lib/grafana
-    - ./agentos/manager/grafana/provisioning:/etc/grafana/provisioning:ro
+    - ./ecosystem/manager/grafana/provisioning:/etc/grafana/provisioning:ro
     - ./dashboards:/var/lib/grafana/dashboards:ro
   ports:
     - "127.0.0.1:3000:3000"
@@ -1327,7 +1326,7 @@ otel-collector:
     - "4318:4318"   # OTLP HTTP
     - "8888:8888"   # Prometheus metrics
   volumes:
-    - ./agentos/manager/otel-collector-manager.yaml:/etc/otelcol-contrib/manager.yaml:ro
+    - ./ecosystem/manager/otel-collector-manager.yaml:/etc/otelcol-contrib/manager.yaml:ro
   healthcheck:
     test: ["CMD", "wget", "--spider", "http://localhost:13133/"]
     interval: 30s
@@ -1375,7 +1374,7 @@ AGENTOS_TRACING_SAMPLE_RATE=1.0    # 生产环境建议 0.1
 
 ```bash
 # 使用 Makefile
-cd scripts/ops/deploy
+cd deploy/docker
 make backup
 ```
 
@@ -1516,8 +1515,8 @@ nginx-prod:
     - "80:80"
     - "443:443"
   volumes:
-    - ./agentos/manager/nginx/ssl:/etc/nginx/ssl:ro
-    - ./agentos/manager/nginx/conf.d:/etc/nginx/conf.d:ro
+    - ./ecosystem/manager/nginx/ssl:/etc/nginx/ssl:ro
+    - ./ecosystem/manager/nginx/conf.d:/etc/nginx/conf.d:ro
 ```
 
 Nginx SSL 配置示例：
@@ -1657,7 +1656,7 @@ securityContext:
 echo ".env" >> .gitignore
 
 # 密钥文件放在 secrets/ 目录
-scripts/ops/deploy/secrets/
+deploy/docker/secrets/
 └── .gitkeep    # 实际密钥文件在此目录下，不提交 Git
 ```
 
@@ -1825,14 +1824,14 @@ docker-compose -f docker-compose.prod.yml logs --tail=50 gateway
 
 | 操作 | 命令 |
 |------|------|
-| 快速启动 | `cd scripts/ops/deploy && ./quickstart.sh` |
-| 配置检查 | `cd scripts/ops/deploy && ./check_config.sh` |
-| 构建镜像 | `cd scripts/ops/deploy && make build-all` |
-| 启动服务 | `cd scripts/ops/deploy && make start` |
-| 查看状态 | `cd scripts/ops/deploy && make ps` |
-| 查看日志 | `cd scripts/ops/deploy && make logs` |
-| 健康检查 | `cd scripts/ops/deploy && make health` |
-| 备份数据 | `cd scripts/ops/deploy && make backup` |
+| 快速启动 | `cd deploy/docker && ./quickstart.sh` |
+| 配置检查 | `cd deploy/docker && ./check_config.sh` |
+| 构建镜像 | `cd deploy/docker && make build-all` |
+| 启动服务 | `cd deploy/docker && make start` |
+| 查看状态 | `cd deploy/docker && make ps` |
+| 查看日志 | `cd deploy/docker && make logs` |
+| 健康检查 | `cd deploy/docker && make health` |
+| 备份数据 | `cd deploy/docker && make backup` |
 | K8s 安装 | `helm install agentrt ./deploy/kubernetes/helm -n agentrt --create-namespace` |
 | K8s 升级 | `helm upgrade agentrt ./deploy/kubernetes/helm -f ./deploy/kubernetes/helm/values-prod.yaml -n agentrt` |
 
@@ -1858,7 +1857,6 @@ docker-compose -f docker-compose.prod.yml logs --tail=50 gateway
 - `deploy/README.md` — 部署目录总览
 - `deploy/docker/README.md` — Docker 部署详细文档
 - `deploy/kubernetes/README.md` — Kubernetes 部署详细文档
-- `scripts/ops/deploy/README.md` — 全系统部署详细文档
 - `scripts/ops/README.md` — 运维脚本总览
 
 ---

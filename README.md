@@ -35,6 +35,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 - [**认知层理论**](Basic_Theories/CN_02_认知层理论.md) — 双系统认知与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
 - [**记忆层理论**](Basic_Theories/CN_03_记忆层理论.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
 - [**设计原则**](Basic_Theories/CN_04_设计原则.md) — 五维正交设计原则导论（[English](Basic_Theories/EN_04_Design_Principles.md)）
+- [**设计哲学**](Basic_Theories/DESIGN_PHILOSOPHY.md) — 体系并行论与五维正交设计体系详述
 - [**架构设计原则完整版**](ARCHITECTURAL_PRINCIPLES.md) — S/K/C/E/A五维24条原则详述
 
 ---
@@ -43,12 +44,14 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 面向新用户的引导式教程，帮助快速上手：
 
-- [**快速开始**](Capital_Guides/getting_started.md) — 5分钟体验AgentOS核心功能
+- [**快速开始**](Capital_Guides/AgentRT_quickstart.md) — 5分钟从零到Hello World
 - [**安装指南**](Capital_Guides/installation.md) — 详细的环境搭建步骤
 - [**配置指南**](Capital_Guides/configuration.md) — 完整的配置选项说明
-- [**部署指南**](Capital_Guides/deployment.md) — 生产环境部署最佳实践
+- [**部署指南**](Capital_Guides/AgentRT_deployment.md) — 生产环境部署最佳实践（Docker/K8s/监控/安全）
 - [**创建Agent**](Capital_Guides/create_agent.md) — Agent开发完整流程
 - [**创建Skill**](Capital_Guides/create_skill.md) — Skill开发完整流程
+- [**Plugin SDK教程**](Capital_Guides/plugin-sdk-tutorial.md) — Plugin SDK完整开发指南
+- [**Prompt工程指南**](Capital_Guides/prompt-engineering.md) — Prompt模板/注入/调优全生命周期
 - [**迁移指南**](Capital_Guides/migration_guide.md) — 版本升级与数据迁移
 
 ---
@@ -63,6 +66,8 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 - [**IPC通信机制**](Capital_Architecture/ipc.md) — Binder/Channel/Buffer 进程间通信
 - [**系统调用架构**](Capital_Architecture/syscall.md) — 用户态与内核态的统一接口
 - [**日志系统架构**](Capital_Architecture/logging_system.md) — 跨语言可观测性与动态反馈调节
+- [**架构概述**](Capital_Architecture/architecture.md) — 系统总览与分层架构图
+- [**C语言边界定义**](Capital_Architecture/C_LANGUAGE_BOUNDARY.md) — C核心职责范围与FFI边界
 
 ---
 
@@ -73,6 +78,8 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 **系统调用 API**：
 
 - [**API总览**](Capital_API/README.md) — API层次结构与设计哲学
+- [**Gateway API参考**](Capital_API/api-reference.md) — HTTP/WebSocket端点API参考
+- [**CLI命令参考**](Capital_API/cli-reference.md) — 统一命令行工具完整命令
 - [**任务管理 API**](Capital_API/syscalls/task.md) — submit/query/wait/cancel 任务全生命周期
 - [**记忆管理 API**](Capital_API/syscalls/memory.md) — write/query/evolve/forget 四层记忆操作
 - [**会话管理 API**](Capital_API/syscalls/session.md) — create/get/close/list 会话管理
@@ -107,6 +114,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 - [**C++编码风格规范**](Capital_Specifications/coding_standard/Cpp_coding_style_standard.md) — C++语言编码规范
 - [**Python编码风格规范**](Capital_Specifications/coding_standard/Python_coding_style_standard.md) — Python类型设计/异步/错误处理规范
 - [**JavaScript编码风格规范**](Capital_Specifications/coding_standard/JavaScript_coding_style_standard.md) — JavaScript/TypeScript编码规范
+- [**命名规范**](Capital_Specifications/coding_standard/NAMING_CONVENTIONS.md) — 组件/文件/函数/类型/常量命名约定
 - [**代码注释模板**](Capital_Specifications/coding_standard/Code_comment_template.md) — Doxygen/docstring注释规范
 - [**日志打印规范**](Capital_Specifications/coding_standard/Log_standard.md) — 日志级别/内容/格式/质量规范
 
@@ -248,6 +256,7 @@ git checkout v1.0.0 -- docs/
 docs/
 ├── ARCHITECTURAL_PRINCIPLES.md    # 五维正交设计原则完整版
 ├── README.md                      # 本文档
+├── TERMINOLOGY.md                 # 统一术语表
 ├── Basic_Theories/                # 基础理论（中/英双语）
 │   ├── CN_01_体系并行论.md
 │   ├── CN_02_认知层理论.md
@@ -256,53 +265,61 @@ docs/
 │   ├── EN_01_MCIS.md
 │   ├── EN_02_Cognition_Theory.md
 │   ├── EN_03_Memory_Theory.md
-│   └── EN_04_Design_Principles.md
+│   ├── EN_04_Design_Principles.md
+│   └── DESIGN_PHILOSOPHY.md       # 设计哲学详述
 ├── Capital_Architecture/          # 架构设计
+│   ├── architecture.md            # 系统总览与分层架构图
+│   ├── C_LANGUAGE_BOUNDARY.md     # C语言边界定义
 │   ├── microkernel.md
 │   ├── coreloopthree.md
 │   ├── memoryrovol.md
 │   ├── ipc.md
 │   ├── syscall.md
 │   ├── logging_system.md
-│   └── diagrams/                 # 架构图（drawio）
+│   └── diagrams/                  # 架构图（drawio）
 ├── Capital_API/                   # API参考
 │   ├── README.md
-│   ├── syscalls/                 # 系统调用API
+│   ├── api-reference.md           # Gateway API参考手册
+│   ├── cli-reference.md           # CLI命令参考手册
+│   ├── syscalls/                  # 系统调用API
 │   │   ├── task.md
 │   │   ├── memory.md
 │   │   ├── session.md
 │   │   ├── telemetry.md
 │   │   └── agent.md
-│   ├── toolkit/                  # 多语言SDK
+│   ├── toolkit/                   # 多语言SDK
 │   │   ├── python/README.md
 │   │   ├── go/README.md
 │   │   ├── rust/README.md
 │   │   └── typescript/README.md
-│   └── algorithms/               # 核心算法
+│   └── algorithms/                # 核心算法
 │       └── README.md
 ├── Capital_Guides/                # 入门与运维指南
-│   ├── getting_started.md         # 快速开始
-│   ├── installation.md            # 安装指南
-│   ├── configuration.md           # 配置指南
-│   ├── deployment.md              # 部署指南
-│   ├── create_agent.md           # 创建Agent
-│   ├── create_skill.md           # 创建Skill
-│   ├── migration_guide.md        # 迁移指南
-│   ├── testing.md               # 测试指南
-│   ├── monitoring.md            # 监控运维
-│   ├── kubernetes-deployment.md # K8s部署
-│   ├── backup-recovery.md       # 备份恢复
-│   ├── kernel_tuning.md         # 内核调优
-│   ├── performance-tuning.md    # 性能调优
-│   ├── security-hardening.md    # 安全加固
-│   ├── module_features.md       # 模块功能
-│   ├── common-issues.md         # 常见问题
-│   ├── diagnosis.md             # 故障诊断
-│   └── known-issues.md          # 已知问题
-├── Capital_Specifications/        # 规范与契约
-│   ├── TERMINOLOGY.md
+│   ├── AgentRT_quickstart.md      # 5分钟快速上手
+│   ├── AgentRT_deployment.md      # 生产环境部署指南
+│   ├── plugin-sdk-tutorial.md     # Plugin SDK开发教程
+│   ├── prompt-engineering.md      # Prompt工程指南
+│   ├── getting_started.md
+│   ├── installation.md
+│   ├── configuration.md
+│   ├── deployment.md
+│   ├── create_agent.md
+│   ├── create_skill.md
+│   ├── migration_guide.md
+│   ├── testing.md
+│   ├── monitoring.md
+│   ├── kubernetes-deployment.md
+│   ├── backup-recovery.md
+│   ├── kernel_tuning.md
+│   ├── performance-tuning.md
+│   ├── security-hardening.md
+│   ├── module_features.md
+│   ├── common-issues.md
+│   ├── diagnosis.md
+│   └── known-issues.md
+├── Capital_Specifications/         # 规范与契约
 │   ├── README.md
-│   ├── agentos_contract/         # 契约规范
+│   ├── agentos_contract/          # 契约规范
 │   │   ├── agent_contract.md
 │   │   ├── agent_contract_schema.json
 │   │   ├── skill_contract.md
@@ -311,7 +328,8 @@ docs/
 │   │   ├── syscall_api_contract.md
 │   │   ├── logging_format.md
 │   │   └── glossary_index.md
-│   ├── coding_standard/          # 编码规范
+│   ├── coding_standard/           # 编码规范
+│   │   ├── NAMING_CONVENTIONS.md  # 命名规范
 │   │   ├── C_coding_style_standard.md
 │   │   ├── Cpp_coding_style_standard.md
 │   │   ├── Python_coding_style_standard.md
@@ -321,20 +339,20 @@ docs/
 │   │   ├── Security_design_standard.md
 │   │   ├── Log_standard.md
 │   │   └── Code_comment_template.md
-│   ├── integration_standards/    # 集成标准
+│   ├── integration_standards/     # 集成标准
 │   │   ├── README.md
 │   │   └── INTEGRATION_STANDARD.md
-│   └── project_erp/             # 项目管理
+│   └── project_erp/              # 项目管理
 │       ├── SBOM.md
 │       ├── error_code_reference.md
 │       ├── manuals_module_requirements.md
 │       └── resource_management_table.md
-├── Source_Other/                 # 其他资源
+├── Source_Other/                  # 其他资源
 │   └── AgentOS-desktop-preview.gif
-├── White_Paper/                  # 白皮书
+├── White_Paper/                   # 白皮书
 │   ├── README.md
 │   └── history/
-└── Quote_Templates/              # 文档模板
+└── Quote_Templates/               # 文档模板
     ├── _template.md
     ├── _template_api.md
     └── _template_guide.md

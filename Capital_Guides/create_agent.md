@@ -160,7 +160,7 @@ my_agent/
 │   ├── main.c
 │   ├── my_agent.c
 │   └── handlers.c
-└── agentos/manager/
+└── ecosystem/manager/
     └── my_agent.yaml
 ```
 
@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
 
     // 加载配置
     agentos_config_t manager;
-    int ret = agentos_config_load("agentos/manager/my_agent.yaml", &manager);
+    int ret = agentos_config_load("ecosystem/manager/my_agent.yaml", &manager);
     if (ret != 0) {
         fprintf(stderr, "配置加载失败: %s\n", agentos_strerror(ret));
         return 1;
@@ -569,7 +569,7 @@ agentos-cli agent register \
     --name my_agent \
     --contract agent_contract.json \
     --binary /usr/local/lib/agentos/daemon/my_agent_d \
-    --manager agentos/manager/my_agent.yaml
+    --manager ecosystem/manager/my_agent.yaml
 
 # 启动 Agent
 agentos-cli agent start my_agent
@@ -583,7 +583,7 @@ agentos-cli agent status my_agent
 在安全穹顶中配置 Agent 权限：
 
 ```yaml
-# agentos/manager/security/policy.yaml
+# ecosystem/manager/security/policy.yaml
 agents:
   my_agent:
     sandbox: workbench

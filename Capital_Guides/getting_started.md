@@ -159,15 +159,15 @@ cmake .. -DAGENTOS_USE_CUDA=OFF
 cd ..
 
 # 复制配置文件
-cp agentos/manager/manager.example.yaml agentos/manager/manager.yaml
+cp ecosystem/manager/manager.example.yaml ecosystem/manager/manager.yaml
 
 # 编辑配置（可选）
-vim agentos/manager/manager.yaml
+vim ecosystem/manager/manager.yaml
 ```
 
 **关键配置项**:
 ```yaml
-# agentos/manager/manager.yaml
+# ecosystem/manager/manager.yaml
 kernel:
   log_level: INFO          # 日志级别
   max_workers: 8           # 最大工作线程数

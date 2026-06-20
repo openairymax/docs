@@ -1490,7 +1490,7 @@ typedef struct {
 
 ### C. 相关文档
 
-- [AgentRT 架构文档](architecture.md) — 系统整体架构和 MemoryRovol 四层记忆系统
+- [AgentRT 架构文档](../Capital_Architecture/architecture.md) — 系统整体架构和 MemoryRovol 四层记忆系统
 - [Prompts 模块 README](../ecosystem/prompts/README.md) — Prompt 模板管理详情
 - [Prompt Tuner Demo](../ecosystem/examples/prompt-tuner-demo/README.md) — Prompt 调优示例
 - [Multi-Agent Debate](../ecosystem/examples/multi-agent-debate/README.md) — 多 Agent 协作模式
