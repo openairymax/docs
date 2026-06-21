@@ -480,8 +480,8 @@ void test_full_system_config_load(void) {
 /* test_schema_validation.c - Schema 验证测试 */
 void test_valid_kernel_config_passes_validation(void) {
     int result = load_and_validate_config(
-        "../agentos/manager/kernel/settings.yaml",
-        "../agentos/manager/schema/kernel-settings.schema.json"
+        "../AgentRT/agentos/manager/kernel/settings.yaml",
+        "../AgentRT/agentos/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_EQ(result, 0);
 }
@@ -491,7 +491,7 @@ void test_invalid_config_fails_validation(void) {
     
     int result = load_and_validate_config(
         "temp_invalid_config.yaml",
-        "../agentos/manager/schema/kernel-settings.schema.json"
+        "../AgentRT/agentos/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_NEQ(result, 0);
     
@@ -592,8 +592,8 @@ export AGENTOS_DEBUG=1
 ## 十、参考文档
 
 - [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
-- [config_unified README.md](../../../agentos/commons/utils/config_unified/README.md) ✅
-- [CONFIG_CHANGE_PROCESS.md](../../../agentos/manager/CONFIG_CHANGE_PROCESS.md) ✅
+- [config_unified README.md](../../../AgentRT/agentos/commons/utils/config_unified/README.md) ✅
+- [CONFIG_CHANGE_PROCESS.md](../../../AgentRT/agentos/manager/CONFIG_CHANGE_PROCESS.md) ✅
 - [error_code_reference.md](../project_erp/error_code_reference.md) ✅
 - [error.h (C 内核错误码定义)](../../../AgentOS/agentos/commons/utils/error/include/error.h) ✅
 - [Integration Standards README](./README.md) ✅

@@ -743,7 +743,7 @@ if (agentos_sys_telemetry_traces(&traces) == AGENTOS_SUCCESS) {
 
 ### 4.1 错误码定义
 
-错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../agentos/commons/utils/error/include/error.h) 中，详见 [第 7 章 错误码](#第 7 章 错误码)。
+错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../AgentRT/agentos/commons/utils/error/include/error.h) 中，详见 [第 7 章 错误码](#第 7 章 错误码)。
 
 ### 4.2 错误处理策略
 

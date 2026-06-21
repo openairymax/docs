@@ -767,5 +767,5 @@ int main() {
 
 - [CoreLoopThree API](../core/coreloop_api.md)
 - [Protocol Stack API](../protocols/unified_protocol_api.md)
-- [Docker部署指南](../docker/README.md)
+- [Docker部署指南](../Docker/README.md)
 - [完整示例](../examples/full_agent_example.c)

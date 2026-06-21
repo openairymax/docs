@@ -105,7 +105,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 **贡献与测试**：
 
-- [**贡献指南**](../CONTRIBUTING.md) — 提交PR的完整流程
+- [**贡献指南**](../AgentRT/CONTRIBUTING.md) — 提交PR的完整流程
 - [**测试指南**](Capital_Guides/testing.md) — 单元测试、集成测试、E2E测试
 
 **编码规范**：
@@ -130,7 +130,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 生产环境的运维保障：
 
-- [**Docker部署**](../docker/README.md) — 容器化部署完整方案
+- [**Docker部署**](../Docker/README.md) — 容器化部署完整方案
 - [**Kubernetes部署**](Capital_Guides/kubernetes-deployment.md) — K8s集群编排
 - [**监控运维**](Capital_Guides/monitoring.md) — Prometheus+Grafana监控栈
 - [**备份恢复**](Capital_Guides/backup-recovery.md) — 数据备份与灾难恢复
@@ -195,7 +195,7 @@ AgentOS项目的标准化规范体系：
 
 - [**统一术语表**](Capital_Specifications/TERMINOLOGY.md) — 统一术语定义
 - [**变更日志**](../CHANGELOG.md) — 版本更新历史
-- [**许可证**](../LICENSE) — Apache-2.0 许可证全文
+- [**许可证**](../AgentRT/LICENSE) — Apache-2.0 许可证全文
 
 ---
 

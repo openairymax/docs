@@ -669,7 +669,7 @@ agentos_sys_free(agent_id);
 | [任务管理 API](./task.md) | 任务提交与查询 |
 | [Skill 契约规范](../../Capital_Specifications/agentos_contract/skill_contract.md) | Skill 契约定义与验证 |
 | [架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md) | 五维正交设计体系 |
-| [系统调用接口](../../../agentos/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
+| [系统调用接口](../../../AgentRT/agentos/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
 
 ---
 

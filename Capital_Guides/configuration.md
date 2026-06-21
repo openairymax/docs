@@ -622,7 +622,7 @@ daemons:
 | `POSTGRES_PASSWORD` | PostgreSQL密码 | - | ✅ |
 | `REDIS_PASSWORD` | Redis密码 | - | ✅ |
 
-完整环境变量示例请参考：[docker/.env.example](../docker/.env.example)
+完整环境变量示例请参考：[Docker/.env.example](../Docker/.env.example)
 
 ---
 

@@ -125,10 +125,10 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../core/include")
 
 # v1.0 - 按层引入
 include_directories(
-    "${CMAKE_CURRENT_SOURCE_DIR}/../agentos/atoms/corekern/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../agentos/atoms/coreloopthree/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../agentos/atoms/memoryrovol/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../agentos/atoms/syscall/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/corekern/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/coreloopthree/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/memoryrovol/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/syscall/include"
 )
 ```
 

@@ -471,7 +471,7 @@ grep DATABASE_URL docker/.env
 ## 📚 相关文档
 
 - [**配置指南**](configuration.md) — 完整的配置选项说明
-- [**Docker部署**](../docker/README.md) — Docker详细文档
+- [**Docker部署**](../Docker/README.md) — Docker详细文档
 - [**Kubernetes部署**](../operations/kubernetes-deployment.md) — K8s生产部署
 - [**故障排查**](../troubleshooting/common-issues.md) — 更多问题解决方案
 

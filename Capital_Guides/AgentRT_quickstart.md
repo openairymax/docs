@@ -252,8 +252,8 @@ app.run()
 | [⚙️ 编译指南](https://atomgit.com/openairymax/docs/blob/main/BUILD_GUIDE.md) | 详细的构建配置与选项说明 |
 | [🧪 测试指南](https://atomgit.com/openairymax/docs/blob/main/TESTING_GUIDE.md) | 单元测试、集成测试与契约测试 |
 | [🐳 部署指南](https://atomgit.com/openairymax/docs/blob/main/DEPLOYMENT_GUIDE.md) | Docker / Kubernetes 生产部署 |
-| [🔒 安全穹顶 (Cupolas)](../agentos/cupolas/README.md) | 四重内生安全体系详解 |
-| [🧠 CoreLoopThree](../agentos/atoms/coreloopthree/README.md) | Agent 认知循环核心机制 |
+| [🔒 安全穹顶 (Cupolas)](../AgentRT/agentos/cupolas/README.md) | 四重内生安全体系详解 |
+| [🧠 CoreLoopThree](../AgentRT/agentos/atoms/coreloopthree/README.md) | Agent 认知循环核心机制 |
 | [📦 SDK 工具包](../sdk/README.md) | Python / Go / Rust / TypeScript SDK 完整文档 |
 | [🎯 示例项目](../ecosystem/examples/hello-agent/README.md) | Hello Agent 示例项目详解 |
 

@@ -82,7 +82,7 @@ AgentOS 技术白皮书系统化阐述了：
 - **任务调度**：加权轮询策略，延迟 < 1ms
 - **高精度时间**：纳秒级定时器，误差 < 0.1%
 
-详见：[agentos/atoms/corekern](../../agentos/atoms/corekern/README.md) ✅
+详见：[agentos/atoms/corekern](../../AgentRT/agentos/atoms/corekern/README.md) ✅
 
 ### 三层认知循环（CoreLoopThree）⭐
 
@@ -102,7 +102,7 @@ AgentOS 技术白皮书系统化阐述了：
 - Agent 调度延迟：< 5ms
 - 实时反馈响应：< 1ms
 
-详见：[agentos/atoms/coreloopthree](../../agentos/atoms/coreloopthree/README.md) ✅
+详见：[agentos/atoms/coreloopthree](../../AgentRT/agentos/atoms/coreloopthree/README.md) ✅
 
 ### 四层记忆卷载（MemoryRovol）⭐
 
@@ -124,7 +124,7 @@ L1 原始卷（文件系统存储·分片压缩）
 - L2→L3 抽象速度：**100 条/秒**
 - L4 模式挖掘速度：**10 万条/分钟**
 
-详见：[agentos/atoms/memoryrovol](../../agentos/atoms/memoryrovol/README.md) ✅
+详见：[agentos/atoms/memoryrovol](../../AgentRT/agentos/atoms/memoryrovol/README.md) ✅
 
 ### 安全穹顶（cupolas）⭐
 
@@ -134,7 +134,7 @@ L1 原始卷（文件系统存储·分片压缩）
 - **输入净化**：正则过滤，风险等级标注（0-3 级）
 - **审计追踪**：异步写入，日志轮转，全链路记录
 
-详见：[cupolas](../../agentos/cupolas/README.md) ✅
+详见：[cupolas](../../AgentRT/agentos/cupolas/README.md) ✅
 
 ### Token 效率优势
 
@@ -143,7 +143,7 @@ L1 原始卷（文件系统存储·分片压缩）
 - **Token 利用率**：领先 **2-3 倍**
 - **原因**：分层上下文管理 + 记忆精准检索 + 预算控制机制
 
-详见：[utils/cost](../../agentos/commons/utils/cost/README.md) ✅
+详见：[utils/cost](../../AgentRT/agentos/commons/utils/cost/README.md) ✅
 
 ---
 

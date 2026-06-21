@@ -481,7 +481,7 @@ Content-Type: application/json
 
 ### 5.1 概述
 
-系统调用是用户态进入内核的唯一入口，定义在 [`agentos/atoms/syscall/include/syscalls.h`](../../agentos/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
+系统调用是用户态进入内核的唯一入口，定义在 [`agentos/atoms/syscall/include/syscalls.h`](../../AgentRT/agentos/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
 
 ### 5.2 函数签名规范
 
@@ -690,7 +690,7 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 > **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentos/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTOS_EINVAL = -2, AGENTOS_ENOMEM = -4, AGENTOS_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
 
-错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../agentos/commons/utils/error/include/error.h) 中：
+错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../AgentRT/agentos/commons/utils/error/include/error.h) 中：
 
 | 错误码 | 值 | 说明 |
 |--------|-----|------|
