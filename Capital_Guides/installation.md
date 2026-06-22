@@ -231,7 +231,7 @@ kubectl port-forward svc/agentos-kernel 8080:8080 -n agentos
 curl http://localhost:8080/health
 ```
 
-详细Kubernetes部署文档请参考：[Kubernetes部署指南](../operations/kubernetes-deployment.md)
+详细Kubernetes部署文档请参考：[Kubernetes部署指南](./kubernetes-deployment.md)
 
 ---
 
