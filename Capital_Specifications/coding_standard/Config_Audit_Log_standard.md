@@ -1,13 +1,11 @@
 SPDX-Copyright: Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 SPDX-License-Identifier: GPL-3.0-only
 
-# AgentOS 配置变更审计日志格式规范
+# Airymax 配置变更审计日志格式规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Config_Audit_Log_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -27,7 +25,7 @@ SPDX-License-Identifier: GPL-3.0-only
 
 ### 1.1 目的
 
-配置变更审计日志用于记录AgentOS Manager模块中所有配置文件的变更操作，提供：
+配置变更审计日志用于记录Airymax Manager模块中所有配置文件的变更操作，提供：
 
 - **可追溯性**: 完整记录谁在什么时间做了什么变更
 - **合规性**: 满足安全审计和合规要求
@@ -250,7 +248,7 @@ audit:
 
 ---
 
-**文档维护**: AgentOS Team  
+**文档维护**: Airymax Team  
 **最后更新**: 2026-04-05  
 
 © 2026 SPHARX Ltd. All Rights Reserved.

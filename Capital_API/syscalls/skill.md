@@ -1,24 +1,22 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Skill 管理 API
+# Airymax Skill 管理 API
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/syscalls/skill.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-Skill 管理 API 提供 AgentOS 技能（Skill）的完整生命周期管理。Skill 是 AgentOS 中可复用的能力单元，遵循**市场-安装-执行-卸载**的标准化流程。每个 Skill 通过 URL 标识来源，安装后获得唯一 Skill ID，可被 Agent 绑定调用，也可独立执行。
+Skill 管理 API 提供 Airymax 技能（Skill）的完整生命周期管理。Skill 是 Airymax 中可复用的能力单元，遵循**市场-安装-执行-卸载**的标准化流程。每个 Skill 通过 URL 标识来源，安装后获得唯一 Skill ID，可被 Agent 绑定调用，也可独立执行。
 
 Skill 系统与 Agent 系统协同工作：Agent 通过 `agentos_agent_skill_bind()` 绑定 Skill 获得扩展能力，Skill 也可通过 `agentos_sys_skill_execute()` 独立执行。这种设计遵循**关注点分离**原则——Agent 负责任务编排，Skill 负责具体能力实现。
 
 ### 🧩 五维正交原则体现
 
-Skill 管理 API 深度体现了 AgentOS 的五维正交设计原则：
+Skill 管理 API 深度体现了 Airymax 的五维正交设计原则：
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|
@@ -298,7 +296,7 @@ agentos_error_t agentos_sys_skill_execute(const char* skill_id,
 
 ```c
 const char* skill_id = "skill_0";
-const char* input = "{\"query\": \"AgentOS architecture\", \"limit\": 5}";
+const char* input = "{\"query\": \"Airymax architecture\", \"limit\": 5}";
 char* output = NULL;
 
 agentos_error_t err = agentos_sys_skill_execute(skill_id, input, &output);
@@ -674,7 +672,7 @@ agentos_sys_free(agent_id);
 ---
 
 **最后更新**: 2026-04-12  
-**维护者**: AgentOS API 委员会 (作者: LirenWang)
+**维护者**: Airymax API 委员会 
 
 ---
 

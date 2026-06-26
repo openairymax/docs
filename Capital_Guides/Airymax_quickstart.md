@@ -1,4 +1,4 @@
-# AgentRT 5 分钟快速上手指南
+# Airymax 5 分钟快速上手指南
 
 > **P4.3.1** — 5 分钟从零到 Hello World
 >
@@ -67,12 +67,12 @@ docker run -d --name agentrt \
 
 ## 3. Hello World：启动网关并提交第一个任务
 
-AgentRT 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。以下示例演示如何启动网关、注册一个 Agent 并提交任务。
+Airymax 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。以下示例演示如何启动网关、注册一个 Agent 并提交任务。
 
 ### 3.1 启动网关
 
 ```bash
-# 启动 AgentRT 网关（默认监听 0.0.0.0:8080）
+# 启动 Airymax 网关（默认监听 0.0.0.0:8080）
 ./agentrt-gateway --host 0.0.0.0 --port 8080
 ```
 
@@ -107,7 +107,7 @@ curl -X POST http://localhost:8080/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "agent": "hello-agent",
-    "message": "你好，请介绍一下 AgentRT"
+    "message": "你好，请介绍一下 Airymax"
   }'
 ```
 
@@ -118,7 +118,7 @@ curl -X POST http://localhost:8080/api/v1/chat \
   "jsonrpc": "2.0",
   "result": {
     "agent": "hello-agent",
-    "reply": "AgentRT 是一个智能体运行时平台，它为驱动 AI Agent 团队提供操作系统级的支持..."
+    "reply": "Airymax 是一个智能体运行时平台，它为驱动 AI Agent 团队提供操作系统级的支持..."
   },
   "id": 1
 }
@@ -128,7 +128,7 @@ curl -X POST http://localhost:8080/api/v1/chat \
 
 ## 4. SDK 快速上手：用 Python 创建你的第一个 Agent
 
-AgentRT 提供多语言 SDK，支持 Python、Go、Rust、TypeScript。以下以 Python SDK 为例展示如何创建一个简单的 Agent。
+Airymax 提供多语言 SDK，支持 Python、Go、Rust、TypeScript。以下以 Python SDK 为例展示如何创建一个简单的 Agent。
 
 ### 4.1 安装 Python SDK
 
@@ -141,20 +141,20 @@ pip install agentos
 创建一个文件 `hello_agent.py`：
 
 ```python
-"""hello_agent.py — 你的第一个 AgentRT Agent"""
+"""hello_agent.py — 你的第一个 Airymax Agent"""
 
-from agentos import AgentOS
+from agentos import Airymax
 
-# 连接 AgentRT 运行时
-client = AgentOS(endpoint="http://localhost:18789", timeout=30)
+# 连接 Airymax 运行时
+client = Airymax(endpoint="http://localhost:18789", timeout=30)
 
 # 提交一个任务
 task = client.submit_task(
-    description="请用一句话介绍 AgentRT 的核心优势",
+    description="请用一句话介绍 Airymax 的核心优势",
     agent_config={
         "name": "hello-agent",
         "model": "gpt-4o-mini",
-        "system_prompt": "你是一个专业的 AgentRT 技术顾问。"
+        "system_prompt": "你是一个专业的 Airymax 技术顾问。"
     }
 )
 
@@ -164,13 +164,13 @@ print(f"Agent 回复: {result.output}")
 
 # 写入记忆
 memory_id = client.write_memory(
-    content="AgentRT 的核心优势：操作系统级架构、安全内生设计、Token 节省约 500%。",
+    content="Airymax 的核心优势：操作系统级架构、安全内生设计、Token 节省约 500%。",
     metadata={"source": "hello_agent", "tag": "intro"}
 )
 print(f"记忆已写入: {memory_id}")
 
 # 搜索记忆
-memories = client.search_memory("AgentRT 优势", top_k=3)
+memories = client.search_memory("Airymax 优势", top_k=3)
 for m in memories:
     print(f"  [{m.score:.2f}] {m.memory.content}")
 
@@ -244,11 +244,11 @@ app.run()
 
 ## 5. 下一步
 
-恭喜！你已经完成了 AgentRT 的快速上手。接下来可以深入了解：
+恭喜！你已经完成了 Airymax 的快速上手。接下来可以深入了解：
 
 | 文档 | 说明 |
 |:-----|:-----|
-| [📘 架构原则](https://atomgit.com/openairymax/docs/blob/main/ARCHITECTURAL_PRINCIPLES.md) | 理解 AgentRT 的五维正交设计体系 |
+| [📘 架构原则](https://atomgit.com/openairymax/docs/blob/main/ARCHITECTURAL_PRINCIPLES.md) | 理解 Airymax 的五维正交设计体系 |
 | [⚙️ 编译指南](https://atomgit.com/openairymax/docs/blob/main/BUILD_GUIDE.md) | 详细的构建配置与选项说明 |
 | [🧪 测试指南](https://atomgit.com/openairymax/docs/blob/main/TESTING_GUIDE.md) | 单元测试、集成测试与契约测试 |
 | [🐳 部署指南](https://atomgit.com/openairymax/docs/blob/main/DEPLOYMENT_GUIDE.md) | Docker / Kubernetes 生产部署 |

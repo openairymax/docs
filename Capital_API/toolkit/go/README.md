@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Go SDK
+# Airymax Go SDK
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/toolkit/go/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-AgentOS Go SDK 提供对 AgentOS 系统调用 API 的惯用 Go 封装。SDK 遵循 Go 语言习惯，支持 context 传递、错误处理和并发模式，同时保持与底层 C API 的完整功能对应。
+Airymax Go SDK 提供对 Airymax 系统调用 API 的惯用 Go 封装。SDK 遵循 Go 语言习惯，支持 context 传递、错误处理和并发模式，同时保持与底层 C API 的完整功能对应。
 
 ### 🧩 五维正交原则体现
 
-Go SDK 将 AgentOS 的五维正交设计原则深度融入 Go 语言特性中：
+Go SDK 将 Airymax 的五维正交设计原则深度融入 Go 语言特性中：
 
 | 维度 | Go 语言特性体现 | SDK 具体实现 |
 |------|----------------|-------------|
@@ -57,7 +55,7 @@ func main() {
     // 创建 Agent 配置
     manager := &agentos.AgentConfig{
         Name:                "my_agent",
-        Description:         "My first AgentOS agent",
+        Description:         "My first Airymax agent",
         Type:                agentos.AgentTypeChat,
         MaxConcurrentTasks:  8,
         TaskQueueDepth:      64,

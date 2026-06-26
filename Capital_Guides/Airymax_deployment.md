@@ -1,8 +1,8 @@
-# AgentRT 部署指南
+# Airymax 部署指南
 
 > **文档编号**: P4.3.7  
 > **版本**: 0.1.1  
-> **适用范围**: AgentRT v0.1.1  
+> **适用范围**: Airymax v0.1.1  
 > **最后更新**: 2026-06-18
 
 ---
@@ -26,7 +26,7 @@
 
 ## 1. 部署架构概览
 
-AgentRT 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层 DAG 架构设计。系统支持三种部署模式：
+Airymax 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层 DAG 架构设计。系统支持三种部署模式：
 
 ### 1.1 单节点部署（Single-Node）
 
@@ -144,7 +144,7 @@ AgentRT 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层
 
 ## 3. Docker 部署
 
-AgentRT 提供了两套 Docker 部署方案：
+Airymax 提供了两套 Docker 部署方案：
 - **`deploy/docker/`**：全系统多服务编排（内核 + 服务层 + 基础设施）
 
 以下以 `deploy/docker/` 全系统方案为例。
@@ -671,7 +671,7 @@ kubectl delete pvc -n agentrt -l app.kubernetes.io/instance=agentrt
 
 ### 5.1 环境变量
 
-AgentRT 通过环境变量进行主要配置。完整的变量列表参考 `configs/env.example`：
+Airymax 通过环境变量进行主要配置。完整的变量列表参考 `configs/env.example`：
 
 #### 核心配置
 
@@ -736,7 +736,7 @@ AgentRT 通过环境变量进行主要配置。完整的变量列表参考 `conf
 
 ### 5.2 配置文件
 
-AgentRT 使用 YAML 格式的配置文件管理 daemon 间服务发现和参数：
+Airymax 使用 YAML 格式的配置文件管理 daemon 间服务发现和参数：
 
 - **内核配置**: `ecosystem/manager/kernel/kernel.yaml`
 - **服务配置**: `ecosystem/manager/services/`
@@ -801,7 +801,7 @@ kubectl create secret generic agentrt-api-keys \
 
 ### 6.1 启动 DAG
 
-AgentRT 采用 5 层 DAG 启动顺序，每层内 daemon 可并行启动，跨层必须等待前层健康检查通过：
+Airymax 采用 5 层 DAG 启动顺序，每层内 daemon 可并行启动，跨层必须等待前层健康检查通过：
 
 ```
 Layer 0（基础设施 - 无依赖，并行启动）:
@@ -834,24 +834,24 @@ Layer 4（网关 - 依赖 Layer 2 和 Layer 3）:
 ```ini
 # agentrt-monit.service — Layer 0
 [Unit]
-Description=AgentRT Monitor Daemon
+Description=Airymax Monitor Daemon
 After=network.target
 
 # agentrt-sched.service — Layer 1
 [Unit]
-Description=AgentRT Scheduler Daemon
+Description=Airymax Scheduler Daemon
 After=network.target agentrt-observe.service
 Requires=agentrt-observe.service
 
 # agentrt-llm.service — Layer 2
 [Unit]
-Description=AgentRT LLM Daemon
+Description=Airymax LLM Daemon
 After=network.target agentrt-sched.service
 Requires=agentrt-sched.service
 
 # agentrt-gateway.service — Layer 4
 [Unit]
-Description=AgentRT Gateway Daemon
+Description=Airymax Gateway Daemon
 After=network.target agentrt-llm.service agentrt-tool.service agentrt-market.service
 Requires=agentrt-llm.service agentrt-tool.service agentrt-market.service
 ```
@@ -860,7 +860,7 @@ Requires=agentrt-llm.service agentrt-tool.service agentrt-market.service
 
 ```ini
 [Unit]
-Description=AgentRT Full Service Stack
+Description=Airymax Full Service Stack
 After=agentrt-monit.service agentrt-observe.service agentrt-info.service agentrt-notify.service
 After=agentrt-sched.service agentrt-channel.service
 After=agentrt-llm.service agentrt-tool.service agentrt-hook.service agentrt-plugin.service
@@ -986,7 +986,7 @@ readinessProbe:
 
 ### 7.1 PostgreSQL 配置
 
-AgentRT 使用 PostgreSQL 15 作为 heapstore 元数据存储。
+Airymax 使用 PostgreSQL 15 作为 heapstore 元数据存储。
 
 **Docker Compose 配置**：
 
@@ -1130,7 +1130,7 @@ alerting:
           - alertmanager:9093
 
 scrape_configs:
-  # AgentRT 自身指标
+  # Airymax 自身指标
   - job_name: 'agentos-gateway'
     static_configs:
       - targets: ['gateway:9090']
@@ -1247,7 +1247,7 @@ grafana-prod:
 
 ### 9.1 日志配置
 
-AgentRT 支持结构化日志（JSON）和普通文本格式：
+Airymax 支持结构化日志（JSON）和普通文本格式：
 
 ```bash
 # 环境变量
@@ -1307,12 +1307,12 @@ volumes:
 
 ### 9.4 分布式追踪 (Tracing)
 
-AgentRT 使用 OpenTelemetry + Jaeger 实现分布式追踪。
+Airymax 使用 OpenTelemetry + Jaeger 实现分布式追踪。
 
 **架构**：
 
 ```
-AgentRT Daemon → OTLP (gRPC :4317) → OpenTelemetry Collector → Jaeger (:14250)
+Airymax Daemon → OTLP (gRPC :4317) → OpenTelemetry Collector → Jaeger (:14250)
                                                               → Prometheus (:8888)
 ```
 

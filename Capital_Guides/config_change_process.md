@@ -1,15 +1,13 @@
-# AgentOS 配置变更流程
+# Airymax 配置变更流程
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/config_change_process.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、概述
 
-本文档定义了 AgentOS 配置变更的标准流程，确保配置变更的可追溯性、安全性和一致性。
+本文档定义了 Airymax 配置变更的标准流程，确保配置变更的可追溯性、安全性和一致性。
 
 ### 1.1 配置变更原则
 
@@ -54,7 +52,7 @@
 _owner:
   module: "cupolas"                    # 内容归属模块
   contact: "cupolas-team@spharx.cn"    # 联系方式
-  path: "AgentOS/cupolas"              # 模块路径
+  path: "AgentRT/cupolas"              # 模块路径
   description: "内容定义责任归属 cupolas 模块，管理责任归属 Manager 模块"
 ```
 

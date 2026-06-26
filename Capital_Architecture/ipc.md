@@ -1,33 +1,30 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 进程间通信（IPC）架构详解
+# Airymax 进程间通信（IPC）架构详解
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Architecture/ipc.md
-**作者**:
-    - Zhixian Zhou、Liren Wang
 
 ## 文档信息
 
 | 字段 | 值 |
 |------|-----|
-| 文档名称 | AgentOS 进程间通信（IPC）架构详解 |
+| 文档名称 | Airymax 进程间通信（IPC）架构详解 |
 | 适用版本 | v1.0.0+ |
-| 作者 | LirenWang |
 
 ---
 
 ## 1. 概述
 
-AgentOS 的进程间通信（IPC）系统基于 **IPC Binder** 实现，是 **体系并行论 (MCIS)** 与 **工程两论** 在进程通信层面的核心实践。IPC Binder 通过共享内存和信号量机制提供高效、安全、可靠的跨进程通信，形成微核心架构的控制论反馈回路，确保系统各组件间的协同工作与动态平衡。
+Airymax 的进程间通信（IPC）系统基于 **IPC Binder** 实现，是 **体系并行论 (MCIS)** 与 **工程两论** 在进程通信层面的核心实践。IPC Binder 通过共享内存和信号量机制提供高效、安全、可靠的跨进程通信，形成微核心架构的控制论反馈回路，确保系统各组件间的协同工作与动态平衡。
 
 从 **体系并行论** 视角分析，IPC 系统是 MCIS 中 **多体协同 (Multi-Body Collaboration)** 机制的具体实现。通过高效的进程间通信，实现了认知体、执行体、记忆体等不同 **体 (Body)** 之间的数据交换与状态同步，支撑了智能体系统的整体协同工作。
 
-作为 AgentOS **系统观维度** 的关键组件，IPC 系统将微核心的机制与策略分离原则具象化为可执行的通信协议，通过零拷贝传输、无锁环形缓冲区等极致优化，体现 **设计美学** 中简约至上与极致细节的平衡。同时，IPC 系统也与 **工程观维度**（性能优化）、**认知观维度**（跨进程认知支持）、**内核观维度**（微核心通信基础）形成正交协同，共同构成 AgentOS 完整的通信基础设施。
+作为 Airymax **系统观维度** 的关键组件，IPC 系统将微核心的机制与策略分离原则具象化为可执行的通信协议，通过零拷贝传输、无锁环形缓冲区等极致优化，体现 **设计美学** 中简约至上与极致细节的平衡。同时，IPC 系统也与 **工程观维度**（性能优化）、**认知观维度**（跨进程认知支持）、**内核观维度**（微核心通信基础）形成正交协同，共同构成 Airymax 完整的通信基础设施。
 
-IPC Binder 不仅是进程间数据传输的技术通道，更是智能体系统中 **控制论负反馈回路** 的物理实现。通过高效的信号量同步和消息队列机制，确保了系统各组件间的状态协调与动态平衡，为整个 AgentOS 生态提供高效、可靠、安全的进程间通信基础设施。
+IPC Binder 不仅是进程间数据传输的技术通道，更是智能体系统中 **控制论负反馈回路** 的物理实现。通过高效的信号量同步和消息队列机制，确保了系统各组件间的状态协调与动态平衡，为整个 Airymax 生态提供高效、可靠、安全的进程间通信基础设施。
 
 ### 1.1 设计理念
 
@@ -41,7 +38,6 @@ IPC Binder 不仅是进程间数据传输的技术通道，更是智能体系统
 │         IPC Binder (Kernel)              │
 │  • Shared Memory Management              │
 │  • Semaphore Synchronization             │
-<!-- From data intelligence emerges. by spharx -->
 │  • Message Queue                         │
 │  • Service Registry                      │
 └───────────────↑─────────────────────────┘
@@ -951,7 +947,7 @@ agentos_ipc_recv(channel, (void**)&response, &len, 5000);
 
 | 技术 | 延迟 (μs) | 吞吐量 (msg/s) | CPU 占用 | 内存拷贝 |
 | :--- | :---: | :---: | :---: | :---: |
-| **AgentOS IPC Binder** | **8** | **100K** | **低** | **零拷贝** |
+| **Airymax IPC Binder** | **8** | **100K** | **低** | **零拷贝** |
 | Linux AF_UNIX (stream) | 25 | 40K | 中 | 2 次拷贝 |
 | Linux Binder (Android) | 15 | 60K | 中 | 1 次拷贝 |
 | POSIX mmap + sem | 10 | 80K | 低 | 零拷贝 |
@@ -959,7 +955,7 @@ agentos_ipc_recv(channel, (void**)&response, &len, 5000);
 
 **跨平台 IPC 对比**:
 
-| 特性 | AgentOS | Windows ALPC | macOS Mach Ports | Fuchsia Zircon |
+| 特性 | Airymax | Windows ALPC | macOS Mach Ports | Fuchsia Zircon |
 | :--- | :--- | :--- | :--- | :--- |
 | **延迟** | 8μs | 12μs | 15μs | 10μs |
 | **吞吐量** | 100K msg/s | 80K msg/s | 60K msg/s | 90K msg/s |
@@ -969,7 +965,7 @@ agentos_ipc_recv(channel, (void**)&response, &len, 5000);
 | **跨语言** | ✅ C/C++/Go/Rust | ✅ .NET/C++ | ✅ Objective-C/Swift | ✅ Rust/C++ |
 
 **设计哲学对比**:
-- **AgentOS**: 极简主义 + 高性能（Liedtke 微核心原则）
+- **Airymax**: 极简主义 + 高性能（Liedtke 微核心原则）
 - **Windows ALPC**: 安全性优先（完整性级别、沙箱隔离）
 - **Mach ports**: 通用性优先（消息传递抽象）
 - **Fuchsia Zircon**: 现代设计（类型安全、形式化验证规划中）

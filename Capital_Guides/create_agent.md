@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Agent 创建指南
+# Airymax Agent 创建指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/create_agent.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-Agent 是 AgentOS 的核心执行实体。每一个 Agent 都是一个自主运行的单元，拥有独立的生命周期、技能集合和记忆空间。本文档将引导你从零开始创建一个符合 AgentOS 契约规范的生产级 Agent。
+Agent 是 Airymax 的核心执行实体。每一个 Agent 都是一个自主运行的单元，拥有独立的生命周期、技能集合和记忆空间。本文档将引导你从零开始创建一个符合 Airymax 契约规范的生产级 Agent。
 
 ### 1.1 Agent 在架构中的位置
 
@@ -45,7 +43,7 @@ Agent 以守护进程 (`_d`) 的形式运行在用户态，通过系统调用与
 
 ### 1.3 理论基础：MCIS视角的Agent创建
 
-Agent 是 **体系并行论 (MCIS)** 理论在 AgentOS 中的具体实现。从 MCIS 视角理解 Agent 创建过程，有助于深入把握 Agent 的设计哲学与实现原理：
+Agent 是 **体系并行论 (MCIS)** 理论在 Airymax 中的具体实现。从 MCIS 视角理解 Agent 创建过程，有助于深入把握 Agent 的设计哲学与实现原理：
 
 #### Agent 作为完整的 MCIS 系统
 
@@ -90,20 +88,20 @@ Agent 的创建过程实际上是 MCIS 系统的构建过程：
 |------|---------|---------|
 | CMake | 3.20+ | 3.28+ |
 | C 编译器 (GCC/Clang/MSVC) | C11 | C17 |
-| AgentOS 内核 | v1.0.0 | v1.0.0.6 |
-| AgentOS CLI | v1.0.0 | v1.0.0.6 |
+| Airymax 内核 | v1.0.0 | v1.0.0.6 |
+| Airymax CLI | v1.0.0 | v1.0.0.6 |
 
 ### 2.2 知识储备
 
 - 熟悉 C11 语言标准
-- 了解 AgentOS 微核心架构（参见 [ARCHITECTURAL_PRINCIPLES.md](../architecture/ARCHITECTURAL_PRINCIPLES.md)）
+- 了解 Airymax 微核心架构（参见 [ARCHITECTURAL_PRINCIPLES.md](../architecture/ARCHITECTURAL_PRINCIPLES.md)）
 - 理解 Agent Contract 契约（参见 [agent_contract.md](../specifications/agentos_contract/agent/agent_contract.md)）
 
 ---
 
 ## 3. Agent 生命周期
 
-理解 Agent 的生命周期是创建 Agent 的基础。AgentOS 中 Agent 的状态转换如下：
+理解 Agent 的生命周期是创建 Agent 的基础。Airymax 中 Agent 的状态转换如下：
 
 ```
                  ┌──────────┐
@@ -210,8 +208,8 @@ project(my_agent VERSION 1.0.0 LANGUAGES C)
 set(C_STANDARD 11)
 set(C_STANDARD_REQUIRED ON)
 
-# 依赖 AgentOS 内核头文件
-find_package(AgentOS REQUIRED COMPONENTS corekern syscall)
+# 依赖 Airymax 内核头文件
+find_package(Airymax REQUIRED COMPONENTS corekern syscall)
 
 add_executable(my_agent_d
     src/main.c
@@ -220,7 +218,7 @@ add_executable(my_agent_d
 )
 
 target_include_directories(my_agent_d PRIVATE include)
-target_link_libraries(my_agent_d PRIVATE AgentOS::syscall)
+target_link_libraries(my_agent_d PRIVATE Airymax::syscall)
 
 # 安装为守护进程
 install(TARGETS my_agent_d DESTINATION lib/agentos/daemon)
@@ -709,7 +707,7 @@ if (ret != 0) {
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 核心团队
+**维护者**: Airymax 核心团队
 
 ---
 

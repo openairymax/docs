@@ -1,14 +1,12 @@
-# AgentOS 多协议网关快速入门
+# Airymax 多协议网关快速入门
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/quickstart_protocol_gateway.md
-**作者**:
-    - Liren Wang
 
 ## 概述
 
-AgentOS 智能网关支持四种主流协议的统一接入与互转，让你可以在同一个网关上同时服务不同类型的客户端：
+Airymax 智能网关支持四种主流协议的统一接入与互转，让你可以在同一个网关上同时服务不同类型的客户端：
 
 | 协议 | 版本 | 典型场景 |
 |------|------|---------|
@@ -46,8 +44,8 @@ brew install cmake ninja curl yaml cjson openssl
 ### 获取源码
 
 ```bash
-git clone https://github.com/your-org/AgentOS.git
-cd AgentOS
+git clone https://github.com/your-org/Airymax.git
+cd Airymax
 git submodule update --init --recursive
 ```
 
@@ -112,7 +110,7 @@ curl -X POST http://localhost:18789/v1/chat/completions \
   -H "Authorization: Bearer your-api-key" \
   -d '{
     "model": "agentos-default",
-    "messages": [{"role": "user", "content": "Hello, AgentOS!"}]
+    "messages": [{"role": "user", "content": "Hello, Airymax!"}]
   }'
 ```
 
@@ -166,7 +164,7 @@ curl -X POST http://localhost:18789/api/v1/invoke \
 ## 第五步：运行兼容性测试
 
 ```bash
-cd AgentOS
+cd Airymax
 
 # 运行完整协议兼容性测试套件
 python3 tests/integration/test_protocol_compatibility.py \
@@ -183,7 +181,7 @@ python3 tests/benchmarks/benchmark_performance.py \
 
 ## 使用桌面客户端
 
-AgentOS 提供基于 Tauri v2 的桌面客户端，内置协议游乐场：
+Airymax 提供基于 Tauri v2 的桌面客户端，内置协议游乐场：
 
 ```bash
 cd scripts/desktop-client

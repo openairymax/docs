@@ -1,15 +1,13 @@
-# AgentOS 安全加固指南
+# Airymax 安全加固指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/security-hardening.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 概述
 
-本文档提供 AgentOS 系统的安全加固指南，基于 **五维正交系统** 的安全观维度和 **零信任安全模型**，实现纵深防御体系。从微核心到应用层，从身份认证到数据加密，全面保障系统安全。
+本文档提供 Airymax 系统的安全加固指南，基于 **五维正交系统** 的安全观维度和 **零信任安全模型**，实现纵深防御体系。从微核心到应用层，从身份认证到数据加密，全面保障系统安全。
 
 ## 安全设计原则
 
@@ -229,13 +227,13 @@ iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 # 允许 SSH (端口22)
 iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 
-# 允许 AgentOS 服务端口
+# 允许 Airymax 服务端口
 iptables -A INPUT -p tcp --dport 8080 -j ACCEPT  # HTTP 网关
 iptables -A INPUT -p tcp --dport 8443 -j ACCEPT  # HTTPS 网关
 
 # 允许 Prometheus 监控端口
 iptables -A INPUT -p tcp --dport 9090 -j ACCEPT  # Prometheus
-iptables -A INPUT -p tcp --dport 9091 -j ACCEPT  # AgentOS 指标
+iptables -A INPUT -p tcp --dport 9091 -j ACCEPT  # Airymax 指标
 
 # 保存规则
 iptables-save > /etc/iptables/rules.v4
@@ -631,7 +629,7 @@ awareness_program:
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V2.0 | 2026-04-10 | AgentOS 安全团队 | 初始版本，基于零信任模型和五维正交系统设计安全加固指南 |
+| Doc V2.0 | 2026-04-10 | Airymax 安全团队 | 初始版本，基于零信任模型和五维正交系统设计安全加固指南 |
 | Doc V2.0 | 2026-03-31 | 模板 | 文档模板 |
 
 ---

@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Agent 管理 API
+# Airymax Agent 管理 API
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/syscalls/agent.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-Agent 管理 API 提供 AgentOS Agent 实例的完整生命周期管理。每个 Agent 遵循**双系统认知理论**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。Agent 状态机严格定义合法转换，确保系统稳定性。
+Agent 管理 API 提供 Airymax Agent 实例的完整生命周期管理。每个 Agent 遵循**双系统认知理论**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。Agent 状态机严格定义合法转换，确保系统稳定性。
 
 ### 🧩 五维正交原则体现
 
-Agent 管理 API 深度体现了 AgentOS 的五维正交设计原则：
+Agent 管理 API 深度体现了 Airymax 的五维正交设计原则：
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|

@@ -1,14 +1,12 @@
-# AgentOS 故障排查与FAQ手册
+# Airymax 故障排查与FAQ手册
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/troubleshooting_faq.md
-**作者**:
-    - Liren Wang
 
 ## 概述
 
-本手册涵盖 AgentOS 常见故障的诊断方法、解决方案和预防措施，按系统模块分类组织。
+本手册涵盖 Airymax 常见故障的诊断方法、解决方案和预防措施，按系统模块分类组织。
 
 ---
 
@@ -372,13 +370,13 @@ curl -s 'http://localhost:9090/api/v1/query?query=up'
 
 ## 八、FAQ
 
-### Q1: AgentOS 支持哪些操作系统？
+### Q1: Airymax 支持哪些操作系统？
 **A**: Ubuntu 22.04+, macOS 13+, Windows 11 (WSL2)。生产环境推荐Ubuntu 22.04 LTS。
 
 ### Q2: 最低硬件要求是什么？
 **A**: 开发环境 2核CPU/4GB内存/20GB磁盘；生产环境 4核CPU/8GB内存/50GB磁盘。
 
-### Q3: 如何查看AgentOS版本？
+### Q3: 如何查看Airymax版本？
 **A**: `./bin/gateway_d --version` 或 `curl http://localhost:18789/health`
 
 ### Q4: 如何启用多协议支持？

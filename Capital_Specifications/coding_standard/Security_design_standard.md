@@ -1,24 +1,22 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 安全设计指南
+# Airymax 安全设计指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Security_design_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、概述
 
 ### 1.1 编制目的
 
-本指南为 AgentOS 项目提供全面的安全设计标准。基于项目架构设计原则的五维正交系统，本指南聚焦于安全观维度（D-1至D-4安全工程原则），阐述如何通过安全穹顶 (cupolas) 实现纵深防御。
+本指南为 Airymax 项目提供全面的安全设计标准。基于项目架构设计原则的五维正交系统，本指南聚焦于安全观维度（D-1至D-4安全工程原则），阐述如何通过安全穹顶 (cupolas) 实现纵深防御。
 
-### 1.2 与 AgentOS 架构的关系
+### 1.2 与 Airymax 架构的关系
 
-基于架构设计原则**E-1（安全内生原则）**，AgentOS 的安全穹顶（cupolas）采用四层防护体系：
+基于架构设计原则**E-1（安全内生原则）**，Airymax 的安全穹顶（cupolas）采用四层防护体系：
 
 | 层次 | 名称 | 组件路径 | 功能 | 实现机制 |
 |------|------|---------|------|---------|
@@ -48,7 +46,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     AgentOS 系统边界                         │
+│                     Airymax 系统边界                         │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │              D1: 虚拟工位 (Virtual Workspace)           │  │
 │  │  ┌───────────────────────────────────────────────────┐  │  │
@@ -890,9 +888,9 @@ void* secure_calloc(size_t nmemb, size_t size);
 
 ### 9.1 建模方法论
 
-所有 AgentOS 组件在安全设计阶段**必须**进行 STRIDE 威胁建模，识别并记录潜在威胁后再制定防护措施。
+所有 Airymax 组件在安全设计阶段**必须**进行 STRIDE 威胁建模，识别并记录潜在威胁后再制定防护措施。
 
-| 威胁类型 | 英文 | 安全属性 | AgentOS 典型场景 |
+| 威胁类型 | 英文 | 安全属性 | Airymax 典型场景 |
 |----------|------|----------|-----------------|
 | **欺骗** | Spoofing | 身份认证 | 伪造 JWT 令牌、冒充合法进程 |
 | **篡改** | Tampering | 完整性 | 修改审计日志、注入恶意配置 |
@@ -920,7 +918,7 @@ void* secure_calloc(size_t nmemb, size_t size);
 | **工具** | CodeQL（必选）、Coverity（推荐）、cppcheck（C/C++ 基础检查） |
 | **触发时机** | 每次 PR/MR 提交自动运行；主分支每日全量扫描 |
 | **阻断规则** | 高严重度（Critical/High）发现必须阻断合并；中严重度需在 7 天内修复 |
-| **自定义规则** | 针对 AgentOS BAN-01~13 禁止模式编写 CodeQL 自定义查询 |
+| **自定义规则** | 针对 Airymax BAN-01~13 禁止模式编写 CodeQL 自定义查询 |
 | **误报处理** | 标记为误报的发现需经安全团队审核确认，不得由开发者单方面关闭 |
 
 ### 10.2 动态应用安全测试（DAST）
@@ -946,7 +944,7 @@ void* secure_calloc(size_t nmemb, size_t size);
 
 ### 11.1 数据保护合规
 
-| 法规 | 要求 | AgentOS 实现 |
+| 法规 | 要求 | Airymax 实现 |
 |------|------|--------------|
 | GDPR | 数据主体权利 | D4 审计、D3 输入控制 |
 | 最小化收集 | 只收集必要数据 | 数据最小化配置 |
@@ -985,10 +983,10 @@ compliance:
 
 ---
 
-## 十二、AgentOS 模块安全设计示例
+## 十二、Airymax 模块安全设计示例
 
 ### 12.1 安全穹顶 (cupolas) 安全设计
-安全穹顶 (cupolas) 模块实现AgentOS的安全穹顶，是安全设计的核心：
+安全穹顶 (cupolas) 模块实现Airymax的安全穹顶，是安全设计的核心：
 
 #### 12.1.1 虚拟工位（Virtual Workbench）安全设计（映射原则：D-2 安全隔离）
 ```python
@@ -1343,13 +1341,13 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 
 ## 十三、参考文献
 
-1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
-2. **AgentOS 微核心设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
-3. **AgentOS 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
+1. **Airymax 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
+2. **Airymax 微核心设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
+3. **Airymax 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
 4. **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 5. **NIST Cybersecurity Framework**: https://www.nist.gov/cyberframework
 6. **ISO 27001**: https://www.iso.org/isoiec-27001-information-security.html
-7. **AgentOS 核心架构文档**:
+7. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
    - [ipc.md](../../Capital_Architecture/ipc.md)
@@ -1360,7 +1358,7 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有安全设计须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有安全设计须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|

@@ -1,10 +1,8 @@
-# AgentOS 内核编译指南
+# Airymax 内核编译指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/build_guide.md
-**作者**:
-    - Liren Wang
 
 ## 1. 环境要求
 

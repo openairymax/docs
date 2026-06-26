@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 规范集术语表与快速索引
+# Airymax 规范集术语表与快速索引
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/glossary_index.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 使用说明
 
-本文档是 AgentOS 规范集的**快速索引**,提供常用术语和章节的快速查找。完整术语定义请参见 [统一术语表](../TERMINOLOGY.md)。
+本文档是 Airymax 规范集的**快速索引**,提供常用术语和章节的快速查找。完整术语定义请参见 [统一术语表](../TERMINOLOGY.md)。
 
 ---
 
@@ -182,7 +180,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | AGENTOS_ETIMEDOUT | -6 | 0x0006 | 操作超时 |
 
 > **📝 双错误码体系说明**  
-> AgentOS 采用双错误码体系：C 内核使用负整数（定义于 `error.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../project_erp/error_code_reference.md)。
+> Airymax 采用双错误码体系：C 内核使用负整数（定义于 `error.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../project_erp/error_code_reference.md)。
 
 **完整列表**: [syscall_api_contract.md - 第 7 章](./syscall_api_contract.md) | [error_code_reference.md](../project_erp/error_code_reference.md)
 
@@ -202,7 +200,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 核心术语速查
 
-以下是 AgentOS 最核心的 10 个术语，完整术语表请参见 [TERMINOLOGY.md](../TERMINOLOGY.md):
+以下是 Airymax 最核心的 10 个术语，完整术语表请参见 [TERMINOLOGY.md](../TERMINOLOGY.md):
 
 1. **Agent (智能体)** - 具有认知能力的实体，通过契约描述自身能力
 2. **Skill (技能)** - 可复用的执行单元，为 Agent 提供具体能力
@@ -211,7 +209,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 5. **安全穹顶 (Cupolas)** - 提供虚拟工位、权限裁决、安全隔离等核心安全机制的内核子系统
 6. **系统调用 (Syscall)** - 用户态程序与内核态交互的唯一接口，遵循最小权限原则
 7. **追踪标识 (TraceID)** - 分布式追踪中请求链路的唯一标识，支持全链路可观测性
-8. **微核心/原子内核 (Microkernel/CoreKern)** - 只提供IPC、内存管理、任务调度、时间服务等原子机制的最小化内核
+8. **微核心/原子核心 (MicroCoreRT/CoreKern)** - 只提供IPC、内存管理、任务调度、时间服务等原子机制的最小化内核
 9. **权限 (Permission)** - 执行特定操作所需的授权，遵循最小权限原则和安全内生设计
 10. **可观测性 (Observability)** - 通过日志、指标、追踪、健康检查实现系统行为的全面透明化
 
@@ -219,7 +217,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 参考文献与理论基础
 
-[1] AgentOS 统一术语表。../TERMINOLOGY.md  
+[1] Airymax 统一术语表。../TERMINOLOGY.md  
 [2] 架构设计原则。../../ARCHITECTURAL_PRINCIPLES.md  
 [3] 《工程控制论》. 科学出版社. 1954  
 [4] 《论系统工程》. 湖南科学技术出版社. 1982  
@@ -227,5 +225,5 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 [6] 产品设计哲学与用户体验思想. Apple Inc.  
 
 ---
-**维护者**: AgentOS 架构委员会  
+**维护者**: Airymax 架构委员会  
 **最后更新**: 2026-04-09

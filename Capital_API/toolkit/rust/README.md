@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Rust SDK
+# Airymax Rust SDK
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/toolkit/rust/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-AgentOS Rust SDK 提供对 AgentOS 系统调用 API 的安全 Rust 封装。SDK 遵循 Rust 最佳实践，提供零成本抽象、内存安全和线程安全保证，同时保持与底层 C API 的完整功能对应。
+Airymax Rust SDK 提供对 Airymax 系统调用 API 的安全 Rust 封装。SDK 遵循 Rust 最佳实践，提供零成本抽象、内存安全和线程安全保证，同时保持与底层 C API 的完整功能对应。
 
 ### 🧩 五维正交原则体现
 
-Rust SDK 将 AgentOS 的五维正交设计原则深度融入 Rust 语言特性中：
+Rust SDK 将 Airymax 的五维正交设计原则深度融入 Rust 语言特性中：
 
 | 维度 | Rust 语言特性体现 | SDK 具体实现 |
 |------|------------------|-------------|
@@ -51,7 +49,7 @@ async fn main() -> Result<()> {
     // 创建 Agent 配置
     let manager = AgentConfig::builder()
         .name("my_agent")
-        .description("My first AgentOS agent")
+        .description("My first Airymax agent")
         .agent_type("chat")
         .max_concurrent_tasks(8)
         .task_queue_depth(64)

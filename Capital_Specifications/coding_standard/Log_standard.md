@@ -1,20 +1,18 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 日志打印规范
+# Airymax 日志打印规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Log_standard.md
-**作者**:
-    - Liren Wang
 ---
 
-## 第 0 章 AgentOS 日志体系总览
+## 第 0 章 Airymax 日志体系总览
 
 ### 0.1 日志层级与对应宏
 
-AgentOS 采用分层日志架构，各层使用不同的日志宏和头文件：
+Airymax 采用分层日志架构，各层使用不同的日志宏和头文件：
 
 | 层级 | 日志宏 | 头文件 | 说明 |
 |------|--------|--------|------|
@@ -26,9 +24,9 @@ AgentOS 采用分层日志架构，各层使用不同的日志宏和头文件：
 | Go SDK | `zap.*` | `zap` logger | Go 绑定层日志 |
 | Rust SDK | `tracing::*` | `tracing` crate | Rust 绑定层日志 |
 
-### 0.2 HiLog 与 AgentOS 日志系统的关系
+### 0.2 HiLog 与 Airymax 日志系统的关系
 
-> **⚠️ 重要说明**：HiLog 是 OpenHarmony 的日志系统，**不是** AgentOS 的日志系统。本文档中出现的 HiLog 示例仅作为日志用法参考，AgentOS 实际代码中应使用对应的 `AGENTOS_LOG_*`（atoms/gateway/protocols 层）或 `SVC_LOG_*`（daemon 服务层）宏。
+> **⚠️ 重要说明**：HiLog 是 OpenHarmony 的日志系统，**不是** Airymax 的日志系统。本文档中出现的 HiLog 示例仅作为日志用法参考，Airymax 实际代码中应使用对应的 `AGENTOS_LOG_*`（atoms/gateway/protocols 层）或 `SVC_LOG_*`（daemon 服务层）宏。
 >
 > 对应关系：
 > - `HiLog::FATAL(LABEL, ...)` → `AGENTOS_LOG_FATAL(MODULE, ...)` 或 `SVC_LOG_FATAL(TAG, ...)`
@@ -40,7 +38,7 @@ AgentOS 采用分层日志架构，各层使用不同的日志宏和头文件：
 
 ### 0.3 结构化 JSON 日志格式（v0.1.0+ 标准）
 
-自 v0.1.0 起，AgentOS 所有模块必须采用结构化 JSON 日志格式，兼容 OpenTelemetry Logs 规范。最小必填字段：
+自 v0.1.0 起，Airymax 所有模块必须采用结构化 JSON 日志格式，兼容 OpenTelemetry Logs 规范。最小必填字段：
 
 ```json
 {
@@ -89,7 +87,7 @@ AGENTOS_LOG_INFO(MODULE, "Processing request: op=%s", operation);
 
 #### 1.1.1 日志作为反馈机制
 
-从控制论角度看，日志系统是 AgentOS 的**感觉神经系统**，承担以下关键功能：
+从控制论角度看，日志系统是 Airymax 的**感觉神经系统**，承担以下关键功能：
 
 1. **状态观测**：采集系统运行状态信息
 2. **偏差检测**：识别实际行为与预期目标的偏离
@@ -146,7 +144,7 @@ AGENTOS_LOG_INFO(MODULE, "Processing request: op=%s", operation);
 
 ## 第 2 章 日志分级与分类
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 2.1 日志级别定义
 
@@ -262,7 +260,7 @@ HiLog::AUDIT(LABEL, "Capability created: subject=%s, resource=%s, permissions=0x
 
 **响应要求**：审计日志必须持久化，保留期限符合合规要求，不可被应用层删除
 
-> **AgentOS 映射**：`HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)`（atoms 层）或 `SVC_LOG_AUDIT(TAG, ...)`（daemon 层）
+> **Airymax 映射**：`HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)`（atoms 层）或 `SVC_LOG_AUDIT(TAG, ...)`（daemon 层）
 
 ### 2.2 日志级别选择矩阵
 
@@ -279,7 +277,7 @@ HiLog::AUDIT(LABEL, "Capability created: subject=%s, resource=%s, permissions=0x
 
 ## 第 3 章 日志内容规范
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 3.1 信息论视角下的日志内容
 
@@ -413,7 +411,7 @@ HiLog::ERROR(LABEL, "Connect to server failed, please check network configuratio
 
 ## 第 4 章 日志打印策略
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 4.1 打印时机控制
 
@@ -517,7 +515,7 @@ if (AGENTOS_LOG_DEBUG_ENABLED()) {
 
 ## 第 5 章 HiLog 接口使用规范
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 5.1 Domain ID 分配的系统工程方法
 
@@ -748,9 +746,9 @@ HiLog::WARN(LABEL, "TCP connection closed: reason=peer_timeout, duration=300s");
 ```
 
 ---
-## 第 7 章 AgentOS 模块日志示例
+## 第 7 章 Airymax 模块日志示例
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。AgentOS 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
 
 ### 7.1 Atoms（原子层）日志规范
 Atoms模块实现微核心核心功能，日志要求最高级别的性能和精度：
@@ -998,7 +996,7 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 | [架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md) | 本规范是原则 E-2（可观测性原则）和 E-4（运维友好原则）在日志打印方面的具体实施 |
 | [C&C++安全编程指南](./C_Cpp_secure_coding_standard.md) | 日志中的错误处理应遵循安全编程指南的异常处理规范 |
 | [统一术语表](../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
-| [AgentOS 核心架构文档](../../Capital_Architecture/) | 与本规范密切相关的架构文档：<br>- logging_system.md（可观测性核心架构）<br>- coreloopthree.md（运行时日志）<br>- memoryrovol.md（内存相关日志）<br>- microkernel.md（内核日志） |
+| [Airymax 核心架构文档](../../Capital_Architecture/) | 与本规范密切相关的架构文档：<br>- logging_system.md（可观测性核心架构）<br>- coreloopthree.md（运行时日志）<br>- memoryrovol.md（内存相关日志）<br>- microkernel.md（内核日志） |
 
 ---
 
@@ -1007,7 +1005,7 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 ### 按规则编号
 
 - **0-1** 日志层级与对应宏
-- **0-2** HiLog 与 AgentOS 日志系统的关系
+- **0-2** HiLog 与 Airymax 日志系统的关系
 - **0-3** 结构化 JSON 日志格式
 - **0-4** trace_id / request_id 传播规范
 - **1-1** 信噪比最大化
@@ -1040,7 +1038,7 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有日志打印须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有日志打印须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|

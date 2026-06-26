@@ -6,8 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/common-issues.md
-**作者**:
-    - Liren Wang
 ---
 
 本文档收集了用户和开发者最常遇到的问题及其解决方案。
@@ -40,11 +38,11 @@ ps -p <PID> -o pid,cmd
 # 方式A: 停止占用进程（如果不重要）
 kill <PID>
 
-# 方式B: 修改AgentOS端口
+# 方式B: 修改Airymax端口
 # 编辑 docker/.env
 KERNEL_IPC_PORT=8081  # 改为其他端口
 
-# 方式C: 停止其他服务后重启AgentOS
+# 方式C: 停止其他服务后重启Airymax
 docker compose -f docker/docker-compose.yml down
 docker compose -f docker/docker-compose.yml up -d
 ```
@@ -429,7 +427,7 @@ docker logs agentos-postgres-dev 2>&1 | grep "duration:"
 curl http://localhost:9090/metrics | grep llm_request_duration
 
 # 4. 分析Prometheus慢请求
-# 打开 Grafana → Dashboard → AgentOS Performance
+# 打开 Grafana → Dashboard → Airymax Performance
 # 查看 P95/P99 延迟趋势图
 
 # 5. 生成性能报告
@@ -556,7 +554,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 为了快速定位和解决问题，请提供：
 
-1. **AgentOS版本**: `agentos-kernel --version`
+1. **Airymax版本**: `agentos-kernel --version`
 2. **操作系统**: `uname -a`
 3. **Docker版本**: `docker --version`
 4. **复现步骤**: 最小化复现代码

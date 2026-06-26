@@ -1,24 +1,22 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 系统调用 API 规范
+# Airymax 系统调用 API 规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/syscall_api_contract.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 编制说明
 
 ### 本文档定位
 
-系统调用 API 规范是 AgentOS 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 AgentOS 微核心架构的关键实现机制。
+系统调用 API 规范是 Airymax 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 Airymax 微核心架构的关键实现机制。
 
 ### 与设计哲学的关系
 
-本规范是 AgentOS 五维正交设计体系在系统调用层面的具体实现，每个维度都有对应的设计体现：
+本规范是 Airymax 五维正交设计体系在系统调用层面的具体实现，每个维度都有对应的设计体现：
 
 #### 五维正交体系映射
 
@@ -43,7 +41,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 系统调用规范是多重理论融合的产物：
 - **工程两论**：通过层次分解（系统工程）和反馈机制（控制论）构建稳定的系统调用架构
-- **双系统认知**：支持不同认知需求的调用策略，平衡效率与精度（Thinkdual 认知双思系统）
+- **双系统认知**：支持不同认知需求的调用策略，平衡效率与精度（Thinkdual 双思考系统）
 - **微核心哲学**：最小化内核接口，最大化服务隔离
 - **设计美学**：追求接口的简约、对称和自解释性
 
@@ -63,7 +61,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 术语 | 简要定义 | 来源 |
 |------|---------|------|
 | 系统调用 (Syscall) | 用户态进入内核的唯一入口 | 本规范 |
-| 微核心/原子内核 (MicroCoreRT/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
+| 微核心/原子核心 (MicroCoreRT/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
 | TraceID | 分布式追踪的唯一标识 | [日志打印规范](../coding_standard/Log_standard.md) |
 
 ---
@@ -72,7 +70,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 系统调用简介
 
-AgentOS 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循微核心设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
+Airymax 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循微核心设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
 
 所有系统调用均通过 `agentos_syscall_invoke` 统一入口分发，确保参数校验和权限控制的一致性。
 
@@ -926,7 +924,7 @@ agentos_error_t agentos_sys_task_submit(const char* input, size_t input_len, ...
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 AgentOS **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 完整错误码列表
 
@@ -1003,7 +1001,7 @@ ERROR_MAP = {
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[1] Airymax 设计哲学。../../Basic_Theories/CN_04_系统设计原则.md  
 [2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] Microkernel Architecture. https://en.wikipedia.org/wiki/Microkernel  
@@ -1015,14 +1013,14 @@ ERROR_MAP = {
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|---------|
-| Doc V2.0 | 2026-03-25 | DechengLi | 根据架构设计原则V1.6进行全面优化，更新理论基础，重构五维正交体系映射，补充可测试性原则应用 |
-| Doc V2.0 | 2026-03-24 | DechengLi | 增加与设计哲学的关系章节，优化表述结构 |
-| Doc V2.0 | 2026-03-24 | DechengLi | 按文档格式规范重新编写 |
-| Doc V2.0 | 2026-03-23 | Chenzhang | 基于项目实际架构全面重构 |
-| Doc V2.0 | 2026-03-21 | DechengLi | 基于系统工程理论重构 |
-| Doc V2.0 | 2026-02-01 | DechengLi | 原始系统调用规范 |
+| Doc V2.0 | 2026-03-25 | Airymax Team | 根据架构设计原则V1.6进行全面优化，更新理论基础，重构五维正交体系映射，补充可测试性原则应用 |
+| Doc V2.0 | 2026-03-24 | Airymax Team | 增加与设计哲学的关系章节，优化表述结构 |
+| Doc V2.0 | 2026-03-24 | Airymax Team | 按文档格式规范重新编写 |
+| Doc V2.0 | 2026-03-23 | Airymax Team | 基于项目实际架构全面重构 |
+| Doc V2.0 | 2026-03-21 | Airymax Team | 基于系统工程理论重构 |
+| Doc V2.0 | 2026-02-01 | Airymax Team | 原始系统调用规范 |
 
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 架构委员会
+**维护者**: Airymax 架构委员会

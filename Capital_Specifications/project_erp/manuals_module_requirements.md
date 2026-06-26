@@ -6,13 +6,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/project_erp/manuals_module_requirements.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-`manuals` 模块是 AgentOS 的技术文档中心，负责管理、生成、验证和维护整个项目的技术文档体系。本规范定义了模块的功能需求、技术规范、接口定义和实现要求。本模块设计基于 AgentOS 架构设计原则 V1.7，特别是 **E-7 文档即代码原则** 和 **E-8 可测试性原则**，确保文档与代码同步演进、质量可控。
+`manuals` 模块是 Airymax 的技术文档中心，负责管理、生成、验证和维护整个项目的技术文档体系。本规范定义了模块的功能需求、技术规范、接口定义和实现要求。本模块设计基于 Airymax 架构设计原则 V1.7，特别是 **E-7 文档即代码原则** 和 **E-8 可测试性原则**，确保文档与代码同步演进、质量可控。
 
 ---
 

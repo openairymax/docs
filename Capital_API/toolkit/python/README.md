@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Python SDK
+# Airymax Python SDK
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/toolkit/python/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-AgentOS Python SDK 提供对 AgentOS 系统调用 API 的高级 Python 封装。SDK 遵循 Pythonic 风格，支持异步操作、类型提示和上下文管理器，同时保持与底层 C API 的完整功能对应。
+Airymax Python SDK 提供对 Airymax 系统调用 API 的高级 Python 封装。SDK 遵循 Pythonic 风格，支持异步操作、类型提示和上下文管理器，同时保持与底层 C API 的完整功能对应。
 
 ### 🧩 五维正交原则体现
 
-Python SDK 将 AgentOS 的五维正交设计原则深度融入 Python 语言特性中：
+Python SDK 将 Airymax 的五维正交设计原则深度融入 Python 语言特性中：
 
 | 维度 | Python 语言特性体现 | SDK 具体实现 |
 |------|-------------------|-------------|
@@ -54,7 +52,7 @@ async def main():
     # 创建 Agent 配置
     manager = AgentConfig(
         name="my_agent",
-        description="My first AgentOS agent",
+        description="My first Airymax agent",
         agent_type="chat",
         max_concurrent_tasks=8,
         task_queue_depth=64

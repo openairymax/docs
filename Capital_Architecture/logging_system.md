@@ -1,38 +1,35 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 日志系统架构详解
+# Airymax 日志系统架构详解
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Architecture/logging_system.md
-**作者**:
-    - Zhixian Zhou、Liren Wang
 
 ## 文档信息
 
 | 字段 | 值 |
 |------|-----|
-| 文档名称 | AgentOS 日志系统架构详解 |
+| 文档名称 | Airymax 日志系统架构详解 |
 | 适用版本 | Dv1.7+ |
-| 作者 | LirenWang |
 | 路径 | `agentos/commons/utils/observability/` |
 
 ---
 
 ## 一、概述
 
-AgentOS 日志系统是系统可观测性的核心组件，遵循 **体系并行论 (MCIS)** 与 **工程两论** 指导原则，通过四级结构化日志（L1→L4）实现从原始事件到高级洞察的全栈日志管理。作为系统诊断、性能分析与智能审计的关键基础设施，日志系统严格遵循 **五维正交体系** 的设计美学，将系统可观测性理论与实时流处理技术工程化为可执行的系统组件。
+Airymax 日志系统是系统可观测性的核心组件，遵循 **体系并行论 (MCIS)** 与 **工程两论** 指导原则，通过四级结构化日志（L1→L4）实现从原始事件到高级洞察的全栈日志管理。作为系统诊断、性能分析与智能审计的关键基础设施，日志系统严格遵循 **五维正交体系** 的设计美学，将系统可观测性理论与实时流处理技术工程化为可执行的系统组件。
 
 从 **体系并行论** 视角分析，日志系统是 MCIS 中的 **可观测体 (Observability Body)**，负责系统状态的全面感知、记录与分析。其四级日志架构（L1原始日志→L2结构化日志→L3聚合指标→L4洞察报告）体现了 **渐进式抽象 (Progressive Abstraction)** 的思想，模拟了从原始数据到高级洞察的认知过程。
 
-该系统不仅是 AgentOS **系统观维度**（全局可观测性）的关键支撑，也是 **工程观维度**（性能与可靠性平衡）的经典实践。通过日志分级压缩与动态采样机制形成控制论负反馈回路，确保日志系统的可持续性与可扩展性，体现了 MCIS 中 **反馈调节 (Feedback Regulation)** 与 **自适应平衡 (Adaptive Balancing)** 的核心原理。同时，日志系统与微核心、CoreLoopThree、MemoryRovol 等核心组件的紧密集成，实现了对整个智能体系统状态的全面监控与智能分析。
+该系统不仅是 Airymax **系统观维度**（全局可观测性）的关键支撑，也是 **工程观维度**（性能与可靠性平衡）的经典实践。通过日志分级压缩与动态采样机制形成控制论负反馈回路，确保日志系统的可持续性与可扩展性，体现了 MCIS 中 **反馈调节 (Feedback Regulation)** 与 **自适应平衡 (Adaptive Balancing)** 的核心原理。同时，日志系统与微核心、CoreLoopThree、MemoryRovol 等核心组件的紧密集成，实现了对整个智能体系统状态的全面监控与智能分析。
 
 ## 1. 日志文件存储位置
 
 ### 1.1 集中式日志根目录
 
-**位置**: `AgentOS/agentos/heapstore/logs/`
+**位置**: `AgentRT/agentos/heapstore/logs/`
 
 ```
 agentos/heapstore/logs/
@@ -42,7 +39,6 @@ agentos/heapstore/logs/
 │   ├── llm_d.log       # LLM 服务日志
 │   ├── tool_d.log      # 工具服务日志
 │   ├── market_d.log    # 市场服务日志
-<!-- From data intelligence emerges. by spharx -->
 │   ├── sched_d.log     # 调度服务日志
 │   └── monit_d.log     # 监控服务日志
 └── apps/                # 应用层日志（openlab/app）
@@ -60,7 +56,7 @@ agentos/heapstore/logs/
 
 ### 1.3 理论基础与原则映射：MCIS与可观测性理论的融合
 
-AgentOS 日志系统的设计深刻体现了 **体系并行论 (MCIS)** 与 **五维正交体系** 的设计思想，将系统可观测性理论、分布式日志处理、实时分析与性能优化完美融合：
+Airymax 日志系统的设计深刻体现了 **体系并行论 (MCIS)** 与 **五维正交体系** 的设计思想，将系统可观测性理论、分布式日志处理、实时分析与性能优化完美融合：
 
 #### 理论基础：体系并行论 (MCIS) 的可观测体映射
 - **可观测体原理** → 日志系统作为 MCIS 中的 **可观测体 (Observability Body)**，负责系统状态的全面感知与记录，支撑智能体系统的自我认知与自我调节
@@ -231,7 +227,7 @@ import logging
 from typing import Optional
 
 class AgentOSLogger:
-    """AgentOS Python 日志器，与 C 端日志格式对齐"""
+    """Airymax Python 日志器，与 C 端日志格式对齐"""
     
     def __init__(self, service_name: str):
         self.logger = logging.getLogger(service_name)
@@ -547,14 +543,14 @@ bool should_sample(token_bucket_t* bucket) {
 
 | 系统 | 吞吐量 (msg/s) | 延迟 (μs) | 功能特性 | 跨语言支持 |
 | :--- | :---: | :---: | :---: | :---: |
-| **AgentOS Logger** | **500K** | **2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| **Airymax Logger** | **500K** | **2** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | syslog (rsyslog) | 100K | 10 | ⭐⭐⭐ | ⭐⭐⭐ |
 | spdlog (C++) | 300K | 3 | ⭐⭐⭐⭐ | ⭐⭐ |
 | log4j2 (Java) | 200K | 5 | ⭐⭐⭐⭐⭐ | ⭐ |
 | zap (Go) | 400K | 2 | ⭐⭐⭐⭐ | ⭐ |
 
 **功能对比**:
-| 特性 | AgentOS | ELK Stack | Loki | Splunk |
+| 特性 | Airymax | ELK Stack | Loki | Splunk |
 | :--- | :---: | :---: | :---: | :---: |
 | **跨语言追踪** | ✅ 原生 | ❌ 需配置 | ❌ 需配置 | ✅ |
 | **动态级别调整** | ✅ | ❌ | ❌ | ✅ |
@@ -668,7 +664,7 @@ sum by (service) (rate({namespace="agentos"}[1h]))
 
 ## 9.5 模块集成与系统交互
 
-AgentOS 日志系统作为整个系统的可观测性核心，与其他关键模块形成紧密的协同关系，共同构成完整的系统监控与反馈体系：
+Airymax 日志系统作为整个系统的可观测性核心，与其他关键模块形成紧密的协同关系，共同构成完整的系统监控与反馈体系：
 
 ### 与 CoreLoopThree 三层运行时架构的关系
 日志系统为 CoreLoopThree 提供全面的运行时可观测性：
@@ -752,7 +748,7 @@ logger.Info("Hello from Go")
 
 **版本**: Doc V2.0  
 **最后更新**: 2026-04-10  
-**维护者**: AgentOS 文档团队  
+**维护者**: Airymax 文档团队  
 **相关文档**: 
 - [原子日志接口](agentos/commons/utils/observability/include/logger.h)
 - [服务公共接口](agentos/daemon/agentos/commons/include/svc_common.h)

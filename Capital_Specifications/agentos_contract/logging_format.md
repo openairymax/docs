@@ -1,24 +1,22 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 日志格式规范
+# Airymax 日志格式规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/logging_format.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 编制说明
 
 ### 本文档定位
 
-日志格式规范是 AgentOS 规范体系的核心组成部分，属于**操作层规范**。本规范定义了 AgentOS 各组件的日志输出格式、字段含义、级别定义及存储策略，是实现系统可观测性的基础。
+日志格式规范是 Airymax 规范体系的核心组成部分，属于**操作层规范**。本规范定义了 Airymax 各组件的日志输出格式、字段含义、级别定义及存储策略，是实现系统可观测性的基础。
 
 ### 与设计哲学的关系
 
-本规范是 AgentOS 五维正交设计体系在日志格式层面的具体实现，每个维度都有对应的设计体现：
+本规范是 Airymax 五维正交设计体系在日志格式层面的具体实现，每个维度都有对应的设计体现：
 
 #### 五维正交体系映射
 
@@ -72,7 +70,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 背景与意义
 
-AgentOS 作为一个分布式多智能体操作系统，其运行涉及内核、服务层、安全层、应用层等多个组件，跨进程、跨主机协作。为了有效诊断问题、追踪请求链路、分析系统行为，必须建立统一的日志格式规范。
+Airymax 作为一个分布式多智能体操作系统，其运行涉及内核、服务层、安全层、应用层等多个组件，跨进程、跨主机协作。为了有效诊断问题、追踪请求链路、分析系统行为，必须建立统一的日志格式规范。
 
 **挑战:**
 - **异构组件**: 内核 (C)、服务 (Python/Go/Node.js)、应用 (多语言) 使用不同的技术栈
@@ -370,7 +368,7 @@ memory_result_count
 
 ### 3.1 级别定义
 
-AgentOS 使用标准日志级别，按严重性递增：
+Airymax 使用标准日志级别，按严重性递增：
 
 | 级别 | 数值 | 名称 | 说明 | 示例 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -959,7 +957,7 @@ class BatchHandler:
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[1] Airymax 设计哲学。../../Basic_Theories/CN_04_系统设计原则.md  
 [2] 架构设计原则。../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] OpenTelemetry Specification. https://opentelemetry.io/docs/specs/otel/  
@@ -972,14 +970,14 @@ class BatchHandler:
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|---------|
-| Doc V2.0 | 2026-03-25 | DechengLi | 根据架构设计原则V1.6进行全面优化，更新理论基础，重构五维正交体系映射，补充可测试性原则应用 |
-| Doc V2.0 | 2026-03-24 | DechengLi | 增加与设计哲学的关系章节，优化表述结构 |
-| Doc V2.0 | 2026-03-24 | DechengLi | 按文档格式规范重新编写 |
-| Doc V2.0 | 2026-03-23 | Chenzhang | 基于项目实际架构全面重构 |
-| Doc V2.0 | 2026-03-21 | DechengLi | 基于系统工程理论重构 |
-| Doc V2.0 | 2026-02-01 | DechengLi | 原始日志格式规范 |
+| Doc V2.0 | 2026-03-25 | Airymax Team | 根据架构设计原则V1.6进行全面优化，更新理论基础，重构五维正交体系映射，补充可测试性原则应用 |
+| Doc V2.0 | 2026-03-24 | Airymax Team | 增加与设计哲学的关系章节，优化表述结构 |
+| Doc V2.0 | 2026-03-24 | Airymax Team | 按文档格式规范重新编写 |
+| Doc V2.0 | 2026-03-23 | Airymax Team | 基于项目实际架构全面重构 |
+| Doc V2.0 | 2026-03-21 | Airymax Team | 基于系统工程理论重构 |
+| Doc V2.0 | 2026-02-01 | Airymax Team | 原始日志格式规范 |
 
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 架构委员会
+**维护者**: Airymax 架构委员会

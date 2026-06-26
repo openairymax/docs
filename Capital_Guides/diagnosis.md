@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 故障诊断指南
+# Airymax 故障诊断指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/diagnosis.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 分层诊断方法论
 
-AgentOS 采用**分层诊断方法论**，从外到内逐层定位问题：
+Airymax 采用**分层诊断方法论**，从外到内逐层定位问题：
 
 ```
 用户报告问题
@@ -61,7 +59,7 @@ COLOR_YELLOW='\033[1;33m'
 COLOR_NC='\033[0m'
 
 echo "=========================================="
-echo "  AgentOS System Diagnostic Tool v1.0"
+echo "  Airymax System Diagnostic Tool v1.0"
 echo "  $(date)"
 echo "=========================================="
 
@@ -270,7 +268,7 @@ fi
 
 ## 🎯 常见问题诊断树
 
-### 问题 1: 无法连接到 AgentOS API
+### 问题 1: 无法连接到 Airymax API
 
 ```
 无法连接 API
@@ -454,7 +452,7 @@ class PerformanceBaseline:
         """生成诊断报告"""
         report_lines = [
             "=" * 60,
-            "  AgentOS Performance Baseline Report",
+            "  Airymax Performance Baseline Report",
             f"  Generated: {datetime.now().isoformat()}",
             "=" * 60,
             ""

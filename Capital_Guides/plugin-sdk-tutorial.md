@@ -1,4 +1,4 @@
-# AgentRT Plugin SDK 开发教程
+# Airymax Plugin SDK 开发教程
 
 > **P4.3.3** — Plugin SDK 完整开发指南
 >
@@ -22,7 +22,7 @@
 
 ## 1. Plugin SDK 概述
 
-AgentRT 的 Plugin SDK 是一套插件化扩展框架，允许开发者通过标准化的接口扩展 AgentRT 的核心能力。插件运行在沙箱环境中，支持热加载、依赖管理和资源隔离。
+Airymax 的 Plugin SDK 是一套插件化扩展框架，允许开发者通过标准化的接口扩展 Airymax 的核心能力。插件运行在沙箱环境中，支持热加载、依赖管理和资源隔离。
 
 ### 1.1 插件能做什么
 
@@ -35,7 +35,7 @@ AgentRT 的 Plugin SDK 是一套插件化扩展框架，允许开发者通过标
 
 ### 1.2 四种插件类型
 
-AgentRT 定义了四种插件基类，分别对应不同的扩展场景：
+Airymax 定义了四种插件基类，分别对应不同的扩展场景：
 
 | 插件类型 | 基类 | 用途 | 典型场景 |
 |:---------|:-----|:-----|:---------|
@@ -54,7 +54,7 @@ pip install agentos
 
 ## 2. 插件生命周期
 
-每个插件在 AgentRT 运行时中经历以下状态转换：
+每个插件在 Airymax 运行时中经历以下状态转换：
 
 ```
 DISCOVERED  →  LOADED  →  ACTIVATING  →  ACTIVE  →  DEACTIVATING  →  INACTIVE
@@ -115,7 +115,7 @@ class MyPlugin(BasePlugin):
 
 ### 3.1 项目结构
 
-一个典型的 AgentRT 插件项目目录结构如下：
+一个典型的 Airymax 插件项目目录结构如下：
 
 ```
 my-first-plugin/
@@ -128,7 +128,7 @@ my-first-plugin/
 ### 3.2 编写插件清单 (plugin.yaml)
 
 ```yaml
-# plugin.yaml — AgentRT Plugin Manifest
+# plugin.yaml — Airymax Plugin Manifest
 plugin_id: my_first_plugin
 name: My First Plugin
 version: 0.1.0
@@ -211,9 +211,9 @@ class HelloWorldTool(ToolPlugin):
         language = params.get("language", "zh")
 
         greetings = {
-            "zh": f"你好，{name}！欢迎使用 AgentRT Plugin SDK。",
-            "en": f"Hello, {name}! Welcome to AgentRT Plugin SDK.",
-            "ja": f"こんにちは、{name}！AgentRT Plugin SDK へようこそ。",
+            "zh": f"你好，{name}！欢迎使用 Airymax Plugin SDK。",
+            "en": f"Hello, {name}! Welcome to Airymax Plugin SDK.",
+            "ja": f"こんにちは、{name}！Airymax Plugin SDK へようこそ。",
         }
 
         return {"greeting": greetings.get(language, greetings["zh"])}
@@ -236,7 +236,7 @@ plugins:
 ### 3.5 运行插件
 
 ```bash
-# 通过 AgentRT CLI 运行
+# 通过 Airymax CLI 运行
 agentrt run --config config.yaml "向张三问好"
 
 # 或直接使用 Python 测试
@@ -254,7 +254,7 @@ print(result['greeting'])
 
 ## 4. Plugin Manifest 格式
 
-Plugin Manifest（插件清单）是插件的身份标识和元数据描述文件，支持 YAML 和 JSON 两种格式。AgentRT 运行时通过 Manifest 发现、加载和配置插件。
+Plugin Manifest（插件清单）是插件的身份标识和元数据描述文件，支持 YAML 和 JSON 两种格式。Airymax 运行时通过 Manifest 发现、加载和配置插件。
 
 ### 4.1 Manifest 字段参考
 
@@ -292,7 +292,7 @@ dependencies:
 
 ### 4.3 权限声明
 
-AgentRT 在沙箱中运行插件，需要显式声明所需权限：
+Airymax 在沙箱中运行插件，需要显式声明所需权限：
 
 | 权限标识 | 说明 |
 |:---------|:-----|
@@ -309,7 +309,7 @@ AgentRT 在沙箱中运行插件，需要显式声明所需权限：
 
 ## 5. 可用 Hooks 参考
 
-HookPlugin 是 AgentRT 插件系统中最灵活的类型，允许开发者在 Agent 生命周期的关键节点注入自定义逻辑。以下列出所有可用的 Hook 事件。
+HookPlugin 是 Airymax 插件系统中最灵活的类型，允许开发者在 Agent 生命周期的关键节点注入自定义逻辑。以下列出所有可用的 Hook 事件。
 
 ### 5.1 Agent 生命周期 Hooks
 
@@ -972,7 +972,7 @@ plugins:
 
 ### 8.1 单元测试
 
-AgentRT 插件为普通 Python 类，可直接使用 `pytest` 编写单元测试：
+Airymax 插件为普通 Python 类，可直接使用 `pytest` 编写单元测试：
 
 ```python
 # tests/test_cost_tracker.py
@@ -1065,11 +1065,11 @@ class TestWebSearchIntegration:
         instance = registry.load(plugin_id)
 
         result = asyncio.run(
-            instance.execute({"query": "AgentRT", "max_results": 3})
+            instance.execute({"query": "Airymax", "max_results": 3})
         )
         assert "query" in result
         assert "results" in result
-        assert result["query"] == "AgentRT"
+        assert result["query"] == "Airymax"
 
     def test_cache_works(self, registry):
         """测试缓存功能。"""
@@ -1089,7 +1089,7 @@ class TestWebSearchIntegration:
         assert result1 == result2
 ```
 
-### 8.3 使用 AgentRT CLI 进行端到端测试
+### 8.3 使用 Airymax CLI 进行端到端测试
 
 ```bash
 # 1. 创建测试配置文件
@@ -1113,8 +1113,8 @@ runtime:
   log_level: debug
 EOF
 
-# 2. 运行 AgentRT 并测试插件
-agentrt run --config test_config.yaml "搜索 AgentRT 的最新信息"
+# 2. 运行 Airymax 并测试插件
+agentrt run --config test_config.yaml "搜索 Airymax 的最新信息"
 ```
 
 ---
@@ -1151,7 +1151,7 @@ my-awesome-plugin/
 ### 9.3 发布到 OpenLab Marketplace
 
 ```bash
-# 1. 登录 AgentRT CLI
+# 1. 登录 Airymax CLI
 agentrt login
 
 # 2. 验证插件完整性
@@ -1211,7 +1211,7 @@ agentrt market install community/web-search-plugin
 
 **Q: 插件可以调用其他插件吗？**
 
-A: 可以。在 `plugin.yaml` 中声明依赖关系，AgentRT 运行时会自动注入依赖插件的实例。
+A: 可以。在 `plugin.yaml` 中声明依赖关系，Airymax 运行时会自动注入依赖插件的实例。
 
 **Q: 插件必须异步吗？**
 
@@ -1227,8 +1227,8 @@ A: 是的。默认超时时间为 30 秒（可在 `plugin.yaml` 中通过 `timeo
 
 ### B. 相关资源
 
-- [AgentRT 快速上手指南](./quickstart.md)
-- [AgentRT 架构文档](../Capital_Architecture/architecture.md)
+- [Airymax 快速上手指南](./quickstart.md)
+- [Airymax 架构文档](../Capital_Architecture/architecture.md)
 - [Plugin Demo 示例项目](../ecosystem/examples/plugin-demo/)
 - [OpenLab Marketplace](https://openlab.agentrt.dev)
 

@@ -3,13 +3,11 @@
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Architecture/test_architecture.md
-**作者**:
-    - Zhixian Zhou、Liren Wang
 ---
 
 ## 📋 概述
 
-AgentOS 采用**双层测试架构**，结合了 C/C++ 和 Python 项目的最佳实践：
+Airymax 采用**双层测试架构**，结合了 C/C++ 和 Python 项目的最佳实践：
 
 1. **模块自测层** - `agentos/*/tests/`（C/C++ 单元测试，与源码相邻）
 2. **集中测试层** - `tests/`（统一测试入口，Python 集成/契约/性能测试）
@@ -73,7 +71,7 @@ pytest -v --cov=agentos          # 带覆盖率
 
 ### 模块级测试映射
 
-| AgentOS 模块 | agentos/*/tests/ | tests/unit/ | 测试类型 |
+| Airymax 模块 | agentos/*/tests/ | tests/unit/ | 测试类型 |
 |--------------|------------------|-------------|----------|
 | **CoreKern** | `atoms/corekern/tests/` (7 文件) | `unit/atoms/corekern/` (6 文件) | C 单元 + Python 集成 |
 | **CoreLoopThree** | `atoms/coreloopthree/tests/` (8 文件) | `unit/atoms/coreloopthree/` (9 文件) | C 单元 + Python 集成 |

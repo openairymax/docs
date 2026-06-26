@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-gateway_d 是 AgentRT 的网关守护进程，负责管理 HTTP/WebSocket/Stdio 三种协议的网关实例，是外部客户端与 AgentRT 核心之间的统一入口。
+gateway_d 是 Airymax 的网关守护进程，负责管理 HTTP/WebSocket/Stdio 三种协议的网关实例，是外部客户端与 Airymax 核心之间的统一入口。
 
 ### 1.1 核心职责
 

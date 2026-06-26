@@ -1,14 +1,12 @@
-# AgentOS 生态伙伴计划
+# Airymax 生态伙伴计划
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/ecosystem_partnership.md
-**作者**:
-    - Liren Wang
 
 ## 概述
 
-AgentOS 生态伙伴计划旨在构建开放、互利、可持续的智能体操作系统生态体系，连接技术提供者、应用开发者和终端用户，共同推动多体控制论智能系统技术的产业化落地。
+Airymax 生态伙伴计划旨在构建开放、互利、可持续的智能体操作系统生态体系，连接技术提供者、应用开发者和终端用户，共同推动多体控制论智能系统技术的产业化落地。
 
 ---
 
@@ -40,7 +38,7 @@ AgentOS 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 ### 2.1 协议集成
 
 ```
-伙伴系统 → 协议适配器 → AgentOS网关 → 内核服务
+伙伴系统 → 协议适配器 → Airymax网关 → 内核服务
     ↓            ↓            ↓           ↓
  MCP/A2A    统一协议栈    协议路由器    IPC Service Bus
  OpenAI     扩展框架      安全穹顶     服务发现
@@ -58,9 +56,9 @@ AgentOS 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 
 | 等级 | 标识 | 要求 |
 |------|------|------|
-| **基础兼容** | AgentOS Compatible | 通过协议兼容性测试套件 |
-| **深度集成** | AgentOS Integrated | 基础兼容 + 性能基准达标 |
-| **企业就绪** | AgentOS Enterprise Ready | 深度集成 + 安全审计通过 + SLA保障 |
+| **基础兼容** | Airymax Compatible | 通过协议兼容性测试套件 |
+| **深度集成** | Airymax Integrated | 基础兼容 + 性能基准达标 |
+| **企业就绪** | Airymax Enterprise Ready | 深度集成 + 安全审计通过 + SLA保障 |
 
 ---
 
@@ -68,7 +66,7 @@ AgentOS 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 
 ### 3.1 解决方案模板
 
-| 行业 | 场景 | AgentOS能力 | 伙伴能力 |
+| 行业 | 场景 | Airymax能力 | 伙伴能力 |
 |------|------|------------|---------|
 | **金融** | 智能风控 | 安全穹顶+审计追踪 | 行业数据+风控模型 |
 | **医疗** | 辅助诊断 | 认知进化+知识迁移 | 医学知识库+合规框架 |
@@ -103,7 +101,7 @@ AgentOS 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 
 | 资源 | 说明 | 获取方式 |
 |------|------|---------|
-| **沙箱环境** | 在线体验AgentOS | sandbox.agentos.dev |
+| **沙箱环境** | 在线体验Airymax | sandbox.agentos.dev |
 | **开发者文档** | 完整API参考 | docs.agentos.dev |
 | **示例代码** | 各语言示例 | GitHub Examples |
 | **技术论坛** | 问答与讨论 | GitHub Discussions |

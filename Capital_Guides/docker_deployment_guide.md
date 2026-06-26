@@ -1,10 +1,8 @@
-# AgentOS Docker 部署完整指南
+# Airymax Docker 部署完整指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/docker_deployment_guide.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📑 目录
@@ -21,12 +19,11 @@
 
 ## 概述
 
-### 什么是 AgentOS Docker？
+### 什么是 Airymax Docker？
 
-AgentOS Docker 是 AgentOS 的容器化部署方案，提供：
-<!-- From data intelligence emerges. by spharx -->
+Airymax Docker 是 Airymax 的容器化部署方案，提供：
 
-- ✅ **开箱即用**: 一键启动完整的 AgentOS 环境
+- ✅ **开箱即用**: 一键启动完整的 Airymax 环境
 - ✅ **微服务架构**: 内核和服务独立容器，故障隔离
 - ✅ **生产就绪**: 健康检查、资源限制、日志聚合
 - ✅ **可观测性**: OpenTelemetry 集成，分布式追踪
@@ -64,7 +61,7 @@ netstat -tuln | grep -E ":(8080|8081|8082|8083|8084)"
 
 ```bash
 # 1. 进入目录
-cd AgentOS/scripts/docker
+cd AgentRT/scripts/docker
 
 # 2. 运行配置检查
 chmod +x check_config.sh
@@ -470,7 +467,7 @@ find backups/ -name "postgres-*.tar.gz" -mtime +7 -delete
 - [Docker 官方文档](https://docs.docker.com/)
 - [Docker Compose 文档](https://docs.docker.com/compose/)
 - [OpenTelemetry 文档](https://opentelemetry.io/)
-- [AgentOS 架构文档](../../paper/architecture/)
+- [Airymax 架构文档](../../paper/architecture/)
 
 ---
 

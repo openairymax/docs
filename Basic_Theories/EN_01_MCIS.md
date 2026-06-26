@@ -6,7 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09  
 **状态**: Release    
 **路径**: OpenAirymax/Docs/Basic_Theories/EN_01_MCIS.md
-**作者**: SPHARX Team  
 
 ## Preface
 
@@ -14,9 +13,9 @@ Where does intelligence come from?
 
 The industry has long offered two answers. The first is **data**: intelligence is hidden within vast oceans of data; through massive training, powerful models are forged, and intelligence becomes the crystallization of these models. The second is **algorithms**: intelligence resides within sophisticated algorithmic architectures, emerging naturally through deeper networks and more ingenious reasoning mechanisms.
 
-AgentOS design practice presents a third answer. Building upon both data and algorithms, intelligence can emerge more rapidly from the parallel operation of multiple independent systems.
+Airymax design practice presents a third answer. Building upon both data and algorithms, intelligence can emerge more rapidly from the parallel operation of multiple independent systems.
 
-This third answer, which I term the "Multibody Cybernetic Intelligent System," can be distilled into one core idea: thinking generates intelligence, originating from system parallelism — From thinking emerges intelligence: Multibody Cybernetic Intelligent System.
+This third answer, termed the "Multibody Cybernetic Intelligent System," can be distilled into one core idea: thinking generates intelligence, originating from system parallelism — From thinking emerges intelligence: Multibody Cybernetic Intelligent System.
 
 ## Part 1: Four Core Propositions
 
@@ -110,7 +109,7 @@ Dimension evolution also requires discipline:
 
 ## Part 3: From Five-Dimensional Orthogonality to Multibody System
 
-In AgentOS V1.x, the Multibody Cybernetic Intelligent System is instantiated as five concrete dimensions:
+In Airymax V1.x, the Multibody Cybernetic Intelligent System is instantiated as five concrete dimensions:
 
 | Dimension | Core Question | Number of Principles |
 |-----------|---------------|----------------------|
@@ -120,7 +119,7 @@ In AgentOS V1.x, the Multibody Cybernetic Intelligent System is instantiated as 
 | Engineering Perspective | How to build maintainable, testable, evolvable systems? | 8 |
 | Design Aesthetics | How to make engineering an art? | 4 |
 
-These five dimensions are called the "Five-Dimensional Orthogonal System." They represent the concrete implementation of the Multibody Cybernetic Intelligent System in the AgentOS project, validated through practice from V1.0 to V1.8 as a stable, effective **minimal complete set** for AgentOS.
+These five dimensions are called the "Five-Dimensional Orthogonal System." They represent the concrete implementation of the Multibody Cybernetic Intelligent System in the Airymax project, validated through practice from V1.0 to V1.8 as a stable, effective **minimal complete set** for Airymax.
 
 However, the Multibody Cybernetic Intelligent System itself is not bound to the number "five." It is an open philosophical framework. In the future, if new fundamental design concerns emerge that cannot be covered by the existing five dimensions—such as an "ethical dimension" or "economic dimension"—and they pass the four-criteria review, a sixth dimension can be formally introduced. Similarly, if practice shows that two dimensions significantly overlap, they should be merged.
 
@@ -140,7 +139,7 @@ The practicality criterion corresponds to "practice is the sole criterion for te
 
 The minimal complete set principle reflects "quantitative change leading to qualitative change." When the accumulation of dimension numbers exceeds a certain threshold, the system's manageability undergoes qualitative change, shifting from "clarity" to "chaos." The principle of appropriateness consciously applies this law.
 
-The Multibody Cybernetic Intelligent System did not emerge from pure speculation. It was born from AgentOS development practice, refined from code, architecture, and repeated trial and error. It acknowledges its own historicity—today's Five-Dimensional Orthogonal System is the optimal solution at the current stage, but tomorrow it may be revised or expanded by new practice. It rejects dogmatization and advocates testing and development through practice. This represents a concrete application of dialectical materialist epistemology in software engineering.
+The Multibody Cybernetic Intelligent System did not emerge from pure speculation. It was born from Airymax development practice, refined from code, architecture, and repeated trial and error. It acknowledges its own historicity—today's Five-Dimensional Orthogonal System is the optimal solution at the current stage, but tomorrow it may be revised or expanded by new practice. It rejects dogmatization and advocates testing and development through practice. This represents a concrete application of dialectical materialist epistemology in software engineering.
 
 ## Part 5: How the Theory Can Be Tested and Falsified
 
@@ -152,7 +151,7 @@ A theory that cannot be falsified is difficult to recognize as scientific. The M
 
 3. **Criteria Sufficiency Proposition**: If a dimension that passes the four-criteria review cannot derive at least three verifiable principles in practice, the validity of these criteria is called into question.
 
-Currently, the Multibody Cybernetic Intelligent System has only been applied in the AgentOS project and has not undergone large-scale, multi-project independent validation. Its true value needs to be tested in broader engineering practice. This is precisely what the practicality criterion demands of the theory itself.
+Currently, the Multibody Cybernetic Intelligent System has only been applied in the Airymax project and has not undergone large-scale, multi-project independent validation. Its true value needs to be tested in broader engineering practice. This is precisely what the practicality criterion demands of the theory itself.
 
 ## Conclusion
 
@@ -168,4 +167,3 @@ This is the Multibody Cybernetic Intelligent System—a theory about how to orga
 
 ---
 
-Author: zhixian zhou

@@ -1,13 +1,11 @@
 <!-- SPDX-FileCopyrightText: 2026 SPHARX Ltd. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# AgentOS Rust 编码风格标准
+# Airymax Rust 编码风格标准
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Rust_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -23,7 +21,7 @@
 9. [文档注释规范](#9-文档注释规范)
 10. [测试规范](#10-测试规范)
 11. [依赖管理](#11-依赖管理)
-12. [AgentOS 模块编码示例](#12-agentos-模块编码示例)
+12. [Airymax 模块编码示例](#12-agentos-模块编码示例)
 
 ---
 
@@ -31,18 +29,18 @@
 
 ### 1.1 适用范围
 
-本标准适用于 AgentOS 项目中所有 Rust 代码的编写，包括但不限于：
+本标准适用于 Airymax 项目中所有 Rust 代码的编写，包括但不限于：
 
-- AgentOS Rust SDK 核心库（`agentos-rs`）
+- Airymax Rust SDK 核心库（`agentos-rs`）
 - 基于 SDK 的上层应用与工具
 - 与 Go SDK / Python SDK 保持跨语言一致性的接口层
 
 ### 1.2 核心原则
 
-本标准遵循 AgentOS 架构的三大核心原则：
+本标准遵循 Airymax 架构的三大核心原则：
 
 1. **五维正交体系**：模块间职责正交、依赖单向、边界清晰。每个模块只属于一个维度（核心循环 / 认知层 / 执行层 / 记忆层 / 系统调用），禁止跨维度耦合。
-2. **Thinkdual 认知双思系统**：代码设计必须同时考虑"声明式意图"与"命令式执行"两条路径。API 设计优先表达意图（what），实现层负责执行（how）。
+2. **Thinkdual 双思考系统**：代码设计必须同时考虑"声明式意图"与"命令式执行"两条路径。API 设计优先表达意图（what），实现层负责执行（how）。
 3. **安全穹顶 Cupolas**：所有外部输入必须经过验证，所有错误必须可追踪至错误码体系，禁止静默丢弃错误。
 
 ### 1.3 规则等级
@@ -70,7 +68,7 @@
 
 ### 2.1 目录结构
 
-AgentOS Rust SDK **必须**遵循以下目录结构：
+Airymax Rust SDK **必须**遵循以下目录结构：
 
 ```
 src/
@@ -171,7 +169,7 @@ pub mod task; // 无 deprecated 标注
 
 ```rust
 // ✅ 正确
-// AgentOS Rust SDK - HTTP 客户端实现
+// Airymax Rust SDK - HTTP 客户端实现
 // Version: 0.1.0
 // Last updated: 2026-03-24
 //
@@ -1278,10 +1276,10 @@ pub struct ProtocolConfig {
 #[derive(Error, Debug, Clone)]
 pub enum AgentOSError { ... }
 
-/// 创建新的 AgentOS 客户端
+/// 创建新的 Airymax 客户端
 ///
 /// # 参数
-/// - `endpoint`: AgentOS 服务端点地址
+/// - `endpoint`: Airymax 服务端点地址
 ///
 /// # 返回
 /// 返回 Result<Client, AgentOSError>
@@ -1332,7 +1330,7 @@ pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult,
 
 ```rust
 // ✅ 正确
-// AgentOS Rust SDK - 统一错误体系
+// Airymax Rust SDK - 统一错误体系
 // Version: 0.1.0
 // Last updated: 2026-04-05
 //
@@ -1347,7 +1345,7 @@ pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult,
 
 ```rust
 // ✅ 正确
-/// 创建新的 AgentOS 客户端
+/// 创建新的 Airymax 客户端
 ///
 /// # 弃用
 /// 自 0.2.0 起请使用 `Client::builder(endpoint).build()`
@@ -1361,20 +1359,20 @@ pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
 
 ```rust
 // ✅ 正确
-/// 创建带 API Key 的 AgentOS 客户端
+/// 创建带 API Key 的 Airymax 客户端
 ///
 /// # 参数
-/// - `endpoint`: AgentOS 服务端点地址
+/// - `endpoint`: Airymax 服务端点地址
 /// - `api_key`: API 密钥
 pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentOSError> { ... }
 ```
 
 ```rust
 // ❌ 禁止
-/// Create a new AgentOS client with API key
+/// Create a new Airymax client with API key
 ///
 /// # Arguments
-/// - `endpoint`: The AgentOS service endpoint address
+/// - `endpoint`: The Airymax service endpoint address
 pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentOSError> { ... }
 ```
 
@@ -1531,11 +1529,11 @@ mod tests {
 name = "agentos-rs"
 version = "0.1.0"
 edition = "2021"
-description = "AgentOS Rust SDK - 与 Go SDK 保持一致的模块化结构"
+description = "Airymax Rust SDK - 与 Go SDK 保持一致的模块化结构"
 license = "MIT"
 homepage = "https://github.com/spharx/agentos"
 repository = "https://github.com/spharx/agentos"
-authors = ["Spharx AgentOS Team"]
+authors = ["Spharx Airymax Team"]
 ```
 
 ```toml
@@ -1626,12 +1624,12 @@ futures = "0.3"
 
 ---
 
-## 12. AgentOS 模块编码示例
+## 12. Airymax 模块编码示例
 
 ### 12.1 Client 模板
 
 ```rust
-// AgentOS Rust SDK - XXX 客户端实现
+// Airymax Rust SDK - XXX 客户端实现
 // Version: 0.1.0
 // Last updated: 2026-06-08
 //
@@ -1745,7 +1743,7 @@ mod tests {
 ### 12.2 Manager 模板
 
 ```rust
-// AgentOS Rust SDK - XXX 管理器实现
+// Airymax Rust SDK - XXX 管理器实现
 // Version: 0.1.0
 // Last updated: 2026-06-08
 //
@@ -1839,7 +1837,7 @@ mod tests {
 ### 12.3 Syscall 模板
 
 ```rust
-// AgentOS Rust SDK - XXX Syscall 实现
+// Airymax Rust SDK - XXX Syscall 实现
 // Version: 0.1.0
 // Last updated: 2026-06-08
 //
@@ -1879,7 +1877,7 @@ impl<B: SyscallBinding> XxxSyscall<B> {
 ### 12.4 Plugin 模板
 
 ```rust
-// AgentOS Rust SDK - XXX 插件实现
+// Airymax Rust SDK - XXX 插件实现
 // Version: 0.1.0
 // Last updated: 2026-06-08
 //
@@ -2036,5 +2034,5 @@ deny = [
 
 ---
 
-> **文档维护者**: Spharx AgentOS Team
+> **文档维护者**: Spharx Airymax Team
 > **审核周期**: 每季度审核一次，与 SDK 主版本同步更新

@@ -1,20 +1,18 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 迁移指南
+# Airymax 迁移指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/migration_guide.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-本文档提供了从 AgentOS 旧版本迁移到新版本的系统性指南。迁移的本质是一个**控制论反馈过程**：旧系统输出的偏差信号驱动新系统的参数校准，直至达到稳态。
+本文档提供了从 Airymax 旧版本迁移到新版本的系统性指南。迁移的本质是一个**控制论反馈过程**：旧系统输出的偏差信号驱动新系统的参数校准，直至达到稳态。
 
-AgentOS 采用语义化版本号（MAJOR.MINOR.PATCH），其中：
+Airymax 采用语义化版本号（MAJOR.MINOR.PATCH），其中：
 
 - **MAJOR**：表示不兼容的 API 更改——对应系统工程的"接口重新定义"
 - **MINOR**：表示向后兼容的功能添加——对应"子系统增量升级"
@@ -22,7 +20,7 @@ AgentOS 采用语义化版本号（MAJOR.MINOR.PATCH），其中：
 
 ### 1.1 迁移哲学
 
-AgentOS 的迁移设计遵循三条原则：
+Airymax 的迁移设计遵循三条原则：
 
 1. **分层迁移**：从底层微核心到上层服务，逐层验证，确保每层迁移后的系统稳定性
 2. **双路径并行**：System 1（快速迁移脚本）处理标准化变更；System 2（人工审查）处理架构级变更
@@ -38,7 +36,7 @@ AgentOS 的迁移设计遵循三条原则：
 
 ## 2. 从 v0.x 迁移到 v1.0
 
-v1.0 是 AgentOS 的首个生产就绪版本，引入了完整的微核心架构（corekern）、三层运行时（coreloopthree）、四层记忆系统（memoryrovol）和安全穹顶（cupolas）。
+v1.0 是 Airymax 的首个生产就绪版本，引入了完整的微核心架构（corekern）、三层运行时（coreloopthree）、四层记忆系统（memoryrovol）和安全穹顶（cupolas）。
 
 ### 2.1 架构级变更
 
@@ -186,7 +184,7 @@ v1.0 的 MemoryRovol 采用四层渐进抽象架构：
  * @return AGENTOS_SUCCESS 成功，其他值表示失败
  */
 agentos_memory_record_t record = {
-    .content     = "Hello, AgentOS!",
+    .content     = "Hello, Airymax!",
     .content_len = 14,
     .metadata    = "{\"type\": \"greeting\"}",
     .importance  = 0.8,
@@ -387,7 +385,7 @@ agentos-cli metrics memory --format=json | jq '.layer_l2.latency_p99'
 
 ## 6. 自动化迁移工具
 
-AgentOS 提供自动化迁移辅助工具：
+Airymax 提供自动化迁移辅助工具：
 
 ```bash
 # 分析迁移影响

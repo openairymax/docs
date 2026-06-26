@@ -1,28 +1,28 @@
-# AgentRT 命名规范 (P4.4.2)
+# Airymax 命名规范 (P4.4.2)
 
-本文档定义了 AgentRT 项目中所有关键组件、文件、函数、类型、常量、错误码及 API 的命名约定，确保整个代码库的一致性与可读性。
+本文档定义了 Airymax 项目中所有关键组件、文件、函数、类型、常量、错误码及 API 的命名约定，确保整个代码库的一致性与可读性。
 
 ---
 
 ## 1. 核心组件命名
 
-### 1.1 AgentRT
+### 1.1 Airymax
 
-**AgentRT** = **Agent** + **R**un**t**ime，即"Agent 运行时"。它是一个 OS 级的 AI Agent 运行时平台，为 AI Agent 提供操作系统级别的调度、资源管理和生命周期管理能力。
+**Airymax**（极境）是产品名。**AgentRT/** 是代码仓库目录路径，为 **Agent** **R**un**t**ime（即"Agent 运行时"）的缩写。Airymax 是一个 OS 级的 AI Agent 运行时平台，为 AI Agent 提供操作系统级别的调度、资源管理和生命周期管理能力。
 
-"RT" 的命名参照了传统操作系统中的"Runtime"概念（如 Windows Runtime / WinRT），强调 AgentRT 不是上层框架，而是位于操作系统层面的基础运行时。
+"RT" 的命名参照了传统操作系统中的"Runtime"概念（如 Windows Runtime / WinRT），强调 Airymax 不是上层框架，而是位于操作系统层面的基础运行时。
 
 ### 1.2 agentos
 
-**agentos** = **agent** + **os**（全小写，无空格），即 AgentRT 内部的"操作系统层"。它是整个 AgentRT 平台的核心基础设施层，提供进程管理、内存管理、IPC 通信、文件系统等底层能力。
+**agentos** = **agent** + **os**（全小写，无空格），即 Airymax 内部的"操作系统层"。它是整个 Airymax 平台的核心基础设施层，提供进程管理、内存管理、IPC 通信、文件系统等底层能力。
 
 - 所有 C 源代码文件位于 `agentos/` 目录下
 - 代码中的命名空间前缀统一使用 `agentos_`（如 `agentos_error_t`、`agentos_log_write`）
-- **注意**：目录名与代码前缀使用小写，与组件名 `AgentRT` 的 PascalCase 形成层次区分
+- **注意**：目录名与代码前缀使用小写，与代码仓库目录 `AgentRT/` 的 PascalCase 形成层次区分（产品名为 Airymax）
 
 ### 1.3 Atoms
 
-**Atoms** = 原子（复数），即"原子构建块"。Atoms 是 AgentRT 中最小的计算单元，代表不可再分的原子操作。
+**Atoms** = 原子（复数），即"原子构建块"。Atoms 是 Airymax 中最小的计算单元，代表不可再分的原子操作。
 
 - 每个 Atom 是一个独立的、无副作用的计算单元
 - 多个 Atoms 可以组合成更复杂的 TaskFlow
@@ -30,16 +30,17 @@
 
 ### 1.4 CoreKern
 
-**CoreKern** = **Core** + **Kern**el，即"核心内核"。它是 AgentRT 的中央调度器和分发器（Central Scheduler and Dispatcher）。
+**CoreKern** = **Core** + **Kern**el，即"原子核心"。它是 Airymax 的中央调度器和分发器（Central Scheduler and Dispatcher）。
 
-- 采用微内核（Microkernel）架构设计
-- 负责所有 Cupola 服务的生命周期管理
+- 采用微核心（MicroCoreRT）架构设计
+- 负责所有 Cupolas 服务的生命周期管理
 - 实现 CoreLoopThree 认知循环的调度
-- 目录名为 `corekern/`（小写），代码前缀为 `corekern_`
+- 目录名为 `corekern/`（小写），代码前缀为 `agentos_core_*`
+- **注**: MicroCoreRT（微核心）是 CoreKern 的架构概念层名称，两者共享同一目录和代码前缀，非独立模块
 
 ### 1.5 CoreLoopThree
 
-**CoreLoopThree** = **Core** + **Loop** + **Three**，即"三阶段核心循环"。它描述了 AgentRT 的认知处理流程：
+**CoreLoopThree** = **Core** + **Loop** + **Three**，即"三层认知循环"。它描述了 Airymax 的认知处理流程：
 
 ```
 Cognition（认知）→ Planning（规划）→ Action（执行）
@@ -52,7 +53,7 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 ### 1.6 Cupolas
 
-**Cupolas** = 穹顶（复数），即"服务胶囊"。命名灵感来源于大教堂建筑顶部的穹顶结构（Cupola），寓意每个 Cupola 是一个独立、自包含、向上拱起的服务单元。
+**Cupolas** = 穹顶（复数），即"安全穹顶"。命名灵感来源于大教堂建筑顶部的穹顶结构（Cupola），寓意每个 Cupola 是一个独立、自包含、向上拱起的安全服务单元。
 
 - 每个 Cupola 是一个独立的服务进程，通过 IPC Bus 与 CoreKern 通信
 - Cupola 之间相互隔离，通过消息传递进行协作
@@ -79,7 +80,7 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 ### 1.9 MemoryRovol
 
-**MemoryRovol** = **Memory** + **R**e**vol**ution，即"记忆革命"。它实现了 AgentRT 的 4 层记忆系统：
+**MemoryRovol** = **Memory** + **Rovol**（**Roll** + **Volume** 的融合造词），即"记忆卷载"。它实现了 Airymax 的 4 层记忆系统：
 
 | 层级 | 名称 | 说明 |
 |------|------|------|
@@ -94,7 +95,7 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 ## 2. 守护进程（Daemon）命名
 
-所有 AgentRT 的后台守护进程使用 `*_d` 后缀命名，遵循 Unix 守护进程命名惯例（`d` = daemon）。
+所有 Airymax 的后台守护进程使用 `*_d` 后缀命名，遵循 Unix 守护进程命名惯例（`d` = daemon）。
 
 ### 2.1 完整 Daemon 列表
 
@@ -469,7 +470,7 @@ int agentos_tls_set(const char *key, void *value);
 
 | 类别 | 规则 | 示例 |
 |------|------|------|
-| 平台名 | PascalCase | `AgentRT` |
+| 平台名 | PascalCase | `Airymax` |
 | 操作系统层 | 全小写 | `agentos` |
 | 核心组件 | PascalCase | `CoreKern`、`CoreLoopThree`、`TaskFlow`、`HeapStore`、`MemoryRovol` |
 | 复数组件 | PascalCase（复数） | `Atoms`、`Cupolas` |
@@ -508,4 +509,4 @@ int agentos_tls_set(const char *key, void *value);
 1. **一致性优先**：当不确定时，参考已有代码中的命名模式
 2. **模块前缀必须**：所有公开符号必须带模块前缀，避免链接冲突
 3. **语义明确**：命名应准确表达其用途，避免缩写歧义（除非是广泛接受的缩写如 `init`、`cfg`）
-4. **C 惯例为准**：由于 AgentRT 核心以 C 语言实现，命名以 C 社区惯例为基准
+4. **C 惯例为准**：由于 Airymax 核心以 C 语言实现，命名以 C 社区惯例为基准

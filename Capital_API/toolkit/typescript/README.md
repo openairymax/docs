@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS TypeScript SDK
+# Airymax TypeScript SDK
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/toolkit/typescript/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-AgentOS TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 AgentOS 微核心系统交互。SDK 遵循 TypeScript 惯用设计，提供完整的类型定义、Promise/async-await 异步支持和自动资源管理。
+Airymax TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 Airymax 微核心系统交互。SDK 遵循 TypeScript 惯用设计，提供完整的类型定义、Promise/async-await 异步支持和自动资源管理。
 
 ### 🧩 五维正交原则体现
 
@@ -20,7 +18,7 @@ AgentOS TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 AgentO
 |------|----------|---------|
 | **系统观** | SDK 作为系统边界抽象 | 统一的 AgentOSClient 入口，封装所有子系统 |
 | **内核观** | 接口契约化 | 完整的 TypeScript 接口定义，编译时类型检查 |
-| **认知观** | 双系统认知模型映射 | System1/System2 路径的类型安全表达 |
+| **认知观** | 双思考系统映射 | System1/System2 路径的类型安全表达 |
 | **工程观** | 可观测性集成 | 内置追踪、指标、日志的 SDK 集成 |
 | **设计美学** | TypeScript 惯用设计 | async/await、泛型、枚举、命名空间 |
 
@@ -56,7 +54,7 @@ const client = new AgentOSClient({
 
 // 健康检查
 const health = await client.healthCheck();
-console.log(`AgentOS status: ${health.status}`);
+console.log(`Airymax status: ${health.status}`);
 ```
 
 ### 创建 Agent
@@ -80,7 +78,7 @@ console.log(`Agent created: ${agent.id}, state: ${agent.state}`);
 ```typescript
 // 写入记忆
 const record = await client.memory.write({
-  content: 'AgentOS uses microkernel architecture',
+  content: 'Airymax uses microkernel architecture',
   importance: 0.8,
   tags: ['architecture', 'kernel'],
   layer: MemoryLayer.L1_RAW,
@@ -402,7 +400,7 @@ try {
   } else if (error instanceof TimeoutError) {
     console.error(`Operation timed out after ${error.timeoutMs}ms`);
   } else if (error instanceof AgentOSError) {
-    console.error(`AgentOS error: ${error.code} - ${error.message}`);
+    console.error(`Airymax error: ${error.code} - ${error.message}`);
   }
 }
 ```
@@ -492,7 +490,7 @@ expect(mockClient.agents.create).toHaveBeenCalledTimes(1);
 ---
 
 **最后更新**: 2026-04-12  
-**维护者**: AgentOS SDK 委员会 (作者: LirenWang)
+**维护者**: Airymax SDK 委员会 
 
 ---
 

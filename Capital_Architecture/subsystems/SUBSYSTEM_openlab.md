@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-openlab 是 AgentRT 的开放实验室，即生态贡献平台。它为社区开发者提供标准化的 Agent、Skill、Strategy 贡献框架，使第三方开发者能够以统一规范贡献可复用的智能体组件。
+openlab 是 Airymax 的开放实验室，即生态贡献平台。它为社区开发者提供标准化的 Agent、Skill、Strategy 贡献框架，使第三方开发者能够以统一规范贡献可复用的智能体组件。
 
 ### 1.1 核心职责
 
@@ -129,7 +129,7 @@ ecosystem/openlab/
 |------|------|------|
 | **Python >= 3.10** | 运行时 | Python 运行环境 |
 | **openlab.core** | 强依赖 | Agent 基类、核心抽象 |
-| **AgentRT protocols** | 协议依赖 | JSON-RPC 2.0 协议 |
+| **Airymax protocols** | 协议依赖 | JSON-RPC 2.0 协议 |
 | **market_d** | 可选依赖 | 通过市场服务分发 Agent |
 
 ### 3.2 被依赖方
@@ -153,7 +153,7 @@ ecosystem/openlab/
                    │ JSON-RPC 2.0
                    ▼
 ┌──────────────────────────────────────────┐
-│           AgentRT Core Runtime            │
+│           Airymax Core Runtime            │
 │   (coreloopthree + gateway_d + llm_d)    │
 └──────────────────────────────────────────┘
 ```

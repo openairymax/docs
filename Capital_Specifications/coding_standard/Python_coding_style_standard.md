@@ -1,28 +1,26 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Python 编码规范
+# Airymax Python 编码规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Python_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、概述
 
 ### 1.1 编制目的
 
-本规范为 AgentOS 项目中的 Python 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度（E-1至E-4），为开发者提供可操作的代码实现指南。
+本规范为 Airymax 项目中的 Python 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度（E-1至E-4），为开发者提供可操作的代码实现指南。
 
 ### 1.2 理论基础
 
-本规范基于 AgentOS 架构设计原则的五维正交系统：
+本规范基于 Airymax 架构设计原则的五维正交系统：
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **Thinkdual 认知双思系统**（原则 C-1）：Python 简洁语法（System 1）与类型提示（System 2）
+- **Thinkdual 双思考系统**（原则 C-1）：Python 简洁语法（System 1）与类型提示（System 2）
 
 **双系统在 Python 中的体现**:
 
@@ -41,9 +39,9 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | SDK Python | Python 3.10+ | pyright |
 | 工具脚本 | Python 3.9+ | - |
 
-### 1.4 与 AgentOS 架构的关系
+### 1.4 与 Airymax 架构的关系
 
-Python 代码在 AgentOS 中主要应用于以下场景：
+Python 代码在 Airymax 中主要应用于以下场景：
 
 | 场景 | 位置 | 关联原则 | Python 特性 |
 |------|------|---------|------------|
@@ -88,7 +86,7 @@ src/
 
 ```python
 """
-AgentOS 任务调度模块。
+Airymax 任务调度模块。
 
 提供任务调度核心功能，包括任务提交、状态管理、
 优先级队列和依赖解析。调度器采用双系统架构：
@@ -102,7 +100,7 @@ Example:
     >>> result = scheduler.wait(task_id)
 
 Author:
-    AgentOS Team
+    Airymax Team
 
 Version:
     1.5.0
@@ -594,7 +592,7 @@ class ResourceManager:
 
 ```python
 class AgentOSError(Exception):
-    """AgentOS 错误基类。"""
+    """Airymax 错误基类。"""
     
     def __init__(self, message: str, code: str = "AGENTOS_ERROR") -> None:
         self.message = message
@@ -788,7 +786,7 @@ from agentos.manager import manager  # type: ignore[attr-defined]
 
 ```python
 # __init__.py
-"""AgentOS 调度模块。
+"""Airymax 调度模块。
 
 Example:
     >>> from agentos.scheduler import TaskScheduler
@@ -822,7 +820,7 @@ from agentos.scheduler.errors import (
 
 ```python
 """
-AgentOS 任务调度器测试。
+Airymax 任务调度器测试。
 """
 
 import pytest
@@ -899,7 +897,7 @@ def test_scheduler_with_strategy(strategy: str, scheduler: TaskScheduler) -> Non
 
 ```python
 # agentos_scheduler_ffi.py
-"""AgentOS 调度器 FFI 绑定。"""
+"""Airymax 调度器 FFI 绑定。"""
 
 from ctypes import CDLL, c_int, c_char_p, POINTER, byref
 from agentos.errors import AgentOSError, SchedulerError
@@ -1031,7 +1029,7 @@ logger.info("Task %s completed", task_id)
 
 ---
 
-## 十一、AgentOS 模块 Python 编码示例
+## 十一、Airymax 模块 Python 编码示例
 
 ### 11.1 daemon（守护层）Python 实现
 Backs模块作为系统服务守护进程，需要高可靠性和可观测性：
@@ -1275,11 +1273,11 @@ class VectorDBClient:
 
 ## 十二、参考文献
 
-1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
+1. **Airymax 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
 2. **Google Python Style Guide**: https://google.github.io/styleguide/pyguide.html
 3. **Python PEP 8**: https://www.python.org/dev/peps/pep-0008/
 4. **Python PEP 484**: https://www.python.org/dev/peps/pep-0484/
-5. **AgentOS 核心架构文档**:
+5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
    - [microkernel.md](../../Capital_Architecture/microkernel.md)
@@ -1290,7 +1288,7 @@ class VectorDBClient:
 
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有 Python 代码须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有 Python 代码须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|

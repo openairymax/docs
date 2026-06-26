@@ -1,16 +1,16 @@
-# P4.3.4: AgentRT Prompt 工程指南
+# P4.3.4: Airymax Prompt 工程指南
 
 > **版本**: v1.0.0 | **最后更新**: 2026-06-18 | **目标读者**: Agent 开发者、Prompt 工程团队
 
 ---
 
-## 1. AgentRT Prompt 系统概述
+## 1. Airymax Prompt 系统概述
 
-AgentRT 的 Prompt 系统是一个多层架构，覆盖从模板定义、变量渲染、上下文注入到版本管理、A/B 测试和自动调优的完整生命周期。系统由以下核心组件构成：
+Airymax 的 Prompt 系统是一个多层架构，覆盖从模板定义、变量渲染、上下文注入到版本管理、A/B 测试和自动调优的完整生命周期。系统由以下核心组件构成：
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   AgentRT Prompt System Architecture                 │
+│                   Airymax Prompt System Architecture                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
@@ -77,12 +77,12 @@ LLM Gateway 发送最终 Prompt
 
 ## 2. Prompt 模板语法
 
-AgentRT 使用类 Jinja2 风格的模板语法，支持 `{variable_name}` 占位符变量替换。模板以 YAML 格式定义。
+Airymax 使用类 Jinja2 风格的模板语法，支持 `{variable_name}` 占位符变量替换。模板以 YAML 格式定义。
 
 ### 2.1 模板文件结构
 
 ```yaml
-# AgentRT Prompt Template: <template_name>
+# Airymax Prompt Template: <template_name>
 # Category: <cognition|memory|security|system>
 # Version: <semver>
 
@@ -193,7 +193,7 @@ print(rendered.user_message)
 
 ### 2.3 模板分类体系
 
-AgentRT 将 Prompt 模板按四大类别组织，对应 `ecosystem/prompts/templates/` 下的四个子目录：
+Airymax 将 Prompt 模板按四大类别组织，对应 `ecosystem/prompts/templates/` 下的四个子目录：
 
 | 分类 | 目录 | 模板示例 | 说明 |
 |:-----|:-----|:---------|:-----|
@@ -212,7 +212,7 @@ AgentRT 将 Prompt 模板按四大类别组织，对应 `ecosystem/prompts/templ
 
 ```yaml
 system: |
-  You are {agent_name}, a software engineering assistant powered by AgentRT.
+  You are {agent_name}, a software engineering assistant powered by Airymax.
 
   ## Core Principles
   1. **Correctness first**: Code must be correct before it is elegant.
@@ -229,7 +229,7 @@ system: |
 
 **设计要点**：
 
-- **身份声明**：`You are {agent_name}, a ... powered by AgentRT` 作为首句，建立角色认知
+- **身份声明**：`You are {agent_name}, a ... powered by Airymax` 作为首句，建立角色认知
 - **核心原则**：用编号列表明确行为准则，每条原则简洁有力
 - **能力边界**：通过 `{tools}` 和 `{capabilities}` 变量声明可用能力
 - **技术上下文**：通过 `{primary_language}`, `{framework}` 等变量注入项目环境
@@ -446,7 +446,7 @@ system: |
 
 ## 5. Memory 上下文注入
 
-AgentRT 通过 MemoryRovol 四层记忆系统将记忆上下文注入到 Prompt 中。不同层级的记忆以不同方式呈现给 LLM。
+Airymax 通过 MemoryRovol 四层记忆系统将记忆上下文注入到 Prompt 中。不同层级的记忆以不同方式呈现给 LLM。
 
 ### 5.1 MemoryRovol L1-L4 记忆层级
 
@@ -612,7 +612,7 @@ class MemoryContextInjector(PromptInjectorHook):
 
 ### 6.1 工具描述格式
 
-AgentRT 使用结构化的工具描述格式，确保 LLM 能正确理解和使用工具。工具描述通过 `{tools}` 变量注入到 System Prompt 中：
+Airymax 使用结构化的工具描述格式，确保 LLM 能正确理解和使用工具。工具描述通过 `{tools}` 变量注入到 System Prompt 中：
 
 ```yaml
 system: |
@@ -736,7 +736,7 @@ def format_tool_descriptions(tools: list[dict]) -> str:
 
 ## 7. 多 Agent Prompt 编排
 
-AgentRT 支持四种多 Agent 协作模式，每种模式需要不同的 Prompt 编排策略。
+Airymax 支持四种多 Agent 协作模式，每种模式需要不同的 Prompt 编排策略。
 
 ### 7.1 协作模式概览
 
@@ -935,7 +935,7 @@ system: |
 
 ### 8.1 版本管理
 
-AgentRT 通过 `registry.yaml` 和模板内嵌版本号实现 Prompt 版本管理：
+Airymax 通过 `registry.yaml` 和模板内嵌版本号实现 Prompt 版本管理：
 
 ```yaml
 # ecosystem/prompts/registry.yaml
@@ -986,7 +986,7 @@ agentrt prompt ab-test intent_classify --baseline 1.0.0 --candidate 1.1.0
 
 ### 8.3 A/B 测试流程
 
-AgentRT 的 `ABTestRunner` 提供完整的 A/B 测试能力：
+Airymax 的 `ABTestRunner` 提供完整的 A/B 测试能力：
 
 ```python
 from ecosystem.prompts.tuner.ab_test import ABTestRunner
@@ -1224,7 +1224,7 @@ max_tokens: 4096
 
 system: |
   You are {agent_name}, a senior code reviewer specializing in security
-  and code quality analysis. You are powered by AgentRT.
+  and code quality analysis. You are powered by Airymax.
 
   ## Review Principles
   1. **Security first**: Identify security vulnerabilities before style issues.
@@ -1324,7 +1324,7 @@ temperature: 0.4
 max_tokens: 8192
 
 system: |
-  You are {agent_name}, a research analyst powered by AgentRT.
+  You are {agent_name}, a research analyst powered by Airymax.
 
   ## Research Methodology
   1. **Define scope**: Clarify the research question and boundaries.
@@ -1366,7 +1366,7 @@ temperature: 0.6
 max_tokens: 2048
 
 system: |
-  You are {agent_name}, a customer support specialist powered by AgentRT.
+  You are {agent_name}, a customer support specialist powered by Airymax.
 
   ## Service Principles
   1. **Empathy first**: Acknowledge the customer's feelings before solving the problem.
@@ -1490,7 +1490,7 @@ typedef struct {
 
 ### C. 相关文档
 
-- [AgentRT 架构文档](../Capital_Architecture/architecture.md) — 系统整体架构和 MemoryRovol 四层记忆系统
+- [Airymax 架构文档](../Capital_Architecture/architecture.md) — 系统整体架构和 MemoryRovol 四层记忆系统
 - [Prompts 模块 README](../ecosystem/prompts/README.md) — Prompt 模板管理详情
 - [Prompt Tuner Demo](../ecosystem/examples/prompt-tuner-demo/README.md) — Prompt 调优示例
 - [Multi-Agent Debate](../ecosystem/examples/multi-agent-debate/README.md) — 多 Agent 协作模式

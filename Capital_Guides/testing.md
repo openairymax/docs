@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 测试指南
+# Airymax 测试指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/testing.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 测试体系概览
 
-AgentOS 采用**多层次测试策略**，确保代码质量和系统稳定性：
+Airymax 采用**多层次测试策略**，确保代码质量和系统稳定性：
 
 ```
 ┌─────────────────────────────────────────────┐

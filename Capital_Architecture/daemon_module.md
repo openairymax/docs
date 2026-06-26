@@ -1,15 +1,13 @@
-# AgentOS Daemon 模块系统架构与使用指南
+# Airymax Daemon 模块系统架构与使用指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Architecture/daemon_module.md
-**作者**:
-    - Zhixian Zhou、Liren Wang
 ---
 
 ## 模块概述
 
-AgentOS Daemon 模块是用户空间守护进程集合，负责提供微核心架构中的高级服务功能。每个守护进程作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
+Airymax Daemon 模块是用户空间守护进程集合，负责提供微核心架构中的高级服务功能。每个守护进程作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
 
 ---
 

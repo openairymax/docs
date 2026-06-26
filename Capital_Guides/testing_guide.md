@@ -3,19 +3,17 @@
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/testing_guide.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 概述
 
-本指南介绍如何高效使用 AgentOS 测试框架，包括测试编写、运行、调试和报告。
+本指南介绍如何高效使用 Airymax 测试框架，包括测试编写、运行、调试和报告。
 
 ---
 
 ## 🏗️ 测试架构
 
-AgentOS 采用**双层测试架构**：
+Airymax 采用**双层测试架构**：
 
 1. **模块自测层** (`agentos/*/tests/`)
    - C/C++ 单元测试，与源码相邻

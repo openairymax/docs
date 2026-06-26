@@ -6,7 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09  
 **状态**: 维护中  
 **路径**: OpenAirymax/Docs/Capital_API/algorithms/README.md  
-**作者**: Liren Wang  
 ---
 
 ## 🎯 概述
@@ -15,7 +14,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 🧩 五维正交原则体现
 
-算法设计深度体现了 AgentOS 的五维正交设计原则，每个维度都在算法实现中得到具体体现：
+算法设计深度体现了 Airymax 的五维正交设计原则，每个维度都在算法实现中得到具体体现：
 
 | 维度 | 算法设计体现 | 具体实现案例 |
 |------|-------------|------------|
@@ -177,10 +176,10 @@ class DocumentTokenizer:
 tokenizer = DocumentTokenizer(language="zh")
 
 # 分词示例
-text = "AgentOS 是一个先进的智能体操作系统，支持多语言文档处理。"
+text = "Airymax 是一个先进的智能体操作系统，支持多语言文档处理。"
 tokens = tokenizer.tokenize(text)
 print(tokens)
-# 输出: ['AgentOS', '是', '一个', '先进', '智能体', '操作系统', '支持', '多语言', '文档', '处理']
+# 输出: ['Airymax', '是', '一个', '先进', '智能体', '操作系统', '支持', '多语言', '文档', '处理']
 
 # 构建倒排索引
 index = InvertedIndex()
@@ -1740,7 +1739,7 @@ algorithms:
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 算法团队
+**维护者**: Airymax 算法团队
 
 ---
 

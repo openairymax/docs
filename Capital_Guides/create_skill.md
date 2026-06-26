@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Skill 创建指南
+# Airymax Skill 创建指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/create_skill.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-Skill（技能）是 AgentOS 中 Agent 的原子能力单元。每一个 Skill 封装一个独立的功能——从文件操作到网络请求，从数据分析到模型推理。Skill 是 AgentOS "执行单元"概念的具体实现，通过注册表动态加载，是 System 1 快速路径的核心组件。
+Skill（技能）是 Airymax 中 Agent 的原子能力单元。每一个 Skill 封装一个独立的功能——从文件操作到网络请求，从数据分析到模型推理。Skill 是 Airymax "执行单元"概念的具体实现，通过注册表动态加载，是 System 1 快速路径的核心组件。
 
 ### 1.1 Skill 在架构中的位置
 
@@ -137,7 +135,7 @@ Skill 的创建过程是 **执行体** 能力单元的具体实现过程：
   "name": "file_reader",
   "version": "1.0.0",
   "description": "安全地读取文件内容",
-  "author": "AgentOS Core Team",
+  "author": "Airymax Core Team",
   "license": "MIT",
   "input": {
     "type": "object",
@@ -426,11 +424,11 @@ project(skill_file_reader VERSION 1.0.0 LANGUAGES C)
 set(C_STANDARD 11)
 set(C_STANDARD_REQUIRED ON)
 
-find_package(AgentOS REQUIRED COMPONENTS corekern)
+find_package(Airymax REQUIRED COMPONENTS corekern)
 
 add_library(skill_file_reader SHARED src/file_reader_skill.c)
 target_include_directories(skill_file_reader PRIVATE include)
-target_link_libraries(skill_file_reader PRIVATE AgentOS::corekern)
+target_link_libraries(skill_file_reader PRIVATE Airymax::corekern)
 
 install(TARGETS skill_file_reader DESTINATION lib/agentos/skills)
 install(FILES skill_contract.json DESTINATION share/agentos/skills/file_reader)
@@ -663,7 +661,7 @@ agentos-cli skill validate --contract skill_contract.json
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 核心团队
+**维护者**: Airymax 核心团队
 
 ---
 

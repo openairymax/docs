@@ -1,28 +1,26 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 通信协议规范
+# Airymax 通信协议规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/protocol_contract.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 编制说明
 
 ### 本文档定位
 
-通信协议规范是 AgentOS 规范体系的核心组成部分，属于**战术层规范**。本规范定义了 AgentOS 分层架构中各组件之间的通信机制，确保系统内部以及系统与外部世界之间能够清晰、可靠、安全地交互。
+通信协议规范是 Airymax 规范体系的核心组成部分，属于**战术层规范**。本规范定义了 Airymax 分层架构中各组件之间的通信机制，确保系统内部以及系统与外部世界之间能够清晰、可靠、安全地交互。
 
 ### 与设计哲学的关系
 
-本规范根植于 AgentOS 五维正交设计体系，是架构设计原则在通信层的具体体现：
+本规范根植于 Airymax 五维正交设计体系，是架构设计原则在通信层的具体体现：
 
 - **系统观（S维度）**: 协议栈按层次组织（外部网关、服务间通信、系统调用），体现层次分解方法，每层有明确的职责边界
 - **内核观（K维度）**: 通信接口保持长期稳定，支持向后兼容和渐进式演进，体现微核心的接口稳定原则
-- **认知观（C维度）**: 协议设计支持 Thinkdual 认知双思系统的效率与精度权衡，通过不同的传输策略适配不同认知需求
+- **认知观（C维度）**: 协议设计支持 Thinkdual 双思考系统的效率与精度权衡，通过不同的传输策略适配不同认知需求
 - **工程观（E维度）**: 每一层都内置安全机制（认证、授权、审计），体现安全内生原则；协议设计考虑 TraceID 贯穿、结构化日志、指标收集等可观测性需求
 - **设计美学（A维度）**: 协议消息格式遵循简约、对称、自解释的美学原则，确保人类可读性和机器可处理性的平衡
 
@@ -30,7 +28,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 本规范适用于以下场景：
 
-1. **系统集成商**: 实现客户端与 AgentOS 的通信对接
+1. **系统集成商**: 实现客户端与 Airymax 的通信对接
 2. **服务开发者**: 开发 agentos/daemon/ 用户态服务层，实现服务间通信
 3. **内核开发者**: 实现和维护 syscall 层接口
 4. **安全审计人员**: 审查通信安全性和权限控制
@@ -52,13 +50,13 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 背景与意义
 
-AgentOS 采用分层架构，各层之间以及层与外部世界之间通过明确的协议通信。清晰的协议设计是系统稳定性、安全性和可维护性的基础。本规范定义了以下通信场景：
+Airymax 采用分层架构，各层之间以及层与外部世界之间通过明确的协议通信。清晰的协议设计是系统稳定性、安全性和可维护性的基础。本规范定义了以下通信场景：
 
 1. **系统调用**: 用户态服务与内核之间的交互 (通过 syscall 层)
 2. **服务间通信**: agentos/daemon/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
 3. **外部网关**: 客户端 (如 CLI、SDK、Web 应用) 与 Habitat 网关的交互
 
-协议设计遵循 AgentOS 的一贯思想：**层次分明、接口稳定、安全内生、可观测**。
+协议设计遵循 Airymax 的一贯思想：**层次分明、接口稳定、安全内生、可观测**。
 
 ### 1.2 目标与范围
 
@@ -105,7 +103,7 @@ AgentOS 采用分层架构，各层之间以及层与外部世界之间通过明
 
 ### 2.1 分层模型
 
-AgentOS 采用四层协议栈，自顶向下分别为：
+Airymax 采用四层协议栈，自顶向下分别为：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -331,8 +329,8 @@ echo '{"jsonrpc":"2.0","method":"task.submit","params":{"input":"Hello"},"id":1}
 
 #### 3.3.2 适用场景
 
-- **CLI 工具**: 本地命令行工具与 AgentOS 交互
-- **脚本集成**: Shell/Python 脚本调用 AgentOS 功能
+- **CLI 工具**: 本地命令行工具与 Airymax 交互
+- **脚本集成**: Shell/Python 脚本调用 Airymax 功能
 - **进程间通信**: 父子进程之间的通信
 
 ### 3.4 认证机制
@@ -684,7 +682,7 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 AgentOS **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 系统调用错误码
 
@@ -869,7 +867,7 @@ curl -X POST http://localhost:18789/rpc \
 
 ## 参考文献
 
-[1] AgentOS 设计哲学。../../Basic_Theories/CN_04_设计原则.md  
+[1] Airymax 设计哲学。../../Basic_Theories/CN_04_系统设计原则.md  
 [2] 架构设计原则。../../ARCHITECTURAL_PRINCIPLES.md  
 [3] 统一术语表。../TERMINOLOGY.md  
 [4] JSON-RPC 2.0 Specification. https://www.jsonrpc.org/specification  
@@ -882,11 +880,11 @@ curl -X POST http://localhost:18789/rpc \
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|---------|
-| v2.0.0 | 2026-03-22 | AgentOS 架构委员会 | 基于设计哲学和系统工程方法进行全面重构，优化结构和表达 |
+| v2.0.0 | 2026-03-22 | Airymax 架构委员会 | 基于设计哲学和系统工程方法进行全面重构，优化结构和表达 |
 | v1.0.0 | - | 初始版本 | 初始发布 |
 
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 架构委员会
+**维护者**: Airymax 架构委员会
 

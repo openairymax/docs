@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-coreloopthree 是 AgentRT 的智能体认知-执行-记忆三层核心运行时，是 Agent 智能行为的主要执行引擎。它实现感知→决策→执行的完整认知循环。
+coreloopthree 是 Airymax 的智能体认知-执行-记忆三层核心运行时，是 Agent 智能行为的主要执行引擎。它实现感知→决策→执行的完整认知循环。
 
 ### 1.1 核心职责
 
@@ -221,5 +221,5 @@ coreloopthree/
 
 - [核心循环三层架构](../coreloopthree.md)
 - [记忆卷载系统](../memoryrovol.md)
-- [认知层理论](../../Basic_Theories/CN_02_认知层理论.md)
-- [记忆层理论](../../Basic_Theories/CN_03_记忆层理论.md)
+- [认知层理论](../../Basic_Theories/CN_02_认知层设计.md)
+- [记忆层理论](../../Basic_Theories/CN_03_记忆层设计.md)

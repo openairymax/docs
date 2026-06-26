@@ -1,15 +1,13 @@
-# AgentOS 协议快速入门指南
+# Airymax 协议快速入门指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/toolkit/PROTOCOL_QUICKSTART.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 前置条件
 
-- AgentOS 网关运行在 `http://localhost:18789`（或您配置的 URL）
+- Airymax 网关运行在 `http://localhost:18789`（或您配置的 URL）
 - Python 3.8+（示例使用 Python；也支持 Go/Rust/TypeScript）
 - 具备 JSON 和 HTTP 基础知识
 
@@ -27,7 +25,7 @@ agentos protocol list
 预期输出：
 ```
 ============================================================
-  AgentOS 协议适配器
+  Airymax 协议适配器
 ============================================================
 
 协议          版本     状态      端点
@@ -141,7 +139,7 @@ openai = create_openai_client(
     model="gpt-4o",
 )
 
-response = await openai.chat("什么是 AgentOS？")
+response = await openai.chat("什么是 Airymax？")
 print(response)
 ```
 
@@ -287,7 +285,7 @@ console.log('结果:', result);
 
 | 使用场景 | 推荐协议 | 原因 |
 |----------|---------|------|
-| AgentOS 通用任务 | **JSON-RPC** | 原生支持，功能完整 |
+| Airymax 通用任务 | **JSON-RPC** | 原生支持，功能完整 |
 | 工具调用 / LLM 上下文 | **MCP** | 标准化的工具发现与调用 |
 | 多代理协调 | **A2A** | 内置发现、委托、共识机制 |
 | LLM 聊天补全 | **OpenAI** | 与 OpenAI 生态即插即用兼容 |

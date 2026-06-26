@@ -6,8 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/installation.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 安装方式总览
@@ -73,7 +71,7 @@ newgrp docker
 
 下载并安装 [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)（需要WSL2）。
 
-#### 2. 克隆AgentOS仓库
+#### 2. 克隆Airymax仓库
 
 ```bash
 git clone https://gitcode.com/spharx/agentos.git && cd agentos
@@ -165,14 +163,14 @@ docker compose -f docker/docker-compose.yml --profile monitoring up -d prometheu
 ### 使用Helm Chart部署
 
 ```bash
-# 添加AgentOS Helm仓库
+# 添加Airymax Helm仓库
 helm repo add spharx https://charts.spharx.cn/agentos
 helm repo update
 
 # 创建命名空间
 kubectl create namespace agentos
 
-# 安装AgentOS（自定义values）
+# 安装Airymax（自定义values）
 helm install agentos spharx/agentos \
     --namespace agentos \
     --values my-values.yaml \
@@ -350,7 +348,7 @@ DESTDIR=./package cmake --install .
 
 # 验证安装
 agentos-kernel --version
-# 预期输出：AgentOS Kernel v1.0.0 (Build: 20260405)
+# 预期输出：Airymax Kernel v1.0.0 (Build: 20260405)
 ```
 
 #### 6. 后续配置

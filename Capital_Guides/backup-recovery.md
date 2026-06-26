@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 备份与恢复指南
+# Airymax 备份与恢复指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/backup-recovery.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 概述
 
-本文档提供 AgentOS 系统的数据备份与灾难恢复方案，确保业务连续性。
+本文档提供 Airymax 系统的数据备份与灾难恢复方案，确保业务连续性。
 
 ### 备份策略矩阵
 
@@ -350,7 +348,7 @@ if [ -z "$BACKUP_DATE" ]; then
 fi
 
 echo "=========================================="
-echo "  AgentOS Disaster Recovery Procedure"
+echo "  Airymax Disaster Recovery Procedure"
 echo "  Backup Date: $BACKUP_DATE"
 echo "=========================================="
 
@@ -538,7 +536,7 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "AgentOS backup failed"
+          summary: "Airymax backup failed"
           description: "Last backup of {{ $labels.backup_type }} failed at {{ $value }}"
 
       - alert: BackupStale

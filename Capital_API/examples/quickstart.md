@@ -1,10 +1,8 @@
-# AgentOS 快速入门指南
+# Airymax 快速入门指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/examples/quickstart.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 前置要求
@@ -47,8 +45,8 @@ docker pull spharx/agentos:v0.0.4
 ### Step 1: 克隆代码
 
 ```bash
-git clone https://github.com/spharx/AgentOS.git
-cd AgentOS
+git clone https://github.com/spharx/Airymax.git
+cd Airymax
 ```
 
 ### Step 2: 配置构建
@@ -116,7 +114,7 @@ agentos-llm-d --help
 
 ```bash
 # 进入项目目录
-cd AgentOS/Docker/Capital_API/docker
+cd AgentRT/Docker/Capital_API/docker
 
 # 启动所有服务
 docker-compose up -d
@@ -164,7 +162,7 @@ curl http://localhost:8080/health
 ```c
 /**
  * @file hello_agent.c
- * @brief 第一个AgentOS程序 - 简单问答
+ * @brief 第一个Airymax程序 - 简单问答
  */
 
 #include "agentos.h"
@@ -174,12 +172,12 @@ curl http://localhost:8080/health
 
 int main(int argc, char* argv[]) {
     // 解析命令行参数
-    const char* question = "你好，AgentOS！";
+    const char* question = "你好，Airymax！";
     if (argc > 1) {
         question = argv[1];
     }
 
-    printf("🤖 AgentOS v0.0.4 - Hello Agent\n");
+    printf("🤖 Airymax v0.0.4 - Hello Agent\n");
     printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     printf("问题: %s\n", question);
     printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
@@ -251,7 +249,7 @@ int main(int argc, char* argv[]) {
     agentos_core_shutdown();
     printf("✅ 所有资源已释放\n");
 
-    printf("\n感谢使用 AgentOS! 👋\n");
+    printf("\n感谢使用 Airymax! 👋\n");
     return 0;
 }
 ```
@@ -276,7 +274,7 @@ export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 **预期输出**:
 ```
-🤖 AgentOS v0.0.4 - Hello Agent
+🤖 Airymax v0.0.4 - Hello Agent
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 问题: 什么是人工智能？
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -295,7 +293,7 @@ export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 [6/6] 清理资源...
 ✅ 所有资源已释放
 
-感谢使用 AgentOS! 👋
+感谢使用 Airymax! 👋
 ```
 
 ---
@@ -490,7 +488,7 @@ void demo_a2a_protocol() {
 
 int main() {
     printf("╔══════════════════════════════════╗\n");
-    printf("║  AgentOS Protocol Stack Demo       ║\n");
+    printf("║  Airymax Protocol Stack Demo       ║\n");
     printf("╚══════════════════════════════════╝\n\n");
     
     demo_mcp_protocol();
@@ -510,7 +508,7 @@ int main() {
 **问题**: `fatal error: 'agentos.h' file not found`
 ```bash
 # 解决：指定正确的include路径
--I/path/to/AgentOS/agentos/include
+-I/path/to/AgentRT/agentos/include
 ```
 
 **问题**: `undefined reference to 'agentos_core_init'`
@@ -556,7 +554,7 @@ agentos_loop_create(&config, &loop);
 
 ## 📖 下一步学习路径
 
-### 初学者 (刚接触AgentOS)
+### 初学者 (刚接触Airymax)
 1. ✅ 完成本快速入门
 2. 📖 阅读 [CoreLoopThree API](../core/coreloop_api.md)
 3. 💡 尝试修改 `hello_agent.c` 的参数
@@ -579,11 +577,11 @@ agentos_loop_create(&config, &loop);
 ## 🆘 获取帮助
 
 - **文档**: https://docs.agentos.dev
-- **GitHub Issues**: https://github.com/spharx/AgentOS/issues
-- **Discussions**: https://github.com/spharx/AgentOS/discussions
+- **GitHub Issues**: https://github.com/spharx/AgentRT/issues
+- **Discussions**: https://github.com/spharx/AgentRT/discussions
 - **邮件列表**: dev@agentos.dev (即将开放)
 
 ---
 
 **最后更新**: 2026-04-28  
-**适用版本**: AgentOS v0.0.4+
+**适用版本**: Airymax v0.0.4+

@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 部署指南
+# Airymax 部署指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/deployment.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-AgentOS 支持多种部署模式，从单机开发环境到分布式生产集群。本文档覆盖完整的部署流程：环境准备、编译构建、配置调优、服务管理、监控告警和升级回滚。
+Airymax 支持多种部署模式，从单机开发环境到分布式生产集群。本文档覆盖完整的部署流程：环境准备、编译构建、配置调优、服务管理、监控告警和升级回滚。
 
 ### 1.0 理论指导：MCIS视角的部署策略
 
-部署是将 **体系并行论 (MCIS)** 理论框架从设计阶段转化为运行阶段的关键过程。从 MCIS 视角理解 AgentOS 的部署策略，有助于构建更加稳健、可扩展、可维护的生产系统。
+部署是将 **体系并行论 (MCIS)** 理论框架从设计阶段转化为运行阶段的关键过程。从 MCIS 视角理解 Airymax 的部署策略，有助于构建更加稳健、可扩展、可维护的生产系统。
 
 #### 部署在 MCIS 系统中的理论意义
 
@@ -57,7 +55,7 @@ AgentOS 支持多种部署模式，从单机开发环境到分布式生产集群
 4. **安全内生原则** → 部署过程的安全验证、加密传输、权限控制
 5. **可观测性原则** → 部署后的系统可观测性保障，支持运行状态监控与故障诊断
 
-通过 MCIS 理论视角理解部署策略，你将能够设计出更加系统、稳健、可扩展的部署方案，为 AgentOS 在生产环境中的稳定运行提供理论指导与实践框架。
+通过 MCIS 理论视角理解部署策略，你将能够设计出更加系统、稳健、可扩展的部署方案，为 Airymax 在生产环境中的稳定运行提供理论指导与实践框架。
 
 ### 1.1 支持的部署模式
 
@@ -95,7 +93,7 @@ sudo apt install -y build-essential cmake git pkg-manager
 # 可选依赖
 sudo apt install -y libssl-dev libcurl4-openssl-dev libyaml-dev
 
-# AgentOS CLI
+# Airymax CLI
 wget -qO- https://releases.agentos.io/cli/install.sh | bash
 ```
 
@@ -105,7 +103,7 @@ wget -qO- https://releases.agentos.io/cli/install.sh | bash
 # 使用 vcpkg 安装依赖
 vcpkg install cmake pkg-manager
 
-# AgentOS CLI
+# Airymax CLI
 Invoke-WebRequest -Uri "https://releases.agentos.io/cli/install.ps1" -UseBasicParsing | Invoke-Expression
 ```
 
@@ -123,8 +121,8 @@ brew install cmake openssl curl yaml-cpp
 
 ```bash
 # 克隆仓库
-git clone https://github.com/SpharxTeam/AgentOS.git
-cd AgentOS
+git clone https://github.com/SpharxTeam/Airymax.git
+cd Airymax
 
 # 创建构建目录
 mkdir build && cd build
@@ -366,7 +364,7 @@ agents:
 ```ini
 # /etc/systemd/system/agentos.service
 [Unit]
-Description=AgentOS Kernel Daemon
+Description=Airymax Kernel Daemon
 After=network.target
 Documentation=https://docs.agentos.io
 
@@ -409,13 +407,13 @@ sudo journalctl -u agentos -f
 
 ```powershell
 # 注册为 Windows 服务
-agentosd --install --manager C:\AgentOS\manager\agentos.yaml
+agentosd --install --manager C:\Airymax\manager\agentos.yaml
 
 # 启动服务
-Start-Service AgentOS
+Start-Service Airymax
 
 # 查看状态
-Get-Service AgentOS
+Get-Service Airymax
 ```
 
 ### 5.3 Docker 部署
@@ -423,16 +421,16 @@ Get-Service AgentOS
 ```dockerfile
 FROM ubuntu:22.04 AS builder
 RUN apt-get update && apt-get install -y build-essential cmake git
-COPY . /src/AgentOS
-WORKDIR /src/AgentOS
+COPY . /src/Airymax
+WORKDIR /src/Airymax
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     cmake --build . --parallel
 
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y libssl3 libcurl4
-COPY --from=builder /src/AgentOS/build /usr/local
-COPY --from=builder /src/AgentOS/manager /etc/agentos
+COPY --from=builder /src/AgentRT/build /usr/local
+COPY --from=builder /src/AgentRT/manager /etc/agentos
 EXPOSE 8080 8081
 CMD ["agentosd", "--manager", "/etc/agentos/agentos.yaml"]
 ```
@@ -708,7 +706,7 @@ agentos-cli security license --report
 ---
 
 **最后更新**: 2026-03-23  
-**维护者**: AgentOS 运维团队
+**维护者**: Airymax 运维团队
 
 ---
 

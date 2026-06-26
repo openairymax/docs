@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-memory 子系统是 AgentRT 的记忆存储与检索基础设施，采用**可拔插提供商架构**，支持内置免费提供商和 MemoryRovol 商业提供商两种实现。
+memory 子系统是 Airymax 的记忆存储与检索基础设施，采用**可拔插提供商架构**，支持内置免费提供商和 MemoryRovol 商业提供商两种实现。
 
 ### 1.1 核心职责
 
@@ -211,5 +211,5 @@ typedef struct agentos_memory_stats {
 ## 6. 相关文档
 
 - [记忆卷载系统](../memoryrovol.md)
-- [记忆层理论](../../Basic_Theories/CN_03_记忆层理论.md)
+- [记忆层理论](../../Basic_Theories/CN_03_记忆层设计.md)
 - [MemoryRovol 集成](../../Capital_Specifications/integration_standards/README.md)

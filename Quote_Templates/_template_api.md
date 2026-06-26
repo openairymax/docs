@@ -12,7 +12,7 @@ status: "production_ready"  # 可选值：production_ready/under_development/dep
 review_due: "[YYYY-MM-DD]"   # 下次审核截止日期
 theoretical_basis: "工程两论、五维正交系统、双系统认知理论"
 target_audience: "开发者/架构师"
-prerequisites: "熟悉C语言编程、了解AgentOS基本概念"
+prerequisites: "熟悉C语言编程、了解Airymax基本概念"
 estimated_reading_time: "30分钟"
 core_concepts: "系统调用, API设计, 契约编程, 错误处理"
 ---
@@ -28,7 +28,7 @@ core_concepts: "系统调用, API设计, 契约编程, 错误处理"
 
 ## 📋 文档信息卡
 - **目标读者**: 开发者/架构师
-- **前置知识**: 熟悉C语言编程、了解AgentOS基本概念
+- **前置知识**: 熟悉C语言编程、了解Airymax基本概念
 - **预计阅读时间**: 30分钟
 - **核心概念**: 系统调用, API设计, 契约编程, 错误处理
 - **文档状态**: 🟢 生产就绪 / 🟡 开发中 / 🔴 已废弃
@@ -40,7 +40,7 @@ core_concepts: "系统调用, API设计, 契约编程, 错误处理"
 
 ### 🧩 五维正交原则体现
 
-[说明该API如何体现AgentOS的五维正交设计原则]
+[说明该API如何体现Airymax的五维正交设计原则]
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|

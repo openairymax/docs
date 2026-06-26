@@ -6,8 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/kubernetes-deployment.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 前置条件
@@ -33,7 +31,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 ### 步骤1：添加Helm仓库
 
 ```bash
-# 添加AgentOS官方Helm仓库
+# 添加Airymax官方Helm仓库
 helm repo add spharx https://charts.spharx.cn/agentos
 helm repo update
 
@@ -183,7 +181,7 @@ monitoring:
         - name: grafana.spharx.cn
 ```
 
-### 步骤4：安装AgentOS
+### 步骤4：安装Airymax
 
 ```bash
 # 安装（dry-run先预览生成的资源）

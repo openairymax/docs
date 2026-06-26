@@ -1,29 +1,26 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 软件物料清单 (SBOM)
+# Airymax 软件物料清单 (SBOM)
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/project_erp/SBOM.md
-**作者**:
-    - Liren Wang
 
 ## 1. 概述
 
-本文档提供了 AgentOS 的软件物料清单（Software Bill of Materials，SBOM），详细列出了 AgentOS 的所有组件、依赖项及其相关元数据。SBOM 对于供应链管理、安全漏洞跟踪和合规性验证至关重要。本清单基于 AgentOS 架构设计原则 V2.0，特别是 **D-1 至 D-4 安全工程原则** 和 **E-8 可测试性原则**，确保软件供应链的安全可控。
+本文档提供了 Airymax 的软件物料清单（Software Bill of Materials，SBOM），详细列出了 Airymax 的所有组件、依赖项及其相关元数据。SBOM 对于供应链管理、安全漏洞跟踪和合规性验证至关重要。本清单基于 Airymax 架构设计原则 V2.0，特别是 **D-1 至 D-4 安全工程原则** 和 **E-8 可测试性原则**，确保软件供应链的安全可控。
 
 ## 2. 文档信息
 
 | 字段 | 值 |
 |------|-----|
-| 文档名称 | AgentOS 软件物料清单 |
+| 文档名称 | Airymax 软件物料清单 |
 | 版本 | Doc V2.0 |
-| 作者 | LirenWang |
 | 理论基础 | 五维正交系统(安全观D-1至D-4、 工程观E-8)、系统工程(供应链管理) |
 | 生成日期 | 2026-04-10 |
 | 生成工具 | 必须通过 CI 自动生成（syft/cyclonedx-cli） |
-| 适用 AgentOS 版本 | v1.2.0+ |
+| 适用 Airymax 版本 | v1.2.0+ |
 
 ## 3. 核心组件
 
@@ -34,7 +31,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
 | agentos_core | 1.0.0 | MIT | 内部 | 提供基础内核功能，包括错误处理、IPC、内存管理、任务调度和时间管理 |
-<!-- From data intelligence emerges. by spharx -->
 
 #### 3.1.2 认知循环运行时 (CoreLoopThree)
 
@@ -79,7 +75,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos-toolkit-rust | 1.0.0 | MIT | 内部 | Rust SDK，提供 AgentOS 客户端库 |
+| agentos-toolkit-rust | 1.0.0 | MIT | 内部 | Rust SDK，提供 Airymax 客户端库 |
 
 **Rust SDK 依赖**:
 
@@ -95,7 +91,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos-toolkit-go | 1.0.0 | MIT | 内部 | Go SDK，提供 AgentOS 客户端库（零外部依赖） |
+| agentos-toolkit-go | 1.0.0 | MIT | 内部 | Go SDK，提供 Airymax 客户端库（零外部依赖） |
 
 **Go SDK 依赖**: 无外部依赖（仅使用 Go 标准库）
 
@@ -122,7 +118,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 5.1 agentos_core
 
-**描述**：AgentOS 核心内核模块，提供基础系统功能。
+**描述**：Airymax 核心内核模块，提供基础系统功能。
 
 **主要功能**：
 - 错误处理（error.c）
@@ -295,6 +291,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 12. 结论
 
-本 SBOM 文档提供了 AgentOS 的详细物料清单，包括核心组件、外部依赖、许可证信息和安全信息。通过这份文档，用户可以了解 AgentOS 的组成结构，管理供应链风险，以及确保合规性。
+本 SBOM 文档提供了 Airymax 的详细物料清单，包括核心组件、外部依赖、许可证信息和安全信息。通过这份文档，用户可以了解 Airymax 的组成结构，管理供应链风险，以及确保合规性。
 
 建议定期更新本文档，以反映组件和依赖项的变化，确保 SBOM 的准确性和时效性。

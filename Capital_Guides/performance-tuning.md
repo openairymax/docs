@@ -1,15 +1,13 @@
-# AgentOS 性能调优指南
+# Airymax 性能调优指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/performance-tuning.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 概述
 
-本文档提供 AgentOS 系统的性能调优指南，涵盖从内核参数调优到应用层优化的全栈性能优化策略。基于 **体系并行论 (MCIS)** 的反馈调节原理和五维正交系统的工程观维度，实现系统性能的动态平衡与持续优化。
+本文档提供 Airymax 系统的性能调优指南，涵盖从内核参数调优到应用层优化的全栈性能优化策略。基于 **体系并行论 (MCIS)** 的反馈调节原理和五维正交系统的工程观维度，实现系统性能的动态平衡与持续优化。
 
 ## 性能优化原则
 
@@ -116,7 +114,7 @@ http {
     keepalive_timeout 65;
     keepalive_requests 1000;
     
-    # AgentOS 网关上游配置
+    # Airymax 网关上游配置
     upstream agentos_gateway {
         least_conn;
         server 127.0.0.1:8080 max_fails=3 fail_timeout=30s;
@@ -204,7 +202,7 @@ scrape_configs:
 # 安装 perf 工具
 sudo apt-get install linux-tools-common linux-tools-generic
 
-# 分析 AgentOS 进程
+# 分析 Airymax 进程
 sudo perf record -g -p $(pgrep agentos)
 sudo perf report
 ```
@@ -277,7 +275,7 @@ perf script | ./FlameGraph/stackcollapse-perf.pl | ./FlameGraph/flamegraph.pl > 
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V2.0 | 2026-04-10 | AgentOS 性能优化团队 | 初始版本，基于五维正交系统设计性能调优指南 |
+| Doc V2.0 | 2026-04-10 | Airymax 性能优化团队 | 初始版本，基于五维正交系统设计性能调优指南 |
 | Doc V2.0 | 2026-03-31 | 模板 | 文档模板 |
 
 ---

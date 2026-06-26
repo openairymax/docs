@@ -1,13 +1,11 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 已知问题与解决方案
+# Airymax 已知问题与解决方案
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/known-issues.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 问题分类索引
@@ -352,10 +350,10 @@ TZ=Asia/Shanghai  # 所有容器统一时区
    journalctl -u agentos-kernel --since "1 hour ago" --no-pager > kernel_logs.txt
    ```
 3. **提交 Issue**:
-   - GitHub Issues: https://github.com/SpharxTeam/AgentOS/issues/new
+   - GitHub Issues: https://github.com/SpharxTeam/AgentRT/issues/new
    - 邮箱: support@spharx.cn
    - 包含信息：
-     - AgentOS 版本 (`agentos --version`)
+     - Airymax 版本 (`agentos --version`)
      - 操作系统 (`uname -a`)
      - 复现步骤
      - 期望行为 vs 实际行为

@@ -1,13 +1,11 @@
 SPDX-FileCopyrightText: 2026 SPHARX Ltd.
 SPDX-License-Identifier: Apache-2.0
 
-# AgentOS Go 编码风格规范
+# Airymax Go 编码风格规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Go_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -22,7 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 8. [测试规范](#8-测试规范)
 9. [文档注释规范](#9-文档注释规范)
 10. [依赖管理](#10-依赖管理)
-11. [AgentOS 模块编码示例](#11-agentos-模块编码示例)
+11. [Airymax 模块编码示例](#11-agentos-模块编码示例)
 
 ---
 
@@ -30,7 +28,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ### 1.1 目的
 
-本规范定义 AgentOS Go SDK 的编码风格标准，确保代码库在命名、结构、错误处理、并发模式和测试策略上保持高度一致性。所有规则均源自项目实际代码中的既定模式，而非理论推导。
+本规范定义 Airymax Go SDK 的编码风格标准，确保代码库在命名、结构、错误处理、并发模式和测试策略上保持高度一致性。所有规则均源自项目实际代码中的既定模式，而非理论推导。
 
 ### 1.2 适用范围
 
@@ -63,7 +61,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ### 2.1 顶层包结构
 
-AgentOS Go SDK 采用扁平化子包结构，每个子包对应一个独立职责域：
+Airymax Go SDK 采用扁平化子包结构，每个子包对应一个独立职责域：
 
 ```
 agentos/toolkit/go/agentos/
@@ -1322,7 +1320,7 @@ modules/task/benchmark_test.go  // ✅ 基准测试
 **必须**在每个源文件头部添加文件头注释，包含以下信息：
 
 ```go
-// AgentOS Go SDK - 统一错误体系
+// Airymax Go SDK - 统一错误体系
 // Version: 0.1.0
 // Last updated: 2026-04-05
 //
@@ -1352,7 +1350,7 @@ modules/task/benchmark_test.go  // ✅ 基准测试
 **必须**为所有导出类型、函数、常量、变量添加 godoc 注释：
 
 ```go
-// ErrorCode 表示 AgentOS SDK 的错误码类型
+// ErrorCode 表示 Airymax SDK 的错误码类型
 // Since: 0.1.0
 type ErrorCode string
 
@@ -1510,14 +1508,14 @@ import (
 
 ---
 
-## 11. AgentOS 模块编码示例
+## 11. Airymax 模块编码示例
 
 ### 11.1 Manager 模块模板
 
 以下模板展示如何创建一个新的资源 Manager，遵循 `BaseManager[T]` 泛型基类模式：
 
 ```go
-// AgentOS Go SDK - XXX 管理模块
+// Airymax Go SDK - XXX 管理模块
 // Version: 0.1.0
 // Last updated: 2026-06-08
 //
@@ -1865,5 +1863,5 @@ issues:
 
 ---
 
-> **文档维护者**: AgentOS 架构组
+> **文档维护者**: Airymax 架构组
 > **下次审查日期**: 2026-09-08

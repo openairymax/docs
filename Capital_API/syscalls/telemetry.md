@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 可观测性 API
+# Airymax 可观测性 API
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/syscalls/telemetry.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-可观测性 API 提供 AgentOS 三支柱（指标、日志、追踪）的完整访问接口。基于**工程控制论**的反馈闭环原则，支持三时间尺度监控：实时（τ<100ms）、轮次内（任务周期）、跨轮次（会话级）。
+可观测性 API 提供 Airymax 三支柱（指标、日志、追踪）的完整访问接口。基于**工程控制论**的反馈闭环原则，支持三时间尺度监控：实时（τ<100ms）、轮次内（任务周期）、跨轮次（会话级）。
 
 ### 🧩 五维正交原则体现
 

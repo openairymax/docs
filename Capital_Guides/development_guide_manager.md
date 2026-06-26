@@ -1,15 +1,13 @@
-# AgentOS Manager 模块 - 架构与开发指南
+# Airymax Manager 模块 - 架构与开发指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/development_guide_manager.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📚 文档概述
 
-本文档提供 AgentOS Manager 模块的完整架构说明、开发指南和最佳实践。作为 AgentOS 系统的配置管理中心，Manager模块承担着至关重要的角色。
+本文档提供 Airymax Manager 模块的完整架构说明、开发指南和最佳实践。作为 Airymax 系统的配置管理中心，Manager模块承担着至关重要的角色。
 
 ### 目标读者
 
@@ -284,7 +282,7 @@ _config_version: "1.0.0"
 _owner:
   module: "your-module"
   contact: "your-team@spharx.cn"
-  path: "AgentOS/manager/your_module"
+  path: "AgentRT/manager/your_module"
 
 your_module:
   setting1: "value1"
@@ -431,11 +429,11 @@ CONFIG_SCHEMA_MAP['your_module/config.yaml'] = 'schema/your-module.schema.json'
 
 ```bash
 # 确保Python路径正确
-export PYTHONPATH="${PYTHONPATH}:/path/to/AgentOS"
+export PYTHONPATH="${PYTHONPATH}:/path/to/Airymax"
 
 # 或在代码中动态添加
 import sys
-sys.path.insert(0, '/path/to/AgentOS')
+sys.path.insert(0, '/path/to/Airymax')
 ```
 
 **Q2: 漂移检测误报**
@@ -468,7 +466,7 @@ cat ecosystem/manager/.gitignore
 ## 📞 支持与反馈
 
 - **技术支持**: support@spharx.cn
-- **问题反馈**: https://github.com/SpharxTeam/AgentOS/issues
+- **问题反馈**: https://github.com/SpharxTeam/AgentRT/issues
 - **架构文档**: [ARCHITECTURAL_PRINCIPLES.md](../../../docs/ARCHITECTURAL_PRINCIPLES.md)
 
 ---

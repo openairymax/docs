@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 文档中心
+# Airymax 文档中心
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📚 文档导航
 
-欢迎使用AgentOS智能体操作系统文档中心。本文档采用分层组织结构，从入门到精通，满足不同层次的需求。
+欢迎使用Airymax智能体操作系统文档中心。本文档采用分层组织结构，从入门到精通，满足不同层次的需求。
 
 ### 🎯 快速入口
 
@@ -21,7 +19,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | **初学者** | 快速开始 → 安装指南 → 配置指南 | 30分钟 |
 | **开发者** | API参考 → 编码规范 → 创建Agent/Skill | 2小时 |
 | **运维工程师** | 部署指南 → 监控运维 → 故障排查 | 1.5小时 |
-| **架构师** | 设计原则 → 微内核架构 → 核心循环三层 | 3小时 |
+| **架构师** | 设计原则 → 微核心架构 → 核心循环三层 | 3小时 |
 
 ---
 
@@ -29,12 +27,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1️⃣ 基础理论 (Basic Theories)
 
-AgentOS的理论基石，理解设计哲学的必读材料：
+Airymax的理论基石，理解设计哲学的必读材料：
 
-- [**体系并行论 (MCIS)**](Basic_Theories/CN_01_体系并行论.md) — 多体控制智能系统理论（[English](Basic_Theories/EN_01_MCIS.md)）
-- [**认知层理论**](Basic_Theories/CN_02_认知层理论.md) — 双系统认知与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
-- [**记忆层理论**](Basic_Theories/CN_03_记忆层理论.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
-- [**设计原则**](Basic_Theories/CN_04_设计原则.md) — 五维正交设计原则导论（[English](Basic_Theories/EN_04_Design_Principles.md)）
+- [**体系并行论 (MCIS)**](Basic_Theories/CN_01_体系并行.md) — 多体控制智能系统理论（[English](Basic_Theories/EN_01_MCIS.md)）
+- [**认知层理论**](Basic_Theories/CN_02_认知层设计.md) — 双系统认知与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
+- [**记忆层理论**](Basic_Theories/CN_03_记忆层设计.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
+- [**设计原则**](Basic_Theories/CN_04_系统设计原则.md) — 五维正交设计原则导论（[English](Basic_Theories/EN_04_Design_Principles.md)）
 - [**设计哲学**](Basic_Theories/DESIGN_PHILOSOPHY.md) — 体系并行论与五维正交设计体系详述
 - [**架构设计原则完整版**](ARCHITECTURAL_PRINCIPLES.md) — S/K/C/E/A五维24条原则详述
 
@@ -44,10 +42,10 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 面向新用户的引导式教程，帮助快速上手：
 
-- [**快速开始**](Capital_Guides/AgentRT_quickstart.md) — 5分钟从零到Hello World
+- [**快速开始**](Capital_Guides/Airymax_quickstart.md) — 5分钟从零到Hello World
 - [**安装指南**](Capital_Guides/installation.md) — 详细的环境搭建步骤
 - [**配置指南**](Capital_Guides/configuration.md) — 完整的配置选项说明
-- [**部署指南**](Capital_Guides/AgentRT_deployment.md) — 生产环境部署最佳实践（Docker/K8s/监控/安全）
+- [**部署指南**](Capital_Guides/Airymax_deployment.md) — 生产环境部署最佳实践（Docker/K8s/监控/安全）
 - [**创建Agent**](Capital_Guides/create_agent.md) — Agent开发完整流程
 - [**创建Skill**](Capital_Guides/create_skill.md) — Skill开发完整流程
 - [**Plugin SDK教程**](Capital_Guides/plugin-sdk-tutorial.md) — Plugin SDK完整开发指南
@@ -58,7 +56,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 ### 3️⃣ 架构设计 (Architecture)
 
-深入理解AgentOS的设计哲学和技术实现：
+深入理解Airymax的设计哲学和技术实现：
 
 - [**微核心架构**](Capital_Architecture/microkernel.md) — K-1~K-4 原则的实现
 - [**核心循环三层**](Capital_Architecture/coreloopthree.md) — Cognition→Execution→Memory
@@ -101,7 +99,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 ### 5️⃣ 开发者指南 (Development)
 
-参与AgentOS开发的必备知识：
+参与Airymax开发的必备知识：
 
 **贡献与测试**：
 
@@ -151,7 +149,7 @@ AgentOS的理论基石，理解设计哲学的必读材料：
 
 ### 8️⃣ 规范与契约 (Specifications)
 
-AgentOS项目的标准化规范体系：
+Airymax项目的标准化规范体系：
 
 **契约规范**：
 
@@ -176,13 +174,13 @@ AgentOS项目的标准化规范体系：
 
 **术语**：
 
-- [**统一术语表**](Capital_Specifications/TERMINOLOGY.md) — AgentOS统一术语定义
+- [**统一术语表**](Capital_Specifications/TERMINOLOGY.md) — Airymax统一术语定义
 
 ---
 
 ### 9️⃣ 白皮书与模板 (White Paper & Templates)
 
-- [**技术白皮书**](White_Paper/README.md) — AgentOS官方技术白皮书（中/英）
+- [**技术白皮书**](White_Paper/README.md) — Airymax官方技术白皮书（中/英）
 - [**文档模板**](Quote_Templates/_template.md) — 通用文档模板
 - [**API文档模板**](Quote_Templates/_template_api.md) — API文档编写模板
 - [**指南文档模板**](Quote_Templates/_template_guide.md) — 指南文档编写模板
@@ -258,10 +256,10 @@ docs/
 ├── README.md                      # 本文档
 ├── TERMINOLOGY.md                 # 统一术语表
 ├── Basic_Theories/                # 基础理论（中/英双语）
-│   ├── CN_01_体系并行论.md
-│   ├── CN_02_认知层理论.md
-│   ├── CN_03_记忆层理论.md
-│   ├── CN_04_设计原则.md
+│   ├── CN_01_体系并行.md
+│   ├── CN_02_认知层设计.md
+│   ├── CN_03_记忆层设计.md
+│   ├── CN_04_系统设计原则.md
 │   ├── EN_01_MCIS.md
 │   ├── EN_02_Cognition_Theory.md
 │   ├── EN_03_Memory_Theory.md
@@ -295,8 +293,8 @@ docs/
 │   └── algorithms/                # 核心算法
 │       └── README.md
 ├── Capital_Guides/                # 入门与运维指南
-│   ├── AgentRT_quickstart.md      # 5分钟快速上手
-│   ├── AgentRT_deployment.md      # 生产环境部署指南
+│   ├── Airymax_quickstart.md      # 5分钟快速上手
+│   ├── Airymax_deployment.md      # 生产环境部署指南
 │   ├── plugin-sdk-tutorial.md     # Plugin SDK开发教程
 │   ├── prompt-engineering.md      # Prompt工程指南
 │   ├── getting_started.md
@@ -348,7 +346,7 @@ docs/
 │       ├── manuals_module_requirements.md
 │       └── resource_management_table.md
 ├── Source_Other/                  # 其他资源
-│   └── AgentOS-desktop-preview.gif
+│   └── Airymax-desktop-preview.gif
 ├── White_Paper/                   # 白皮书
 │   ├── README.md
 │   └── history/
@@ -362,7 +360,7 @@ docs/
 
 ## 🎯 文档质量标准
 
-AgentOS文档遵循**完美主义原则 (A-4)**：
+Airymax文档遵循**完美主义原则 (A-4)**：
 
 ✅ **完整性**：每个公共API都有文档  
 ✅ **准确性**：示例代码可运行，配置参数经过验证  
@@ -374,7 +372,6 @@ AgentOS文档遵循**完美主义原则 (A-4)**：
 
 ## 📞 联系方式
 
-- **问题**: wangliren@spharx.cn
 
 ---
 

@@ -6,13 +6,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/module_features.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-`manuals` 模块是 AgentOS 的技术文档中心，提供完整的文档管理、生成、验证和发布功能。本文档详细描述了模块的各项功能，帮助用户全面了解模块的能力和使用场景。
+`manuals` 模块是 Airymax 的技术文档中心，提供完整的文档管理、生成、验证和发布功能。本文档详细描述了模块的各项功能，帮助用户全面了解模块的能力和使用场景。
 
 ---
 
@@ -479,7 +477,7 @@ security:
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 产品团队
+**维护者**: Airymax 产品团队
 
 ---
 

@@ -1,16 +1,15 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."
 
-# AgentOS Memory Layer Theory
+# Airymax Memory Layer Theory
 
 **最新**: 2026-06-09  
 **状态**: Release       
 **路径**: OpenAirymax/Docs/Basic_Theories/EN_03_Memory_Theory.md
-**作者**: SPHARX Team  
 
 ## 1. Introduction
 
-Memory is core to agents' accumulation of experience and realization of evolution. AgentOS's memory layer (MemoryRovol) is a four-layer rolling memory system designed based on the engineering perspective within the Five-Dimensional Orthogonal System. Inspired by neural network hierarchical abstraction ideas and human hippocampal-neocortical memory consolidation mechanisms, it achieves layer-by-layer sublimation from raw events to abstract rules. This document details its theoretical foundations, four-layer architecture, and key mechanisms.
+Memory is core to agents' accumulation of experience and realization of evolution. Airymax's memory layer (MemoryRovol) is a four-layer rolling memory system designed based on the engineering perspective within the Five-Dimensional Orthogonal System. Inspired by neural network hierarchical abstraction ideas and human hippocampal-neocortical memory consolidation mechanisms, it achieves layer-by-layer sublimation from raw events to abstract rules. This document details its theoretical foundations, four-layer architecture, and key mechanisms.
 
 ## 2. Theoretical Foundations
 
@@ -47,10 +46,12 @@ MemoryRovol's four-layer architecture highly corresponds to this physiological m
 Hermann Ebbinghaus discovered that human forgetting follows an exponential decay pattern. MemoryRovol formalizes this pattern as a forgetting weight:
 
 $$
-R = e^{-\lambda t}
+R(t) = e^{-t/\tau}
 $$
 
-where $t$ is the time interval and $\lambda$ is the decay rate. This weight affects retrieval priority, simulating natural memory aging.
+where $t$ is the time interval and $\tau$ is the decay constant (default 7 days). This weight affects retrieval priority, simulating natural memory aging.
+
+> **Terminology Standardization Note**: The forgetting formula uniformly uses the $\tau$ notation (consistent with ARCHITECTURAL_PRINCIPLES.md C-4). The historical $\lambda$ notation ($R = e^{-\lambda t}$) is mathematically equivalent ($\lambda = 1/\tau$), but this specification uniformly uses $\tau$ for terminology consistency. See TERMINOLOGY.md v3.0 ruling #6.
 
 ### 2.4 Topological Data Analysis
 
@@ -138,7 +139,7 @@ The memory layer interacts with the kernel through system calls, maintaining ker
 
 ## 6. Summary
 
-MemoryRovol deeply integrates convolutional neural network hierarchical abstraction ideas with human memory mechanisms, achieving memory storage, indexing, structuring, abstraction, and forgetting through a four-layer rolling architecture. It ensures both the integrity of original facts and supports extracting reusable rules from experience, serving as the core foundation for AgentOS's self-evolution.
+MemoryRovol deeply integrates convolutional neural network hierarchical abstraction ideas with human memory mechanisms, achieving memory storage, indexing, structuring, abstraction, and forgetting through a four-layer rolling architecture. It ensures both the integrity of original facts and supports extracting reusable rules from experience, serving as the core foundation for Airymax's self-evolution.
 
 ***
 
@@ -149,8 +150,3 @@ MemoryRovol deeply integrates convolutional neural network hierarchical abstract
 3. LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. *Nature*, 521(7553), 436-444.
 4. Squire, L. R., & Zola-Morgan, S. (1991). The medial temporal lobe memory system. *Science*, 253(5026), 1380-1386.
 5. Hopfield, J. J. (1982). Neural networks and physical systems with emergent collective computational abilities. *Proceedings of the National Academy of Sciences*, 79(8), 2554-2558.
-
-**Document Authors**
-- Chenzhang (Doctor) [<https://ieeexplore.ieee.org/author/37086472514>]
-- DechengLi (Architect) [<https://gitee.com/spharx01>]
-- LirenWang (Engineers) [<https://gitee.com/spharx02>]

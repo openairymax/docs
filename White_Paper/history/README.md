@@ -1,7 +1,7 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 白皮书历史版本归档
+# Airymax 白皮书历史版本归档
 
 **最新**: 2026-06-09
 **状态**: 维护中
@@ -147,11 +147,11 @@ AgentOS_技术白皮书_V{version}.pdf
 
 ## 维护责任
 
-- **责任人**：AgentOS 架构委员会
+- **责任人**：Airymax 架构委员会
 - **审核频率**：每次新版本发布时
 - **联系方式**：architecture@agentos.org（计划中）
 
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 架构委员会
+**维护者**: Airymax 架构委员会

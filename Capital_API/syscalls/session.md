@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 会话管理 API
+# Airymax 会话管理 API
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/syscalls/session.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-会话管理 API 提供 AgentOS 会话生命周期的完整控制。会话是 Agent 与用户或系统交互的上下文容器，包含对话历史、记忆关联、状态信息和执行上下文。每个会话遵循**双系统路径**：System 1 快速响应，System 2 深度处理。
+会话管理 API 提供 Airymax 会话生命周期的完整控制。会话是 Agent 与用户或系统交互的上下文容器，包含对话历史、记忆关联、状态信息和执行上下文。每个会话遵循**双系统路径**：System 1 快速响应，System 2 深度处理。
 
 ### 🧩 五维正交原则体现
 
-会话管理 API 深度体现了 AgentOS 的五维正交设计原则：
+会话管理 API 深度体现了 Airymax 的五维正交设计原则：
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|

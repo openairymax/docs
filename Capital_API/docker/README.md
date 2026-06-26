@@ -1,10 +1,8 @@
-# AgentOS Docker 部署完整指南
+# Airymax Docker 部署完整指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/docker/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 三种部署方式
@@ -86,8 +84,8 @@ docker exec agentos-gateway gateway_d --help
 ```bash
 # 挂载源码目录
 docker run -it --rm \
-  -v /path/to/AgentOS:/workspace/AgentOS \
-  -w /workspace/AgentOS/build \
+  -v /path/to/Airymax:/workspace/Airymax \
+  -w /workspace/AgentRT/build \
   agentos:latest bash
 
 # 在容器内执行构建命令
@@ -107,8 +105,8 @@ services:
       context: ../../
       dockerfile: Docs/Capital_API/docker/Dockerfile.dev
     volumes:
-      - ../..:/workspace/AgentOS
-    working_dir: /workspace/AgentOS/build
+      - ../..:/workspace/Airymax
+    working_dir: /workspace/AgentRT/build
     command: bash -c "cmake .. && make -j$(nproc) && ctest"
 ```
 
@@ -298,7 +296,7 @@ agentos_request_duration_seconds_count 300.000
 ```json
 {
   "dashboard": {
-    "title": "AgentOS Monitoring",
+    "title": "Airymax Monitoring",
     "panels": [...]
   },
   "datasource": {
@@ -496,7 +494,7 @@ docker-compose logs --tail=50
 ## 📞 技术支持
 
 - **Docker Hub**: https://hub.docker.com/r/spharx/agentos
-- **GitHub Issues**: https://github.com/spharx/AgentOS/issues?q=is%3Aissue+is%3Aopen+label%3Adocker
+- **GitHub Issues**: https://github.com/spharx/AgentRT/issues?q=is%3Aissue+is%3Aopen+label%3Adocker
 - **文档**: https://docs.agentos.dev/docker
 
 ---

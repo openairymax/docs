@@ -1,28 +1,26 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS C++ 编码规范
+# Airymax C++ 编码规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Cpp_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、概述
 
 ### 1.1 编制目的
 
-本规范为 AgentOS 项目中的 C++ 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度，为开发者提供可操作的代码实现指南。
+本规范为 Airymax 项目中的 C++ 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度，为开发者提供可操作的代码实现指南。
 
 ### 1.2 理论基础
 
-本规范基于 AgentOS 架构设计原则的五维正交系统，聚焦于**工程观**维度：
+本规范基于 Airymax 架构设计原则的五维正交系统，聚焦于**工程观**维度：
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
-- **Thinkdual 认知双思系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
+- **Thinkdual 双思考系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
 - **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 
 **关联原则**:
@@ -42,13 +40,13 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | agentos/daemon/ | C++17 | GCC 11+ / Clang 14+ |
 | openlab/ | C++17 | GCC 11+ / Clang 14+ |
 
-### 1.4 与 AgentOS 架构的关系
+### 1.4 与 Airymax 架构的关系
 
-本规范适用于 AgentOS 的以下层次：
+本规范适用于 Airymax 的以下层次：
 
 | 层次 | 组件 | C++ 代码位置 | 关联原则 |
 |------|------|-------------|---------|
-| 原子内核 | corekern/ | agentos/atoms/corekern/ | K-1, K-2 |
+| 原子核心 | corekern/ | agentos/atoms/corekern/ | K-1, K-2 |
 | 认知层 | coreloopthree/ | agentos/atoms/cognition/ | C-1, C-2 |
 | 记忆层 | memoryrovol/ | agentos/atoms/memory/ | C-3, C-4 |
 | 安全层 | agentos/cupolas/ | agentos/atoms/agentos/cupolas/ | E-1, S-2 |
@@ -170,7 +168,7 @@ namespace module_internal {
 ### 3.2 命名前缀规则
 
 - **模块前缀**：公共 API 使用模块前缀
-  - `atoms_`: 原子内核
+  - `atoms_`: 原子核心
   - `cog_`: 认知层
   - `mem_`: 记忆层
   - `exec_`: 执行层
@@ -662,7 +660,7 @@ int memory_alloc(size_t size, void** out_ptr) {
 ### 8.3 异常使用规范
 
 ```cpp
-// AgentOS C++ 代码中，公共 API 禁止抛出异常
+// Airymax C++ 代码中，公共 API 禁止抛出异常
 // ⚠️ 澄清：公共 C API 边界（extern "C" 函数）禁止异常逃逸；C++ 内部 API 可使用异常但必须捕获并转换为错误码。
 // 具体规则：
 //   1. extern "C" 函数：异常不得跨越 C 链接边界，必须 try-catch 全包并返回 agentos_error_t
@@ -915,7 +913,7 @@ private:
  * 提供固定大小内存块的分配器。适用于高频分配/释放场景，
  * 如任务调度、事件处理等。
  * 
- * @author AgentOS Team
+ * @author Airymax Team
  * @date 2026-03-25
  * @version 1.6
  * 
@@ -1138,7 +1136,7 @@ TEST_F(MemoryPoolTest, ExhaustPool) {
 ```
 
 ---
-## 十四、AgentOS 模块 C++ 编码示例
+## 十四、Airymax 模块 C++ 编码示例
 
 ### 14.1 Atoms（原子层）C++ 编码
 Atoms模块实现微核心核心功能，要求最高级别的性能和可靠性：
@@ -1443,7 +1441,7 @@ private:
 ---
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有 C++ 代码须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有 C++ 代码须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|
@@ -1462,11 +1460,11 @@ private:
 
 ## 十五、参考文献
 
-1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
+1. **Airymax 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
 2. **C++ Core Guidelines**: https://isocpp.github.io/CppCoreGuidelines/
 3. **Google C++ Style Guide**: https://google.github.io/styleguide/cppguide.html
 4. **ISO C++ Standard**: https://eel.is/c++draft/
-5. **AgentOS 核心架构文档**:
+5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)  
    - [microkernel.md](../../Capital_Architecture/microkernel.md)

@@ -1,24 +1,22 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 测试编写规范
+# Airymax 测试编写规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/testing_guidelines.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-本文档定义 AgentOS 项目测试代码的编写规范，涵盖 Python 和 C 两种语言的测试标准。所有贡献者必须遵循本规范编写测试代码，确保测试套件的一致性、可维护性和有效性。
+本文档定义 Airymax 项目测试代码的编写规范，涵盖 Python 和 C 两种语言的测试标准。所有贡献者必须遵循本规范编写测试代码，确保测试套件的一致性、可维护性和有效性。
 
 ---
 
 ## 📐 测试金字塔
 
-AgentOS 遵循测试金字塔模型：
+Airymax 遵循测试金字塔模型：
 
 ```
         ╱  E2E  ╲           10% - 端到端测试
@@ -481,7 +479,7 @@ def test_write_operation():
 ---
 
 **最后更新**: 2026-04-12  
-**维护者**: AgentOS 质量保障团队
+**维护者**: Airymax 质量保障团队
 
 ---
 

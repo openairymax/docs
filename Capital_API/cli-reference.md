@@ -1,8 +1,8 @@
-# AgentRT CLI 命令参考手册
+# Airymax CLI 命令参考手册
 
-> **P4.3.5** — CLI 命令参考手册，涵盖 AgentOS 统一命令行工具的所有可用命令。
+> **P4.3.5** — CLI 命令参考手册，涵盖 Airymax 统一命令行工具的所有可用命令。
 >
-> 版本：AgentOS v2.1.0 | CLI 入口：`scripts/dev/cli/agentos`
+> 版本：Airymax v2.1.0 | CLI 入口：`scripts/dev/cli/agentos`
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## 1. 概述
 
-`agentos` 是 AgentOS 的统一命令行入口，通过 REST API 和 JSON-RPC 2.0 与 AgentOS Gateway 通信。所有命令的默认 Gateway 地址为 `http://localhost:18789`。
+`agentos` 是 Airymax 的统一命令行入口，通过 REST API 和 JSON-RPC 2.0 与 Airymax Gateway 通信。所有命令的默认 Gateway 地址为 `http://localhost:18789`。
 
 ### 基本用法
 
@@ -48,7 +48,7 @@ agentos <command> <subcommand> [options] [arguments]
 
 | 环境变量 | 默认值 | 说明 |
 |:---------|:-------|:-----|
-| `AGENTOS_ENDPOINT` | `http://localhost:18789` | AgentOS Gateway 的 HTTP 地址 |
+| `AGENTOS_ENDPOINT` | `http://localhost:18789` | Airymax Gateway 的 HTTP 地址 |
 | `AGENTOS_API_KEY` | （空） | API 认证密钥，设置后将作为 `Authorization: Bearer` 头传递 |
 | `AGENTOS_HEAPSTORE_ROOT` | `~/.agentrt/heapstore` | Heapstore 数据根目录，用于 `db` 相关命令 |
 
@@ -69,7 +69,7 @@ export AGENTOS_HEAPSTORE_ROOT="/data/agentrt/heapstore"
 
 ## 3. Service Management（服务管理）
 
-用于管理 AgentOS 平台上的微服务组件的生命周期。
+用于管理 Airymax 平台上的微服务组件的生命周期。
 
 ### 3.1 `service list` — 列出所有服务
 
@@ -87,7 +87,7 @@ agentos service list
 
 ```
 ============================================================
-  AgentOS Services
+  Airymax Services
 ============================================================
 
 Name                 Status       Healthy    Port
@@ -271,7 +271,7 @@ agentos service health
 
 ```
 ============================================================
-  AgentOS Health Check
+  Airymax Health Check
 ============================================================
 
 ✓ Gateway is healthy (v2.1.0, uptime: 9240s)
@@ -281,7 +281,7 @@ agentos service health
 
 ```
 ============================================================
-  AgentOS Health Check
+  Airymax Health Check
 ============================================================
 
 ✗ Health check failed: Connection failed: [Errno 111] Connection refused
@@ -293,7 +293,7 @@ agentos service health
 
 ## 4. Agent Management（Agent 管理）
 
-用于管理 AgentOS 平台上的 AI Agent 实例。
+用于管理 Airymax 平台上的 AI Agent 实例。
 
 ### 4.1 `agent list` — 列出已注册的 Agent
 
@@ -311,7 +311,7 @@ agentos agent list
 
 ```
 ============================================================
-  AgentOS Agents
+  Airymax Agents
 ============================================================
 
 ID           Name                 Type            Status
@@ -468,7 +468,7 @@ agentos agent info a1b2c3d4e5
 
 ## 5. Task Management（任务管理）
 
-用于管理 AgentOS 平台上的任务生命周期。
+用于管理 Airymax 平台上的任务生命周期。
 
 ### 5.1 `task list` — 列出任务
 
@@ -486,7 +486,7 @@ agentos task list
 
 ```
 ============================================================
-  AgentOS Tasks
+  Airymax Tasks
 ============================================================
 
 ID           Agent           Status       Progress
@@ -660,7 +660,7 @@ agentos task result t1a2b3c4d5
 
 ## 6. Protocol Operations（协议操作）
 
-AgentOS 支持多种协议适配器，包括 JSON-RPC 2.0、MCP v1.0、A2A v0.3、OpenAI API Compatible 和 OpenJiuwen（自定义二进制协议）。本节命令用于管理、测试和操作这些协议。
+Airymax 支持多种协议适配器，包括 JSON-RPC 2.0、MCP v1.0、A2A v0.3、OpenAI API Compatible 和 OpenJiuwen（自定义二进制协议）。本节命令用于管理、测试和操作这些协议。
 
 ### 6.1 `protocol list` — 列出所有协议适配器
 
@@ -678,7 +678,7 @@ agentos protocol list
 
 ```
 ============================================================
-  AgentOS Protocol Adapters
+  Airymax Protocol Adapters
 ============================================================
 
 Protocol        Version    Status     Endpoint
@@ -1080,7 +1080,7 @@ agentos protocol transform openai jsonrpc '{"model":"gpt-4o","messages":[{"role"
       "method": "tool.execute",
       "params": {
           "name": "web_search",
-          "query": "AgentOS"
+          "query": "Airymax"
       },
       "id": 1
   }
@@ -1164,7 +1164,7 @@ agentos protocol capabilities openai
 
 ## 7. Configuration（配置管理）
 
-用于读取和修改 AgentOS 运行时配置。
+用于读取和修改 Airymax 运行时配置。
 
 ### 7.1 `config get` — 获取配置值
 
@@ -1257,7 +1257,7 @@ agentos config list
 
 ```
 ============================================================
-  AgentOS Configuration
+  Airymax Configuration
 ============================================================
 
   gateway.port:             18789
@@ -1300,7 +1300,7 @@ agentos config reload
 
 ## 8. Monitoring（监控）
 
-用于查看 AgentOS 平台的运行时指标和告警。
+用于查看 Airymax 平台的运行时指标和告警。
 
 ### 8.1 `monitor metrics` — 查看指标
 
@@ -1318,7 +1318,7 @@ agentos monitor metrics
 
 ```
 ============================================================
-  AgentOS Metrics
+  Airymax Metrics
 ============================================================
 
   Gateway:
@@ -1397,11 +1397,11 @@ agentos monitor dashboard
 
 ## 9. Development（开发工具）
 
-用于 AgentRT 项目的开发工作流。
+用于 Airymax 项目的开发工作流。
 
 ### 9.1 `dev init` — 初始化开发环境
 
-初始化 AgentRT 的开发环境，包括依赖安装、子模块初始化和构建目录配置。
+初始化 Airymax 的开发环境，包括依赖安装、子模块初始化和构建目录配置。
 
 **用法：**
 
@@ -1430,7 +1430,7 @@ agentos dev init
 
 ### 9.2 `dev build` — 构建项目
 
-编译 AgentRT 项目。
+编译 Airymax 项目。
 
 **用法：**
 
@@ -1443,7 +1443,7 @@ agentos dev build
 **示例输出：**
 
 ```
-→ Building AgentRT...
+→ Building Airymax...
   Build type: Release
   Generator:  Ninja
   Parallel:   8 jobs
@@ -1500,7 +1500,7 @@ agentos dev doctor
 
 ```
 ============================================================
-  AgentOS Diagnostics
+  Airymax Diagnostics
 ============================================================
 
 Tool                      Status
@@ -1521,7 +1521,7 @@ Tool                      Status
 
 ```
 ============================================================
-  AgentOS Diagnostics
+  Airymax Diagnostics
 ============================================================
 
 Tool                      Status
@@ -1547,7 +1547,7 @@ Tool                      Status
 | Docker | 否 | 容器化部署 |
 | Node.js | 否 | TypeScript SDK |
 | Rust/Cargo | 否 | Rust SDK |
-| Gateway | — | AgentOS Gateway 是否在运行 |
+| Gateway | — | Airymax Gateway 是否在运行 |
 
 **环境变量：** `AGENTOS_ENDPOINT` — 决定 Gateway 健康检查的目标地址。
 
@@ -1555,7 +1555,7 @@ Tool                      Status
 
 ### 9.5 `dev shell` — 打开开发 Shell
 
-打开一个配置好 AgentRT 开发环境的 Shell 会话。
+打开一个配置好 Airymax 开发环境的 Shell 会话。
 
 **用法：**
 
@@ -1614,7 +1614,7 @@ agentos db migrate --target=v2
 
 ```
 ============================================================
-  AgentRT Database Migration
+  Airymax Database Migration
 ============================================================
 
 → Target version: v2
@@ -1636,7 +1636,7 @@ agentos db migrate --target=v2
 
 ```
 ============================================================
-  AgentRT Database Migration
+  Airymax Database Migration
 ============================================================
 
 → Target version: v2
@@ -1801,11 +1801,11 @@ agentos db backup
 
 ## 11. System（系统命令）
 
-用于查看 AgentOS 的版本和系统状态。
+用于查看 Airymax 的版本和系统状态。
 
 ### 11.1 `version` — 显示版本
 
-显示 AgentOS CLI 和 Gateway 的版本信息。
+显示 Airymax CLI 和 Gateway 的版本信息。
 
 **用法：**
 
@@ -1818,7 +1818,7 @@ agentos version
 **示例输出：**
 
 ```
-AgentOS v2.1.0
+Airymax v2.1.0
   Gateway: http://localhost:18789
   Protocols: JSON-RPC 2.0, MCP v1.0, A2A v0.3, OpenAI API, OpenJiuwen (binary)
 ```
@@ -1829,7 +1829,7 @@ AgentOS v2.1.0
 
 ### 11.2 `status` — 显示系统状态
 
-显示 AgentOS Gateway 和所有服务的当前状态。通过调用 `/health` 端点获取信息。
+显示 Airymax Gateway 和所有服务的当前状态。通过调用 `/health` 端点获取信息。
 
 **用法：**
 
@@ -1843,7 +1843,7 @@ agentos status
 
 ```
 ============================================================
-  AgentOS System Status
+  Airymax System Status
 ============================================================
 
 ✓ Gateway: healthy (v2.1.0)
@@ -1857,7 +1857,7 @@ agentos status
 
 ```
 ============================================================
-  AgentOS System Status
+  Airymax System Status
 ============================================================
 
 ✗ Gateway unreachable: Connection failed: [Errno 111] Connection refused
@@ -1891,7 +1891,7 @@ agentos db --help
 ```
 usage: agentos [-h] {service,agent,task,protocol,config,monitor,dev,db,version,status,help} ...
 
-AgentOS Unified CLI - 统一命令行工具
+Airymax Unified CLI - 统一命令行工具
 
 positional arguments:
   {service,agent,task,protocol,config,monitor,dev,db,version,status,help}

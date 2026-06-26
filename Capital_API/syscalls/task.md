@@ -1,18 +1,16 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 任务管理 API
+# Airymax 任务管理 API
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/syscalls/task.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 🎯 概述
 
-任务管理 API 提供 AgentOS 任务生命周期的完整控制，包括任务提交、状态查询、取消、优先级调整等功能。所有任务遵循**双系统路径**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。
+任务管理 API 提供 Airymax 任务生命周期的完整控制，包括任务提交、状态查询、取消、优先级调整等功能。所有任务遵循**双系统路径**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。
 
 ### 🧠 理论视角：MCIS框架下的任务API设计
 
@@ -54,7 +52,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 🧩 五维正交原则体现
 
-任务管理 API 深度体现了 AgentOS 的五维正交设计原则：
+任务管理 API 深度体现了 Airymax 的五维正交设计原则：
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|

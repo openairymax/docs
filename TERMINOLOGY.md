@@ -1,19 +1,17 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# OpenAirymax AgentOS — 统一术语表
+# Airymax 统一术语表
 
-**最新**: 2026-06-10
-**状态**: 维护中
-**路径**: `Docs/TERMINOLOGY.md`
-
-**作者**: Liren Wang、Zhixian Zhou — AgentOS 架构委员会
+**最新**: 2026-06-25  
+**状态**: 维护中   
+**路径**: `Docs/TERMINOLOGY.md`  
 
 ---
 
 ## 一、编制说明
 
-本术语表是 OpenAirymax AgentOS 规范体系的**唯一权威术语参考**。
+本术语表是 Airymax (极境) 规范体系的**唯一权威术语参考**。
 
 **目的**:
 - 统一所有规范文档、代码注释、API 文档中的术语定义
@@ -22,15 +20,97 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **使用规则**:
 1. 编写文档时必须使用本表的**标准名称**
 2. 标注为"禁止使用"的旧称不得出现在任何新的规范文档或代码注释中
-3. 新增术语需经架构委员会审核后加入
+3. 新增术语需经架构团队审核后加入
+4. 标准计算机专业名词（如 IPC、Daemon、Sandbox 等）遵循业界通用定义，本表不重新定义，仅在"标准计算机名词"分区中说明其在 Airymax 中的使用上下文
+5. 当标准名词与 Airymax 特有概念同名时，以 Airymax 特有定义为准
 
 ---
 
-## 二、核心架构术语
+## 二、标准计算机名词
+
+本分区所列术语均为计算机科学领域的**业界通用专业名词**，遵循其标准定义，Airymax **不重新定义**。仅说明其在 Airymax 项目中的使用上下文，供文档编写与代码注释参考。
+
+### IPC / 进程间通信
+
+**业界定义**: Inter-Process Communication，操作系统提供的机制，允许不同进程之间交换数据与信号。常见实现包括管道、消息队列、共享内存、信号量、套接字等。
+
+**Airymax 使用上下文**: Airymax 微核心（CoreKern/MicroCoreRT）的核心机制之一，承载用户态服务（Daemon）之间、Agent 与内核之间的消息传递。
+
+**系统内代码**: `agentos_ipc_*`
+
+**参见**: CoreKern（原子核心）、AirymaxSyscall（系统调用层）、Daemon（用户态服务进程）
+
+---
+
+### Daemon / 用户态服务进程
+
+**业界定义**: 在后台运行的长生命周期进程，通常独立于终端会话，提供特定服务。Unix 传统命名以 `d` 后缀（如 `syslogd`、`sshd`）。
+
+**Airymax 使用上下文**: Airymax 采用微核心架构，将功能服务化为用户态进程，命名遵循 `*_d` 约定（如 `gateway_d`、`llm_d`、`tool_d`）。完整列表见附录 A。
+
+**系统内代码**: `*_d` 进程后缀
+
+**参见**: IPC、Service Isolation（服务隔离）、Protocols（协议适配层）
+
+---
+
+### Sandbox / 沙箱
+
+**业界定义**: 一种安全机制，将程序运行限制在受控的隔离环境中，防止其对宿主系统造成意外或恶意影响。常见于浏览器、容器、JVM 等运行时。
+
+**Airymax 使用上下文**: Airymax 系统调用层（AirymaxSyscall）的七大功能域之一，为 Agent 与 Skill 提供隔离执行环境，配合 Cupolas（安全穹顶）共同构成安全防护体系。
+
+**系统内代码**: `agentos_sys_sandbox_*`
+
+**参见**: Cupolas（安全穹顶）、Service Isolation（服务隔离）、Security by Design（安全内生设计）
+
+---
+
+### JSON-RPC 2.0
+
+**业界定义**: JSON Remote Procedure Call，一种无状态、轻量级的远程过程调用协议，使用 JSON 作为数据格式。规范定义于 https://www.jsonrpc.org/specification。
+
+**Airymax 使用上下文**: Airymax 协议适配层（Protocols）支持的标准协议之一，用于 Agent 与外部客户端之间的请求-响应通信。错误码体系与 Airymax 统一错误码体系对接。
+
+**参见**: Protocols（协议适配层）、ErrorCodeSystem（统一错误码体系）
+
+---
+
+### TraceID / 跟踪标识符
+
+**业界定义**: 分布式追踪系统中用于唯一标识一次请求链路的标识符，贯穿请求经过的所有服务节点，支持链路分析与性能诊断。常见于 OpenTelemetry、Jaeger、Zipkin 等可观测性体系。
+
+**Airymax 使用上下文**: Airymax 可观测性子系统的核心标识，贯穿 Agent 任务执行、IPC 消息传递、Daemon 服务调用的全链路，与 SpanID 配合实现调用链追踪。
+
+**参见**: Cupolas（安全穹顶，含审计子系统）、AirymaxSyscall（系统调用层，含 Telemetry 域）
+
+---
+
+### Service Isolation / 服务隔离
+
+**业界定义**: 一种架构模式，将不同服务的运行环境、资源、权限相互隔离，防止单一服务故障或被攻破后影响整体系统。常见实现包括进程隔离、容器隔离、虚拟机隔离等。
+
+**Airymax 使用上下文**: Airymax 微核心架构的设计原则之一，各 Daemon 服务运行于独立进程，通过 IPC 通信，资源与权限相互隔离，与 Sandbox、Cupolas 协同构成纵深防御。
+
+**参见**: Daemon（用户态服务进程）、Sandbox（沙箱）、Cupolas（安全穹顶）、MicroCoreRT（微核心）
+
+---
+
+### Security by Design / 安全内生设计
+
+**业界定义**: 一种工程理念，将安全作为系统设计的首要原则，在架构层面而非附加层面解决安全问题。与"安全左移"（Shift Left Security）理念一致，强调默认安全（Secure by Default）。
+
+**Airymax 使用上下文**: Airymax 的核心设计理念之一，贯穿 CoreKern、Cupolas、Memory Safety Macro System、合规编译模式（AGENTRT_COMPLIANCE_STRICT）等所有安全相关组件。
+
+**参见**: Cupolas（安全穹顶）、Memory Safety Macro System（安全宏体系）、Sandbox（沙箱）
+
+---
+
+## 三、Airymax 特有架构术语
 
 ### Agent / 智能体
 
-**定义**: 具有认知能力的实体，能够感知环境、进行推理决策并执行行动。Agent 是 AgentOS 的基本执行单元。
+**定义**: 具有认知能力的实体，能够感知环境、进行推理决策并执行行动。Agent 是 Airymax 的基本执行单元。
 
 **系统内代码**: `agentos_sys_agent_*`
 
@@ -70,21 +150,23 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### CoreKern / 原子核心
 
-**定义**: AgentOS 微核心中不可再分的基础内核实现，承载 IPC、内存管理、任务调度、时间服务、OOM 处理、可观测性等原子机制。是体系并行论中基础体 (Base Body) 的具象实现。
+**定义**: Airymax 微核心中不可再分的基础内核实现，承载 IPC、内存管理、任务调度、时间服务、OOM 处理、可观测性等原子机制。是体系并行论中基础体 (Base Body) 的具象实现。
 
 **标准名称**: 原子核心 (CoreKern)
 
+> **注**: CoreKern 是标准模块名（对应目录 `corekern/`）。MicroCoreRT（微核心）是其架构概念层名称，描述"极简内核抽象层"的设计理念，两者共享同一目录和代码前缀，并非独立模块。详见下方 MicroCoreRT 条目。
+
 **系统内代码**: `agentos_core_*`
 
-**代码目录**: `AgentOS/agentos/atoms/corekern/`
+**代码目录**: `AgentRT/agentos/atoms/corekern/`
 
-**参见**: MicroCoreRT（微核心）、IPC、AirymaxSyscall（系统调用层）
+**参见**: MicroCoreRT（微核心，架构概念层）、IPC、AirymaxSyscall（系统调用层）
 
 ---
 
 ### CoreLoopThree / 三层认知循环
 
-**定义**: AgentOS 的三层认知-执行-记忆主循环运行时：
+**定义**: Airymax 的三层认知-执行-记忆主循环运行时：
 
 | 层级 | 名称 | 职责 |
 |------|------|------|
@@ -96,11 +178,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 三层认知循环 (CoreLoopThree)
 
-**旧称/禁止使用**: "第三循环内核"、"三层循环运行时"、"三层一体架构"、"三层循环核心"
+**旧称/禁止使用**: "三层循环运行时"、"三层一体架构"、"三层循环核心"
 
 **系统内代码**: `agentos_loop_*`
 
-**代码目录**: `AgentOS/agentos/atoms/coreloopthree/`
+**代码目录**: `AgentRT/agentos/atoms/coreloopthree/`
 
 **参见**: Thinkdual（双思考系统）、MemoryRovol（记忆卷载）、TaskFlow（任务流引擎）
 
@@ -108,7 +190,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### Cupolas / 安全穹顶
 
-**定义**: AgentOS 的内生安全防护层，采用输入净化→权限仲裁→网络过滤→审计记录四重防护链，包含 Guards、Permission、Sanitizer、Audit、Workbench、Security Vault、Network Security 七个子系统。
+**定义**: Airymax 的内生安全防护层，采用输入净化→权限仲裁→网络过滤→审计记录四重防护链，包含 Guards、Permission、Sanitizer、Audit、Workbench、Security Vault、Network Security 七个子系统。
 
 **标准名称**: 安全穹顶 (Cupolas)
 
@@ -118,24 +200,9 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-### Daemon / 用户态服务层
-
-**定义**: AgentOS 的用户态服务集群。共 10 个独立服务进程（gateway_d、llm_d、tool_d、market_d、sched_d、monit_d、channel_d、observe_d、notify_d、info_d），以 `_d` 后缀命名，通过 IPC 与微内核通信，通过 JSON-RPC 2.0 对外提供服务。
-
-**标准名称**: 用户态服务层 (Daemon)
-
-**旧称/禁止使用**: "守护进程"、"后端服务层"、"daemon进程"
-> 严禁使用"守护进程"——该词在 AgentOS 语境中会与操作系统传统守护进程概念混淆。
-
-**代码目录**: `AgentOS/agentos/daemon/`
-
-**参见**: MicroCoreRT（微核心）、IPC、Protocols（协议适配层）
-
----
-
 ### ErrorCodeSystem / 统一错误码体系
 
-**定义**: AgentOS 采用双错误码体系：
+**定义**: Airymax 采用双错误码体系：
 
 | 体系 | 适用场景 | 格式 |
 |------|---------|------|
@@ -164,35 +231,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### HeapStore / 数据分区存储
 
-**定义**: AgentOS 的结构化数据分区持久层，支持日志、追踪、会话、Agent、Skill、内存、Token、IPC 等多数据分区的批量写入与熔断保护。
+**定义**: Airymax 的结构化数据分区持久层，支持日志、追踪、会话、Agent、Skill、内存、Token、IPC 等多数据分区的批量写入与熔断保护。
 
 **系统内代码**: `agentos_heapstore_*`
 
-**代码目录**: `AgentOS/agentos/heapstore/`
-
----
-
-### IPC / 进程间通信
-
-**定义**: 微核心提供的进程间通信机制。支持 Request-Response（同步）、Publish-Subscribe（异步）、Streaming（长连接）三种通信模式。
-
-**标准名称**: 进程间通信 (IPC)
-
-**系统内代码**: `agentos_ipc_*`
-
-**代码目录**: `AgentOS/agentos/atoms/corekern/src/ipc/`
-
-**参见**: MicroCoreRT（微核心）、AirymaxSyscall（系统调用层）、Service Isolation（服务隔离）
-
----
-
-### JSON-RPC 2.0
-
-**定义**: AgentOS 采用的轻量级远程过程调用协议，支持请求-响应和通知两种模式。所有 Daemon 服务通过 JSON-RPC 2.0 对外暴露方法。
-
-**协议层错误码**: -32700 (Parse error)、-32600 (Invalid Request)、-32601 (Method not found)、-32602 (Invalid params)、-32603 (Internal error)
-
-**参见**: ErrorCodeSystem（统一错误码体系）
+**代码目录**: `AgentRT/agentos/heapstore/`
 
 ---
 
@@ -210,7 +253,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### Memory Safety Macro System / 安全宏体系
 
-**定义**: AgentOS 的内存操作安全宏体系，覆盖分配、释放、字符串操作和禁止函数，确保内存操作的类型安全和空指针安全。
+**定义**: Airymax 的内存操作安全宏体系，覆盖分配、释放、字符串操作和禁止函数，确保内存操作的类型安全和空指针安全。
 
 **核心宏**:
 - 分配: `AGENTOS_MALLOC` / `AGENTOS_CALLOC` / `AGENTOS_REALLOC`
@@ -239,7 +282,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### MemoryRovol / 记忆卷载
 
-**定义**: AgentOS 的四层渐进式记忆架构，从原始数据到深层模式的完整处理管线：
+**定义**: Airymax 的四层渐进式记忆架构，从原始数据到深层模式的完整处理管线：
 
 | 层级 | 名称 | 功能 |
 |------|------|------|
@@ -256,6 +299,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `agentos_layer*_*` / `agentos_memoryrov_*`
 
+**代码目录**: `MemoryRovol/`（独立模块，原位于 `AgentRT/agentos/atoms/memoryrovol/`，现已独立为 Airymax 商业化核心模块）
+
 **参见**: CoreLoopThree（三层认知循环）、Forgetting Engine（遗忘机制）、TimeSliceInfer（分时推理框架）、MemorySwap（记忆交换算法）
 
 ---
@@ -270,61 +315,33 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-### MicroCoreRT / 微核心
+### MicroCoreRT / 微核心（架构概念层名称）
 
 **定义**: 极简的操作系统内核抽象层，只提供最基本的 IPC、内存管理、任务调度、时间管理、可观测性功能。其他功能作为用户态服务实现。名称取自 Micro + Core + RT（Runtime）。
 
 > 注: 这是"微内核风格"的用户态抽象层，不是真正的操作系统内核（不运行在 ring 0，不管理硬件）。
 
-**标准名称**: 微核心 (MicroCoreRT)
+**与 CoreKern 的关系**: MicroCoreRT 是 **CoreKern 的架构概念层名称**，描述"极简内核抽象层"的设计理念。CoreKern 是该理念的具体实现模块（对应目录 `corekern/`，代码前缀 `agentos_core_*`）。两者**不是独立模块**，共享同一目录和代码前缀。
 
 **旧称/禁止使用**: "微内核"、"Microkernel"（不加限定词时易与真正 OS 内核混淆）
 
-**系统内代码**: `agentos_core_*`
+**系统内代码**: `agentos_core_*`（与 CoreKern 共享）
 
-**代码目录**: `AgentOS/agentos/atoms/corekern/`（与 CoreKern 同目录）
+**代码目录**: `AgentRT/agentos/atoms/corekern/`（与 CoreKern 同目录）
 
-**参见**: CoreKern（原子核心）、IPC、AirymaxSyscall（系统调用层）、Service Isolation（服务隔离）
+**参见**: CoreKern（原子核心，标准模块名）、IPC、AirymaxSyscall（系统调用层）、Service Isolation（服务隔离）
 
 ---
 
 ### Protocols / 协议适配层
 
-**定义**: AgentOS 的多协议适配层，提供统一的协议抽象、路由、转换和扩展框架。支持 9 种协议类型：JSON-RPC 2.0、MCP v1、A2A v0.3、OpenAI、Claude、OpenJiuwen、OpenClaw、ChinaEco、AGNTCY ACP。
+**定义**: Airymax 的多协议适配层，提供统一的协议抽象、路由、转换和扩展框架。支持 9 种协议类型：JSON-RPC 2.0、MCP v1、A2A v0.3、OpenAI、Claude、OpenJiuwen、OpenClaw、ChinaEco、AGNTCY ACP。
 
 **标准名称**: 协议适配层 (Protocols)
 
-**代码目录**: `AgentOS/agentos/protocols/`
+**代码目录**: `AgentRT/agentos/protocols/`
 
 **参见**: Daemon（用户态服务层）
-
----
-
-### Sandbox / 沙箱
-
-**定义**: 隔离的执行环境，限制 Skill 的权限和资源访问。支持进程隔离、容器隔离、WASM 隔离三种模式。
-
-**标准名称**: 沙箱 (Sandbox)
-
-**系统内代码**: `agentos_sys_sandbox_*`、`cupolas_workbench_*`
-
-**参见**: Service Isolation（服务隔离）、Permission（权限）、Cupolas（安全穹顶）
-
----
-
-### Security by Design / 安全内生设计
-
-**定义**: 将安全机制内嵌于系统架构和设计中的理念，而非事后附加补丁。Cupolas 安全穹顶是该理念的具象实现。
-
-**参见**: Cupolas（安全穹顶）、Sandbox（沙箱）
-
----
-
-### Service Isolation / 服务隔离
-
-**定义**: 用户态服务之间相互隔离，只能通过内核 IPC 通信。一个服务的崩溃不会影响其他服务。
-
-**参见**: MicroCoreRT（微核心）、IPC
 
 ---
 
@@ -346,7 +363,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 任务流引擎 (TaskFlow)
 
-**代码目录**: `AgentOS/agentos/atoms/taskflow/`
+**代码目录**: `AgentRT/agentos/atoms/taskflow/`
 
 **参见**: CoreLoopThree（三层认知循环）
 
@@ -354,7 +371,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### Thinkdual / 双思考系统
 
-**定义**: AgentOS 的核心认知创新，由三组件构成的认知架构：
+**定义**: Airymax 的核心认知创新，由三组件构成的认知架构：
 
 | 组件 | 角色 | 功能 |
 |------|------|------|
@@ -371,7 +388,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `tc_*`（思考链）/ `mc_*`（元认知）/ `sc_*`（流式验证）/ `tc3_*`（协调器）
 
-**代码目录**: `AgentOS/agentos/atoms/coreloopthree/src/cognition/`
+**代码目录**: `AgentRT/agentos/atoms/coreloopthree/src/cognition/`
 
 **参见**: CoreLoopThree（三层认知循环）、CognitiveEvolution（认知进化系统）
 
@@ -391,15 +408,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-### TraceID / 跟踪标识符
-
-**定义**: 跨组件请求的全局唯一标识符，用于分布式追踪和日志关联。
-
-**参见**: Security by Design（安全内生设计）、JSON-RPC 2.0
-
----
-
-## 三、标准化名称映射总表
+## 四、标准化名称映射总表
 
 | 标准中文 | 标准英文 | 代码前缀 | 禁止使用的旧称 |
 |----------|----------|---------|---------------|
@@ -407,7 +416,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 系统调用层 | AirymaxSyscall | `agentos_sys_*` | Syscall Layer |
 | 认知进化系统 | CognitiveEvolution | `cog_*` | — |
 | 契约 | Contract | — | — |
-| 原子核心 | CoreKern | `agentos_core_*` | 原子内核 |
+| 原子核心 | CoreKern | `agentos_core_*` | 原子核心（MicroCoreRT 为其架构概念层名称，非独立模块） |
 | 三层认知循环 | CoreLoopThree | `agentos_loop_*` | 第三循环内核、三层循环运行时、三层一体架构 |
 | 安全穹顶 | Cupolas | `cupolas_*` | Cupolas安全模块 |
 | 用户态服务层 | Daemon | `*_d` 进程 | 守护进程、后端服务层 |
@@ -420,7 +429,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 安全宏体系 | Memory Safety Macro System | `AGENTOS_MALLOC` 等 | — |
 | 记忆交换算法 | MemorySwap | `agentos_memory_swap_*` | — |
 | 记忆卷载 | MemoryRovol | `agentos_layer*_*` | 记忆漩涡引擎 |
-| 微核心 | MicroCoreRT | `agentos_core_*` | 微内核、Microkernel |
+| 微核心（概念层） | MicroCoreRT（CoreKern 别称） | `agentos_core_*`（与 CoreKern 共享） | 微内核、Microkernel |
 | 协议适配层 | Protocols | — | — |
 | 沙箱 | Sandbox | `agentos_sys_sandbox_*` | — |
 | 安全内生设计 | Security by Design | — | — |
@@ -433,7 +442,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-## 四、MemoryRovol 子系统术语
+## 五、MemoryRovol 子系统术语
 
 ### L1 原始卷
 
@@ -499,7 +508,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-## 五、命名规范速查
+## 六、命名规范速查
 
 ### 函数命名
 
@@ -539,7 +548,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-## 六、附录
+## 七、附录
 
 ### A. Daemon 服务完整列表（10 个）
 
@@ -590,19 +599,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 参考文献
 
-[1] 体系并行论 — `Basic_Theories/CN_01_体系并行论.md`
-[2] 认知层理论 — `Basic_Theories/CN_02_认知层理论.md`
-[3] 记忆层理论 — `Basic_Theories/CN_03_记忆层理论.md`
-[4] 设计原则 — `Basic_Theories/CN_04_设计原则.md`
+[1] 体系并行论 — `Basic_Theories/CN_01_体系并行.md`
+[2] 认知层理论 — `Basic_Theories/CN_02_认知层设计.md`
+[3] 记忆层理论 — `Basic_Theories/CN_03_记忆层设计.md`
+[4] 设计原则 — `Basic_Theories/CN_04_系统设计原则.md`
 [5] 架构设计原则 — `ARCHITECTURAL_PRINCIPLES.md`
 [6] MemoryRovol 架构文档 — `Capital_Architecture/memoryrovol.md`
 [7] 微核心架构 — `Capital_Architecture/microkernel.md`
 [8] 三层认知循环 — `Capital_Architecture/coreloopthree.md`
 [9] 系统调用层 — `Capital_Architecture/syscall.md`
-
----
-
-**维护者**: AgentOS 架构委员会
-**联系方式**: architecture@agentos.org(暂)
-**版本历史**: v1.0 (2026-06-09) → v2.0 (2026-06-03) → v3.0 (2026-06-10) → **v4.0 (2026-06-10)**
-**v4.0 变更**: 全面精简重构 — 移除文件行数统计、代码片段、测试列表、性能基准表等实现细节，回归纯术语定义参考。修正 AirymaxSyscall 拼写。

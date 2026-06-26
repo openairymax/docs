@@ -8,7 +8,7 @@
  *
  * @section architecture 系统架构
  *
- * AgentOS 采用分层微内核架构，自底向上分为以下层次：
+ * AgentOS 采用分层微核心架构，自底向上分为以下层次：
  *
  * @subsection layer_atoms 原子层 (Atoms)
  * 系统最底层的核心构件，提供基础能力：

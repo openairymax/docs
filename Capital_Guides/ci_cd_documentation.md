@@ -1,10 +1,8 @@
-# AgentOS CI/CD 标准化配置文档
+# Airymax CI/CD 标准化配置文档
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/ci_cd_documentation.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 架构概述
@@ -24,7 +22,7 @@
 
 ### 2.1 工作流清单
 
-AgentOS CI/CD 由 3 个核心工作流构成（v5.0）：
+Airymax CI/CD 由 3 个核心工作流构成（v5.0）：
 
 | 工作流 | 触发条件 | 功能 |
 |--------|---------|------|
@@ -128,7 +126,7 @@ libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
 Name: tiktoken
-Description: Tokenizer library (CI stub for AgentOS)
+Description: Tokenizer library (CI stub for Airymax)
 Version: 0.5.2
 Libs: -L${libdir} -ltiktoken
 Cflags: -I${includedir}
@@ -294,4 +292,4 @@ install-deps.sh 中的重试逻辑:
 
 ---
 
-*SPHARX Ltd. - AgentOS Project*
+*SPHARX Ltd. - Airymax Project*

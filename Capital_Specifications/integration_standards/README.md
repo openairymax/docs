@@ -1,20 +1,18 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS Integration Standards / AgentOS 集成标准集
+# Airymax Integration Standards / Airymax 集成标准集
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 目录 / Table of Contents
 
-本目录包含 AgentOS 各模块间的集成标准和最佳实践。
+本目录包含 Airymax 各模块间的集成标准和最佳实践。
 
-This directory contains integration standards and best practices between AgentOS modules.
+This directory contains integration standards and best practices between Airymax modules.
 
 ### 已发布的集成标准 / Published Integration Standards
 
@@ -44,7 +42,7 @@ This directory contains integration standards and best practices between AgentOS
 **版本**: v1.0.0  
 **最后更新**: {日期}  
 **适用范围**: {模块} 与 {目标模块} 的集成  
-**理论基础**: 工程两论（接口契约化）+ 五维正交设计 + Thinkdual 认知双思系统  
+**理论基础**: 工程两论（接口契约化）+ 五维正交设计 + Thinkdual 双思考系统  
 
 ## 一、集成概述
 ### 1.1 集成目标
@@ -78,7 +76,7 @@ This directory contains integration standards and best practices between AgentOS
 
 ## 🎯 目标 / Objectives
 
-建立 AgentOS 模块间集成的标准化机制，确保：
+建立 Airymax 模块间集成的标准化机制，确保：
 
 1. **统一接口契约**: 所有模块间调用遵循一致的接口定义
 2. **配置管理标准化**: 统一的配置加载、验证和热更新机制

@@ -1,10 +1,8 @@
-# AgentOS 配置漂移检测器使用指南
+# Airymax 配置漂移检测器使用指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/drift_detector_guide.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -269,7 +267,7 @@ python drift_detector.py --action detect --verbose
 
 ---
 
-**文档维护**: AgentOS Team  
+**文档维护**: Airymax Team  
 **最后更新**: 2026-04-05  
 
 © 2026 SPHARX Ltd. All Rights Reserved.

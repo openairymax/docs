@@ -3,17 +3,15 @@
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/daemon/gateway_api.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 概述
 
-AgentOS 提供7个守护进程（Daemon）服务，构成完整的Agent运行时基础设施：
+Airymax 提供7个守护进程（Daemon）服务，构成完整的Agent运行时基础设施：
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   AgentOS Daemon 层                │
+│                   Airymax Daemon 层                │
 ├──────────┬──────────┬──────────┬───────────────────┤
 │ gateway_d│  llm_d  │channel_d │    sched_d        │
 │  网关服务 │ LLM服务  │ 通道服务 │    调度器         │

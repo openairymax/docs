@@ -1,14 +1,12 @@
-# AgentOS Tools Module Design
+# Airymax Tools Module Design
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Architecture/toolkit_design.md
-**作者**:
-    - Zhixian Zhou、Liren Wang
 
 ## 1. 设计理念
 
-本设计基于AgentOS的核心哲学：
+本设计基于Airymax的核心哲学：
 - **工程控制论**：通过健康检查、错误处理和状态管理实现系统的自我调节
 - **系统工程**：模块化设计，清晰的接口边界，与核心系统无缝集成
 - **双系统思维**：提供快速路径（System 1）和安全路径（System 2）
@@ -87,7 +85,7 @@
 
 ### 4.1 Python SDK
 
-- [x] 主客户端类 `AgentOS`
+- [x] 主客户端类 `Airymax`
 - [x] 异步客户端类 `AsyncAgentOS`
 - [x] 任务管理（提交、查询、等待、取消）
 - [x] 记忆管理（写入、搜索、获取、删除）
@@ -126,7 +124,7 @@
 
 ### 4.4 TypeScript SDK
 
-- [x] 主客户端类 `AgentOS`
+- [x] 主客户端类 `Airymax`
 - [x] 任务管理（提交、查询、等待、取消）
 - [x] 记忆管理（写入、搜索、获取、删除）
 - [x] 会话管理（创建、设置上下文、获取上下文、关闭）
@@ -248,4 +246,4 @@
 
 ## 13. 结论
 
-本设计方案旨在为AgentOS提供一套完整、统一、高性能的多语言SDK，使不同技术栈的开发者能够方便地使用AgentOS的功能。通过严格遵循AgentOS的设计哲学和架构规范，确保SDK与核心系统的无缝集成，同时提供符合各语言惯用法的API，提升开发体验和代码质量。
+本设计方案旨在为Airymax提供一套完整、统一、高性能的多语言SDK，使不同技术栈的开发者能够方便地使用Airymax的功能。通过严格遵循Airymax的设计哲学和架构规范，确保SDK与核心系统的无缝集成，同时提供符合各语言惯用法的API，提升开发体验和代码质量。

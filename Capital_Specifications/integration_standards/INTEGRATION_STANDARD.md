@@ -6,8 +6,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/integration_standards/INTEGRATION_STANDARD.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、集成概述
@@ -26,7 +24,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  AgentOS 各业务模块                   │
+│                  Airymax 各业务模块                   │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
 │  │ cupolas  │ │ daemon   │ │ atoms    │ │ 其他   │ │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ │
@@ -55,7 +53,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 ```bash
 # 定义 Manager 配置的根目录路径
 export AGENTOS_CONFIG_DIR="/etc/agentos"          # Linux 生产环境
-export AGENTOS_CONFIG_DIR="./AgentOS/manager"     # 开发环境
+export AGENTOS_CONFIG_DIR="./AgentRT/manager"     # 开发环境
 export AGENTOS_CONFIG_DIR="C:\\agentos\\config"   # Windows 环境
 ```
 
@@ -68,7 +66,7 @@ export AGENTOS_CONFIG_DIR="C:\\agentos\\config"   # Windows 环境
 1. Linux: `/etc/agentos`
 2. Windows: `%APPDATA%\agentos`
 3. macOS: `~/Library/Application Support/agentos`
-4. 开发环境: `./AgentOS/manager`
+4. 开发环境: `./AgentRT/manager`
 
 ### 2.2 配置子目录结构
 
@@ -131,9 +129,9 @@ static const char* get_config_dir(void) {
     const char* config_dir = getenv("AGENTOS_CONFIG_DIR");
     if (!config_dir) {
 #ifdef _WIN32
-        config_dir = ".\\AgentOS\\manager";
+        config_dir = ".\\Airymax\\manager";
 #else
-        config_dir = "./AgentOS/manager";
+        config_dir = "./AgentRT/manager";
 #endif
     }
     return config_dir;
@@ -595,7 +593,7 @@ export AGENTOS_DEBUG=1
 - [config_unified README.md](../../../AgentRT/agentos/commons/utils/config_unified/README.md) ✅
 - [CONFIG_CHANGE_PROCESS.md](../../../AgentRT/agentos/manager/CONFIG_CHANGE_PROCESS.md) ✅
 - [error_code_reference.md](../project_erp/error_code_reference.md) ✅
-- [error.h (C 内核错误码定义)](../../../AgentOS/agentos/commons/utils/error/include/error.h) ✅
+- [error.h (C 内核错误码定义)](../../../AgentRT/agentos/commons/utils/error/include/error.h) ✅
 - [Integration Standards README](./README.md) ✅
 
 ---

@@ -1,28 +1,26 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS JavaScript 编码规范
+# Airymax JavaScript 编码规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/JavaScript_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、概述
 
 ### 1.1 编制目的
 
-本规范为 AgentOS 项目中的 JavaScript/TypeScript 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度（E-1至E-4），为开发者提供可操作的代码实现指南。
+本规范为 Airymax 项目中的 JavaScript/TypeScript 代码提供统一的编码标准。基于项目架构设计原则的五维正交系统，本规范聚焦于工程观维度（E-1至E-4），为开发者提供可操作的代码实现指南。
 
 ### 1.2 理论基础
 
-本规范基于 AgentOS 架构设计原则的五维正交系统：
+本规范基于 Airymax 架构设计原则的五维正交系统：
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **Thinkdual 认知双思系统**（原则 C-1）：TypeScript 提供编译时检查（System 2），JavaScript 提供运行时灵活（System 1）
+- **Thinkdual 双思考系统**（原则 C-1）：TypeScript 提供编译时检查（System 2），JavaScript 提供运行时灵活（System 1）
 
 **双系统在 JavaScript/TypeScript 中的体现**:
 
@@ -76,7 +74,7 @@ src/
  * 优先级队列和依赖解析。
  *
  * @module agentos/scheduler
- * @author AgentOS Team
+ * @author Airymax Team
  * @version 1.6.0
  */
 
@@ -485,7 +483,7 @@ class TaskExecutor {
 
 ```typescript
 /**
- * AgentOS 错误基类
+ * Airymax 错误基类
  */
 export class AgentOSError extends Error {
     public readonly code: string;
@@ -862,7 +860,7 @@ export interface TaskPlan<T = unknown, R = unknown> {
 
 ```typescript
 /**
- * 类型守卫：检查是否为 AgentOS 错误
+ * 类型守卫：检查是否为 Airymax 错误
  */
 function isAgentOSError(error: unknown): error is AgentOSError {
     return error instanceof AgentOSError;
@@ -888,7 +886,7 @@ function isValidTaskPlan(plan: unknown): plan is TaskPlan {
  */
 async function handleError(error: unknown): Promise<void> {
     if (isAgentOSError(error)) {
-        logger.error(`AgentOS error: ${error.code} - ${error.message}`);
+        logger.error(`Airymax error: ${error.code} - ${error.message}`);
         // error.code 是确定存在的
     } else if (error instanceof Error) {
         logger.error(`Unexpected error: ${error.message}`);
@@ -1146,7 +1144,7 @@ export interface JsonRpcResponse<T = unknown> {
 
 ---
 
-## 十四、AgentOS 模块 JavaScript/TypeScript 编码示例
+## 十四、Airymax 模块 JavaScript/TypeScript 编码示例
 
 ### 14.1 daemon（守护层）TypeScript 实现
 Backs模块作为系统服务守护进程，需要高可靠性和可观测性：
@@ -1226,7 +1224,7 @@ export class IpcService implements OnModuleInit, OnModuleDestroy {
 /**
  * 任务监控守护进程 - 体现工程观（E-2）和设计美学（A-1）原则
  * 
- * 监控AgentOS任务执行状态，提供实时指标和告警。
+ * 监控Airymax任务执行状态，提供实时指标和告警。
  * 基于事件驱动的架构，支持插件化扩展。
  */
 @Controller('tasks')
@@ -1496,7 +1494,7 @@ export class VectorDbClient {
 ```
 
 ### 14.4 前端SDK TypeScript 实现
-AgentOS前端SDK需要与后端架构保持一致性：
+Airymax前端SDK需要与后端架构保持一致性：
 
 #### 14.4.1 统一状态管理（映射原则：S-2 模块化设计）
 ```typescript
@@ -1585,11 +1583,11 @@ export class UnifiedStateManager {
 ---
 ## 十五、参考文献
 
-1. **AgentOS 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
+1. **Airymax 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md)
 2. **Google TypeScript Style Guide**: https://google.github.io/styleguide/tsguide.html
 3. **TypeScript Documentation**: https://www.typescriptlang.org/docs/
 4. **Airbnb JavaScript Style Guide**: https://github.com/airbnb/javascript
-5. **AgentOS 核心架构文档**:
+5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
    - [microkernel.md](../../Capital_Architecture/microkernel.md)
@@ -1601,7 +1599,7 @@ export class UnifiedStateManager {
 
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有 JavaScript/TypeScript 代码须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有 JavaScript/TypeScript 代码须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|

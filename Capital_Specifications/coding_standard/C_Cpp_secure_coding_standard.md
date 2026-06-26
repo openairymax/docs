@@ -1,13 +1,11 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS C&C++安全编程指南
+# Airymax C&C++安全编程指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/C_Cpp_secure_coding_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 内存安全
@@ -29,7 +27,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 > 2. **性能问题**：当源字符串远短于目标缓冲区时，`strncpy` 会用 `'\0'` 填充剩余空间，造成不必要的开销
 >
 > **推荐替代方案**（优先级从高到低）：
-> - `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` —— AgentOS 安全拷贝宏，自动保证 null 终止（定义在 `memory_compat.h`）
+> - `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` —— Airymax 安全拷贝宏，自动保证 null 终止（定义在 `memory_compat.h`）
 > - `snprintf(dst, dst_size, "%s", src)` —— 标准库方案，始终保证 null 终止
 > - `strncpy(dst, src, dst_size - 1); dst[dst_size - 1] = '\0';` —— 手动补零，仅在前两者不可用时使用
 
@@ -64,9 +62,9 @@ void* ptr = AGENTOS_MALLOC(size);
 
 **禁止**：直接使用 `malloc` 而不检查返回值；使用 `calloc` 而不初始化。
 
-### 1.2.1 AgentOS 安全宏（推荐）
+### 1.2.1 Airymax 安全宏（推荐）
 
-AgentOS 在 `memory_compat.h` 中提供以下安全宏，所有 C 代码应优先使用：
+Airymax 在 `memory_compat.h` 中提供以下安全宏，所有 C 代码应优先使用：
 
 | 宏名称 | 功能 | 说明 |
 |--------|------|------|
@@ -438,7 +436,7 @@ AGENTOS_SECURE_ZERO(password, sizeof(password));  // 推荐：跨平台安全清
 // memset((void*)p, 0, sizeof(password));
 ```
 
-> **⚠️ explicit_bzero 可移植性说明**：`explicit_bzero` 在 Linux/glibc 上可用，但在 Windows/MSVC 上不可用。AgentOS 提供 `AGENTOS_SECURE_ZERO` 宏（定义在 `memory_compat.h`）作为跨平台替代方案，在 Linux 上使用 `explicit_bzero`，在 Windows 上使用 `SecureZeroMemory` 或 volatile 指针方案。所有需要安全清零的代码必须使用 `AGENTOS_SECURE_ZERO` 而非直接调用 `explicit_bzero`。
+> **⚠️ explicit_bzero 可移植性说明**：`explicit_bzero` 在 Linux/glibc 上可用，但在 Windows/MSVC 上不可用。Airymax 提供 `AGENTOS_SECURE_ZERO` 宏（定义在 `memory_compat.h`）作为跨平台替代方案，在 Linux 上使用 `explicit_bzero`，在 Windows 上使用 `SecureZeroMemory` 或 volatile 指针方案。所有需要安全清零的代码必须使用 `AGENTOS_SECURE_ZERO` 而非直接调用 `explicit_bzero`。
 
 **禁止**：
 - 在日志中输出密钥或密码
@@ -506,7 +504,7 @@ Release 构建必须启用以下安全选项：
 
 ## 附录：跨文档规范引用
 
-本规范与以下 AgentOS 工程规范一致，所有 C/C++ 安全代码须同时遵循：
+本规范与以下 Airymax 工程规范一致，所有 C/C++ 安全代码须同时遵循：
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|

@@ -1,10 +1,8 @@
-# AgentOS Daemon 公共库 API 文档
+# Airymax Daemon 公共库 API 文档
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/daemon/API_DOCUMENTATION.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -22,7 +20,7 @@
 
 ## 概述
 
-本公共库为AgentOS daemon层提供统一的基础设施，包括：
+本公共库为Airymax daemon层提供统一的基础设施，包括：
 
 | 组件 | 功能 | 头文件 |
 |------|------|--------|

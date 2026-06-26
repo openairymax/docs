@@ -3,15 +3,13 @@
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/DOXYGEN_GUIDE.md
-**作者**:
-    - Liren Wang
 
 ## 概述
 
 本目录包含 cupolas 模块的 Doxygen API 文档配置和生成工具。
 
 **文档特点**：
-- ✅ 完全符合 AgentOS 架构设计原则 (E-7: 文档即代码)
+- ✅ 完全符合 Airymax 架构设计原则 (E-7: 文档即代码)
 - ✅ 遵循 `Code_comment_template.md` C/C++ 注释规范
 - ✅ 支持中文输出，完整的架构说明
 - ✅ 包含交互式 SVG 类图和调用图
@@ -68,7 +66,7 @@ generate_api_docs.bat
 
 ```bash
 # 进入 cupolas 目录
-cd AgentOS/cupolas
+cd AgentRT/cupolas
 
 # 运行 Doxygen
 doxygen Doxyfile
@@ -124,7 +122,7 @@ docs/api/
 
 | 配置项 | 值 | 说明 |
 |--------|-----|------|
-| PROJECT_NAME | "cupolas - AgentOS 安全穹顶" | 项目名称 |
+| PROJECT_NAME | "cupolas - Airymax 安全穹顶" | 项目名称 |
 | OUTPUT_LANGUAGE | Chinese | 中文输出 |
 | EXTRACT_ALL | YES | 提取所有实体 |
 | RECURSIVE | YES | 递归扫描子目录 |
@@ -245,7 +243,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'AgentOS/agentos/cupolas/**'
+      - 'AgentRT/agentos/cupolas/**'
 
 jobs:
   docs:
@@ -257,14 +255,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
       - name: Generate Docs
-        working-directory: AgentOS/cupolas
+        working-directory: AgentRT/cupolas
         run: doxygen Doxyfile
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./AgentOS/agentos/cupolas/docs/api/html
+          publish_dir: ./AgentRT/agentos/cupolas/docs/api/html
 ```
 
 ### GitLab CI 示例
@@ -276,11 +274,11 @@ generate-docs:
   before_script:
     - apk add --no-cache doxygen graphviz
   script:
-    - cd AgentOS/cupolas
+    - cd AgentRT/cupolas
     - doxygen Doxyfile
   artifacts:
     paths:
-      - AgentOS/agentos/cupolas/docs/api/html
+      - AgentRT/agentos/cupolas/docs/api/html
     expire_in: 30 days
   only:
     - main
@@ -325,7 +323,7 @@ git commit -m "docs: update API documentation"
 ## 参考资料
 
 - **Doxygen 官方手册**: https://www.doxygen.nl/manual/
-- **AgentOS 架构原则**: ../../../docs/ARCHITECTURAL_PRINCIPLES.md
+- **Airymax 架构原则**: ../../../docs/ARCHITECTURAL_PRINCIPLES.md
 - **代码注释规范**: ../../../docs/Capital_Specifications/
 - **Doxygen 特殊命令**: https://www.doxygen.nl/manual/commands.html
 
@@ -333,7 +331,7 @@ git commit -m "docs: update API documentation"
 
 **版本**: 1.0.0
 **更新日期**: 2026-04-02
-**维护者**: SPHARX Ltd. - AgentOS Team
+**维护者**: SPHARX Ltd. - Airymax Team
 
 **SPDX-FileCopyrightText: 2026 SPHARX Ltd.**
 **SPDX-License-Identifier: Apache-2.0**

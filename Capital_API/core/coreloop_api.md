@@ -3,12 +3,11 @@
 **最新**: 2026-06-09  
 **状态**: 维护中  
 **路径**: OpenAirymax/Docs/Capital_API/core/coreloop_api.md  
-**作者**: Liren Wang  
 ---
 
 ## 📖 概述
 
-CoreLoopThree 是 AgentOS 的核心运行时，实现了**认知-执行-记忆**三层架构：
+CoreLoopThree 是 Airymax 的核心运行时，实现了**认知-执行-记忆**三层架构：
 
 ```
 ┌─────────────────────────────────────┐

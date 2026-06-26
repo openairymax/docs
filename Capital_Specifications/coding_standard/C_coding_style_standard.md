@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS C 语言编码规范
+# Airymax C 语言编码规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/C_coding_style_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 一、核心理念
 
-本规范基于 AgentOS 架构设计原则的五维正交设计体系：
+本规范基于 Airymax 架构设计原则的五维正交设计体系：
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
-- **Thinkdual 认知双思系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
+- **Thinkdual 双思考系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
 - **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 - **设计美学**（原则 A-1, A-2, A-4）：代码结构简约对称，命名自解释，注释清晰优雅，追求完美主义
 
@@ -39,7 +37,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **SBOM：** 由 CI 生成的软件物料清单（SPDX 或 CycloneDX），随发布附件提供。
 
 ---
-<!-- From data intelligence emerges. by spharx -->
 
 ## 三、目录模板（强制）
 
@@ -258,7 +255,7 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 **违规示例**: `int arr[n]`
 **正确做法**: `int* arr = AGENTOS_MALLOC(n * sizeof(int))` + 对应 `AGENTOS_FREE`
 
-> **AgentOS 内存宏完整列表**（定义在 `memory_compat.h`）：
+> **Airymax 内存宏完整列表**（定义在 `memory_compat.h`）：
 > - `AGENTOS_MALLOC(size)` —— 带返回值检查的 malloc
 > - `AGENTOS_CALLOC(nmemb, size)` —— 带返回值检查的 calloc（零初始化）
 > - `AGENTOS_REALLOC(ptr, size)` —— 安全 realloc（使用临时指针，避免原指针丢失）
@@ -279,7 +276,7 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 >   ```
 
 > **禁止函数清单**（定义在 `banned_functions.h`）：
-> AgentOS 在严格模式下禁止使用以下 30 个不安全函数，编译时由 `banned_functions.h` 触发编译错误：
+> Airymax 在严格模式下禁止使用以下 30 个不安全函数，编译时由 `banned_functions.h` 触发编译错误：
 > - 字符串操作：`strcpy`, `strcat`, `sprintf`, `vsprintf`, `gets`, `scanf`, `sscanf` 等
 > - 内存操作：直接使用 `malloc`/`free`/`realloc`/`calloc`/`strdup`（必须使用 `AGENTOS_*` 宏替代）
 > - 格式化输出：`printf`（生产代码应使用日志宏 `AGENTOS_LOG_*` / `SVC_LOG_*`）

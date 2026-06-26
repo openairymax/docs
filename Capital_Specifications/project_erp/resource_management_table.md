@@ -1,17 +1,15 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 资源管理表
+# Airymax 资源管理表
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/project_erp/resource_management_table.md
-**作者**:
-    - Liren Wang
 
 ## 1. 概述
 
-本文档提供了 AgentOS 中所有需要管理的资源及其释放责任的详细说明。资源管理是确保系统稳定性和防止资源泄漏的关键部分，所有开发者必须严格遵循本文档中的资源管理规范。本规范基于 AgentOS 架构设计原则 V1.7，特别是 **E-3 资源确定性原则** 和 **E-8 可测试性原则**，确保资源生命周期明确且可测试验证。
+本文档提供了 Airymax 中所有需要管理的资源及其释放责任的详细说明。资源管理是确保系统稳定性和防止资源泄漏的关键部分，所有开发者必须严格遵循本文档中的资源管理规范。本规范基于 Airymax 架构设计原则 V1.7，特别是 **E-3 资源确定性原则** 和 **E-8 可测试性原则**，确保资源生命周期明确且可测试验证。
 
 ## 2. 资源管理原则
 
@@ -32,7 +30,6 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | `agentos_execution_engine_t` | `agentos_execution_create()` | `agentos_execution_destroy()` | 创建者释放 | 否（单线程访问） | 执行引擎实例 |
 | `agentos_memory_engine_t` | `agentos_memory_create()` | `agentos_memory_destroy()` | 创建者释放 | 否（单线程访问） | 记忆引擎实例 |
 | `agentos_compensation_t` | `agentos_compensation_create()` | `agentos_compensation_destroy()` | 创建者释放 | 否（单线程访问） | 补偿事务管理器 |
-<!-- From data intelligence emerges. by spharx -->
 | `char*` (任务ID) | `agentos_loop_submit()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
 | `char*` (JSON结果) | `agentos_loop_wait()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
 | `char*` (健康状态JSON) | `agentos_cognition_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
@@ -265,4 +262,4 @@ ASAN_OPTIONS=detect_leaks=1:detect_stack_use_after_return=1 ./your_application
 
 ## 8. 结论
 
-资源管理是AgentOS系统稳定性和可靠性的关键组成部分。所有开发者必须严格遵循本文档中的资源管理规范，确保资源的正确创建、使用和释放。通过统一的资源管理策略，可以减少内存泄漏、资源竞争等问题，提高系统的整体质量和可维护性。
+资源管理是Airymax系统稳定性和可靠性的关键组成部分。所有开发者必须严格遵循本文档中的资源管理规范，确保资源的正确创建、使用和释放。通过统一的资源管理策略，可以减少内存泄漏、资源竞争等问题，提高系统的整体质量和可维护性。

@@ -1,10 +1,8 @@
-# AgentOS 构建规范文档
+# Airymax 构建规范文档
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/build_standards.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📋 目录
@@ -21,9 +19,9 @@
 
 ### 🎯 源码和产物分离
 
-**AgentOS严格遵循"源码和产物分离"原则：**
+**Airymax严格遵循"源码和产物分离"原则：**
 
-1. ✅ **源码目录 (`AgentOS/`)** - 仅包含源代码、配置文件和脚本
+1. ✅ **源码目录 (`AgentRT/`)** - 仅包含源代码、配置文件和脚本
 2. ✅ **构建目录 (`AgentRT-build/`)** - 所有构建产物统一输出到此目录
 3. ✅ **禁止在源码目录内进行任何构建操作**
 
@@ -31,7 +29,7 @@
 
 ```bash
 # ❌ 错误：在源码目录内运行cmake
-cd AgentOS
+cd Airymax
 cmake .                     # 禁止！会产生build/目录
 cmake -B build              # 禁止！
 mkdir build && cd build     # 禁止！
@@ -42,7 +40,7 @@ mkdir build && cd build     # 禁止！
 ```bash
 # ✅ 正确：使用外部构建目录
 cd AgentRT-build            # 切换到构建目录
-cmake ../AgentOS            # 指向源码目录
+cmake ../Airymax            # 指向源码目录
 make -j$(nproc)             # 编译
 ```
 
@@ -52,7 +50,7 @@ make -j$(nproc)             # 编译
 
 ```
 OpenAirymax/
-├── AgentOS/                    ← 纯源码目录
+├── AgentRT/                    ← 纯源码目录
 │   ├── agentos/                # 核心代码
 │   │   ├── atoms/              # 原子模块
 │   │   ├── commons/            # 公共库
@@ -91,7 +89,7 @@ OpenAirymax/
 
 ```bash
 # 设置项目根目录变量（根据实际路径修改）
-export AGENTOS_ROOT="$(pwd)"        # 假设当前在 AgentOS 目录
+export AGENTOS_ROOT="$(pwd)"        # 假设当前在 Airymax 目录
 export BUILD_DIR="../AgentRT-build"  # 或使用绝对路径
 
 # 1. 创建构建目录（如不存在）
@@ -122,7 +120,7 @@ make package
 ```bash
 # 从 OpenAirymax 目录执行
 mkdir -p AgentRT-build && cd AgentRT-build
-cmake ../AgentOS -DCMAKE_BUILD_TYPE=Release
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ctest --output-on-failure -j$(nproc)
 ```
@@ -145,7 +143,7 @@ rm -rf AgentRT-build
 mkdir AgentRT-build && cd AgentRT-build
 
 # 重新配置和编译
-cmake ../AgentOS -DCMAKE_BUILD_TYPE=Release
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
 
@@ -153,7 +151,7 @@ make -j$(nproc)
 
 ```bash
 cd AgentRT-build
-cmake ../AgentOS \
+cmake ../Airymax \
     -DCMAKE_BUILD_TYPE=Debug \
     -DAGENTOS_SANITIZE=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -166,10 +164,10 @@ make -j$(nproc)
 
 ### 🗑️ 自动清理脚本
 
-AgentOS 提供了自动清理脚本 `scripts/release/cleanup_builds.sh`：
+Airymax 提供了自动清理脚本 `scripts/release/cleanup_builds.sh`：
 
 ```bash
-# 从 AgentOS 源码目录执行
+# 从 Airymax 源码目录执行
 ./scripts/release/cleanup_builds.sh
 ```
 
@@ -183,8 +181,8 @@ AgentOS 提供了自动清理脚本 `scripts/release/cleanup_builds.sh`：
 ### 手动清理命令
 
 ```bash
-# 在AgentOS源码目录中执行
-cd <path-to-AgentOS>
+# 在Airymax源码目录中执行
+cd <path-to-Airymax>
 
 # 查找并显示所有构建产物
 find . -type d \( -name "build" -o -name "_build" -o -name "CMakeFiles" \) \
@@ -207,7 +205,7 @@ find . -name "*.pyc" -delete
 
 ### 关键规则说明
 
-AgentOS 的 `.gitignore` 已包含以下关键规则（版本号 9.0.0+）：
+Airymax 的 `.gitignore` 已包含以下关键规则（版本号 9.0.0+）：
 
 ```gitignore
 # CMake构建目录（所有层级）
@@ -242,8 +240,8 @@ AgentRT-build/
 ### 验证规则生效
 
 ```bash
-# 在AgentOS源码目录中执行
-cd <path-to-AgentOS>
+# 在Airymax源码目录中执行
+cd <path-to-Airymax>
 
 # 检查文件是否被.gitignore排除
 git check-ignore -v agentos/build
@@ -260,7 +258,7 @@ git check-ignore -v agentos/toolkit/rust/target
 ### Q1: 为什么会在源码目录内产生构建产物？
 
 **原因**：
-- 直接在 AgentOS 目录内运行 `cmake .` 或 `cmake ..`
+- 直接在 Airymax 目录内运行 `cmake .` 或 `cmake ..`
 - IDE（如 CLion）自动在源码目录创建 cmake-build-* 目录
 - 测试脚本错误配置构建路径
 
@@ -278,7 +276,7 @@ git check-ignore -v agentos/toolkit/rust/target
 # 方法2: 手动清理（见上文"手动清理命令"）
 
 # 方法3: 使用 git clean（小心使用！）
-cd <path-to-AgentOS>
+cd <path-to-Airymax>
 git clean -fdX    # 删除所有 .gitignore 匹配的文件/目录
 ```
 
@@ -303,7 +301,7 @@ File → Settings → Build, Execution, Deployment → CMake
 ### Q4: 如何验证源码目录完全干净？
 
 ```bash
-cd <path-to-AgentOS>
+cd <path-to-Airymax>
 
 # 检查是否有未追踪的构建产物
 git status --porcelain | grep -E "build|CMake|\.pyc|target"
@@ -321,7 +319,7 @@ find . -type d \( -name "build" -o -name "_build" -o -name "CMakeFiles" \) \
 
 ```
 OpenAirymax/
-├── AgentOS/                  ← 源码
+├── AgentRT/                  ← 源码
 ├── AgentRT-build/           ← Release 构建
 ├── AgentRT-build-debug/     ← Debug 构建
 └── AgentRT-build-coverage/  ← Coverage 构建
@@ -331,15 +329,15 @@ OpenAirymax/
 ```bash
 # Release 构建
 mkdir AgentRT-build && cd AgentRT-build
-cmake ../AgentOS -DCMAKE_BUILD_TYPE=Release
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Release
 
 # Debug 构建
 mkdir AgentRT-build-debug && cd AgentRT-build-debug
-cmake ../AgentOS -DCMAKE_BUILD_TYPE=Debug
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Debug
 
 # Coverage 构建
 mkdir AgentRT-build-coverage && cd AgentRT-build-coverage
-cmake ../AgentOS -DCMAKE_BUILD_TYPE=Debug -DAGENTOS_COVERAGE=ON
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Debug -DAGENTOS_COVERAGE=ON
 ```
 
 ---
@@ -349,7 +347,7 @@ cmake ../AgentOS -DCMAKE_BUILD_TYPE=Debug -DAGENTOS_COVERAGE=ON
 ### GitHub Actions 示例
 
 ```yaml
-name: Build AgentOS
+name: Build Airymax
 
 on: [push, pull_request]
 
@@ -366,7 +364,7 @@ jobs:
     - name: Configure CMake
       run: |
         cd ../AgentRT-build
-        cmake $GITHUB_WORKSPACE/AgentOS \
+        cmake $GITHUB_WORKSPACE/Airymax \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=ON
     
@@ -387,9 +385,9 @@ jobs:
 
 ### 远程仓库地址
 
-**AgentOS 主仓库：**
+**Airymax 主仓库：**
 - 主仓库：https://atomgit.com/openairymax/agentos
-- GitHub 镜像：https://github.com/SpharxTeam/AgentOS
+- GitHub 镜像：https://github.com/SpharxTeam/Airymax
 - Gitee 镜像：https://gitee.com/SpharxTeam/agentos
 
 **关联模块仓库：**
@@ -408,7 +406,7 @@ jobs:
 
 ### 定期检查清单
 
-- [ ] 验证 AgentOS 目录内无构建产物
+- [ ] 验证 Airymax 目录内无构建产物
 - [ ] 检查 `.gitignore` 规则是否完整
 - [ ] 确认所有开发者使用外部构建
 - [ ] 更新本文档（如有新规则）
@@ -437,7 +435,7 @@ jobs:
 
 ---
 
-**文档维护者**: AgentOS Build Team  
+**文档维护者**: Airymax Build Team  
 **最后更新**: 2026-04-28  
 **适用版本**: v0.0.4+
 

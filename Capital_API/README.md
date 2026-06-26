@@ -1,10 +1,8 @@
-# AgentOS Capital API - 完整API参考文档
+# Airymax Capital API - 完整API参考文档
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_API/README.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 📚 文档导航
@@ -288,8 +286,8 @@ if (mcp->encode) {
 
 ## 📞 支持与反馈
 
-- **问题报告**: [GitHub Issues](https://github.com/spharx/AgentOS/issues)
-- **讨论社区**: [Discussions](https://github.com/spharx/AgentOS/discussions)
+- **问题报告**: [GitHub Issues](https://github.com/spharx/AgentRT/issues)
+- **讨论社区**: [Discussions](https://github.com/spharx/AgentRT/discussions)
 - **API变更日志**: 见各模块文档末尾的"版本历史"章节
 
 ---
@@ -297,7 +295,7 @@ if (mcp->encode) {
 ## 📜 许可证
 
 ```
-SPHARX AgentOS v0.0.4
+SPHARX Airymax v0.0.4
 Copyright (c) 2026 SPHARX Ltd.
 SPDX-License-Identifier: GPL-3.0-or-later OR Apache-2.0
 ```

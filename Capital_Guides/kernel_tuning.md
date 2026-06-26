@@ -1,22 +1,20 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# AgentOS 内核调优指南
+# Airymax 内核调优指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Guides/kernel_tuning.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 1. 概述
 
-AgentOS 内核由多个精密协作的子系统组成，每个子系统都提供了丰富的可调参数。本指南基于工程控制论的反馈调优方法论，帮助你根据工作负载特征对内核进行系统性调优。
+Airymax 内核由多个精密协作的子系统组成，每个子系统都提供了丰富的可调参数。本指南基于工程控制论的反馈调优方法论，帮助你根据工作负载特征对内核进行系统性调优。
 
 ### 1.1 调优方法论
 
-AgentOS 内核调优遵循**测量→分析→调优→验证**的反馈闭环：
+Airymax 内核调优遵循**测量→分析→调优→验证**的反馈闭环：
 
 ```
     ┌──────────┐
@@ -60,7 +58,7 @@ agentos-cli benchmark baseline --duration 60
 
 # 输出示例
 ┌─────────────────────────────────────────────┐
-│           AgentOS Performance Baseline       │
+│           Airymax Performance Baseline       │
 ├──────────────────┬──────────┬───────────────┤
 │ Metric           │ Value    │ Unit          │
 ├──────────────────┼──────────┼───────────────┤
@@ -98,7 +96,7 @@ agentos-cli profile memory --duration 30
 
 ### 3.1 IPC 调优
 
-IPC（进程间通信）是 AgentOS 内核性能的关键路径。
+IPC（进程间通信）是 Airymax 内核性能的关键路径。
 
 ```yaml
 # agentos.yaml → corekern.ipc
@@ -759,7 +757,7 @@ agentos-cli manager get corekern.ipc.batch_size
 ---
 
 **最后更新**: 2026-04-09  
-**维护者**: AgentOS 性能工程团队
+**维护者**: Airymax 性能工程团队
 
 ---
 

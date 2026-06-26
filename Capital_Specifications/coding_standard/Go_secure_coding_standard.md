@@ -1,13 +1,11 @@
 SPDX-FileCopyrightText: 2026 SPHARX Ltd.
 SPDX-License-Identifier: Apache-2.0
 
-# AgentOS Go 安全编码规范
+# Airymax Go 安全编码规范
 
 **最新**: 2026-06-09
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/coding_standard/Go_secure_coding_standard.md
-**作者**:
-    - Liren Wang
 ---
 
 ## 目录
@@ -21,7 +19,7 @@ SPDX-License-Identifier: Apache-2.0
 7. [网络安全](#7-网络安全)
 8. [资源管理](#8-资源管理)
 9. [审计与可观测性](#9-审计与可观测性)
-10. [AgentOS 模块安全编码示例](#10-agentos-模块安全编码示例)
+10. [Airymax 模块安全编码示例](#10-agentos-模块安全编码示例)
 
 ---
 
@@ -29,7 +27,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ### 1.1 Cupolas 四层防护体系
 
-AgentOS 采用 **Cupolas 四层防护** 安全架构，每一层对应 Go SDK 中的具体安全机制。所有 Go 代码必须遵循该架构的约束，不得绕过任何一层防护。
+Airymax 采用 **Cupolas 四层防护** 安全架构，每一层对应 Go SDK 中的具体安全机制。所有 Go 代码必须遵循该架构的约束，不得绕过任何一层防护。
 
 | 防护层 | 代号 | 安全目标 | Go SDK 对应机制 |
 |--------|------|----------|-----------------|
@@ -923,7 +921,7 @@ if resp.StatusCode >= 400 {
 
 ### 6.1 零外部依赖原则
 
-**规则 6.1.1** — AgentOS Go SDK 必须保持零外部依赖（仅允许 Go 标准库）
+**规则 6.1.1** — Airymax Go SDK 必须保持零外部依赖（仅允许 Go 标准库）
 
 当前 `go.mod` 验证：
 
@@ -1593,7 +1591,7 @@ agentos.GetLogger().Printf("[AUDIT] operation=task.cancel, task_id=%s, result=%v
 
 ---
 
-## 10. AgentOS 模块安全编码示例
+## 10. Airymax 模块安全编码示例
 
 ### 10.1 安全的 HTTP 客户端
 
@@ -2005,4 +2003,4 @@ func (b *AuditedSyscallBinding) Invoke(ctx context.Context,
 
 ---
 
-*本文档由 AgentOS 安全团队维护，最终解释权归 SPHARX Ltd. 所有。*
+*本文档由 Airymax 安全团队维护，最终解释权归 SPHARX Ltd. 所有。*

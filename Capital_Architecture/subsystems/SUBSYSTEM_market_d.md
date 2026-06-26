@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-market_d 是 AgentRT 的市场服务守护进程，负责 Agent 和 Skill 的注册、发现、安装和管理。它类似于应用商店，为 AgentRT 生态系统提供组件分发能力。
+market_d 是 Airymax 的市场服务守护进程，负责 Agent 和 Skill 的注册、发现、安装和管理。它类似于应用商店，为 Airymax 生态系统提供组件分发能力。
 
 ### 1.1 核心职责
 
