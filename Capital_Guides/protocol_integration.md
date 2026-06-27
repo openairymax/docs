@@ -6,7 +6,7 @@
 
 ## 概述
 
-Airymax 网关提供统一的协议兼容层，支持 JSON-RPC 2.0、MCP、A2A、OpenAI API 四种协议的接入、检测与互转。本文档详细说明每种协议的集成方法、消息格式映射和常见集成场景。
+Airymax 网关提供统一的协议兼容层，支持 JSON-RPC 2.0、MCP v1、A2A v0.3、OpenAI、Claude、OpenJiuwen、OpenClaw、ChinaEco、AGNTCY ACP 共 9 种协议的接入、检测与互转。本文档详细说明每种协议的集成方法、消息格式映射和常见集成场景。
 
 ---
 

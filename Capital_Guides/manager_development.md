@@ -466,7 +466,7 @@ cat ecosystem/manager/.gitignore
 ## 📞 支持与反馈
 
 - **技术支持**: support@spharx.cn
-- **问题反馈**: https://github.com/SpharxTeam/AgentRT/issues
+- **问题反馈**: https://gitcode.com/spharx/agentos/issues
 - **架构文档**: [ARCHITECTURAL_PRINCIPLES.md](../../../docs/ARCHITECTURAL_PRINCIPLES.md)
 
 ---

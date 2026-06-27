@@ -91,9 +91,9 @@ permission_rules:
 
 ## 服务层安全加固
 
-### 守护进程安全配置
+### 用户态服务安全配置
 
-#### llm_d (LLM 服务守护进程) 安全
+#### llm_d (LLM 服务用户态服务) 安全
 ```yaml
 llm_d:
   security:
@@ -114,7 +114,7 @@ llm_d:
         - "eval\\("
 ```
 
-#### tool_d (工具服务守护进程) 安全
+#### tool_d (工具服务用户态服务) 安全
 ```yaml
 tool_d:
   security:

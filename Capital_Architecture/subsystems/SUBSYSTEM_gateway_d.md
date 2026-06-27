@@ -1,4 +1,4 @@
-# SUBSYSTEM_gateway_d — 网关守护进程
+# SUBSYSTEM_gateway_d — 网关用户态服务
 
 **版本**: v0.1.0  
 **状态**: 稳定  
@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-gateway_d 是 Airymax 的网关守护进程，负责管理 HTTP/WebSocket/Stdio 三种协议的网关实例，是外部客户端与 Airymax 核心之间的统一入口。
+gateway_d 是 Airymax 的网关用户态服务，负责管理 HTTP/WebSocket/Stdio 三种协议的网关实例，是外部客户端与 Airymax 核心之间的统一入口。
 
 ### 1.1 核心职责
 
@@ -135,7 +135,7 @@ typedef struct {
 ### 3.3 架构层级
 
 ```
-gateway_d/          ← 守护进程层（服务管理）
+gateway_d/          ← 用户态服务层（服务管理）
     ↓
 agentos/gateway/   ← 协议转换层（HTTP/WS/Stdio 实现）
     ↓

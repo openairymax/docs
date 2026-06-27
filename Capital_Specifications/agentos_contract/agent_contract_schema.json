@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agentos.org/schemas/agent_contract.json",
   "title": "Agent Contract Schema (AgentOS/)",
-  "description": "AgentOS Agent 契约 JSON Schema 规范，基于五维正交设计体系（系统观、内核观、认知观、工程观、设计美学），用于验证 Agent 能力描述文件。理论基础：工程两论、双系统认知、微核心哲学、设计美学。",
+  "description": "AgentOS Agent 契约 JSON Schema 规范，基于五维正交设计体系（系统观、内核观、认知观、工程观、设计美学），用于验证 Agent 能力描述文件。理论基础：工程两论、双思考系统认知、微核心哲学、设计美学。",
   "type": "object",
   "required": [
     "schema_version",
@@ -103,11 +103,11 @@
       "properties": {
         "system1": {
           "type": "string",
-          "description": "System 1 模型名称（轻量、快速）"
+          "description": "t1 快思考 模型名称（轻量、快速）"
         },
         "system2": {
           "type": "string",
-          "description": "System 2 模型名称（强大、深度）"
+          "description": "t2 慢思考 模型名称（强大、深度）"
         }
       }
     },

@@ -343,7 +343,7 @@ providers:
         cost_per_1k_input: 0.0
         cost_per_1k_output: 0.0
 
-# 双系统协同配置 (C-1原则)
+# 双思考系统 (Thinkdual) 配置 (C-1原则)
 dual_system:
   system1_model: "openai/gpt-4o-mini"     # 快速直觉推理
   system2_model: "openai/gpt-4-turbo"       # 深度逻辑验证
@@ -498,14 +498,14 @@ auto_compaction:
 
 ---
 
-## 🔌 守护进程通用配置 (daemon-common.yaml)
+## 🔌 用户态服务通用配置 (daemon-common.yaml)
 
 ```yaml
 # =============================================================================
 # Airymax Daemon Common Configuration
 # =============================================================================
 
-# 所有守护进程共享的基础配置
+# 所有用户态服务共享的基础配置
 base:
   # 日志级别
   log_level: "${LOG_LEVEL:-INFO}"
@@ -519,7 +519,7 @@ base:
   # Redis连接
   redis_url: "${REDIS_URL:-redis://localhost:6379/0}"
 
-# 各守护进程特定配置
+# 各用户态服务特定配置
 daemons:
 
   llm_d:

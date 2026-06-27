@@ -2,14 +2,14 @@
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Architecture/toolkit_design.md
+**路径**: OpenAirymax/Docs/Capital_Architecture/engineering/toolkit.md
 
 ## 1. 设计理念
 
 本设计基于Airymax的核心哲学：
 - **工程控制论**：通过健康检查、错误处理和状态管理实现系统的自我调节
 - **系统工程**：模块化设计，清晰的接口边界，与核心系统无缝集成
-- **双系统思维**：提供快速路径（System 1）和安全路径（System 2）
+- **双思考系统 (Thinkdual)**：提供快速路径（t1-f/t1-p 快思考）和安全路径（t2 慢思考）
 - **乔布斯美学**：简洁、精致、完整的代码实现
 
 ## 2. 整体架构

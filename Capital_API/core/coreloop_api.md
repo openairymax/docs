@@ -991,6 +991,6 @@ switch (err) {
 ## 🔗 相关文档
 
 - [MemoryRovol 详细API](../core/memoryrovol_api.md)
-- [守护进程集成指南](../daemon/gateway_api.md)
+- [用户态服务集成指南](../daemon/gateway_api.md)
 - [协议栈适配](../protocols/unified_protocol_api.md)
 - [快速入门示例](../examples/quickstart.md)

@@ -49,7 +49,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **内核开发者**: agentos/atoms/模块的日志记录
-2. **服务开发者**: agentos/daemon/守护进程的日志记录
+2. **服务开发者**: agentos/daemon/用户态服务的日志记录
 3. **应用开发者**: openlab/app/应用的日志记录
 4. **运维人员**: 日志收集、聚合和分析
 5. **安全审计人员**: 审计日志审查和合规检查

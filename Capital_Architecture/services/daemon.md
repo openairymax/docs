@@ -2,12 +2,12 @@
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Architecture/daemon_module.md
+**路径**: OpenAirymax/Docs/Capital_Architecture/services/daemon.md
 ---
 
 ## 模块概述
 
-Airymax Daemon 模块是用户空间守护进程集合，负责提供微核心架构中的高级服务功能。每个守护进程作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
+Airymax Daemon 模块是用户空间用户态服务集合，负责提供微核心架构中的高级服务功能。每个用户态服务作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
 
 ---
 

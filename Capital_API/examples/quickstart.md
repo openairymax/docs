@@ -561,7 +561,7 @@ agentos_loop_create(&config, &loop);
 4. 🧪 运行更多 [examples](../examples/)
 
 ### 中级开发者
-1. 📖 学习 [守护进程 API](../daemon/gateway_api.md)
+1. 📖 学习 [用户态服务 API](../daemon/gateway_api.md)
 2. 🔧 实现 [自定义工具](../examples/custom_tool_example.c)
 3. 🌐 集成外部LLM API
 4. 🧪 编写单元测试

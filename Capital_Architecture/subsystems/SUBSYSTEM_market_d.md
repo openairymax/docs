@@ -1,4 +1,4 @@
-# SUBSYSTEM_market_d — 市场服务守护进程
+# SUBSYSTEM_market_d — 市场服务用户态服务
 
 **版本**: v0.1.0  
 **状态**: 稳定  
@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-market_d 是 Airymax 的市场服务守护进程，负责 Agent 和 Skill 的注册、发现、安装和管理。它类似于应用商店，为 Airymax 生态系统提供组件分发能力。
+market_d 是 Airymax 的市场服务用户态服务，负责 Agent 和 Skill 的注册、发现、安装和管理。它类似于应用商店，为 Airymax 生态系统提供组件分发能力。
 
 ### 1.1 核心职责
 

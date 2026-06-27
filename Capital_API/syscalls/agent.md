@@ -10,7 +10,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 🎯 概述
 
-Agent 管理 API 提供 Airymax Agent 实例的完整生命周期管理。每个 Agent 遵循**双系统认知理论**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。Agent 状态机严格定义合法转换，确保系统稳定性。
+Agent 管理 API 提供 Airymax Agent 实例的完整生命周期管理。每个 Agent 遵循**双思考系统 (Thinkdual)**：t1-f 快思考路径处理简单任务，t2 慢思考路径处理复杂任务。Agent 状态机严格定义合法转换，确保系统稳定性。
 
 ### 🧩 五维正交原则体现
 
@@ -20,7 +20,7 @@ Agent 管理 API 深度体现了 Airymax 的五维正交设计原则：
 |------|----------|---------|
 | **系统观** | Agent 生命周期的系统管理 | 创建→配置→运行→销毁的完整状态机 |
 | **内核观** | Agent 资源的标准化契约 | 统一的配置接口，明确的资源隔离边界 |
-| **认知观** | 双系统认知能力配置 | System 1/System 2 协同调度，认知策略可配置 |
+| **认知观** | 双思考系统 (Thinkdual) 能力配置 | t1-f/t2 协同调度，认知策略可配置 |
 | **工程观** | Agent 安全与可观测性 | 权限控制、资源限制、性能监控、健康检查 |
 | **设计美学** | 优雅的智能体抽象 | 一致的配置模型，灵活的能力组合机制 |
 
@@ -81,10 +81,10 @@ typedef struct agentos_agent_config {
     /** 默认任务超时（毫秒） */
     uint32_t default_task_timeout_ms;
     
-    /** System 1 阈值：任务描述最大长度 */
+    /** t1-f 阈值：任务描述最大长度 */
     uint32_t system1_max_desc_len;
     
-    /** System 1 阈值：最大优先级 */
+    /** t1-f 阈值：最大优先级 */
     uint8_t system1_max_priority;
     
     /** 认知引擎配置（JSON 格式） */
@@ -178,10 +178,10 @@ typedef struct agentos_agent_descriptor {
     /** 平均任务执行时间（毫秒） */
     uint32_t avg_task_time_ms;
     
-    /** System 1 路径执行次数 */
+    /** t1-f 路径执行次数 */
     uint64_t system1_exec_count;
     
-    /** System 2 路径执行次数 */
+    /** t2 路径执行次数 */
     uint64_t system2_exec_count;
     
     /** 当前内存使用（字节） */
@@ -226,10 +226,10 @@ typedef struct agentos_agent_statistics {
     /** 平均任务执行时间（毫秒） */
     uint32_t avg_task_time_ms;
     
-    /** System 1 路径占比（%） */
+    /** t1-f 路径占比（%） */
     float system1_ratio_percent;
     
-    /** System 2 路径占比（%） */
+    /** t2 路径占比（%） */
     float system2_ratio_percent;
     
     /** 总内存使用（字节） */
@@ -837,8 +837,8 @@ int main(void)
         printf("  总 Agent 数: %llu\n", stats.total_agents);
         printf("  运行中: %llu\n", stats.agents_by_state[AGENT_STATE_RUNNING]);
         printf("  总活跃任务: %llu\n", stats.total_active_tasks);
-        printf("  System 1 占比: %.1f%%\n", stats.system1_ratio_percent);
-        printf("  System 2 占比: %.1f%%\n", stats.system2_ratio_percent);
+        printf("  t1-f 占比: %.1f%%\n", stats.system1_ratio_percent);
+        printf("  t2 占比: %.1f%%\n", stats.system2_ratio_percent);
     }
     
     // 清理资源

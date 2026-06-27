@@ -192,7 +192,7 @@ corekern:
 
 ### 4.1 认知层调优
 
-认知层负责任务理解和深度规划，是 System 2 的核心。
+认知层负责任务理解和深度规划，是 t2 慢思考的核心。
 
 ```yaml
 coreloopthree:
@@ -200,7 +200,7 @@ coreloopthree:
     # 主模型 — 用于深度规划
     model_primary: "default"
 
-    # 辅模型 — 用于快速分类（System 1）
+    # 辅模型 — 用于快速分类（t1 快思考）
     model_auxiliary: "fast"
 
     # 最大重试次数

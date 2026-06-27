@@ -38,8 +38,8 @@
   - 调用入口
   - 权限控制
 
-### 守护进程 API
-- [网关守护进程 (gateway_d)](daemon/gateway_api.md)
+### 用户态服务 API
+- [网关用户态服务 (gateway_d)](daemon/gateway_api.md)
   - HTTP/WebSocket/Stdio网关
   - 服务管理
   - 配置接口

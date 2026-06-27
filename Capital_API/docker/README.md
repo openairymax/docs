@@ -128,7 +128,7 @@ services:
 ```
 /usr/local/
 ├── bin/
-│   ├── gateway_d          # 网关守护进程
+│   ├── gateway_d          # 网关用户态服务
 │   ├── agentos-llm-d      # LLM服务
 │   ├── channel_d          # 通道服务
 │   ├── agentos-sched-d    # 调度器

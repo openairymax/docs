@@ -20,11 +20,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **Thinkdual 双思考系统**（原则 C-1）：Python 简洁语法（System 1）与类型提示（System 2）
+- **Thinkdual 双思考系统**（原则 C-1）：Python 简洁语法（t1 快思考）与类型提示（t2 慢思考）
 
-**双系统在 Python 中的体现**:
+**双思考系统在 Python 中的体现**:
 
-| 场景 | System 1（快速） | System 2（严谨） |
+| 场景 | t1 快思考（快速） | t2 慢思考（严谨） |
 |------|-----------------|-----------------|
 | 类型系统 | 动态类型 | 类型提示 (typing) |
 | 错误处理 | 运行时异常 | 静态类型检查 (mypy) |
@@ -89,9 +89,9 @@ src/
 Airymax 任务调度模块。
 
 提供任务调度核心功能，包括任务提交、状态管理、
-优先级队列和依赖解析。调度器采用双系统架构：
-- System 1：快速路径，处理简单任务
-- System 2：深度路径，处理复杂任务
+优先级队列和依赖解析。调度器采用双思考系统架构：
+- t1 快思考：快速路径，处理简单任务
+- t2 慢思考：深度路径，处理复杂任务
 
 Example:
     >>> from agentos.scheduler import TaskScheduler
@@ -495,8 +495,8 @@ class SchedulerBase(ABC):
 class TaskScheduler(SchedulerBase):
     """任务调度器。
     
-    负责管理任务的生命周期和执行。调度器采用双系统架构，
-    System 1 处理简单任务，System 2 处理复杂任务。
+    负责管理任务的生命周期和执行。调度器采用双思考系统架构，
+    t1 快思考 处理简单任务，t2 慢思考 处理复杂任务。
     
     Example:
         >>> scheduler = TaskScheduler(name="main", max_workers=4)
@@ -1032,12 +1032,12 @@ logger.info("Task %s completed", task_id)
 ## 十一、Airymax 模块 Python 编码示例
 
 ### 11.1 daemon（守护层）Python 实现
-Backs模块作为系统服务守护进程，需要高可靠性和可观测性：
+Backs模块作为系统用户态服务，需要高可靠性和可观测性：
 
-#### 11.1.1 IPC通信守护进程（映射原则：E-3 通信基础设施）
+#### 11.1.1 IPC通信用户态服务（映射原则：E-3 通信基础设施）
 ```python
 """
-IPC通信守护进程 - 体现系统观（S-3）和工程观（E-4）原则
+IPC通信用户态服务 - 体现系统观（S-3）和工程观（E-4）原则
 
 实现与Atoms模块的高性能进程间通信。
 集成OpenTelemetry可观测性和消息加密。
@@ -1079,7 +1079,7 @@ class SecureIpcMessage:
         return True
 
 class IpcDaemon:
-    """IPC守护进程 - 体现工程观（E-2）和设计美学（A-1）原则"""
+    """IPC用户态服务 - 体现工程观（E-2）和设计美学（A-1）原则"""
     
     def __init__(self, manager: dict):
         self.manager = manager

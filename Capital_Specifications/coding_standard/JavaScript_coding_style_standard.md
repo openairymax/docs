@@ -20,11 +20,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误处理、日志、健康检查构建反馈闭环
 - **《论系统工程》**（原则 S-2）：模块化、接口驱动、边界清晰
-- **Thinkdual 双思考系统**（原则 C-1）：TypeScript 提供编译时检查（System 2），JavaScript 提供运行时灵活（System 1）
+- **Thinkdual 双思考系统**（原则 C-1）：TypeScript 提供编译时检查（t2 慢思考），JavaScript 提供运行时灵活（t1 快思考）
 
-**双系统在 JavaScript/TypeScript 中的体现**:
+**双思考系统在 JavaScript/TypeScript 中的体现**:
 
-| 场景 | System 1（快速） | System 2（严谨） |
+| 场景 | t1 快思考（快速） | t2 慢思考（严谨） |
 |------|-----------------|-----------------|
 | 类型系统 | JavaScript 动态类型 | TypeScript 静态类型 |
 | 错误处理 | 运行时 try-catch | 编译时类型检查 |
@@ -392,8 +392,8 @@ export interface SubmitResult {
 /**
  * 任务调度器
  *
- * 负责管理任务的生命周期和执行。调度器采用双系统架构，
- * System 1 处理简单任务，System 2 处理复杂任务。
+ * 负责管理任务的生命周期和执行。调度器采用双思考系统架构，
+ * t1 快思考 处理简单任务，t2 慢思考 处理复杂任务。
  *
  * @example
  * ```typescript
@@ -762,9 +762,9 @@ export { CognitionEngine } from './cognition-engine';
  * @fileoverview 任务调度器模块
  *
  * 提供任务调度核心功能，包括任务提交、状态管理、
- * 优先级队列和依赖解析。调度器采用双系统架构：
- * - System 1：快速路径，处理简单任务
- * - System 2：深度路径，处理复杂任务
+ * 优先级队列和依赖解析。调度器采用双思考系统架构：
+ * - t1 快思考：快速路径，处理简单任务
+ * - t2 慢思考：深度路径，处理复杂任务
  *
  * @module agentos/scheduler
  */
@@ -1147,7 +1147,7 @@ export interface JsonRpcResponse<T = unknown> {
 ## 十四、Airymax 模块 JavaScript/TypeScript 编码示例
 
 ### 14.1 daemon（守护层）TypeScript 实现
-Backs模块作为系统服务守护进程，需要高可靠性和可观测性：
+Backs模块作为系统用户态服务，需要高可靠性和可观测性：
 
 #### 14.1.1 IPC 通信服务（映射原则：E-3 通信基础设施）
 ```typescript
@@ -1219,10 +1219,10 @@ export class IpcService implements OnModuleInit, OnModuleDestroy {
 }
 ```
 
-#### 14.1.2 任务监控守护进程（映射原则：E-2 可维护性）
+#### 14.1.2 任务监控用户态服务（映射原则：E-2 可维护性）
 ```typescript
 /**
- * 任务监控守护进程 - 体现工程观（E-2）和设计美学（A-1）原则
+ * 任务监控用户态服务 - 体现工程观（E-2）和设计美学（A-1）原则
  * 
  * 监控Airymax任务执行状态，提供实时指标和告警。
  * 基于事件驱动的架构，支持插件化扩展。
@@ -1264,7 +1264,7 @@ export class TaskMonitorDaemon {
   }
   
   /**
-   * 检查告警条件 - 体现System 2（深度分析）原则
+   * 检查告警条件 - 体现t2 慢思考（深度分析）原则
    */
   private async checkAlerts(context: TaskContext): Promise<void> {
     const alerts: Alert[] = [];

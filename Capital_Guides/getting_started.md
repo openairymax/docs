@@ -1,524 +1,270 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
-"From data intelligence emerges."
+# Airymax 5 分钟快速上手指南
 
-# Airymax 快速入门指南
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Guides/getting_started.md
-
-## 版本历史
-
-| 版本 | 日期 | 变更说明 |
-|------|------|----------|
-| v1.0.0 | 2026-03-21 | 初始版本，包含环境要求、快速安装和 Hello World 示例 |
-| v1.0.1 | 2026-03-22 | 添加了错误处理示例和常见问题解答 |
-| v1.0.2 | 2026-03-23 | 更新了配置示例和性能优化建议 |
-
----
-
-## 📋 目录
-
-1. [理论指导：体系并行论视角](#0-理论指导体系并行论视角)
-2. [环境要求](#1-环境要求)
-3. [快速安装](#2-快速安装)
-4. [Hello World](#3-hello-world-第一个-agent)
-5. [下一步学习](#4-下一步学习)
-
----
-
-## 0. 理论指导：体系并行论视角
-
-在开始使用 Airymax 之前，了解其背后的 **体系并行论 (Multibody Cybernetic Intelligent System, MCIS)** 理论基础将帮助你更好地理解系统的设计哲学和架构思想。
-
-### MCIS 核心概念快速入门
-
-Airymax 是基于 **体系并行论 (MCIS)** 理论构建的智能体操作系统。MCIS 理论的核心思想是通过多个正交且协同的 **体 (Body)** 构建复杂的智能系统：
-
-- **认知体 (Cognition Body)** → 负责智能决策、任务规划、意图理解
-- **执行体 (Execution Body)** → 负责任务执行、工具调用、环境交互  
-- **记忆体 (Memory Body)** → 负责经验存储、知识积累、上下文管理
-- **基础体 (Base Body)** → 提供运行时基础设施、通信机制、资源管理
-- **可观测体 (Observability Body)** → 负责系统状态监控、日志记录、性能分析
-
-### 五维正交体系的设计美学
-
-Airymax 的设计遵循 **五维正交体系**，确保系统在不同维度上的正交分离与协同统一：
-
-1. **系统观维度** → 系统工程层次分解，关注系统整体结构与组件关系
-2. **内核观维度** → 微核心架构与形式化验证，关注系统安全性与可靠性
-3. **认知观维度** → 双系统认知理论与智能决策，关注智能体认知过程
-4. **工程观维度** → 性能优化与极致细节，关注系统实现质量与效率
-5. **设计美学维度** → 简约至上与用户体验，关注系统易用性与美感
-
-### 快速入门的理论映射
-
-作为 Airymax 的初学者，你将接触到的核心组件对应 MCIS 中的不同 **体**：
-
-- **Agent（智能体）** → 完整的 MCIS 系统实例，包含认知体、执行体、记忆体的协同工作
-- **Skill（技能）** → 执行体的具体能力实现，完成特定任务
-- **Memory（记忆）** → 记忆体的具体实现，存储智能体经验与知识
-- **CoreLoopThree（三层认知循环）** → 认知体、执行体、记忆体的运行时协同机制
-
-通过本快速入门指南，你将在实践中体验 MCIS 理论的具体实现，为后续深入学习和开发奠定坚实的理论基础。
+> **P4.3.1** — 5 分钟从零到 Hello World
+>
+> 预计阅读 / 操作时间：**5 分钟** | 难度：入门级
 
 ---
 
 ## 1. 环境要求
 
-### 1.1 硬件要求
+在开始之前，请确保你的系统满足以下最低要求：
 
-| 组件 | 最低配置 | 推荐配置 |
-| :--- | :--- | :--- |
-| **CPU** | 4 核 2.0 GHz | 8 核 3.0 GHz+ |
-| **内存** | 8 GB | 16 GB+ |
-| **存储** | 10 GB SSD | 50 GB NVMe SSD |
-| **网络** | 10 Mbps | 100 Mbps+ |
+| 依赖项 | 版本要求 | 说明 |
+|:-------|:---------|:-----|
+| **操作系统** | Ubuntu 22.04+ / macOS 13+ / Windows 11 (WSL2) | 推荐 Linux 环境 |
+| **CMake** | ≥ 3.20 | 构建系统 |
+| **编译器** | GCC 11+ / Clang 14+ | 支持 C11 和 C++17 |
+| **Python** | ≥ 3.10 | SDK 和 OpenLab 需要 |
+| **Docker** | 可选 | 容器化部署（推荐） |
 
-### 1.2 软件依赖
-
-**必需依赖**:
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install -y \
-    build-essential \
-    cmake \
-    git \
-    libssl-dev \
-    pkg-manager \
-    python3 \
-    python3-pip
-
-# macOS
-xcode-select --install
-brew install cmake openssl python3
-```
-
-**编译器版本要求**:
-- GCC 11+ 或 Clang 14+
-- CMake 3.20+
-- Python 3.8+
-
-### 1.3 可选依赖
+### 安装系统依赖（Ubuntu）
 
 ```bash
-# FAISS GPU 加速（可选）
-sudo apt-get install -y nvidia-cuda-toolkit
-
-# Docker 容器化（可选）
-curl -fsSL https://get.docker.com | bash
+sudo apt update && sudo apt install -y \
+    build-essential cmake gcc g++ \
+    libssl-dev libsqlite3-dev ninja-build \
+    python3 python3-pip
 ```
 
 ---
 
 ## 2. 快速安装
 
-### 2.1 克隆项目
+### 2.1 克隆仓库并构建
 
 ```bash
-git clone https://github.com/spharx/agentos.git
+# 克隆仓库
+git clone https://atomgit.com/openairymax/agentos.git
 cd agentos
+
+# 源外构建（BAN-33 强制要求）
+cmake -B ../AgentRT-build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build ../AgentRT-build --parallel $(nproc)
 ```
 
-### 2.2 构建项目
+### 2.2 验证安装
 
 ```bash
-# 创建构建目录
-mkdir -p build && cd build
-
-# 配置（Release 模式）
-cmake .. -DCMAKE_BUILD_TYPE=Release
-
-# 编译（使用所有 CPU 核心）
-make -j$(nproc)
-
-# 安装（可选）
-sudo make install
+# 运行测试套件
+cd ../AgentRT-build && ctest --output-on-failure
 ```
 
-**构建选项**:
-```bash
-# 启用调试模式
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-
-# 启用测试
-cmake .. -DAGENTOS_BUILD_TESTS=ON
-
-# 禁用 GPU 加速
-cmake .. -DAGENTOS_USE_CUDA=OFF
-```
-
-### 2.3 初始化配置
+### 2.3 Docker 快速启动（可选）
 
 ```bash
-# 返回项目根目录
-cd ..
+# 构建镜像
+docker build -f deploy/docker/Dockerfile -t airymax/agentos:latest .
 
-# 复制配置文件
-cp ecosystem/manager/manager.example.yaml ecosystem/manager/manager.yaml
-
-# 编辑配置（可选）
-vim ecosystem/manager/manager.yaml
-```
-
-**关键配置项**:
-```yaml
-# ecosystem/manager/manager.yaml
-kernel:
-  log_level: INFO          # 日志级别
-  max_workers: 8           # 最大工作线程数
-  
-memory:
-  faiss_index_type: IVF1024,PQ64  # FAISS 索引类型
-  cache_size: 100000       # LRU 缓存大小
-  
-services:
-  llm_d:
-    enabled: true
-    default_provider: openai
-  tool_d:
-    enabled: true
-    python_path: /usr/bin/python3
+# 启动容器
+docker run -d --name agentrt \
+    -p 8080:8080 \
+    -v ./config:/app/config \
+    airymax/agentos:latest
 ```
 
 ---
 
-## 3. Hello World：第一个 Agent
+## 3. Hello World：启动网关并提交第一个任务
 
-### 3.0 理论视角：从 Hello World 理解 MCIS
+Airymax 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。以下示例演示如何启动网关、注册一个 Agent 并提交任务。
 
-在创建你的第一个 Agent 之前，让我们从 **体系并行论 (MCIS)** 的视角理解 Hello World 示例所展示的核心概念：
-
-**MCIS 视角的 Hello World 流程**：
-1. **初始化 Airymax 系统** → 启动 **基础体 (Base Body)**，为智能体提供运行时环境
-2. **创建会话** → 建立 **认知体 (Cognition Body)** 的上下文环境，管理智能体交互状态
-3. **提交认知任务** → **认知体** 处理输入信息，进行意图理解与任务规划
-4. **等待任务完成** → **执行体 (Execution Body)** 执行具体操作，**记忆体 (Memory Body)** 记录执行过程
-5. **清理资源** → 系统资源的优雅释放，体现 **控制论负反馈** 的闭环管理
-
-**五维正交体系的具体体现**：
-- **系统观维度** → 会话管理、任务调度、资源清理的系统工程层次分解
-- **内核观维度** → 系统调用接口（sys_session_create, sys_task_submit）的安全性与稳定性
-- **认知观维度** → 认知任务的提交与处理，体验智能体的决策过程
-- **工程观维度** → 错误处理、资源管理、性能优化的工程实践
-- **设计美学维度** → 简洁的API设计、清晰的代码结构、友好的用户体验
-
-通过这个简单的 Hello World 示例，你将实际体验 MCIS 理论在 Airymax 中的具体实现，理解智能体系统的基本工作原理。
-
-### 3.1 创建项目结构
+### 3.1 启动网关
 
 ```bash
-mkdir -p my_first_agent
-cd my_first_agent
-
-# 创建目录结构
-mkdir -p src manager
+# 启动 Airymax 网关（默认监听 0.0.0.0:8080）
+./agentrt-gateway --host 0.0.0.0 --port 8080
 ```
 
-### 3.2 编写 Agent 代码
+启动成功后你会看到类似输出：
 
-**C 语言版本**:
-```c
-// src/my_agent.c
-#include "agentos.h"
-#include <stdio.h>
+```
+[INFO] Gateway started on http://0.0.0.0:8080
+[INFO] WebSocket endpoint: ws://0.0.0.0:8081
+```
 
-int main(int argc, char* argv[]) {
-    // 1. 初始化 Airymax
-    agentos_error_t err = agentos_init();
-    if (err != AGENTOS_SUCCESS) {
-        fprintf(stderr, "Failed to initialize Airymax: %s\n", agentos_strerror(err));
-        return 1;
-    }
-    
-    printf("🚀 Airymax initialized successfully!\n");
-    
-    // 2. 创建会话
-    char* session_id;
-    err = sys_session_create("my_session", &session_id);
-    if (err != AGENTOS_SUCCESS) {
-        fprintf(stderr, "Failed to create session: %s\n", agentos_strerror(err));
-        return 1;
-    }
-    printf("✅ Session created: %s\n", session_id);
-    
-    // 3. 提交认知任务
-    const char* task_json = 
-        "{"
-        "\"type\": \"cognition\","
-        "\"input\": \"你好，世界！\","
-        "\"priority\": 2"
-        "}";
-    
-    char* task_id;
-    err = sys_task_submit(task_json, &task_id);
-    if (err != AGENTOS_SUCCESS) {
-        fprintf(stderr, "Failed to submit task: %s\n", agentos_strerror(err));
-        free(session_id);
-        return 1;
-    }
-    printf("✅ Task submitted: %s\n", task_id);
-    
-    // 4. 等待任务完成
-    char* result;
-    err = sys_task_wait(task_id, task_json, 5000, &result);
-    if (err != AGENTOS_SUCCESS) {
-        fprintf(stderr, "Task failed: %s\n", agentos_strerror(err));
-        free(session_id);
-        free(task_id);
-        return 1;
-    }
-    printf("✅ Task completed: %s\n", result);
-    
-    // 5. 写入记忆
-    err = sys_memory_write(session_id, task_json, result);
-    if (err != AGENTOS_SUCCESS) {
-        fprintf(stderr, "Failed to write memory: %s\n", agentos_strerror(err));
-        free(session_id);
-        free(task_id);
-        free(result);
-        return 1;
-    }
-    printf("✅ Memory written\n");
-    
-    // 6. 清理资源
-    free(session_id);
-    free(task_id);
-    free(result);
-    agentos_shutdown();
-    
-    printf("🎉 Hello World from Airymax!\n");
-    return 0;
+### 3.2 注册一个 Hello Agent
+
+在另一个终端中，使用 curl 向网关注册一个简单的 Agent：
+
+```bash
+# 注册 Agent
+curl -X POST http://localhost:8080/api/v1/agents/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "hello-agent",
+    "version": "1.0.0",
+    "model": "gpt-4o-mini",
+    "system_prompt": "你是一个友好的助手，请用简洁的中文回答用户的问题。"
+  }'
+```
+
+### 3.3 提交第一个任务
+
+```bash
+# 提交对话任务
+curl -X POST http://localhost:8080/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": "hello-agent",
+    "message": "你好，请介绍一下 Airymax"
+  }'
+```
+
+预期响应：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "agent": "hello-agent",
+    "reply": "Airymax 是一个智能体运行时平台，它为驱动 AI Agent 团队提供操作系统级的支持..."
+  },
+  "id": 1
 }
 ```
 
-**Python 版本** (更简洁):
+---
+
+## 4. SDK 快速上手：用 Python 创建你的第一个 Agent
+
+Airymax 提供多语言 SDK，支持 Python、Go、Rust、TypeScript。以下以 Python SDK 为例展示如何创建一个简单的 Agent。
+
+### 4.1 安装 Python SDK
+
+```bash
+pip install agentos
+```
+
+### 4.2 编写第一个 Agent
+
+创建一个文件 `hello_agent.py`：
+
 ```python
-#!/usr/bin/env python3
-# src/my_agent.py
+"""hello_agent.py — 你的第一个 Airymax Agent"""
 
-from agentos import Airymax, AgentOSLogger
+from agentos import Airymax
 
-def main():
-    # 1. 初始化
-    os = Airymax()
-    logger = AgentOSLogger("my_agent")
-    logger.info("🚀 Airymax initialized!")
-    
-    # 2. 创建会话
-    session = os.session_create("my_session")
-    logger.info(f"✅ Session created: {session.id}")
-    
-    # 3. 提交任务
-    task = os.task_submit(
-        task_type="cognition",
-        input="你好，世界！",
-        priority=2
-    )
-    logger.info(f"✅ Task submitted: {task.id}")
-    
-    # 4. 等待完成
-    result = task.wait(timeout=5.0)
-    logger.info(f"✅ Task completed: {result.output}")
-    
-    # 5. 写入记忆
-    session.memory_write(task.input, result.output)
-    logger.info("✅ Memory written")
-    
-    # 6. 清理
-    os.shutdown()
-    logger.info("🎉 Hello World from Airymax!")
+# 连接 Airymax 运行时
+client = Airymax(endpoint="http://localhost:18789", timeout=30)
 
-if __name__ == "__main__":
-    main()
+# 提交一个任务
+task = client.submit_task(
+    description="请用一句话介绍 Airymax 的核心优势",
+    agent_config={
+        "name": "hello-agent",
+        "model": "gpt-4o-mini",
+        "system_prompt": "你是一个专业的 Airymax 技术顾问。"
+    }
+)
+
+# 等待任务完成并获取结果
+result = task.wait(timeout=60)
+print(f"Agent 回复: {result.output}")
+
+# 写入记忆
+memory_id = client.write_memory(
+    content="Airymax 的核心优势：操作系统级架构、安全内生设计、Token 节省约 500%。",
+    metadata={"source": "hello_agent", "tag": "intro"}
+)
+print(f"记忆已写入: {memory_id}")
+
+# 搜索记忆
+memories = client.search_memory("Airymax 优势", top_k=3)
+for m in memories:
+    print(f"  [{m.score:.2f}] {m.memory.content}")
+
+# 关闭连接
+client.close()
 ```
 
-### 3.3 编译和运行
+### 4.3 运行
 
-**C 语言版本**:
 ```bash
-# 编译
-gcc -o my_agent src/my_agent.c \
-    -I/path/to/agentos/include \
-    -L/path/to/agentos/lib \
-    -lagentos -lpthread
-
-# 设置库路径
-export LD_LIBRARY_PATH=/path/to/agentos/lib:$LD_LIBRARY_PATH
-
-# 运行
-./my_agent
+python hello_agent.py
 ```
 
-**Python 版本**:
-```bash
-# 安装 Python SDK
-pip install -e agentos/toolkit/python/agentos
+### 4.4 使用异步客户端
 
-# 运行
-python3 src/my_agent.py
+对于高并发场景，推荐使用 `AsyncAgentOS`：
+
+```python
+"""async_agent.py — 异步 Agent 示例"""
+
+import asyncio
+from agentos import AsyncAgentOS
+
+async def main():
+    async with AsyncAgentOS(endpoint="http://localhost:18789") as client:
+        # 同时提交多个任务
+        tasks = [
+            client.submit_task("分析市场趋势"),
+            client.submit_task("生成周报摘要"),
+            client.submit_task("审查代码安全漏洞"),
+        ]
+        results = await asyncio.gather(*tasks)
+
+        for i, result in enumerate(results):
+            print(f"任务 {i + 1}: {result.output[:80]}...")
+
+asyncio.run(main())
 ```
 
-### 3.4 预期输出
+### 4.5 使用 Framework 层构建完整应用
 
-```log
-2026-03-21 10:30:45.123 [INFO] [my_agent] [trace=abc123] 🚀 Airymax initialized!
-2026-03-21 10:30:45.234 [INFO] [my_agent] [trace=abc123] ✅ Session created: sess_xyz789
-2026-03-21 10:30:45.345 [INFO] [my_agent] [trace=abc123] ✅ Task submitted: task_def456
-2026-03-21 10:30:46.456 [INFO] [my_agent] [trace=abc123] ✅ Task completed: 你好！有什么可以帮助你的吗？
-2026-03-21 10:30:46.567 [INFO] [my_agent] [trace=abc123] ✅ Memory written
-2026-03-21 10:30:46.678 [INFO] [my_agent] [trace=abc123] 🎉 Hello World from Airymax!
+```python
+"""framework_agent.py — 使用 Framework 层构建 Agent 应用"""
+
+from agentos.framework import Application, Plugin, Lifecycle
+
+class MyAgent(Application):
+    """自定义 Agent 应用"""
+
+    def on_start(self):
+        print(f"[{self.name}] Agent 已启动")
+
+    def on_message(self, message: str) -> str:
+        # 处理用户消息，调用 CoreLoopThree 认知循环
+        response = self.process(message)
+        return response
+
+    def on_stop(self):
+        print(f"[{self.name}] Agent 已停止")
+
+# 启动应用
+app = MyAgent(config={
+    "name": "my-custom-agent",
+    "model": "gpt-4o-mini",
+    "system_prompt": "你是一个专业的 AI 助手。"
+})
+app.run()
 ```
 
 ---
 
-## 4. 下一步学习
+## 5. 下一步
 
-恭喜你完成了第一个 Agent！接下来可以学习：
+恭喜！你已经完成了 Airymax 的快速上手。接下来可以深入了解：
 
-### 4.1 深入学习路径
+| 文档 | 说明 |
+|:-----|:-----|
+| [📘 架构原则](https://atomgit.com/openairymax/docs/blob/main/ARCHITECTURAL_PRINCIPLES.md) | 理解 Airymax 的五维正交设计体系 |
+| [⚙️ 编译指南](https://atomgit.com/openairymax/docs/blob/main/BUILD_GUIDE.md) | 详细的构建配置与选项说明 |
+| [🧪 测试指南](https://atomgit.com/openairymax/docs/blob/main/TESTING_GUIDE.md) | 单元测试、集成测试与契约测试 |
+| [🐳 部署指南](https://atomgit.com/openairymax/docs/blob/main/DEPLOYMENT_GUIDE.md) | Docker / Kubernetes 生产部署 |
+| [🔒 安全穹顶 (Cupolas)](../AgentRT/agentos/cupolas/README.md) | 四重内生安全体系详解 |
+| [🧠 CoreLoopThree](../AgentRT/agentos/atoms/coreloopthree/README.md) | Agent 认知循环核心机制 |
+| [📦 SDK 工具包](../../AgentRT/sdk/README.md) | Python / Go / Rust / TypeScript SDK 完整文档 |
+| [🎯 示例项目](../../AgentRT/ecosystem/examples/hello-agent/README.md) | Hello Agent 示例项目详解 |
 
-1. **[创建 Agent 指南](create_agent.md)**:
-   - 设计复杂的 Agent 架构
-   - 实现自定义技能
-   - 集成外部 API
+### 推荐学习路径
 
-2. **[创建技能指南](create_skill.md)**:
-   - 编写 Python 技能
-   - 用 Go/Rust实现高性能技能
-   - 技能打包和分发
-
-3. **[内核调优指南](kernel_tuning.md)**:
-   - 优化 FAISS 索引参数
-   - 调整线程池大小
-   - 性能监控和分析
-
-4. **[部署指南](deployment.md)**:
-   - Docker 容器化部署
-   - Kubernetes 集群管理
-   - 生产环境配置
-
-### 4.2 示例项目
-
-查看官方示例仓库获取更多灵感：
-
-```bash
-# 克隆示例仓库
-git clone https://github.com/spharx/agentos-examples.git
-
-# 浏览示例
-cd agentos-examples
-ls -la
-
-# 运行示例
-cd examples/chatbot
-python3 main.py
 ```
-
-### 4.4 开发工具
-
-Airymax 提供了一系列强大的开发工具，帮助提升开发效率和质量：
-
-1. **统一代码质量分析器** (`scripts/tools/unified_quality_analyzer.py`):
-   - 支持 C/C++、Python、Go、TypeScript 多语言代码分析
-   - 集成 clang-tidy、cppcheck、bandit、mypy 等工具
-   - 生成详细的代码质量报告和修复建议
-   
-   ```bash
-   # 分析整个项目
-   python scripts/tools/unified_quality_analyzer.py --scan-all
-   
-   # 分析特定语言
-   python scripts/tools/unified_quality_analyzer.py --language cpp --path src/
-   
-   # 生成 JSON 报告
-   python scripts/tools/unified_quality_analyzer.py --output report.json --format json
-   ```
-
-2. **交互式开发教程引擎** (`scripts/tutorial/tutorial_engine.py`):
-   - 提供命令行和 Web 两种交互式学习方式
-   - 支持渐进式学习路径和实时验证
-   - 内置新贡献者教程（6个步骤，4小时）
-   
-   ```bash
-   # 启动新贡献者教程
-   python scripts/tutorial/tutorial_engine.py start --role new-contributor
-   
-   # 启动教程 Web 服务器
-   python scripts/tutorial/tutorial_engine.py serve --port 8080
-   ```
-
-3. **性能基准测试框架** (`scripts/benchmark/`):
-   - 统一的基准测试 API，支持测试定义、执行、监控
-   - 高级统计计算引擎，支持分布拟合和显著性检验
-   - 专业报告生成，支持 HTML、PDF、Markdown 格式
-   - 历史结果比较和回归检测
-   
-   ```bash
-   # 运行 CoreLoopThree 基准测试示例
-   python scripts/benchmark/example_coreloopthree_benchmark.py
-   
-   # 查看基准测试框架使用指南
-   cat docs/Capital_Specifications/performance_benchmarking_framework.md
-   ```
-
-4. **系统健康诊断工具** (`scripts/toolkit/doctor.py`):
-   - 8个诊断类别：系统、Python环境、构建工具、项目结构等
-   - 详细的健康报告和建议
-   - 自动检测和修复常见问题
-
-5. **服务管理框架** (`agentos/commons/svc_common.h/.c`):
-   - 统一的服务生命周期管理
-   - 服务状态监控和健康检查
-   - 服务注册和发现机制
-   - 守护进程适配器模式
-
-### 4.5 获取帮助
-
-- **官方文档**: https://docs.agentos.io
-- **GitHub Issues**: https://github.com/spharx/agentos/issues
-- **Discord 社区**: https://discord.gg/agentos
-- **Stack Overflow**: 标签 `agentos`
-
----
-
-## 📝 常见问题 FAQ
-
-### Q1: 构建失败，提示找不到头文件
-
-**A**: 确保已正确设置 include 路径：
-```bash
-export CPATH=/path/to/agentos/include:$CPATH
-```
-
-### Q2: 运行时提示找不到共享库
-
-**A**: 设置库路径：
-```bash
-export LD_LIBRARY_PATH=/path/to/agentos/lib:$LD_LIBRARY_PATH
-```
-
-### Q3: Python 导入失败
-
-**A**: 确保已安装 SDK：
-```bash
-pip install -e agentos/toolkit/python/agentos
-```
-
-### Q4: 如何启用 GPU 加速？
-
-**A**: 需要 NVIDIA GPU 和 CUDA Toolkit：
-```bash
-cmake .. -DAGENTOS_USE_CUDA=ON
+快速上手指南（本文）→ 架构原则 → CoreLoopThree → SDK 文档 → 示例项目
 ```
 
 ---
 
-<div align="center">
-
-**© 2026 SPHARX Ltd. All Rights Reserved.**
-
-*From data intelligence emerges*
-
-</div>
+> "From data intelligence emerges." — 始于数据，终于智能。
+>
+> © 2026 SPHARX Ltd. All Rights Reserved.

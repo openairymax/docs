@@ -2,7 +2,7 @@
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Architecture/test_architecture.md
+**路径**: OpenAirymax/Docs/Capital_Architecture/engineering/testing.md
 ---
 
 ## 📋 概述

@@ -1,4 +1,4 @@
-# SUBSYSTEM_llm_d — LLM 服务守护进程
+# SUBSYSTEM_llm_d — LLM 服务用户态服务
 
 **版本**: v0.1.0  
 **状态**: 稳定  
@@ -10,7 +10,7 @@
 
 ## 1. 职责边界
 
-llm_d 是 Airymax 的 LLM（大语言模型）服务守护进程，负责管理多个 LLM 提供商的路由、调用、缓存和成本追踪。它是 coreloopthree 认知引擎与外部 LLM API 之间的代理层。
+llm_d 是 Airymax 的 LLM（大语言模型）服务用户态服务，负责管理多个 LLM 提供商的路由、调用、缓存和成本追踪。它是 coreloopthree 认知引擎与外部 LLM API 之间的代理层。
 
 ### 1.1 核心职责
 

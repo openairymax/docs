@@ -20,7 +20,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
-- **Thinkdual 双思考系统**（原则 C-1）：提供 System 1（快速、低延迟）与 System 2（安全、全面）两条路径，并允许运行时策略切换
+- **Thinkdual 双思考系统**（原则 C-1）：提供 t1 快思考（快速、低延迟）与 t2 慢思考（安全、全面）两条路径，并允许运行时策略切换
 - **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 
 **关联原则**:
@@ -351,8 +351,8 @@ std::optional<TaskMetrics> get_metrics(const std::string& task_id);
 /**
  * @brief 调度器类
  * 
- * 负责管理任务的生命周期和执行。调度器采用双系统架构，
- * System 1 处理简单任务，System 2 处理复杂任务。
+ * 负责管理任务的生命周期和执行。调度器采用双思考系统架构，
+ * t1 快思考 处理简单任务，t2 慢思考 处理复杂任务。
  * 
  * @note 此类是线程安全的
  */
@@ -860,10 +860,10 @@ private:
 };
 ```
 
-### 9.3 双系统并发模型
+### 9.3 双思考系统并发模型
 
 ```cpp
-// System 1: 快速路径，使用轻量级锁
+// t1 快思考: 快速路径，使用轻量级锁
 class FastPathProcessor {
 public:
     int process_simple_task(const Task& task) {
@@ -879,7 +879,7 @@ private:
     static std::mutex FAST_LOCK;
 };
 
-// System 2: 慢速路径，使用读写锁
+// t2 慢思考: 慢速路径，使用读写锁
 class SlowPathProcessor {
 public:
     int process_complex_task(const Task& task) {
@@ -1206,11 +1206,11 @@ private:
 #### 14.1.2 任务调度器（映射原则：C-2 认知优化）
 ```cpp
 /**
- * @brief 双系统任务调度器 - 体现认知观（C-1, C-2）和工程观（E-2）原则
+ * @brief 双思考系统任务调度器 - 体现认知观（C-1, C-2）和工程观（E-2）原则
  * 
- * 实现System 1（快速路径）和System 2（慢速路径）双系统架构：
- * - System 1：简单任务，直接执行
- * - System 2：复杂任务，深度分析后执行
+ * 实现t1 快思考（快速路径）和t2 慢思考（慢速路径）双思考系统架构：
+ * - t1 快思考：简单任务，直接执行
+ * - t2 慢思考：复杂任务，深度分析后执行
  * 
  * @see coreloopthree.md 中的三循环架构
  * @see microkernel.md 中的任务管理原语
@@ -1220,12 +1220,12 @@ public:
     // 使用现代C++特性：enum class 类型安全
     enum class SystemSelection {
         kAuto,      // 自动选择
-        kSystem1,   // 强制使用System 1
-        kSystem2    // 强制使用System 2
+        kSystem1,   // 强制使用t1 快思考
+        kSystem2    // 强制使用t2 慢思考
     };
     
     /**
-     * @brief 提交任务到双系统调度器
+     * @brief 提交任务到双思考系统调度器
      * 
      * 根据任务复杂度自动选择执行系统，支持运行时策略切换。
      * 
@@ -1243,7 +1243,7 @@ public:
             return std::nullopt;
         }
         
-        // 双系统选择逻辑
+        // 双思考系统选择逻辑
         SystemSelection target = selection;
         if (target == SystemSelection::kAuto) {
             target = select_system_based_on_complexity(task);
@@ -1262,10 +1262,10 @@ public:
 ### 14.2 用户态服务层（daemon）C++ 编码
 用户态服务层模块作为系统服务，强调可靠性和可观测性：
 
-#### 14.2.1 IPC服务守护进程（映射原则：E-3 通信基础设施）
+#### 14.2.1 IPC服务用户态服务（映射原则：E-3 通信基础设施）
 ```cpp
 /**
- * @brief IPC服务守护进程 - 体现系统观（S-3）和工程观（E-2, E-4）原则
+ * @brief IPC服务用户态服务 - 体现系统观（S-3）和工程观（E-2, E-4）原则
  * 
  * 实现高性能进程间通信，集成OpenTelemetry可观测性。
  * 遵循用户态服务层设计模式，支持优雅启停。
@@ -1468,9 +1468,9 @@ private:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)  
    - [microkernel.md](../../Capital_Architecture/microkernel.md)
-   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
-   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+   - [logging_system.md](../../Capital_Architecture/services/logging.md)
 
 ---
 

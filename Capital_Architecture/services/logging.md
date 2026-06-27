@@ -5,7 +5,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Architecture/logging_system.md
+**路径**: OpenAirymax/Docs/Capital_Architecture/services/logging.md
 
 ## 文档信息
 

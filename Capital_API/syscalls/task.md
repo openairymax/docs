@@ -10,7 +10,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 🎯 概述
 
-任务管理 API 提供 Airymax 任务生命周期的完整控制，包括任务提交、状态查询、取消、优先级调整等功能。所有任务遵循**双系统路径**：System 1 快速路径处理简单任务，System 2 深度路径处理复杂任务。
+任务管理 API 提供 Airymax 任务生命周期的完整控制，包括任务提交、状态查询、取消、优先级调整等功能。所有任务遵循**双思考系统 (Thinkdual) 路径**：t1-f 快思考路径处理简单任务，t2 慢思考路径处理复杂任务。
 
 ### 🧠 理论视角：MCIS框架下的任务API设计
 
@@ -22,7 +22,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 1. **认知体与执行体的协同接口** → 任务 API 是 **认知体 (Cognition Body)** 向 **执行体 (Execution Body)** 传递执行指令的标准接口
 2. **任务生命周期的形式化控制** → 通过标准化的 API 函数，实现了任务从创建到完成的全生命周期形式化控制
-3. **双系统认知的工程实现** → 任务类型区分（System 1/System 2）体现了双系统认知理论的工程实践
+3. **双思考系统 (Thinkdual) 的工程实现** → 任务类型区分（t1-f/t2）体现了双思考系统的工程实践
 4. **控制论反馈的信息通道** → 任务状态查询与统计功能为系统提供了控制论负反馈所需的状态信息
 
 #### 任务API的MCIS理论映射
@@ -34,12 +34,12 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **任务控制函数** → `agentos_task_cancel()`、`agentos_task_priority_set()` 对应 **控制论反馈回路** 的执行调节
 - **统计获取函数** → `agentos_task_stats()` 对应系统自我认知的状态分析需求
 
-#### 双系统路径的MCIS理论解释
+#### 双思考系统 (Thinkdual) 路径的MCIS理论解释
 
-任务 API 支持的双系统路径在 MCIS 理论中的解释：
+任务 API 支持的双思考系统 (Thinkdual) 路径在 MCIS 理论中的解释：
 
-- **System 1 快速路径** → 对应 **执行体** 的快速直觉执行模式，适用于简单、确定性的任务
-- **System 2 深度路径** → 对应 **认知体** 的深度分析执行模式，适用于复杂、不确定的任务
+- **t1-f 快思考路径** → 对应 **执行体** 的快速直觉执行模式，适用于简单、确定性的任务
+- **t2 慢思考路径** → 对应 **认知体** 的深度分析执行模式，适用于复杂、不确定的任务
 - **路径选择机制** → 基于任务复杂度与资源可用性的智能路径选择，体现 **多体协同** 的优化决策
 
 #### 任务状态机的MCIS理论意义
@@ -58,7 +58,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 |------|----------|---------|
 | **系统观** | 任务状态反馈闭环 | 完整的任务状态机（等待→执行→完成/失败） |
 | **内核观** | 极简的接口契约 | 仅 7 个核心函数，每个函数有明确的契约 |
-| **认知观** | 双系统路径协同 | System 1/System 2 任务类型区分，不同执行策略 |
+| **认知观** | 双思考系统 (Thinkdual) 路径协同 | t1-f/t2 任务类型区分，不同执行策略 |
 | **工程观** | 安全内生与可观测性 | 权限检查、结构化日志、性能指标收集 |
 | **设计美学** | 优雅的状态管理 | 统一的错误码、清晰的资源生命周期 |
 
@@ -100,8 +100,8 @@ typedef struct agentos_task_descriptor {
     
     /** 任务类型 */
     enum {
-        TASK_TYPE_SIMPLE = 0,     /* System 1 快速路径 */
-        TASK_TYPE_COMPLEX = 1,    /* System 2 深度路径 */
+        TASK_TYPE_SIMPLE = 0,     /* t1-f 快思考路径 */
+        TASK_TYPE_COMPLEX = 1,    /* t2 慢思考路径 */
         TASK_TYPE_CRITICAL = 2,   /* 关键任务（实时性要求高） */
         TASK_TYPE_BACKGROUND = 3  /* 后台任务（低优先级） */
     } type;
@@ -182,7 +182,7 @@ typedef struct agentos_task_statistics {
     /** System 1 路径任务占比（%） */
     float system1_ratio_percent;
     
-    /** System 2 路径任务占比（%） */
+    /** t2 路径任务占比（%） */
     float system2_ratio_percent;
 } agentos_task_statistics_t;
 ```
@@ -430,7 +430,7 @@ agentos_task_priority_set(uint64_t task_id,
  * @brief 获取任务统计信息
  * 
  * 获取全局任务执行统计信息，包括任务数量、成功率、
- * System 1/System 2 路径占比等。
+ * t1-f/t2 路径占比等。
  * 
  * @param out_stats [out] 返回统计信息结构体
  * @return AGENTOS_SUCCESS 成功；其他值表示错误

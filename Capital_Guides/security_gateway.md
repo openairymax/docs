@@ -466,7 +466,7 @@ clang-tidy src/**/*.c -- -Iinclude
 ### 联系支持
 
 - **安全漏洞报告**: security@spharx.io
-- **GitHub Issues**: https://github.com/spharx/agentos/issues
+- **GitCode Issues**: https://gitcode.com/spharx/agentos/issues
 - **社区论坛**: https://community.agentos.io
 
 ---

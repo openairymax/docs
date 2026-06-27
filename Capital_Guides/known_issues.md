@@ -350,7 +350,7 @@ TZ=Asia/Shanghai  # 所有容器统一时区
    journalctl -u agentos-kernel --since "1 hour ago" --no-pager > kernel_logs.txt
    ```
 3. **提交 Issue**:
-   - GitHub Issues: https://github.com/SpharxTeam/AgentRT/issues/new
+   - GitCode Issues: https://gitcode.com/spharx/agentos/issues/new
    - 邮箱: support@spharx.cn
    - 包含信息：
      - Airymax 版本 (`agentos --version`)

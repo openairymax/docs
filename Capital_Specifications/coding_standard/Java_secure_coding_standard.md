@@ -46,7 +46,7 @@ Airymax的五维正交系统为Java安全编码提供了多层次的理论框架
 
 #### 1.3.3 认知观（Cognitive View）安全
 - **Thinkdual 认知偏差防护**：基于C-3原则，Java API设计需考虑开发者认知模式，防止安全配置错误
-- **安全代码审查**：利用System 2（慢速路径）深度分析能力进行安全代码审查
+- **安全代码审查**：利用t2 慢思考（慢速路径）深度分析能力进行安全代码审查
 
 #### 1.3.4 工程观（Engineering View）安全
 - **安全工程化**：将D-1至D-4安全工程原则转化为具体的Java编码模式
@@ -60,13 +60,13 @@ Airymax的五维正交系统为Java安全编码提供了多层次的理论框架
 
 Airymax 的 Thinkdual 双思考系统为 Java 安全编码提供了心理学基础：
 
-#### 1.4.1 System 1（快速路径）安全
+#### 1.4.1 t1 快思考（快速路径）安全
 - **直觉安全设计**：常见安全操作应直观易懂，支持快速正确使用
 - **默认安全行为**：API默认配置应是安全的，防止疏忽导致的安全漏洞
 - **示例**：安全敏感的API应使安全用法成为最自然的选择
 
-#### 1.4.2 System 2（慢速路径）安全
-- **深度安全分析**：复杂安全决策需要System 2的深度分析能力
+#### 1.4.2 t2 慢思考（慢速路径）安全
+- **深度安全分析**：复杂安全决策需要t2 慢思考的深度分析能力
 - **安全配置验证**：复杂安全配置需要明确的验证机制和文档
 - **示例**：密钥管理系统需要详细的配置向导和安全检查
 
@@ -1184,9 +1184,9 @@ public class SecureKernelBinding {
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
    - [microkernel.md](../../Capital_Architecture/microkernel.md)
-   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
-   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+   - [logging_system.md](../../Capital_Architecture/services/logging.md)
    - [Security_design_standard.md](../Security_design_standard.md)
 
 ---

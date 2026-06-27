@@ -16,7 +16,7 @@ Airymax 采用分层日志架构，各层使用不同的日志宏和头文件：
 
 | 层级 | 日志宏 | 头文件 | 说明 |
 |------|--------|--------|------|
-| daemon 服务层 | `SVC_LOG_*` | `svc_log.h` | 系统守护进程日志，如 IPC 服务、资源管理 |
+| daemon 服务层 | `SVC_LOG_*` | `svc_log.h` | 系统用户态服务日志，如 IPC 服务、资源管理 |
 | atoms/gateway/protocols | `AGENTOS_LOG_*` | `agentos_log.h` | 微核心核心、网关、协议层日志 |
 | cupolas 安全穹顶 | `AGENTOS_LOG_AUDIT` / `SVC_LOG_AUDIT` | `agentos_log.h` / `svc_log.h` | 安全审计日志，用于合规审查和取证分析 |
 | Desktop | `logger.*()` | `logger.ts` | 桌面端 TypeScript 日志 |

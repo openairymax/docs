@@ -67,11 +67,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 |---------|---------|---------|---------|---------|------|
 | `agentos_dynamic_t` | `agentos_dynamic_create()` | `agentos_dynamic_destroy()` | 创建者释放 | 否（单线程访问） | 动态模块实例 |
 
-### 3.6 守护进程层 (daemon)
+### 3.6 用户态服务层 (daemon)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_daemon_service_t` | `agentos_daemon_service_create()` | `agentos_daemon_service_destroy()` | 创建者释放 | 内部互斥锁 | 守护进程服务实例 |
+| `agentos_daemon_service_t` | `agentos_daemon_service_create()` | `agentos_daemon_service_destroy()` | 创建者释放 | 内部互斥锁 | 用户态服务实例 |
 | `agentos_ipc_bus_t` | `agentos_ipc_bus_create()` | `agentos_ipc_bus_destroy()` | 创建者释放 | 内部互斥锁 | IPC 服务总线 |
 | `agentos_thread_pool_t` | `agentos_thread_pool_create()` | `agentos_thread_pool_destroy()` | 创建者释放 | 内部互斥锁 | 线程池 |
 | `agentos_orchestrator_t` | `agentos_orchestrator_create()` | `agentos_orchestrator_destroy()` | 创建者释放 | 内部互斥锁 | 编排器实例 |

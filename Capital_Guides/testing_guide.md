@@ -1,364 +1,680 @@
-# 测试指南
+Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+"From data intelligence emerges."
+
+# Airymax 测试指南
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Guides/testing_guide.md
+**路径**: OpenAirymax/Docs/Capital_Guides/testing.md
 ---
 
-## 📋 概述
+## 📋 测试体系概览
 
-本指南介绍如何高效使用 Airymax 测试框架，包括测试编写、运行、调试和报告。
+Airymax 采用**多层次测试策略**，确保代码质量和系统稳定性：
 
----
-
-## 🏗️ 测试架构
-
-Airymax 采用**双层测试架构**：
-
-1. **模块自测层** (`agentos/*/tests/`)
-   - C/C++ 单元测试，与源码相邻
-   - 使用 CMockery2 框架
-   - 通过 CMake/CTest 运行
-
-2. **集中测试层** (`tests/`)
-   - Python 集成/契约/性能测试
-   - 使用 pytest 框架
-   - 通过 `run_tests.py` 运行
-
-详细架构说明见 [ARCHITECTURE.md](ARCHITECTURE.md)
-
----
-
-## 🚀 快速开始
-
-### 安装依赖
-
-```bash
-cd tests
-pip install -r requirements.txt        # 基本依赖
-pip install -r requirements-dev.txt    # 开发依赖（推荐）
 ```
-
-### 运行测试
-
-```bash
-# 运行所有 Python 测试
-python run_tests.py
-
-# 使用 pytest 直接运行
-pytest unit/ -v              # 单元测试
-pytest integration/ -v       # 集成测试
-pytest security/ -v          # 安全测试
-pytest benchmarks/ -v        # 性能测试
-
-# 带覆盖率
-pytest --cov=agentos --cov-report=html
-
-# 并行运行（需要 pytest-xdist）
-pytest -n auto
-
-# 运行特定标记的测试
-pytest -m "unit and not slow"
+┌─────────────────────────────────────────────┐
+│              E2E 测试 (端到端)                 │
+│   完整用户场景验证 · 集成测试 · 性能基准        │
+├─────────────────────────────────────────────┤
+│              集成测试                         │
+│   组件交互 · API 契约 · 数据库交互            │
+├─────────────────────────────────────────────┤
+│              单元测试                         │
+│   函数/方法级别 · 模块隔离 · Mock             │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📝 编写测试
+## 🧪 测试层级与工具
 
-### Python 单元测试
+### 1. 单元测试 (Unit Tests)
+
+**目标**: 验证单个函数/方法的正确性
+
+| 语言 | 框架 | 位置 |
+|------|------|------|
+| C/C++ | CTest + Google Test | `tests/unit/c/` |
+| Python | pytest + unittest.mock | `tests/unit/python/` |
+
+#### Python 单元测试示例
 
 ```python
 import pytest
-from agentos.core import Agent
+from unittest.mock import Mock, patch, MagicMock
+from agentos.memory import MemoryClient
 
-class TestAgent:
-    """Agent 单元测试"""
+class TestMemoryClientStore:
+    """MemoryClient.store() 方法测试"""
 
-    def test_agent_creation(self):
-        """测试 Agent 创建"""
-        agent = Agent(name="TestAgent")
-        assert agent.name == "TestAgent"
-        assert agent.status == "inactive"
+    def test_store_success(self):
+        """测试成功存储"""
+        client = MemoryClient(base_url="http://test")
 
-    def test_agent_activation(self):
-        """测试 Agent 激活"""
-        agent = Agent(name="TestAgent")
-        agent.activate()
-        assert agent.status == "active"
+        with patch.object(client.session, 'post') as mock_post:
+            mock_post.return_value.json.return_value = {
+                "jsonrpc": "2.0",
+                "result": {"record_id": "rec-001"},
+                "id": "test"
+            }
 
-    @pytest.mark.parametrize("name", ["Agent1", "Agent2", "Agent3"])
-    def test_multiple_agents(self, name):
-        """参数化测试"""
-        agent = Agent(name=name)
-        assert agent.name == name
+            result = client.store(data="test data", tags=["test"])
+
+            assert result == "rec-001"
+            mock_post.assert_called_once()
+
+    def test_store_with_invalid_data(self):
+        """测试无效数据"""
+        client = MemoryClient(base_url="http://test")
+
+        with pytest.raises(ValidationError) as exc_info:
+            client.store(data=None)
+
+        assert "data cannot be None" in str(exc_info.value)
+
+    def test_store_network_error(self):
+        """测试网络错误"""
+        client = MemoryClient(base_url="http://test")
+
+        with patch.object(client.session, 'post') as mock_post:
+            mock_post.side_effect = ConnectionError("Network error")
+
+            with pytest.raises(NetworkError) as exc_info:
+                client.store(data="test")
+
+            assert "Network error" in str(exc_info.value)
 ```
 
-### 使用测试工具
+### 2. 集成测试 (Integration Tests)
+
+**目标**: 验证组件间的交互正确性
 
 ```python
-from tests.utils.test_helpers import TestDataGenerator, MockFactory
+# tests/integration/test_kernel_integration.py
+import pytest
+from agentos import AgentOSClient
 
-def test_with_mock():
-    """使用 Mock 对象"""
-    mock_response = MockFactory.create_mock_response(
-        status_code=200,
-        json_data={"status": "ok", "data": "test"}
+@pytest.fixture(scope="module")
+def kernel_client():
+    """创建内核客户端（需要运行中的内核服务）"""
+    client = AgentOSClient(
+        base_url="http://localhost:8080",
+        api_key="test-api-key"
     )
-    assert mock_response.status_code == 200
-    assert mock_response.json()["status"] == "ok"
+    yield client
+    client.close()
 
-def test_with_fixture_data():
-    """使用夹具数据"""
-    from tests.utils.test_helpers import load_fixture
-    task_data = load_fixture("tasks/sample_tasks.json")
-    assert len(task_data) > 0
+class TestKernelIntegration:
+    """内核集成测试"""
+
+    def test_health_check(self, kernel_client):
+        """健康检查集成测试"""
+        health = kernel_client.health_check()
+        assert health.status == "healthy"
+        assert health.version.startswith("1.")
+
+    def test_create_and_chat_agent(self, kernel_client):
+        """创建 Agent 并对话的完整流程"""
+        from agentos import AgentConfig
+
+        # 创建 Agent
+        config = AgentConfig(
+            name="integration-test-agent",
+            model="gpt-4-turbo"
+        )
+        agent = kernel_client.create_agent(config)
+        agent.start()
+
+        try:
+            # 对话
+            response = agent.chat("Hello!")
+            assert response.content is not None
+            assert len(response.content) > 0
+        finally:
+            agent.stop()
+
+    def test_memory_lifecycle(self, kernel_client):
+        """记忆系统生命周期测试"""
+        memory = kernel_client.memory
+
+        # 存储
+        record_id = memory.store(
+            data="Integration test data",
+            tags=["integration-test"]
+        )
+        assert record_id is not None
+
+        # 搜索
+        results = memory.search(query="integration test", top_k=5)
+        assert len(results) > 0
+        assert any(r.id == record_id for r in results)
+
+        # 获取详情
+        record = memory.get_by_id(record_id)
+        assert record is not None
+        assert record.data == "Integration test data"
 ```
 
-### 性能测试
+### 3. E2E 测试 (End-to-End Tests)
+
+**目标**: 验证完整的用户使用场景
 
 ```python
+# tests/e2e/test_user_scenarios.py
 import pytest
-from tests.utils.test_helpers import PerformanceTester
+from agentos import AgentOSClient
 
-def test_performance():
-    """性能测试"""
-    with PerformanceTester("my_test") as pt:
-        # 执行被测代码
-        result = expensive_operation()
+class TestUserScenarios:
+    """E2E 用户场景测试"""
 
-    assert pt.elapsed_ms < 100  # 小于 100ms
-    assert result is not None
+    @pytest.mark.e2e
+    def test_complete_agent_workflow(self):
+        """
+        完整工作流：
+        1. 创建 Agent
+        2. 配置技能
+        3. 执行多轮对话
+        4. 存储记忆
+        5. 检索记忆
+        6. 清理资源
+        """
+        client = AgentOSClient(
+            base_url="http://localhost:8080",
+            api_key=os.environ["TEST_API_KEY"]
+        )
+
+        # Step 1: 创建 Agent
+        agent_config = AgentConfig(
+            name="e2e-test-agent",
+            tools=["web-search", "calculator"]
+        )
+        agent = client.create_agent(agent_config)
+        agent.start()
+
+        try:
+            # Step 2: 多轮对话
+            conversation_history = []
+            questions = [
+                "What is the weather in Beijing?",
+                "Calculate 123 * 456",
+                "Summarize our conversation"
+            ]
+
+            for question in questions:
+                response = agent.chat(question)
+                conversation_history.append({
+                    "question": question,
+                    "answer": response.content
+                })
+                assert response.content
+
+            # Step 3: 记忆存储与检索
+            memory_record_id = agent.memory.store(
+                data={
+                    "conversation": conversation_history,
+                    "type": "e2e_test"
+                },
+                tags=["e2e", "conversation"]
+            )
+
+            search_results = agent.memory.search(
+                query="weather calculation",
+                top_k=5
+            )
+            assert any(r.id == memory_record_id for r in search_results)
+
+        finally:
+            # Step 4: 清理
+            agent.stop()
+            client.delete_agent(agent.id)
+
+    @pytest.mark.e2e
+    @pytest.mark.performance
+    def test_concurrent_agents(self):
+        """并发 Agent 性能测试"""
+        import concurrent.futures
+
+        client = AgentOSClient(base_url="http://localhost:8080")
+
+        def run_agent_session(agent_index):
+            agent = client.create_agent(AgentConfig(
+                name=f"concurrent-agent-{agent_index}"
+            ))
+            agent.start()
+
+            start_time = time.time()
+            for _ in range(10):
+                agent.chat(f"Message {agent_index}")
+
+            duration = time.time() - start_time
+            agent.stop()
+            return duration
+
+        # 启动 10 个并发 Agent
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [
+                executor.submit(run_agent_session, i)
+                for i in range(10)
+            ]
+            durations = [f.result() for f in futures]
+
+        avg_duration = sum(durations) / len(durations)
+        print(f"Average session duration: {avg_duration:.2f}s")
+        assert avg_duration < 30.0  # 每个会话应在 30 秒内完成
 ```
 
 ---
 
-## 🏷️ 测试标记
+## 📊 测试覆盖率要求
 
-使用 pytest markers 组织测试：
+### 覆盖率标准
 
-```python
-@pytest.mark.unit
-def test_basic_functionality():
-    """单元测试"""
-    pass
+| 组件类型 | 行覆盖率 | 分支覆盖率 | 函数覆盖率 |
+|----------|---------|-----------|-----------|
+| **核心内核** | ≥ 90% | ≥ 85% | ≥ 95% |
+| **用户态服务** | ≥ 85% | ≥ 80% | ≥ 90% |
+| **SDK 客户端** | ≥ 90% | ≥ 85% | ≥ 95% |
+| **工具函数** | ≥ 95% | ≥ 90% | 100% |
 
-@pytest.mark.integration
-def test_module_interaction():
-    """集成测试"""
-    pass
-
-@pytest.mark.slow
-def test_large_dataset():
-    """慢速测试（>5秒）"""
-    pass
-
-@pytest.mark.security
-def test_input_validation():
-    """安全测试"""
-    pass
-
-@pytest.mark.benchmark
-def test_performance():
-    """性能基准测试"""
-    pass
-
-@pytest.mark.skip(reason="暂时跳过")
-def test_temporarily_skipped():
-    pass
-
-@pytest.mark.xfail
-def test_known_failure():
-    """预期失败的测试"""
-    pass
-```
-
----
-
-## 🔧 调试技巧
-
-### 查看详细输出
+### 运行覆盖率报告
 
 ```bash
-# 详细输出
-pytest -v
+# Python (pytest-cov)
+pytest --cov=agentos --cov-report=html --cov-fail-under=90
 
-# 显示打印内容
-pytest -s
-
-# 显示局部变量
-pytest --tb=long
-
-# 进入调试器
-pytest --pdb
-```
-
-### 运行特定测试
-
-```bash
-# 运行特定文件
-pytest tests/unit/atoms/test_corekern.py
-
-# 运行特定类
-pytest tests/unit/atoms/test_corekern.py::TestCoreKern
-
-# 运行特定方法
-pytest tests/unit/atoms/test_corekern.py::TestCoreKern::test_memory
-
-# 使用关键词过滤
-pytest -k "memory"
+# C++ (gcov)
+cmake .. -DCMAKE_BUILD_TYPE=Coverage
+make && ctest
+gcov -r *.cpp
 ```
 
 ---
 
-## 📊 覆盖率报告
+## ⚡ 性能基准测试
 
-```bash
-# 生成覆盖率报告
-pytest --cov=agentos --cov-report=html
+### 基准测试框架
 
-# 查看 HTML 报告
-open coverage_html/index.html  # macOS
-xdg-open coverage_html/index.html  # Linux
-start coverage_html/index.html  # Windows
+| 语言 | 工具 | 用途 |
+|------|------|------|
+| Python | pytest-benchmark | 微基准测试 |
+| Go | testing.B | 内置基准测试 |
+| C++ | Google Benchmark | 高性能基准 |
 
-# 生成 XML 报告（用于 CI）
-pytest --cov=agentos --cov-report=xml
-
-# 设置覆盖率阈值
-pytest --cov=agentos --cov-fail-under=85
-```
-
----
-
-## 🎯 最佳实践
-
-### 1. 测试命名
-
-- 文件名: `test_<模块名>.py`
-- 类名: `Test<类名>`
-- 方法名: `test_<场景>_<预期结果>`
+### 关键性能指标
 
 ```python
-class TestMemoryManager:
-    def test_store_and_retrieve_memory(self):
-        pass
-
-    def test_store_invalid_memory_raises_error(self):
-        pass
-```
-
-### 2. 夹具使用
-
-```python
+# benchmarks/performance_benchmarks.py
 import pytest
+
+class TestIPCBenchmark:
+    """IPC 性能基准"""
+
+    @pytest.mark.benchmark
+    def test_ipc_latency(self, benchmark):
+        """IPC 调用延迟"""
+        client = get_kernel_client()
+
+        def ipc_call():
+            return client.syscall("memory.ping")
+
+        latency = benchmark(ipc_call)
+        assert latency < 0.001  # < 1ms
+
+    @pytest.mark.benchmark
+    def test_ipc_throughput(self, benchmark):
+        """IPC 吞吐量"""
+        client = get_kernel_client()
+
+        def batch_calls():
+            for _ in range(1000):
+                client.syscall("memory.ping")
+
+        throughput = benchmark(batch_calls)
+        calls_per_sec = 1000 / (throughput / 1000000000)  # 纳秒转秒
+        assert calls_per_sec > 1000000  # > 1M QPS
+
+
+class TestMemoryBenchmark:
+    """记忆系统性能基准"""
+
+    @pytest.mark.benchmark
+    def test_memory_write_throughput(self, benchmark):
+        """L1 写入吞吐量"""
+        memory = get_memory_client()
+
+        def write_batch():
+            for i in range(100):
+                memory.store(data=f"benchmark-data-{i}")
+
+        benchmark(write_batch)
+
+    @pytest.mark.benchmark
+    def test_memory_search_latency(self, benchmark):
+        """L2 搜索延迟"""
+        memory = get_memory_client()
+
+        def search():
+            return memory.search(query="benchmark query", top_k=10)
+
+        results = benchmark(search)
+        assert len(results) > 0
+```
+
+### 运行基准测试
+
+```bash
+# Python
+pytest benchmarks/ --benchmark-only --benchmark-autosave
+
+# 输出结果对比
+pytest-benchmark compare --baseline=baseline.json current.json
+```
+
+---
+
+## 🔄 CI/CD 测试流水线
+
+### GitHub Actions 示例
+
+```yaml
+# .github/workflows/tests.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+        go-version: ['1.21', '1.22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt
+          pip install -e .
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v \
+            --cov=agentos \
+            --cov-report=xml \
+            --cov-fail-under=90
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  integration-tests:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd redis-cli ping
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v \
+            --envfile .env.test
+
+  e2e-tests:
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy test environment
+        run: docker compose -f docker/docker-compose.yml up -d
+
+      - name: Wait for services
+        run: |
+          sleep 30
+          docker compose ps
+
+      - name: Run E2E tests
+        run: |
+          pytest tests/e2e/ -v -m e2e
+
+      - name: Cleanup
+        if: always
+        run: docker compose down -v
+```
+
+---
+
+## 🧰 测试工具与配置
+
+### pytest 配置
+
+```ini
+# pyproject.toml 或 setup.cfg
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests (requires running services)",
+    "e2e: End-to-end tests",
+    "slow: Slow running tests",
+    "performance: Performance benchmarks",
+    "security: Security-related tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["agentos"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+fail_under = 90
+```
+
+### Mock 最佳实践
+
+```python
+# 使用 pytest-mock fixture
+def test_with_mock(mock_client):
+    mock_client.get.return_value = {"status": "ok"}
+    result = call_api(mock_client)
+    assert result["status"] == "ok"
+
+# 使用 unittest.mock.patch
+@patch('agentos.client.requests.Session.post')
+def test_with_patch(mock_post):
+    mock_post.return_value.json.return_value = {"result": "success"}
+    # ... test code
+
+# 使用响应工厂模式
+def create_mock_response(status_code=200, json_data=None):
+    response = Mock()
+    response.status_code = status_code
+    response.json.return_value = json_data or {}
+    return response
+```
+
+---
+
+## 📈 测试数据管理
+
+### 测试夹具 (Fixtures)
+
+```python
+# conftest.py
+import pytest
+import tempfile
+import os
 
 @pytest.fixture
-def sample_agent():
-    return Agent(name="TestAgent")
+def sample_agent_config():
+    """返回标准的 Agent 配置"""
+    return AgentConfig(
+        name="test-agent",
+        model="gpt-4-turbo",
+        max_tokens=100,
+        temperature=0.7
+    )
 
 @pytest.fixture
-def mock_llm_service():
-    return MockLLMService()
+def temp_database():
+    """创建临时数据库用于测试"""
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    yield db_path
+    os.close(db_fd)
+    os.unlink(db_path)
 
-def test_agent_with_llm(sample_agent, mock_llm_service):
-    sample_agent.set_llm(mock_llm_service)
-    result = sample_agent.process("Hello")
-    assert result is not None
+@pytest.fixture
+def authenticated_client():
+    """返回已认证的客户端"""
+    client = AgentOSClient(
+        base_url="http://localhost:8080",
+        api_key="test-key-for-testing"
+    )
+    yield client
+    client.close()
 ```
 
-### 3. 测试隔离
+### 测试数据生成器
+
+```python
+from faker import Faker
+
+fake = Faker()
+
+def generate_test_user():
+    """生成随机测试用户数据"""
+    return {
+        "name": fake.name(),
+        "email": fake.email(),
+        "username": fake.user_name(),
+        "created_at": fake.date_time_this_year()
+    }
+
+def generate_test_conversation(num_messages=5):
+    """生成测试对话历史"""
+    return [
+        {
+            "role": "user" if i % 2 == 0 else "assistant",
+            "content": fake.sentence(nb_words=10)
+        }
+        for i in range(num_messages)
+    ]
+```
+
+---
+
+## 🐛 测试常见问题
+
+### 问题 1: 测试间状态污染
+
+**解决方案**: 使用独立的测试数据库和清理机制
 
 ```python
 @pytest.fixture(autouse=True)
-def clean_state():
-    """每个测试前清理状态"""
-    Agent.reset_all()
+def cleanup_database(db_session):
+    """每个测试后自动清理数据库"""
     yield
-    Agent.cleanup()
+    db_session.rollback()
+    db_session.query(Model).delete()
+    db_session.commit()
 ```
 
-### 4. 参数化测试
+### 问题 2: 异步测试超时
+
+**解决方案**: 合理设置超时和使用 async fixtures
 
 ```python
-@pytest.mark.parametrize("input,expected", [
-    ("hello", 5),
-    ("world!", 6),
-    ("", 0),
-])
-def test_string_length(input, expected):
-    assert len(input) == expected
+@pytest.fixture
+async def async_client():
+    client = AsyncAgentOSClient()
+    yield client
+    await client.close()
+
+@pytest.mark.asyncio
+async def test_async_operation(async_client):
+    result = await asyncio.wait_for(
+        async_client.some_async_method(),
+        timeout=5.0
+    )
+    assert result
 ```
 
----
+### 问题 3: 外部服务依赖
 
-## 📁 测试数据管理
-
-### 夹具数据位置
-
-```
-tests/fixtures/data/
-├── tasks/           # 任务测试数据
-├── memories/        # 记忆测试数据
-├── sessions/        # 会话测试数据
-└── skills/          # 技能测试数据
-```
-
-### 添加新测试数据
-
-1. 在对应目录创建 JSON 文件
-2. 使用 `load_fixture()` 加载：
+**解决方案**: 使用服务虚拟化或 Contract Testing
 
 ```python
-from tests.utils.test_helpers import load_fixture
-
-data = load_fixture("tasks/new_test_data.json")
+# 使用 WireMock 或 Mountebank 模拟外部服务
+@pytest.fixture
+def mock_llm_service():
+    with WireMockServer() as wiremock:
+        wiremock.stub_for(
+            post(url_pathEqualTo("/api/v1/chat"))
+            .willReturn(a_response()
+                      .with_status(200)
+                      .with_body(json.dumps({"choices": [{"message": {"content": "Mock"}}]})))
+        )
+        yield wiremock.base_url
 ```
 
 ---
 
-## 🔍 常见问题
+## 📚 相关文档
 
-### Q: 测试运行很慢怎么办？
-
-```bash
-# 跳过慢速测试
-pytest -m "not slow"
-
-# 并行运行
-pytest -n 4
-
-# 只运行单元测试
-pytest -m unit
-```
-
-### Q: 如何调试失败的测试？
-
-```bash
-# 进入调试器
-pytest --pdb
-
-# 显示局部变量
-pytest --tb=short -v
-
-# 只运行上次失败的测试
-pytest --lf
-```
-
-### Q: 覆盖率为什么很低？
-
-- 确保测试覆盖了核心逻辑
-- 使用 `pytest --cov-report=term-missing` 查看未覆盖行
-- 添加更多边界条件测试
+- **[编码规范](coding-standards.md)** — 代码风格与测试规范
+- **[调试指南](debugging.md)** — 调试技巧与工具
+- **[架构决策记录](adr/)** — ADR 索引
+- **[CI/CD 流水线](../../.github/workflows/)** — 自动化测试配置
 
 ---
 
-## 📚 参考资源
+**© 2026 SPHARX Ltd. All Rights Reserved.**
 
-- [pytest 官方文档](https://docs.pytest.org/)
-- [pytest-cov 文档](https://pytest-cov.readthedocs.io/)
-- [CMockery2 文档](https://code.google.com/archive/p/cmockery2/)
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 测试架构说明
-
----
-
-© 2026 SPHARX Ltd. All Rights Reserved.
+*"From data intelligence emerges."*

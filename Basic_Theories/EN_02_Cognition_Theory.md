@@ -55,10 +55,10 @@ The routing layer is the entry point of the cognitive layer, responsible for con
 
 ### 3.2 Dual-Model Collaboration
 
-The dual-model collaboration system is the "thinking engine" of the cognitive layer, realizing the cooperation between System 1 and System 2:
+The dual-model collaboration system is the "thinking engine" of the cognitive layer, realizing the cooperation between t1 fast-thinking and t2 slow-thinking:
 
-- **Primary Thinker (System 2)**: Uses the most powerful reasoning model for deep planning, reflection, and adjustment.
-- **Auxiliary Thinker (System 1)**: Uses lightweight models for quick response, cross-validation, and conflict detection.
+- **Primary Thinker (t2 slow-thinking)**: Uses the most powerful reasoning model for deep planning, reflection, and adjustment.
+- **Auxiliary Thinker (t1 fast-thinking)**: Uses lightweight models for quick response, cross-validation, and conflict detection.
 - **Arbitration mechanism**: When primary and auxiliary models produce inconsistent conclusions, internal debate is triggered, with audit committee intervention or manual confirmation.
 
 ### 3.3 Incremental Planner

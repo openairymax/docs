@@ -1350,9 +1350,9 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 7. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
-   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
-   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+   - [logging_system.md](../../Capital_Architecture/services/logging.md)
 
 ---
 

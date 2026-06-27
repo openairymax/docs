@@ -27,7 +27,7 @@ Airymax 采用**分层诊断方法论**，从外到内逐层定位问题：
                   ↓
 ┌─────────────────────────────────────────────┐
 │  Layer 3: 服务层 (Service Layer)             │
-│  检查：守护进程状态 · API 响应 · 资源使用     │
+│  检查：用户态服务状态 · API 响应 · 资源使用     │
 └─────────────────┬───────────────────────────┘
                   ↓
 ┌─────────────────────────────────────────────┐
@@ -161,7 +161,7 @@ fi
 echo ""
 echo "--- [Layer 3] Service Layer Checks ---"
 
-# 检查所有守护进程服务
+# 检查所有用户态服务服务
 for SERVICE in llm_d market_d monit_d tool_d sched_d gateway_d; do
     PORT=$(get_port_for_service $SERVICE)
 
