@@ -18,7 +18,7 @@ Airymax TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 Airyma
 |------|----------|---------|
 | **系统观** | SDK 作为系统边界抽象 | 统一的 AgentOSClient 入口，封装所有子系统 |
 | **内核观** | 接口契约化 | 完整的 TypeScript 接口定义，编译时类型检查 |
-| **认知观** | 双思考系统映射 | System1/System2 路径的类型安全表达 |
+| **认知观** | 双思考系统映射 | t1-f/t2 路径的类型安全表达 |
 | **工程观** | 可观测性集成 | 内置追踪、指标、日志的 SDK 集成 |
 | **设计美学** | TypeScript 惯用设计 | async/await、泛型、枚举、命名空间 |
 

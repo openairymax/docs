@@ -30,7 +30,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 Airymax的理论基石，理解设计哲学的必读材料：
 
 - [**体系并行论 (MCIS)**](Basic_Theories/CN_01_体系并行.md) — 多体控制智能系统理论（[English](Basic_Theories/EN_01_MCIS.md)）
-- [**认知层理论**](Basic_Theories/CN_02_认知层设计.md) — 双系统认知与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
+- [**认知层理论**](Basic_Theories/CN_02_认知层设计.md) — 双思考系统与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
 - [**记忆层理论**](Basic_Theories/CN_03_记忆层设计.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
 - [**设计原则**](Basic_Theories/CN_04_系统设计原则.md) — 五维正交设计原则导论（[English](Basic_Theories/EN_04_Design_Principles.md)）
 - [**设计哲学**](Capital_Architecture/philosophy/design_philosophy.md) — 体系并行论与五维正交设计体系详述

@@ -789,9 +789,9 @@ void atoms_mem_alloc_numa(size_t size, int numa_node, uint32_t flags) {
 #### 7.1.2 任务调度日志（映射原则：C-2 认知优化）
 ```cpp
 /**
- * @brief 双系统任务调度日志 - 体现认知观（C-1, C-2）原则
+ * @brief 双思考系统任务调度日志 - 体现认知观（C-1, C-2）原则
  * 
- * 记录System 1/System 2路径选择，支持认知模式分析。
+ * 记录t1 快思考/t2 慢思考路径选择，支持认知模式分析。
  * 结构化日志支持机器学习驱动的调度优化。
  */
 void schedule_task(Task* task) {

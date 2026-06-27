@@ -179,7 +179,7 @@ typedef struct agentos_task_statistics {
     /** 任务队列深度 */
     uint32_t queue_depth;
     
-    /** System 1 路径任务占比（%） */
+    /** t1-f 路径任务占比（%） */
     float system1_ratio_percent;
     
     /** t2 路径任务占比（%） */

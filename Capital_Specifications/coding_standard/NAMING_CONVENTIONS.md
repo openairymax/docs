@@ -93,9 +93,9 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 ---
 
-## 2. 守护进程（Daemon）命名
+## 2. 用户态服务（Daemon）命名
 
-所有 Airymax 的后台守护进程使用 `*_d` 后缀命名，遵循 Unix 守护进程命名惯例（`d` = daemon）。
+所有 Airymax 的后台用户态服务使用 `*_d` 后缀命名，遵循 Unix 用户态服务命名惯例（`d` = daemon）。
 
 ### 2.1 完整 Daemon 列表
 
@@ -109,8 +109,6 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 | `observe_d` | Observability Daemon | 可观测性服务，Metrics 采集，Tracing，健康检查 |
 | `monit_d` | Monitor Daemon | 监控告警服务，阈值检测，告警路由，自愈策略 |
 | `market_d` | Market Daemon | 能力市场，计费计量，配额管理 |
-| `plugin_d` | Plugin Daemon | 插件管理服务，插件加载/卸载，版本管理，依赖解析 |
-| `hook_d` | Hook Daemon | 钩子/回调服务，事件拦截，生命周期钩子，过滤器链 |
 | `channel_d` | Channel Daemon | 通道管理服务，长连接管理，流式通道，会话保持 |
 | `notify_d` | Notification Daemon | 通知推送服务，消息推送，多渠道分发，投递保证 |
 
@@ -474,7 +472,7 @@ int agentos_tls_set(const char *key, void *value);
 | 操作系统层 | 全小写 | `agentos` |
 | 核心组件 | PascalCase | `CoreKern`、`CoreLoopThree`、`TaskFlow`、`HeapStore`、`MemoryRovol` |
 | 复数组件 | PascalCase（复数） | `Atoms`、`Cupolas` |
-| 守护进程 | snake_case + `_d` | `gateway_d`、`llm_d`、`tool_d` |
+| 用户态服务 | snake_case + `_d` | `gateway_d`、`llm_d`、`tool_d` |
 | C 源文件 | snake_case | `logger.c`、`core_config.c` |
 | 头文件 | snake_case | `logger.h`、`platform.h` |
 | 代码目录 | snake_case | `agentos/`、`commons/`、`protocols/` |

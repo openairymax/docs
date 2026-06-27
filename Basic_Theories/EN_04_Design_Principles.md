@@ -46,11 +46,11 @@ Daniel Kahneman proposes in *Thinking, Fast and Slow* that human thinking compri
 
 Airymax embeds this theory into its architecture:
 
-- **Cognitive layer**: System 2 deep planning, System 1 rapid classification and cross-validation.
-- **Action layer**: System 1 fast execution, System 2 result verification and exception handling.
-- **Memory layer**: System 1 rapid retrieval, System 2 deep pattern mining.
+- **Cognitive layer**: t2 slow-thinking deep planning, t1 fast-thinking rapid classification and cross-validation.
+- **Action layer**: t1 fast-thinking fast execution, t2 slow-thinking result verification and exception handling.
+- **Memory layer**: t1 fast-thinking rapid retrieval, t2 slow-thinking deep pattern mining.
 
-The collaboration of dual systems enables the system to efficiently handle routine tasks while confronting complex challenges.
+The collaboration of the dual-thinking system (Thinkdual) enables the system to efficiently handle routine tasks while confronting complex challenges.
 
 ## 4. MicroCoreRT and Pure Kernel
 
