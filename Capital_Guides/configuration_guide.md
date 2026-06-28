@@ -75,14 +75,14 @@ Airymax采用**分层配置**策略，支持多环境、多实例配置：
 
 ### 配置文件位置
 
+Airymax 使用**单一统一配置文件** `configs/agentos.yaml`，包含所有子系统的配置段。
+
 | 环境 | 配置路径 | 用途 |
 |------|---------|------|
-| **Docker开发** | `docker/.env` | Docker Compose环境变量 |
+| **源码安装** | `configs/agentos.yaml` | 统一配置（kernel/llm/memory/security/multi_agent/gateway/hooks/plugins/observability） |
+| **Docker开发** | `docker/.env` | Docker Compose 环境变量 |
 | **Docker生产** | `docker/.env.production` | 生产环境变量 |
-| **源码安装** | `config/kernel.yaml` | 内核主配置 |
-| **源码安装** | `config/llm.yaml` | LLM服务配置 |
-| **源码安装** | `config/memory.yaml` | 记忆系统配置 |
-| **Kubernetes** | ConfigMap/Secret | K8s原生配置 |
+| **Kubernetes** | ConfigMap/Secret | K8s 原生配置 |
 
 ---
 

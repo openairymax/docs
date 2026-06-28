@@ -178,8 +178,8 @@ echo "--- [Layer 2] Gateway Layer Checks ---"
 if nc -z localhost 8006 2>/dev/null; then
     check_pass "API Gateway (8006) is listening"
 
-    # 测试路由转发
-    GATEWAY_RESP=$(curl -s http://localhost:8006/api/v1/llm/health 2>/dev/null)
+    # 测试网关健康状态
+    GATEWAY_RESP=$(curl -s http://localhost:8080/health 2>/dev/null)
     if [ -n "$GATEWAY_RESP" ]; then
         check_pass "Gateway routing to llm_d works"
     else
@@ -542,32 +542,28 @@ curl -s http://localhost:8080/api/v1/tasks?status=running | jq '.tasks[] | {id, 
 ### LLM 服务诊断
 
 ```bash
-# 测试 LLM 推理延迟
-time curl -X POST http://localhost:8001/api/v1/llm/chat \
+# 测试 LLM 服务可用性
+curl -s http://localhost:8080/v1/models | jq .
+
+# 查看 LLM daemon 日志
+journalctl -u llm_d --since "5 minutes ago" | tail -20
+
+# 通过 JSON-RPC 调用 LLM
+time curl -s -X POST http://localhost:8080/ \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Hi"}],"stream":false}'
-
-# 查看 LLM 队列深度
-curl -s http://localhost:8001/api/v1/llm/stats | jq .queue_depth
-
-# 查看 Token 使用统计
-curl -s http://localhost:8001/api/v1/llm/stats/tokens | jq .
+  -d '{"jsonrpc":"2.0","method":"llm.complete","params":{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hi"}]},"id":1}' | jq .
 ```
 
 ### 记忆系统诊断
 
 ```bash
-# L1 统计
-curl -s http://localhost:8080/api/v1/memory/l1/stats | jq .
+# 通过 JSON-RPC 查询记忆系统状态
+curl -s -X POST http://localhost:8080/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"memory.stats","params":{"layer":"all"},"id":1}' | jq .
 
-# L2 索引状态
-curl -s http://localhost:8080/api/v1/memory/l2/stats | jq '{vector_count, index_type, dimension, last_build_time}'
-
-# L3 图统计
-curl -s http://localhost:8080/api/v1/memory/l3/stats | jq '{total_relations, entity_count, avg_degree}'
-
-# L4 模式统计
-curl -s http://localhost:8080/api/v1/memory/l4/stats | jq '{pattern_count, categories, last_mining_time}'
+# 查看记忆存储目录使用量
+du -sh /var/lib/agentos/memory/
 ```
 
 ---

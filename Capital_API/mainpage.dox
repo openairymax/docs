@@ -53,13 +53,19 @@
  *
  * | 用户态服务 | 说明 | 关键头文件 |
  * |----------|------|-----------|
- * | **gateway_d** | 网关用户态服务 | - |
- * | **llm_d** | LLM服务用户态服务 | `llm_service.h`, `llm_svc_adapter.h` |
+ * | **gateway_d** | 网关用户态服务 | `gateway_service.h` |
+ * | **llm_d** | LLM 服务用户态服务 | `llm_service.h`, `llm_svc_adapter.h` |
  * | **tool_d** | 工具服务用户态服务 | `tool_service.h` |
  * | **sched_d** | 调度用户态服务 | - |
  * | **monit_d** | 监控用户态服务 | - |
  * | **market_d** | 市场用户态服务 | - |
- * | **common** | 公共服务层 | `ipc_service_bus.h`, `service_discovery.h`, `circuit_breaker.h`, `unified_metrics.h`, `alert_manager.h`, `config_manager.h` |
+ * | **channel_d** | 通道用户态服务 | - |
+ * | **observe_d** | 可观测性用户态服务 | - |
+ * | **notify_d** | 通知用户态服务 | - |
+ * | **info_d** | 信息服务用户态服务 | - |
+ * | **hook_d** | Hook 用户态服务 | - |
+ * | **plugin_d** | 插件用户态服务 | - |
+ * | **common** | 公共服务层（共享库，非独立 daemon） | `ipc_service_bus.h`, `service_discovery.h`, `circuit_breaker.h`, `unified_metrics.h`, `alert_manager.h`, `config_manager.h` |
  *
  * @subsection layer_gateway 网关层 (Gateway)
  * 多协议智能网关：
