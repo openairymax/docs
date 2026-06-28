@@ -1213,7 +1213,7 @@ private:
  * - t2 慢思考：复杂任务，深度分析后执行
  * 
  * @see coreloopthree.md 中的三循环架构
- * @see microkernel.md 中的任务管理原语
+ * @see microcorert.md 中的任务管理原语
  */
 class DualSystemScheduler : public SchedulerBase {
 public:
@@ -1467,7 +1467,7 @@ private:
 5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)  
-   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [microcorert.md](../../Capital_Architecture/microcorert.md)
    - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
    - [logging_system.md](../../Capital_Architecture/services/logging.md)

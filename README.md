@@ -1,7 +1,7 @@
 Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# Airymax 文档中心
+# Airymax 文档中心  
 
 **最新**: 2026-06-09
 **状态**: 维护中
@@ -25,15 +25,15 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 📖 文档分类
 
-### 1️⃣ 基础理论 (Basic Theories)
+### 1️⃣ 基础设计 (Basic Theories)
 
-Airymax的理论基石，理解设计哲学的必读材料：
+Airymax 的设计基石，理解设计哲学的必读材料：
 
-- [**体系并行论 (MCIS)**](Basic_Theories/CN_01_体系并行.md) — 多体控制智能系统理论（[English](Basic_Theories/EN_01_MCIS.md)）
-- [**认知层理论**](Basic_Theories/CN_02_认知层设计.md) — 双思考系统与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
-- [**记忆层理论**](Basic_Theories/CN_03_记忆层设计.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
+- [**体系并行 (MCIS)**](Basic_Theories/CN_01_体系并行.md) — 多体控制智能系统（[English](Basic_Theories/EN_01_MCIS.md)）
+- [**认知层设计**](Basic_Theories/CN_02_认知层设计.md) — 双思考系统与三层架构（[English](Basic_Theories/EN_02_Cognition_Theory.md)）
+- [**记忆层设计**](Basic_Theories/CN_03_记忆层设计.md) — 四层记忆卷载模型（[English](Basic_Theories/EN_03_Memory_Theory.md)）
 - [**设计原则**](Basic_Theories/CN_04_系统设计原则.md) — 五维正交设计原则导论（[English](Basic_Theories/EN_04_Design_Principles.md)）
-- [**设计哲学**](Capital_Architecture/philosophy/design_philosophy.md) — 体系并行论与五维正交设计体系详述
+- [**设计哲学**](Capital_Architecture/philosophy/design_philosophy.md) — 体系并行与五维正交设计体系详述
 - [**架构设计原则完整版**](ARCHITECTURAL_PRINCIPLES.md) — S/K/C/E/A五维24条原则详述
 
 ---
@@ -61,7 +61,7 @@ Airymax的理论基石，理解设计哲学的必读材料：
 
 深入理解Airymax的设计哲学和技术实现：
 
-- [**微核心架构**](Capital_Architecture/microkernel.md) — K-1~K-4 原则的实现
+- [**微核心架构**](Capital_Architecture/microcorert.md) — K-1~K-4 原则的实现
 - [**核心循环三层**](Capital_Architecture/coreloopthree.md) — Cognition→Execution→Memory
 - [**记忆卷载系统**](Capital_Architecture/memoryrovol.md) — L1→L2→L3→L4 四层记忆
 - [**IPC通信机制**](Capital_Architecture/kernel/ipc.md) — Binder/Channel/Buffer 进程间通信
@@ -256,7 +256,7 @@ docs/
 ├── ARCHITECTURAL_PRINCIPLES.md    # 五维正交设计原则完整版
 ├── README.md                      # 本文档
 ├── TERMINOLOGY.md                 # 统一术语表
-├── Basic_Theories/                # 基础理论（中/英双语）
+├── Basic_Theories/                # 基础设计（中/英双语）
 │   ├── CN_01_体系并行.md
 │   ├── CN_02_认知层设计.md
 │   ├── CN_03_记忆层设计.md
@@ -264,17 +264,24 @@ docs/
 │   ├── EN_01_MCIS.md
 │   ├── EN_02_Cognition_Theory.md
 │   ├── EN_03_Memory_Theory.md
-│   ├── EN_04_Design_Principles.md
-│   └── DESIGN_PHILOSOPHY.md       # 设计哲学详述
+│   └── EN_04_Design_Principles.md
 ├── Capital_Architecture/          # 架构设计
 │   ├── architecture.md            # 系统总览与分层架构图
-│   ├── C_LANGUAGE_BOUNDARY.md     # C语言边界定义
-│   ├── microkernel.md
-│   ├── coreloopthree.md
-│   ├── memoryrovol.md
-│   ├── ipc.md
-│   ├── syscall.md
-│   ├── logging_system.md
+│   ├── microcorert.md             # 微核心 (MicroCoreRT) 架构详解
+│   ├── coreloopthree.md           # 三层认知循环
+│   ├── memoryrovol.md             # 记忆卷载系统
+│   ├── syscall.md                 # 系统调用架构
+│   ├── kernel/                    # 内核子系统
+│   │   ├── ipc.md                 # IPC 通信机制
+│   │   └── c_language_boundary.md # C 语言边界定义
+│   ├── services/                  # 服务子系统
+│   │   ├── daemon.md              # Daemon 用户态服务
+│   │   └── logging.md             # 日志系统架构
+│   ├── engineering/               # 工程实践
+│   │   ├── testing.md             # 测试架构
+│   │   └── toolkit.md             # 工具链设计
+│   ├── philosophy/                # 设计哲学
+│   │   └── design_philosophy.md   # 体系并行与五维正交设计体系
 │   └── diagrams/                  # 架构图（drawio）
 ├── Capital_API/                   # API参考
 │   ├── README.md

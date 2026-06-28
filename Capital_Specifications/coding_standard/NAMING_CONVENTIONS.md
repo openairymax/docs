@@ -202,10 +202,10 @@ int heapstore_init(const heapstore_config_t *config);
 int heapstore_put(const char *key, const void *data, size_t size);
 int heapstore_get(const char *key, void **data, size_t *size);
 
-// corekern 模块
-int corekern_start(void);
-int corekern_stop(void);
-int corekern_register_cupola(const char *name, cupola_entry_t entry);
+// CoreKern 模块（代码前缀 agentos_core_）
+int agentos_core_start(void);
+int agentos_core_stop(void);
+int agentos_core_register_cupola(const char *name, cupola_entry_t entry);
 ```
 
 ### 4.3 常见动作动词
@@ -217,8 +217,8 @@ int corekern_register_cupola(const char *name, cupola_entry_t entry);
 | `get` | 获取值（不修改状态） | `config_value_get_type` |
 | `set` | 设置值 | `config_context_set` |
 | `init` | 初始化 | `heapstore_init` |
-| `start` | 启动 | `corekern_start` |
-| `stop` | 停止 | `corekern_stop` |
+| `start` | 启动 | `agentos_core_start` |
+| `stop` | 停止 | `agentos_core_stop` |
 | `write` | 写入 | `agentos_log_write` |
 | `clone` | 克隆/深拷贝 | `config_value_clone` |
 | `has` | 检查是否存在 | `config_context_has` |

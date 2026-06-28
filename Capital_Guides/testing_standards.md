@@ -472,9 +472,9 @@ def test_write_operation():
 | 文档 | 描述 |
 |------|------|
 | [测试 README](./README.md) | 测试套件总览 |
-| [架构设计原则](../../docs/ARCHITECTURAL_PRINCIPLES.md) | 五维正交设计体系 |
-| [编码规范](../../docs/Capital_Specifications/coding_standard/Python_coding_style_standard.md) | Python 编码规范 |
-| [C 编码规范](../../docs/Capital_Specifications/coding_standard/C_coding_style_standard.md) | C 编码规范 |
+| [架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md) | 五维正交设计体系 |
+| [编码规范](../../Capital_Specifications/coding_standard/Python_coding_style_standard.md) | Python 编码规范 |
+| [C 编码规范](../../Capital_Specifications/coding_standard/C_coding_style_standard.md) | C 编码规范 |
 
 ---
 

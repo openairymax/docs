@@ -254,7 +254,7 @@ Anthropic Claude 大语言模型 API 集成，支持 Extended Thinking 和 Tool 
   "model": "claude-sonnet-4-20250514",
   "max_tokens": 4096,
   "messages": [
-    { "role": "user", "content": "解释 MCIS 理论" }
+    { "role": "user", "content": "解释 MCIS" }
   ],
   "tools": [
     {
@@ -382,7 +382,7 @@ openai_client = create_openai_client(
     api_key="your-key",
     model="gpt-4o",
 )
-response = await openai_client.chat("解释 MCIS 理论")
+response = await openai_client.chat("解释 MCIS")
 ```
 
 #### 完整 API 参考
@@ -686,7 +686,7 @@ const openaiClient = createOpenAIClient({
   apiKey: 'your-key',
   model: 'gpt-4o',
 });
-const chat = await openaiClient.chat('什么是 MCIS 理论?');
+const chat = await openaiClient.chat('什么是 MCIS?');
 ```
 
 #### 完整 API 参考
@@ -1217,5 +1217,5 @@ agentos protocol test openai
 - [转换器实现](../protocols/core/transformers/include/protocol_transformers.h)
 - [网关桥接 API](../gateway/include/gateway_protocol_bridge.h)
 - [OpenLab 协议绑定](../openlab/openlab/protocols/__init__.py)
-- [Airymax 架构](../../docs/Capital_Architecture/)
-- [快速入门指南](../../docs/Capital_Guides/getting_started.md)
+- [Airymax 架构](../../Capital_Architecture/)
+- [快速入门指南](../../Capital_Guides/getting_started.md)

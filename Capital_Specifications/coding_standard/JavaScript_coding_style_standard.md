@@ -1590,10 +1590,10 @@ export class UnifiedStateManager {
 5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
-   - [microkernel.md](../../Capital_Architecture/microkernel.md)
-   - [ipc.md](../../Capital_Architecture/ipc.md)
+   - [microcorert.md](../../Capital_Architecture/microcorert.md)
+   - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
-   - [logging_system.md](../../Capital_Architecture/logging_system.md)
+   - [logging.md](../../Capital_Architecture/services/logging.md)
 
 ---
 

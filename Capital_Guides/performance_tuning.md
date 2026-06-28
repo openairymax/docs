@@ -751,7 +751,7 @@ agentos-cli manager get corekern.ipc.batch_size
 - [架构设计原则](../architecture/ARCHITECTURAL_PRINCIPLES.md)
 - [部署指南](deployment.md)
 - [故障排查](troubleshooting.md)
-- [微核心架构](../Capital_Architecture/microkernel.md)
+- [微核心架构](../Capital_Architecture/microcorert.md)
 - [记忆卷载系统](../Capital_Architecture/memoryrovol.md)
 
 ---

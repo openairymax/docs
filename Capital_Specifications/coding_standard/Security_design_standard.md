@@ -1283,7 +1283,7 @@ void atoms_secure_free(void* ptr, size_t size) {
 ```go
 // 核心三循环安全集成 - 体现系统观（S-1）和工程观（E-2）原则
 //
-// 连接coreloopthree调度器与microkernel任务管理。
+// 连接coreloopthree调度器与MicroCoreRT任务管理。
 // 实现双向身份验证和完整性保护。
 type SecureSchedulerBridge struct {
 	crypto      CryptoService
@@ -1342,7 +1342,7 @@ func (b *SecureSchedulerBridge) ScheduleSecureTask(task SecureTask) error {
 ## 十三、参考文献
 
 1. **Airymax 架构设计原则**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
-2. **Airymax 微核心设计**: [microkernel.md](../../Capital_Architecture/microkernel.md)
+2. **Airymax 微核心设计**: [microcorert.md](../../Capital_Architecture/microcorert.md)
 3. **Airymax 统一术语表**: [TERMINOLOGY.md](../TERMINOLOGY.md)
 4. **OWASP Top 10**: https://owasp.org/www-project-top-ten/
 5. **NIST Cybersecurity Framework**: https://www.nist.gov/cyberframework

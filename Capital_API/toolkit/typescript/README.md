@@ -78,7 +78,7 @@ console.log(`Agent created: ${agent.id}, state: ${agent.state}`);
 ```typescript
 // 写入记忆
 const record = await client.memory.write({
-  content: 'Airymax uses microkernel architecture',
+  content: 'Airymax uses MicroCoreRT architecture',
   importance: 0.8,
   tags: ['architecture', 'kernel'],
   layer: MemoryLayer.L1_RAW,
@@ -86,7 +86,7 @@ const record = await client.memory.write({
 
 // 查询记忆
 const results = await client.memory.query({
-  text: 'microkernel design patterns',
+  text: 'MicroCoreRT design patterns',
   limit: 5,
   similarityThreshold: 0.7,
 });

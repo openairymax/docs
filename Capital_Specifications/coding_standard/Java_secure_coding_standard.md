@@ -41,7 +41,7 @@ Airymax的五维正交系统为Java安全编码提供了多层次的理论框架
 - **模块化安全设计**：基于S-2原则，安全功能模块化，支持独立部署和升级
 
 #### 1.3.2 内核观（Kernel View）安全
-- **微核心安全模型**：Java代码需与microkernel.md中定义的微核心安全原语保持一致
+- **微核心安全模型**：Java代码需与microcorert.md中定义的微核心安全原语保持一致
 - **系统调用保护**：Java Native Interface（JNI）调用必须严格验证，防止非法跨越用户态-内核态边界
 
 #### 1.3.3 认知观（Cognitive View）安全
@@ -1183,7 +1183,7 @@ public class SecureKernelBinding {
 5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)
-   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [microcorert.md](../../Capital_Architecture/microcorert.md)
    - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
    - [logging_system.md](../../Capital_Architecture/services/logging.md)

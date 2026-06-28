@@ -544,7 +544,7 @@ int main(void) {
     // 4. 执行 Skill
     char* output = NULL;
     err = agentos_sys_skill_execute(skill_ids[0],
-        "{\"query\": \"microkernel architecture patterns\", \"limit\": 5}",
+        "{\"query\": \"MicroCoreRT architecture patterns\", \"limit\": 5}",
         &output);
     if (err == AGENTOS_SUCCESS) {
         printf("\nSkill output: %s\n", output);

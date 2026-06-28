@@ -7,18 +7,18 @@
 
 ## 📋 概述
 
-Airymax 提供7个用户态服务（Daemon），构成完整的Agent运行时基础设施：
+Airymax 提供10个用户态服务（Daemon），构成完整的Agent运行时基础设施：
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Airymax Daemon 层                │
-├──────────┬──────────┬──────────┬───────────────────┤
-│ gateway_d│  llm_d  │channel_d │    sched_d        │
-│  网关服务 │ LLM服务  │ 通道服务 │    调度器         │
-├──────────┼──────────┼──────────┼───────────────────┤
-│ monit_d  │market_d │ tool_d   │                   │
-│ 监控服务 │ 市场服务 │工具执行器 │                   │
-└──────────┴──────────┴──────────┴───────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      Airymax Daemon 层                       │
+├──────────┬──────────┬──────────┬──────────┬─────────────────┤
+│ gateway_d│  llm_d   │ tool_d   │ market_d │    sched_d      │
+│  网关服务 │ LLM服务  │工具执行器 │ 市场服务 │    调度器       │
+├──────────┼──────────┼──────────┼──────────┼─────────────────┤
+│ monit_d  │channel_d │observe_d │notify_d  │    info_d       │
+│ 监控服务 │ 通道服务 │ 观测服务 │ 通知服务 │   信息服务      │
+└──────────┴──────────┴──────────┴──────────┴─────────────────┘
            ↕            ↕           ↕
      ┌──────────┬──────────┬──────────┐
      │ Protocol │  Core    │ Commons  │
@@ -764,6 +764,6 @@ int main() {
 ## 🔗 相关文档
 
 - [CoreLoopThree API](../core/coreloop_api.md)
-- [Protocol Stack API](../protocols/unified_protocol_api.md)
-- [Docker部署指南](../Docker/README.md)
-- [完整示例](../examples/full_agent_example.c)
+- [Protocol Stack API（待编写）](../protocols/unified_protocol_api.md)
+- [Docker部署指南](../docker/README.md)
+- [完整示例（待编写）](../examples/full_agent_example.c)

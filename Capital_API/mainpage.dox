@@ -3,7 +3,7 @@
  *
  * @section overview 系统概述
  *
- * AgentOS 是基于**多体控制论智能系统 (MCIS)** 理论构建的智能体操作系统，
+ * AgentOS 是基于**多体控制论智能系统 (MCIS)** 构建的智能体操作系统，
  * 采用微核心架构，支持五大框架、多协议网关和分层安全防护。
  *
  * @section architecture 系统架构
@@ -127,7 +127,7 @@
  * docker compose -f agentos/gateway/docker/docker-compose.dev.yml up -d
  * @endcode
  *
- * @section mcis MCIS理论
+ * @section mcis MCIS
  *
  * AgentOS 基于**多体控制论智能系统 (Multibody Cybernetic Intelligent System)**
  * 理论设计，核心控制论机制：

@@ -171,7 +171,7 @@ async def streaming_example():
     print("流式响应:")
     async for chunk in client.stream_request(
         method="llm.chat",
-        params={"prompt": "用三句话介绍 MCIS 理论"},
+        params={"prompt": "用三句话介绍 MCIS"},
     ):
         print(chunk, end="", flush=True)
     print()  # 流结束后换行

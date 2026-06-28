@@ -567,7 +567,7 @@ agentos_loop_create(&config, &loop);
 4. 🧪 编写单元测试
 
 ### 高级开发者
-1. 📖 研究 [协议栈扩展](../protocols/protocol_extension_api.md)
+1. 📖 研究 [协议栈扩展（待编写）](../protocols/protocol_extension_api.md)
 2. 🏗️ 开发自定义协议适配器
 3. 🔬 性能优化与调优
 4. 🤝 贡献代码到主仓库
