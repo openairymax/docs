@@ -7,7 +7,7 @@
 
 ## 模块概述
 
-Airymax Daemon 模块是用户空间用户态服务集合，负责提供微核心架构中的高级服务功能。每个用户态服务作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
+Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCoreRT 微核心架构中的高级服务功能。每个用户态服务作为独立进程运行，通过 Unix Socket 或 TCP 与其他组件通信。
 
 ---
 
@@ -93,7 +93,7 @@ sudo make install
 
 # 启动服务（示例）
 ./llm_d --config /etc/agentos/llm.conf
-./tool_d --tcp --port 8081
+./tool_d -p 8081
 ```
 
 ---

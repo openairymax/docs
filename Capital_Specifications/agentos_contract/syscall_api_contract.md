@@ -12,7 +12,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 本文档定位
 
-系统调用 API 规范是 Airymax 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 Airymax 微核心架构的关键实现机制。
+系统调用 API 规范是 Airymax 规范体系的核心组成部分，属于**操作层规范**。本规范定义了用户态程序与内核交互的唯一接口，是 Airymax MicroCoreRT 微核心架构的关键实现机制。
 
 ### 与设计哲学的关系
 
@@ -61,7 +61,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 术语 | 简要定义 | 来源 |
 |------|---------|------|
 | 系统调用 (Syscall) | 用户态进入内核的唯一入口 | 本规范 |
-| 微核心/原子核心 (MicroCoreRT/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
+| MicroCoreRT 微核心/原子核心 (MicroCoreRT/CoreKern) | 只提供不可再分原子机制的最小化内核：IPC、内存管理、任务调度、时间服务 | [架构设计原则](../../../Capital_Architecture/ARCHITECTURAL_PRINCIPLES.md) |
 | TraceID | 分布式追踪的唯一标识 | [日志打印规范](../coding_standard/Log_standard.md) |
 
 ---
@@ -70,7 +70,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 系统调用简介
 
-Airymax 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循微核心设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
+Airymax 系统调用 (syscall) 是用户态程序与内核交互的唯一接口。它遵循 MicroCoreRT 微核心设计思想，将内核核心功能 (任务管理、记忆管理、会话管理、可观测性) 以稳定、安全的 API 形式暴露给上层应用和服务。
 
 所有系统调用定义于 `agentos/atoms/syscall/include/syscalls.h`，使用 `agentos_sys_*` 统一命名前缀，确保参数校验和权限控制的一致性。
 
@@ -96,12 +96,14 @@ typedef int32_t agentos_error_t;
 
 // 常见错误码（定义于 agentos/commons/utils/error/include/error.h）
 #define AGENTOS_OK                     0    // 成功
+#define AGENTOS_ERR_UNKNOWN           -1    // 未知错误
 #define AGENTOS_ERR_INVALID_PARAM     -2    // 参数无效
 #define AGENTOS_ERR_OUT_OF_MEMORY     -4    // 内存不足
 #define AGENTOS_ERR_NOT_FOUND         -6    // 资源不存在
-#define AGENTOS_ERR_PERMISSION_DENIED -10   // 权限不足
 #define AGENTOS_ERR_TIMEOUT           -8    // 操作超时
-// 向后兼容别名：AGENTOS_SUCCESS→AGENTOS_OK, AGENTOS_EINVAL→AGENTOS_ERR_INVALID_PARAM 等
+#define AGENTOS_ERR_PERMISSION_DENIED -10   // 权限不足
+#define AGENTOS_ERR_BUSY              -17   // 资源忙
+#define AGENTOS_ERR_FAIL              -31   // 内部错误
 ```
 
 完整错误码列表见 [第 7 章 错误码](#第 7 章 错误码)。
@@ -122,15 +124,20 @@ agentos_error_t err = agentos_sys_task_submit(
 
 - **输入参数**: 由调用者分配，内核不持有引用
 - **输出参数**: 由内核分配，调用者负责释放
-- **释放方式**: 使用标准 `free()` 函数
+- **释放方式**: 使用 `agentos_sys_free()` 函数
 
 **示例:**
 ```c
-char* output = NULL;
-agentos_error_t err = agentos_sys_memory_search("query", 5, &output);
-if (err == AGENTOS_SUCCESS) {
-    printf("Search result: %s\n", output);
-    free(output);  // 必须释放内核分配的内存
+char** record_ids = NULL;
+float* scores = NULL;
+size_t count = 0;
+agentos_error_t err = agentos_sys_memory_search("query", 5, &record_ids, &scores, &count);
+if (err == AGENTOS_OK) {
+    for (size_t i = 0; i < count; i++) {
+        printf("Record %zu: %s (score: %.2f)\n", i, record_ids[i], scores[i]);
+    }
+    agentos_sys_free(record_ids);  // 必须使用 agentos_sys_free 释放
+    agentos_sys_free(scores);
 }
 ```
 
@@ -142,7 +149,8 @@ if (err == AGENTOS_SUCCESS) {
 
 | 类别 | 系统调用 | 功能描述 | 复杂度 |
 | :--- | :--- | :--- | :--- |
-| **初始化** | `agentos_sys_init` | 设置底层引擎句柄 (认知、执行、记忆) | O(1) |
+| **初始化** | `agentos_syscalls_init` | 初始化系统调用子系统 | O(1) |
+| | `agentos_syscalls_cleanup` | 清理系统调用子系统 | O(1) |
 | **任务管理** | `agentos_sys_task_submit` | 提交自然语言任务，等待执行完成并返回结果 | O(n) |
 | | `agentos_sys_task_query` | 查询任务状态 | O(1) |
 | | `agentos_sys_task_wait` | 等待指定任务完成并获取结果 | O(n) |
@@ -155,8 +163,18 @@ if (err == AGENTOS_SUCCESS) {
 | | `agentos_sys_session_get` | 获取会话信息 | O(1) |
 | | `agentos_sys_session_close` | 关闭会话 | O(1) |
 | | `agentos_sys_session_list` | 列出所有活跃会话 | O(n) |
+| | `agentos_sys_session_get_persist_status` | 获取会话持久化状态 | O(1) |
+| **Agent 管理** | `agentos_sys_agent_spawn` | 生成新的 Agent 实例 | O(1) |
+| | `agentos_sys_agent_terminate` | 终止 Agent 实例 | O(1) |
+| | `agentos_sys_agent_invoke` | 调用 Agent 执行任务 | O(n) |
+| | `agentos_sys_agent_list` | 列出所有 Agent 实例 | O(n) |
+| **Skill 管理** | `agentos_sys_skill_install` | 安装 Skill | O(1) |
+| | `agentos_sys_skill_execute` | 执行 Skill | O(n) |
+| | `agentos_sys_skill_list` | 列出所有已安装 Skill | O(n) |
+| | `agentos_sys_skill_uninstall` | 卸载 Skill | O(1) |
 | **可观测性** | `agentos_sys_telemetry_metrics` | 导出系统指标 (JSON) | O(1) |
 | | `agentos_sys_telemetry_traces` | 导出追踪数据 (JSON) | O(n) |
+| **辅助函数** | `agentos_sys_free` | 释放内核分配的内存 | O(1) |
 
 ### 2.2 按优先级分类
 
@@ -179,45 +197,63 @@ if (err == AGENTOS_SUCCESS) {
 
 ### 3.1 初始化
 
-#### 3.1.1 `agentos_sys_init`
+#### 3.1.1 `agentos_syscalls_init`
 
-**功能**: 设置底层引擎句柄，供后续系统调用使用。
+**功能**: 初始化系统调用子系统，为后续系统调用做好准备。
 
 **语法**:
 ```c
-void agentos_sys_init(void* cognition, void* execution, void* memory);
+agentos_error_t agentos_syscalls_init(void);
 ```
 
-**参数**:
-- `cognition`: 认知引擎句柄 (由内核创建)
-- `execution`: 执行引擎句柄
-- `memory`: 记忆引擎句柄
+**参数**: 无
 
-**返回值**: 无
+**返回值**:
+- `AGENTOS_OK`: 初始化成功
+- `AGENTOS_ERR_FAIL`: 初始化失败
 
 **说明**: 
 - 此函数应在内核启动后、任何其他系统调用之前调用一次
-- 句柄由内核内部管理，上层应用无需关心其具体类型
-- 多次调用会覆盖之前的句柄，可能导致未定义行为
+- 多次调用是安全的，后续调用将直接返回成功
+- 若初始化失败，系统调用功能不可用
 
 **示例**:
 ```c
 // 内核启动流程
 int main() {
-    // 1. 创建引擎实例
-    void* cognition_engine = cognition_create();
-    void* execution_engine = execution_create();
-    void* memory_engine = memory_create();
+    // 1. 初始化系统调用子系统
+    agentos_error_t err = agentos_syscalls_init();
+    if (err != AGENTOS_OK) {
+        fprintf(stderr, "Syscall init failed: %d\n", err);
+        return 1;
+    }
 
-    // 2. 初始化内核
-    agentos_sys_init(cognition_engine, execution_engine, memory_engine);
-
-    // 3. 开始处理请求
+    // 2. 开始处理请求
     // ...
 
+    // 3. 清理
+    agentos_syscalls_cleanup();
     return 0;
 }
 ```
+
+#### 3.1.2 `agentos_syscalls_cleanup`
+
+**功能**: 清理系统调用子系统，释放所有内核资源。
+
+**语法**:
+```c
+void agentos_syscalls_cleanup(void);
+```
+
+**参数**: 无
+
+**返回值**: 无
+
+**说明**: 
+- 此函数应在内核退出前调用一次
+- 调用后所有系统调用功能不可用
+- 重复调用不会导致未定义行为
 
 ### 3.2 任务管理
 
@@ -231,7 +267,7 @@ agentos_error_t agentos_sys_task_submit(
     const char* input,
     size_t input_len,
     uint32_t timeout_ms,
-    char** out_result
+    char** out_output
 );
 ```
 
@@ -239,14 +275,14 @@ agentos_error_t agentos_sys_task_submit(
 - `input`: 自然语言描述的任务目标
 - `input_len`: 输入长度
 - `timeout_ms`: 超时 (毫秒),0 表示无限等待
-- `out_result`: 输出结果 (JSON 字符串),调用者需使用 `free()` 释放
+- `out_output`: 输出结果 (JSON 字符串),调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOMEM`: 内存不足
-- `AGENTOS_ETIMEDOUT`: 任务超时
-- `AGENTOS_ENOTINIT`: 引擎未初始化
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+- `AGENTOS_ERR_TIMEOUT`: 任务超时
+- `AGENTOS_ERR_FAIL`: 内部错误
 
 **性能特征**:
 - **时间复杂度**: O(n),n 为任务复杂度
@@ -258,9 +294,9 @@ agentos_error_t agentos_sys_task_submit(
 char* result = NULL;
 agentos_error_t err = agentos_sys_task_submit(
     "开发一个电商应用", 18, 30000, &result);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Task result: %s\n", result);
-    free(result);
+    agentos_sys_free(result);
 } else {
     fprintf(stderr, "Task failed: %d\n", err);
 }
@@ -272,9 +308,9 @@ if (err == AGENTOS_SUCCESS) {
 ```c
 // 1. 始终检查返回值
 char* result = NULL;
-if (agentos_sys_task_submit(...) == AGENTOS_SUCCESS) {
+if (agentos_sys_task_submit(...) == AGENTOS_OK) {
     // 处理结果
-    free(result);
+    agentos_sys_free(result);
 }
 
 // 2. 合理设置超时时间
@@ -282,7 +318,7 @@ agentos_sys_task_submit(task, len, 30000, &result);  // 30 秒超时
 
 // 3. 及时释放输出结果
 if (result) {
-    free(result);
+    agentos_sys_free(result);
     result = NULL;
 }
 ```
@@ -296,7 +332,7 @@ printf("Result: %s\n", result);  // result 可能为 NULL
 // 2. 不释放内存
 char* result = NULL;
 agentos_sys_task_submit(..., &result);
-// 忘记 free(result),导致内存泄漏
+// 忘记 agentos_sys_free(result),导致内存泄漏
 
 // 3. 超时时间设置不合理
 agentos_sys_task_submit(..., 100, &result);  // 100ms 太短，容易超时
@@ -331,14 +367,14 @@ enum task_status {
 ```
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOENT`: 任务不存在
-- `AGENTOS_EINVAL`: 参数无效
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: 任务不存在
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
 
 **示例**:
 ```c
 int status;
-if (agentos_sys_task_query(task_id, &status) == AGENTOS_SUCCESS) {
+if (agentos_sys_task_query(task_id, &status) == AGENTOS_OK) {
     switch (status) {
         case TASK_PENDING:
             printf("Task is pending\n");
@@ -378,10 +414,10 @@ agentos_error_t agentos_sys_task_wait(
 - `out_result`: 输出结果，调用者需释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOENT`: 任务不存在
-- `AGENTOS_ETIMEDOUT`: 等待超时
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: 任务不存在
+- `AGENTOS_ERR_TIMEOUT`: 等待超时
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **与 `task_submit` 的区别**:
 - `task_submit`: 提交并立即执行，适用于新任务
@@ -397,9 +433,9 @@ do_other_work();
 
 // 3. 等待任务完成
 char* result = NULL;
-if (agentos_sys_task_wait(task_id, 30000, &result) == AGENTOS_SUCCESS) {
+if (agentos_sys_task_wait(task_id, 30000, &result) == AGENTOS_OK) {
     printf("Task completed: %s\n", result);
-    free(result);
+    agentos_sys_free(result);
 }
 ```
 
@@ -416,9 +452,9 @@ agentos_error_t agentos_sys_task_cancel(const char* task_id);
 - `task_id`: 任务 ID
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 取消成功
-- `AGENTOS_ENOENT`: 任务不存在
-- `AGENTOS_EPERM`: 无权取消该任务
+- `AGENTOS_OK`: 取消成功
+- `AGENTOS_ERR_NOT_FOUND`: 任务不存在
+- `AGENTOS_ERR_PERMISSION_DENIED`: 无权取消该任务
 
 **说明**:
 - 只能取消 PENDING 或 RUNNING 状态的任务
@@ -427,7 +463,7 @@ agentos_error_t agentos_sys_task_cancel(const char* task_id);
 
 **示例**:
 ```c
-if (agentos_sys_task_cancel(task_id) == AGENTOS_SUCCESS) {
+if (agentos_sys_task_cancel(task_id) == AGENTOS_OK) {
     printf("Task cancelled successfully\n");
 } else {
     fprintf(stderr, "Failed to cancel task\n");
@@ -443,32 +479,33 @@ if (agentos_sys_task_cancel(task_id) == AGENTOS_SUCCESS) {
 **语法**:
 ```c
 agentos_error_t agentos_sys_memory_write(
-    const char* data,
-    size_t data_len,
+    const void* data,
+    size_t len,
     const char* metadata,
-    size_t metadata_len
+    char** out_record_id
 );
 ```
 
 **参数**:
-- `data`: 记忆数据 (JSON 格式)
-- `data_len`: 数据长度
-- `metadata`: 元数据 (可选，可为 NULL)
-- `metadata_len`: 元数据长度
+- `data`: 记忆数据 (二进制或文本)
+- `len`: 数据长度
+- `metadata`: 元数据 (JSON 字符串，可选，可为 NULL)
+- `out_record_id`: 输出记录 ID,调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOMEM`: 内存不足
-- `AGENTOS_ENOTINIT`: 记忆引擎未初始化
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
 const char* data = "{\"type\":\"fact\",\"content\":\"Earth is round\"}";
 const char* meta = "{\"source\":\"user\",\"priority\":1}";
+char* record_id = NULL;
 
-if (agentos_sys_memory_write(data, strlen(data), meta, strlen(meta)) == AGENTOS_SUCCESS) {
-    printf("Memory written successfully\n");
+if (agentos_sys_memory_write(data, strlen(data), meta, &record_id) == AGENTOS_OK) {
+    printf("Memory written, record_id: %s\n", record_id);
+    agentos_sys_free(record_id);
 }
 ```
 
@@ -480,28 +517,38 @@ if (agentos_sys_memory_write(data, strlen(data), meta, strlen(meta)) == AGENTOS_
 ```c
 agentos_error_t agentos_sys_memory_search(
     const char* query,
-    size_t query_len,
-    char** out_results
+    uint32_t limit,
+    char*** out_record_ids,
+    float** out_scores,
+    size_t* out_count
 );
 ```
 
 **参数**:
 - `query`: 搜索查询 (自然语言)
-- `query_len`: 查询长度
-- `out_results`: 搜索结果 (JSON 数组),调用者需释放
+- `limit`: 最大返回结果数量
+- `out_record_ids`: 输出记录 ID 数组，调用者需使用 `agentos_sys_free()` 释放
+- `out_scores`: 输出相关性分数数组，调用者需使用 `agentos_sys_free()` 释放
+- `out_count`: 输出结果数量
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOMEM`: 内存不足
-- `AGENTOS_ENOTFOUND`: 未找到匹配结果
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+- `AGENTOS_ERR_NOT_FOUND`: 未找到匹配结果
 
 **示例**:
 ```c
-char* results = NULL;
-if (agentos_sys_memory_search("地球形状", 12, &results) == AGENTOS_SUCCESS) {
-    printf("Search results: %s\n", results);
-    free(results);
+char** record_ids = NULL;
+float* scores = NULL;
+size_t count = 0;
+
+if (agentos_sys_memory_search("地球形状", 5, &record_ids, &scores, &count) == AGENTOS_OK) {
+    for (size_t i = 0; i < count; i++) {
+        printf("Record %s (score: %.2f)\n", record_ids[i], scores[i]);
+    }
+    agentos_sys_free(record_ids);
+    agentos_sys_free(scores);
 }
 ```
 
@@ -512,26 +559,29 @@ if (agentos_sys_memory_search("地球形状", 12, &results) == AGENTOS_SUCCESS) 
 **语法**:
 ```c
 agentos_error_t agentos_sys_memory_get(
-    const char* memory_id,
-    char** out_data
+    const char* record_id,
+    void** out_data,
+    size_t* out_len
 );
 ```
 
 **参数**:
-- `memory_id`: 记忆 ID
-- `out_data`: 记忆数据，调用者需释放
+- `record_id`: 记录 ID
+- `out_data`: 记忆数据，调用者需使用 `agentos_sys_free()` 释放
+- `out_len`: 输出数据长度
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOENT`: 记忆不存在
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: 记录不存在
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
-char* data = NULL;
-if (agentos_sys_memory_get(mem_id, &data) == AGENTOS_SUCCESS) {
-    printf("Memory data: %s\n", data);
-    free(data);
+void* data = NULL;
+size_t len = 0;
+if (agentos_sys_memory_get(record_id, &data, &len) == AGENTOS_OK) {
+    printf("Memory data (%zu bytes)\n", len);
+    agentos_sys_free(data);
 }
 ```
 
@@ -541,20 +591,20 @@ if (agentos_sys_memory_get(mem_id, &data) == AGENTOS_SUCCESS) {
 
 **语法**:
 ```c
-agentos_error_t agentos_sys_memory_delete(const char* memory_id);
+agentos_error_t agentos_sys_memory_delete(const char* record_id);
 ```
 
 **参数**:
-- `memory_id`: 记忆 ID
+- `record_id`: 记录 ID
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 删除成功
-- `AGENTOS_ENOENT`: 记忆不存在
-- `AGENTOS_EPERM`: 无权删除
+- `AGENTOS_OK`: 删除成功
+- `AGENTOS_ERR_NOT_FOUND`: 记录不存在
+- `AGENTOS_ERR_PERMISSION_DENIED`: 无权删除
 
 **示例**:
 ```c
-if (agentos_sys_memory_delete(mem_id) == AGENTOS_SUCCESS) {
+if (agentos_sys_memory_delete(record_id) == AGENTOS_OK) {
     printf("Memory deleted\n");
 }
 ```
@@ -568,28 +618,27 @@ if (agentos_sys_memory_delete(mem_id) == AGENTOS_SUCCESS) {
 **语法**:
 ```c
 agentos_error_t agentos_sys_session_create(
-    const char* manager,
+    const char* metadata,
     char** out_session_id
 );
 ```
 
 **参数**:
-- `manager`: 会话配置 (JSON 格式)
-- `out_session_id`: 会话 ID,调用者需释放
+- `metadata`: 会话元数据 (JSON 格式)
+- `out_session_id`: 会话 ID,调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
 char* session_id = NULL;
-const char* manager = "{\"user\":\"alice\",\"ttl\":3600}";
-if (agentos_sys_session_create(manager, &session_id) == AGENTOS_SUCCESS) {
+const char* metadata = "{\"user\":\"alice\",\"ttl\":3600}";
+if (agentos_sys_session_create(metadata, &session_id) == AGENTOS_OK) {
     printf("Session created: %s\n", session_id);
-    // 使用会话...
-    free(session_id);
+    agentos_sys_free(session_id);
 }
 ```
 
@@ -607,19 +656,19 @@ agentos_error_t agentos_sys_session_get(
 
 **参数**:
 - `session_id`: 会话 ID
-- `out_info`: 会话信息 (JSON 格式),调用者需释放
+- `out_info`: 会话信息 (JSON 格式),调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOENT`: 会话不存在
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: 会话不存在
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
 char* info = NULL;
-if (agentos_sys_session_get(sess_id, &info) == AGENTOS_SUCCESS) {
+if (agentos_sys_session_get(sess_id, &info) == AGENTOS_OK) {
     printf("Session info: %s\n", info);
-    free(info);
+    agentos_sys_free(info);
 }
 ```
 
@@ -636,8 +685,8 @@ agentos_error_t agentos_sys_session_close(const char* session_id);
 - `session_id`: 会话 ID
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOENT`: 会话不存在
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: 会话不存在
 
 **示例**:
 ```c
@@ -650,28 +699,303 @@ agentos_sys_session_close(sess_id);
 
 **语法**:
 ```c
-agentos_error_t agentos_sys_session_list(char** out_sessions);
+agentos_error_t agentos_sys_session_list(char*** out_sessions, size_t* out_count);
 ```
 
 **参数**:
-- `out_sessions`: 会话列表 (JSON 数组),调用者需释放
+- `out_sessions`: 会话 ID 数组，调用者需使用 `agentos_sys_free()` 释放
+- `out_count`: 输出会话数量
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
-char* sessions = NULL;
-if (agentos_sys_session_list(&sessions) == AGENTOS_SUCCESS) {
-    printf("Active sessions: %s\n", sessions);
-    free(sessions);
+char** sessions = NULL;
+size_t count = 0;
+if (agentos_sys_session_list(&sessions, &count) == AGENTOS_OK) {
+    for (size_t i = 0; i < count; i++) {
+        printf("Session: %s\n", sessions[i]);
+    }
+    agentos_sys_free(sessions);
 }
 ```
 
-### 3.5 可观测性
+#### 3.4.5 `agentos_sys_session_get_persist_status`
 
-#### 3.5.1 `agentos_sys_telemetry_metrics`
+**功能**: 获取会话持久化状态。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_session_get_persist_status(
+    const char* session_id,
+    session_persist_status_t* out_status,
+    agentos_error_t* out_error
+);
+```
+
+**参数**:
+- `session_id`: 会话 ID
+- `out_status`: 输出持久化状态
+- `out_error`: 输出详细错误信息
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_NOT_FOUND`: 会话不存在
+
+**示例**:
+```c
+session_persist_status_t status;
+agentos_error_t persist_err;
+if (agentos_sys_session_get_persist_status(sess_id, &status, &persist_err) == AGENTOS_OK) {
+    printf("Persist status: %d\n", status);
+}
+```
+
+### 3.5 Agent 管理
+
+#### 3.5.1 `agentos_sys_agent_spawn`
+
+**功能**: 生成新的 Agent 实例。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_agent_spawn(
+    const char* agent_spec,
+    char** out_agent_id
+);
+```
+
+**参数**:
+- `agent_spec`: Agent 规格说明 (JSON 格式)
+- `out_agent_id`: 输出 Agent ID,调用者需使用 `agentos_sys_free()` 释放
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char* agent_id = NULL;
+const char* spec = "{\"name\":\"assistant\",\"model\":\"gpt-4\"}";
+if (agentos_sys_agent_spawn(spec, &agent_id) == AGENTOS_OK) {
+    printf("Agent created: %s\n", agent_id);
+    agentos_sys_free(agent_id);
+}
+```
+
+#### 3.5.2 `agentos_sys_agent_terminate`
+
+**功能**: 终止 Agent 实例。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_agent_terminate(const char* agent_id);
+```
+
+**参数**:
+- `agent_id`: Agent ID
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: Agent 不存在
+- `AGENTOS_ERR_PERMISSION_DENIED`: 无权终止
+
+**示例**:
+```c
+if (agentos_sys_agent_terminate(agent_id) == AGENTOS_OK) {
+    printf("Agent terminated\n");
+}
+```
+
+#### 3.5.3 `agentos_sys_agent_invoke`
+
+**功能**: 调用 Agent 执行任务。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_agent_invoke(
+    const char* agent_id,
+    const char* input,
+    size_t input_len,
+    char** out_output
+);
+```
+
+**参数**:
+- `agent_id`: Agent ID
+- `input`: 输入数据
+- `input_len`: 输入长度
+- `out_output`: 输出结果，调用者需使用 `agentos_sys_free()` 释放
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_NOT_FOUND`: Agent 不存在
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char* output = NULL;
+if (agentos_sys_agent_invoke(agent_id, "Hello", 5, &output) == AGENTOS_OK) {
+    printf("Agent response: %s\n", output);
+    agentos_sys_free(output);
+}
+```
+
+#### 3.5.4 `agentos_sys_agent_list`
+
+**功能**: 列出所有 Agent 实例。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_agent_list(char*** out_agent_ids, size_t* out_count);
+```
+
+**参数**:
+- `out_agent_ids`: Agent ID 数组，调用者需使用 `agentos_sys_free()` 释放
+- `out_count`: 输出 Agent 数量
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char** agent_ids = NULL;
+size_t count = 0;
+if (agentos_sys_agent_list(&agent_ids, &count) == AGENTOS_OK) {
+    for (size_t i = 0; i < count; i++) {
+        printf("Agent: %s\n", agent_ids[i]);
+    }
+    agentos_sys_free(agent_ids);
+}
+```
+
+### 3.6 Skill 管理
+
+#### 3.6.1 `agentos_sys_skill_install`
+
+**功能**: 安装 Skill。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_skill_install(
+    const char* skill_url,
+    char** out_skill_id
+);
+```
+
+**参数**:
+- `skill_url`: Skill 下载地址
+- `out_skill_id`: 输出 Skill ID,调用者需使用 `agentos_sys_free()` 释放
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char* skill_id = NULL;
+if (agentos_sys_skill_install("https://example.com/skills/calc.zip", &skill_id) == AGENTOS_OK) {
+    printf("Skill installed: %s\n", skill_id);
+    agentos_sys_free(skill_id);
+}
+```
+
+#### 3.6.2 `agentos_sys_skill_execute`
+
+**功能**: 执行 Skill。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_skill_execute(
+    const char* skill_id,
+    const char* input,
+    char** out_output
+);
+```
+
+**参数**:
+- `skill_id`: Skill ID
+- `input`: 输入数据
+- `out_output`: 输出结果，调用者需使用 `agentos_sys_free()` 释放
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_INVALID_PARAM`: 参数无效
+- `AGENTOS_ERR_NOT_FOUND`: Skill 不存在
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char* output = NULL;
+if (agentos_sys_skill_execute(skill_id, "{\"a\":1,\"b\":2}", &output) == AGENTOS_OK) {
+    printf("Skill output: %s\n", output);
+    agentos_sys_free(output);
+}
+```
+
+#### 3.6.3 `agentos_sys_skill_list`
+
+**功能**: 列出所有已安装的 Skill。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_skill_list(char*** out_skills, size_t* out_count);
+```
+
+**参数**:
+- `out_skills`: Skill ID 数组，调用者需使用 `agentos_sys_free()` 释放
+- `out_count`: 输出 Skill 数量
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
+
+**示例**:
+```c
+char** skills = NULL;
+size_t count = 0;
+if (agentos_sys_skill_list(&skills, &count) == AGENTOS_OK) {
+    for (size_t i = 0; i < count; i++) {
+        printf("Skill: %s\n", skills[i]);
+    }
+    agentos_sys_free(skills);
+}
+```
+
+#### 3.6.4 `agentos_sys_skill_uninstall`
+
+**功能**: 卸载 Skill。
+
+**语法**:
+```c
+agentos_error_t agentos_sys_skill_uninstall(const char* skill_id);
+```
+
+**参数**:
+- `skill_id`: Skill ID
+
+**返回值**:
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_NOT_FOUND`: Skill 不存在
+- `AGENTOS_ERR_PERMISSION_DENIED`: 无权卸载
+
+**示例**:
+```c
+if (agentos_sys_skill_uninstall(skill_id) == AGENTOS_OK) {
+    printf("Skill uninstalled\n");
+}
+```
+
+### 3.7 可观测性
+
+#### 3.7.1 `agentos_sys_telemetry_metrics`
 
 **功能**: 导出系统指标 (JSON 格式)。
 
@@ -681,18 +1005,18 @@ agentos_error_t agentos_sys_telemetry_metrics(char** out_metrics);
 ```
 
 **参数**:
-- `out_metrics`: 指标数据，调用者需释放
+- `out_metrics`: 指标数据，调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
 char* metrics = NULL;
-if (agentos_sys_telemetry_metrics(&metrics) == AGENTOS_SUCCESS) {
+if (agentos_sys_telemetry_metrics(&metrics) == AGENTOS_OK) {
     printf("System metrics: %s\n", metrics);
-    free(metrics);
+    agentos_sys_free(metrics);
 }
 ```
 
@@ -711,29 +1035,62 @@ if (agentos_sys_telemetry_metrics(&metrics) == AGENTOS_SUCCESS) {
 }
 ```
 
-#### 3.5.2 `agentos_sys_telemetry_traces`
+#### 3.7.2 `agentos_sys_telemetry_traces`
 
 **功能**: 导出追踪数据 (JSON 格式)。
 
 **语法**:
 ```c
-agentos_error_t agentos_sys_telemetry_traces(char** out_traces);
+agentos_error_t agentos_sys_telemetry_traces(
+    const char* trace_id,
+    char** out_spans
+);
 ```
 
 **参数**:
-- `out_traces`: 追踪数据，调用者需释放
+- `trace_id`: 追踪 ID (为 NULL 时返回所有追踪)
+- `out_spans`: 追踪数据，调用者需使用 `agentos_sys_free()` 释放
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTOS_OK`: 成功
+- `AGENTOS_ERR_OUT_OF_MEMORY`: 内存不足
 
 **示例**:
 ```c
-char* traces = NULL;
-if (agentos_sys_telemetry_traces(&traces) == AGENTOS_SUCCESS) {
-    printf("Traces: %s\n", traces);
-    free(traces);
+char* spans = NULL;
+if (agentos_sys_telemetry_traces("trace-123", &spans) == AGENTOS_OK) {
+    printf("Spans: %s\n", spans);
+    agentos_sys_free(spans);
 }
+```
+
+### 3.8 辅助函数
+
+#### 3.8.1 `agentos_sys_free`
+
+**功能**: 释放由系统调用分配的内存。
+
+**语法**:
+```c
+void agentos_sys_free(void* ptr);
+```
+
+**参数**:
+- `ptr`: 指向待释放内存的指针
+
+**返回值**: 无
+
+**说明**:
+- 所有系统调用输出的动态分配内存，必须使用此函数释放
+- 禁止使用标准库 `free()` 释放系统调用分配的内存
+- 传入 NULL 是安全的，不会产生任何效果
+
+**示例**:
+```c
+char* output = NULL;
+agentos_sys_task_submit("task", 4, 30000, &output);
+// 使用输出...
+agentos_sys_free(output);  // 必须使用 agentos_sys_free 释放
 ```
 
 ---
@@ -757,13 +1114,13 @@ char* result = NULL;
 
 while (retries-- > 0) {
     err = agentos_sys_task_submit(input, len, 30000, &result);
-    if (err == AGENTOS_SUCCESS || err != AGENTOS_ETIMEDOUT) {
+    if (err == AGENTOS_OK || err != AGENTOS_ERR_TIMEOUT) {
         break;  // 成功或非超时错误，退出重试
     }
     sleep(1);  // 等待 1 秒后重试
 }
 
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     fprintf(stderr, "Task failed after retries: %d\n", err);
 }
 ```
@@ -774,7 +1131,7 @@ if (err != AGENTOS_SUCCESS) {
 
 ```c
 agentos_error_t err = agentos_sys_task_submit(NULL, 0, 30000, &result);
-if (err == AGENTOS_EINVAL) {
+if (err == AGENTOS_ERR_INVALID_PARAM) {
     fprintf(stderr, "Invalid parameters: %d\n", err);
     exit(1);  // 立即退出
 }
@@ -785,7 +1142,7 @@ if (err == AGENTOS_EINVAL) {
 所有错误应记录到日志系统：
 
 ```c
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     AGENTOS_LOG_ERROR("Syscall failed: error=%d, function=%s", err, __func__);
 }
 ```
@@ -837,9 +1194,16 @@ char* cached_search(const char* query) {
     }
     
     // 未命中，调用系统调用
-    result = NULL;
-    agentos_sys_memory_search(query, strlen(query), &result);
-    cache_put(search_cache, query, result);
+    char** record_ids = NULL;
+    float* scores = NULL;
+    size_t count = 0;
+    agentos_sys_memory_search(query, 5, &record_ids, &scores, &count);
+    if (count > 0) {
+        result = strdup(record_ids[0]);
+        cache_put(search_cache, query, result);
+        agentos_sys_free(record_ids);
+        agentos_sys_free(scores);
+    }
     return result;
 }
 ```
@@ -873,17 +1237,17 @@ agentos_sys_task_wait(task_id, 30000, &result);
 agentos_error_t agentos_sys_task_submit(const char* input, size_t input_len, ...) {
     // 1. 空指针检查
     if (!input || input_len == 0) {
-        return AGENTOS_EINVAL;
+        return AGENTOS_ERR_INVALID_PARAM;
     }
     
     // 2. 长度限制检查
     if (input_len > MAX_INPUT_SIZE) {
-        return AGENTOS_EINVAL;
+        return AGENTOS_ERR_INVALID_PARAM;
     }
     
     // 3. 权限检查
     if (!has_permission(TASK_SUBMIT)) {
-        return AGENTOS_EPERM;
+        return AGENTOS_ERR_PERMISSION_DENIED;
     }
     
     // 4. 审计日志
@@ -925,30 +1289,21 @@ agentos_error_t agentos_sys_task_submit(const char* input, size_t input_len, ...
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 完整错误码列表
 
-> **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentos/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTOS_EINVAL = -2, AGENTOS_ENOMEM = -4, AGENTOS_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
-
-| 错误码 | 值 | 说明 | 常见原因 |
-|--------|-----|------|---------|
-| `AGENTOS_SUCCESS` | 0 | 成功 | - |
-| `AGENTOS_EINVAL` | -1 | 无效参数 | 空指针、长度超限、格式错误 |
-| `AGENTOS_ENOMEM` | -2 | 内存不足 | 系统内存耗尽 |
-| `AGENTOS_EBUSY` | -3 | 资源忙 | 资源被占用 |
-| `AGENTOS_ENOENT` | -4 | 资源不存在 | ID 错误、资源已删除 |
-| `AGENTOS_EPERM` | -5 | 权限不足 | 缺少权限 |
-| `AGENTOS_ETIMEDOUT` | -6 | 操作超时 | 超时时间设置过短 |
-| `AGENTOS_EEXIST` | -7 | 资源已存在 | 重复创建 |
-| `AGENTOS_ECANCELED` | -8 | 操作取消 | 被用户取消 |
-| `AGENTOS_ENOTSUP` | -9 | 不支持 | 功能未实现 |
-| `AGENTOS_EIO` | -10 | I/O 错误 | 磁盘故障、网络中断 |
-| `AGENTOS_EINTR` | -11 | 被中断 | 信号中断 |
-| `AGENTOS_EOVERFLOW` | -12 | 溢出 | 数据超出范围 |
-| `AGENTOS_EBADF` | -13 | 无效状态或句柄 | 句柄损坏 |
-| `AGENTOS_ENOTINIT` | -14 | 未初始化 | 引擎未初始化 |
-| `AGENTOS_ERESOURCE` | -15 | 资源耗尽 | 配额用尽 |
+| 宏名 | 值 | 说明 | 常见原因 |
+|------|-----|------|---------|
+| `AGENTOS_OK` | 0 | 成功 | - |
+| `AGENTOS_ERR_UNKNOWN` | -1 | 未知错误 | 未分类的内部错误 |
+| `AGENTOS_ERR_INVALID_PARAM` | -2 | 无效参数 | 空指针、长度超限、格式错误 |
+| `AGENTOS_ERR_OUT_OF_MEMORY` | -4 | 内存不足 | 系统内存耗尽 |
+| `AGENTOS_ERR_NOT_FOUND` | -6 | 资源不存在 | ID 错误、资源已删除 |
+| `AGENTOS_ERR_TIMEOUT` | -8 | 操作超时 | 超时时间设置过短 |
+| `AGENTOS_ERR_PERMISSION_DENIED` | -10 | 权限不足 | 缺少权限 |
+| `AGENTOS_ERR_BUSY` | -17 | 资源忙 | 资源被占用 |
+| `AGENTOS_ERR_FAIL` | -31 | 内部错误 | 通用内部故障 |
 
 ### 7.2 错误码映射
 
@@ -956,11 +1311,11 @@ agentos_error_t agentos_sys_task_submit(const char* input, size_t input_len, ...
 
 ```python
 ERROR_MAP = {
-    AGENTOS_EINVAL: -32602,      # Invalid params
-    AGENTOS_ENOENT: -32601,      # Method not found
-    AGENTOS_EPERM: -32003,       # Permission denied
-    AGENTOS_ENOMEM: -32000,      # Server error
-    AGENTOS_ETIMEDOUT: -32000,   # Server error
+    AGENTOS_ERR_INVALID_PARAM: -32602,      # Invalid params
+    AGENTOS_ERR_NOT_FOUND: -32601,          # Method not found
+    AGENTOS_ERR_PERMISSION_DENIED: -32003,  # Permission denied
+    AGENTOS_ERR_OUT_OF_MEMORY: -32000,      # Server error
+    AGENTOS_ERR_TIMEOUT: -32000,            # Server error
 }
 ```
 
@@ -974,16 +1329,21 @@ ERROR_MAP = {
 **任务管理**: 3.2 节  
 **记忆管理**: 3.3 节  
 **会话管理**: 3.4 节  
-**可观测性**: 3.5 节  
+**Agent 管理**: 3.5 节  
+**Skill 管理**: 3.6 节  
+**可观测性**: 3.7 节  
+**辅助函数**: 3.8 节  
 
 ### A.2 常用系统调用速查
 
 | 功能 | 系统调用 | 参数 | 返回值 |
 |------|---------|------|--------|
-| 提交任务 | `task_submit` | input, timeout | result |
+| 提交任务 | `task_submit` | input, timeout | output |
 | 查询任务 | `task_query` | task_id | status |
-| 搜索记忆 | `memory_search` | query | results |
-| 创建会话 | `session_create` | manager | session_id |
+| 搜索记忆 | `memory_search` | query, limit | record_ids, scores |
+| 创建会话 | `session_create` | metadata | session_id |
+| 生成 Agent | `agent_spawn` | agent_spec | agent_id |
+| 安装 Skill | `skill_install` | skill_url | skill_id |
 | 导出指标 | `telemetry_metrics` | - | metrics_json |
 
 ---

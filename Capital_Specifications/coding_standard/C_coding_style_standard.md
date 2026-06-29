@@ -319,7 +319,7 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 
 | 编号 | 禁止模式 | 检测命令 |
 |------|---------|----------|
-| BAN-01 | `return AGENTOS_SUCCESS` 占位返回 | `grep -rn "return AGENTOS_SUCCESS" --include="*.c"` |
+| BAN-01 | `return AGENTOS_OK` 占位返回 | `grep -rn "return AGENTOS_OK" --include="*.c"` |
 | BAN-02 | `(void)param` 忽略参数 | `grep -rn "(void)" --include="*.c"` |
 | BAN-03 | 空函数体 `{}` | 代码审查 |
 | BAN-04 | TODO/FIXME 无关联 Issue | `grep -rn "TODO\|FIXME" --include="*.c"` |

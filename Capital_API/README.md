@@ -132,14 +132,14 @@
 int main() {
     // 1. 初始化核心系统
     agentos_error_t err = agentos_core_init();
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         return -1;
     }
 
     // 2. 创建三层循环
     agentos_core_loop_t* loop = NULL;
     err = agentos_loop_create(NULL, &loop);
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         agentos_core_shutdown();
         return -1;
     }
@@ -157,7 +157,7 @@ int main() {
     size_t result_len = 0;
     err = agentos_loop_wait(loop, task_id, 30000, &result, &result_len);
     
-    if (err == AGENTOS_SUCCESS && result) {
+    if (err == AGENTOS_OK && result) {
         printf("Agent响应: %.*s\n", (int)result_len, result);
         AGENTOS_FREE(result);
     }
@@ -247,7 +247,7 @@ if (mcp->encode) {
 
 ### 1. 错误处理约定
 所有API函数返回 `agentos_error_t` 类型：
-- `AGENTOS_SUCCESS` (0): 成功
+- `AGENTOS_OK` (0): 成功
 - `AGENTOS_EINVAL` (-1): 无效参数
 - `AGENTOS_ENOMEM` (-2): 内存不足
 - `AGENTOS_ENOTINIT` (-3): 未初始化
@@ -268,7 +268,7 @@ if (mcp->encode) {
 ### 4. 命名规范
 - 函数: `module_action_object` (如 `agentos_loop_create`)
 - 类型: `module_object_t` (如 `agentos_core_loop_t`)
-- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTOS_SUCCESS`)
+- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTOS_OK`)
 - 枚举: `MODULE_TYPE_VALUE` (如 `TASK_STATUS_PENDING`)
 
 ---

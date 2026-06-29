@@ -124,10 +124,10 @@ MemoryRovol 是 CoreLoopThree 记忆层的具体实现：
 - **记忆检索** → CoreLoopThree 认知层通过吸引子网络从 MemoryRovol L2-L4 层检索相关经验
 - **记忆进化** → CoreLoopThree 记忆进化委员会定期触发 MemoryRovol L4 模式层的持久同调分析
 
-### 与微核心 (MicroCoreRT) 的关系
-MemoryRovol 运行在微核心提供的资源管理基础设施之上：
-- **内存管理** → 利用微核心的智能指针和内存池机制，优化向量索引的内存使用
-- **进程隔离** → 通过微核心的地址空间隔离，确保记忆数据的安全边界
+### 与 MicroCoreRT 微核心的关系
+MemoryRovol 运行在 MicroCoreRT 微核心提供的资源管理基础设施之上：
+- **内存管理** → 利用 MicroCoreRT 微核心的智能指针和内存池机制，优化向量索引的内存使用
+- **进程隔离** → 通过 MicroCoreRT 微核心的地址空间隔离，确保记忆数据的安全边界
 - **系统调用** → 通过统一的 `syscall` 接口访问底层存储和计算资源
 
 ### 与系统调用 (Syscall) 层的关系
@@ -877,7 +877,7 @@ manager.forget_lambda = 0.5;
 
 agentos_memoryrov_handle_t* handle;
 agentos_error_t err = agentos_memoryrov_init(&manager, &handle);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     fprintf(stderr, "Error: %s\n", agentos_strerror(err));
     return err;
 }

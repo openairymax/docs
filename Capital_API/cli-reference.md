@@ -24,7 +24,7 @@
 
 ## 1. 概述
 
-`agentos` 是 Airymax 的统一命令行入口，通过 REST API 和 JSON-RPC 2.0 与 Airymax Gateway 通信。所有命令的默认 Gateway 地址为 `http://localhost:18789`。
+`agentos` 是 Airymax 的统一命令行入口，通过 REST API 和 JSON-RPC 2.0 与 Airymax Gateway 通信。所有命令的默认 Gateway 地址为 `http://localhost:8080`。
 
 ### 基本用法
 
@@ -48,7 +48,7 @@ agentos <command> <subcommand> [options] [arguments]
 
 | 环境变量 | 默认值 | 说明 |
 |:---------|:-------|:-----|
-| `AGENTOS_ENDPOINT` | `http://localhost:18789` | Airymax Gateway 的 HTTP 地址 |
+| `AGENTOS_ENDPOINT` | `http://localhost:8080` | Airymax Gateway 的 HTTP 地址 |
 | `AGENTOS_API_KEY` | （空） | API 认证密钥，设置后将作为 `Authorization: Bearer` 头传递 |
 | `AGENTOS_HEAPSTORE_ROOT` | `~/.agentrt/heapstore` | Heapstore 数据根目录，用于 `db` 相关命令 |
 
@@ -56,7 +56,7 @@ agentos <command> <subcommand> [options] [arguments]
 
 ```bash
 # 连接到远程 Gateway
-export AGENTOS_ENDPOINT="http://agentos.example.com:18789"
+export AGENTOS_ENDPOINT="http://agentos.example.com:8080"
 
 # 设置 API 认证
 export AGENTOS_API_KEY="sk-xxxxxxxxxxxx"
@@ -92,8 +92,7 @@ agentos service list
 
 Name                 Status       Healthy    Port
 --------------------------------------------------
-gateway              running      ✓          18789
-agent-manager        running      ✓          18790
+gateway              running      ✓          8080
 task-scheduler       running      ✓          18791
 memory-store         running      ✓          18792
 ```
@@ -828,7 +827,7 @@ agentos protocol test openai -v
   Testing JSON-RPC 2.0
 ============================================================
 
-→ Connecting to http://localhost:18789/jsonrpc ...
+→ Connecting to http://localhost:8080/jsonrpc ...
 ✓ Connected successfully (12ms, version: 2.0)
 ```
 
@@ -839,7 +838,7 @@ agentos protocol test openai -v
   Testing OpenAI API Compatible
 ============================================================
 
-→ Connecting to http://localhost:18789/v1/models ...
+→ Connecting to http://localhost:8080/v1/models ...
 ✓ Connected successfully (34ms, version: 1.0)
 
 Raw response:
@@ -859,9 +858,9 @@ Raw response:
   Testing JSON-RPC 2.0
 ============================================================
 
-→ Connecting to http://localhost:18789/jsonrpc ...
+→ Connecting to http://localhost:8080/jsonrpc ...
 ✗ Connection failed (15000ms)
-→ Ensure gateway is running at http://localhost:18789
+→ Ensure gateway is running at http://localhost:8080
 ```
 
 **环境变量：** `AGENTOS_ENDPOINT` — 决定测试的目标地址。
@@ -1153,7 +1152,7 @@ agentos protocol capabilities openai
     - text-embedding-3-large
 
   Transport Details:
-    Endpoint:     http://localhost:18789/v1
+    Endpoint:     http://localhost:8080/v1
     Content-Type: application/json
     Transport:    HTTP (SSE)
 ```
@@ -1193,7 +1192,7 @@ agentos config get logging.level
 **示例输出：**
 
 ```
-gateway.port = 18789
+gateway.port = 8080
 ```
 
 **错误输出示例：**
@@ -1260,7 +1259,7 @@ agentos config list
   Airymax Configuration
 ============================================================
 
-  gateway.port:             18789
+  gateway.port:             8080
   gateway.host:             0.0.0.0
   gateway.max_connections:  100
   logging.level:            info
@@ -1512,7 +1511,7 @@ Tool                      Status
 ⚠ Docker                   Not found (optional)
 ⚠ Node.js                  Not found (optional)
 ⚠ Rust/Cargo               Not found (optional)
-✓ Gateway                  Running (http://localhost:18789)
+✓ Gateway                  Running (http://localhost:8080)
 
 ✓ All required tools available
 ```
@@ -1819,7 +1818,7 @@ agentos version
 
 ```
 Airymax v2.1.0
-  Gateway: http://localhost:18789
+  Gateway: http://localhost:8080
   Protocols: JSON-RPC 2.0, MCP v1.0, A2A v0.3, OpenAI API, OpenJiuwen (binary)
 ```
 
@@ -1861,7 +1860,7 @@ agentos status
 ============================================================
 
 ✗ Gateway unreachable: Connection failed: [Errno 111] Connection refused
-→ Expected at: http://localhost:18789
+→ Expected at: http://localhost:8080
 ```
 
 **环境变量：** `AGENTOS_ENDPOINT` — 决定状态查询的目标地址。
@@ -1941,6 +1940,6 @@ optional arguments:
 
 | 环境变量 | 默认值 | 影响的命令 |
 |:---------|:-------|:-----------|
-| `AGENTOS_ENDPOINT` | `http://localhost:18789` | 所有需要与 Gateway 通信的命令 |
+| `AGENTOS_ENDPOINT` | `http://localhost:8080` | 所有需要与 Gateway 通信的命令 |
 | `AGENTOS_API_KEY` | （空） | 所有需要认证的 API 请求 |
 | `AGENTOS_HEAPSTORE_ROOT` | `~/.agentrt/heapstore` | `db migrate`, `db migrate-status`, `db migrate-rollback`, `db backup` |

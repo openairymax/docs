@@ -128,12 +128,12 @@ char* task_id = NULL;
 char* result = NULL;
 
 agentos_error_t err = agentos_loop_create(NULL, &loop);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     return err;
 }
 
 err = agentos_loop_submit(loop, "Hello World", 11, &task_id);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     goto cleanup_loop;
 }
 
@@ -143,7 +143,7 @@ err = agentos_loop_wait(loop, task_id, 10000, &result, &result_len);
 // 释放任务ID（不再需要）
 MEMORY_FREE_SAFE(&task_id);
 
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     goto cleanup_loop;
 }
 
@@ -155,7 +155,7 @@ MEMORY_FREE_SAFE(&result);
 
 // 释放核心循环
 agentos_loop_destroy(loop);
-return AGENTOS_SUCCESS;
+return AGENTOS_OK;
 
 cleanup_loop:
     MEMORY_FREE_SAFE(&task_id);
@@ -170,7 +170,7 @@ cleanup_loop:
 // 使用 goto cleanup 模式分配多个资源
 void* resource1 = NULL;
 void* resource2 = NULL;
-agentos_error_t err = AGENTOS_SUCCESS;
+agentos_error_t err = AGENTOS_OK;
 
 resource1 = malloc(sizeof(*resource1));
 if (!resource1) {

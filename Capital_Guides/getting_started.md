@@ -73,7 +73,7 @@ Airymax 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。
 
 ```bash
 # 启动 Airymax 网关（默认监听 0.0.0.0:8080）
-./agentrt-gateway --host 0.0.0.0 --port 8080
+./gateway_d -h 0.0.0.0 -p 8080
 ```
 
 启动成功后你会看到类似输出：

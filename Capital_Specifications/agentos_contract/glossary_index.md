@@ -173,11 +173,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | 错误码 | C 内核值 | SDK 十六进制值 | 说明 |
 |--------|---------|--------------|------|
 | AGENTOS_SUCCESS | 0 | 0x0000 | 成功 |
-| AGENTOS_EINVAL | -1 | 0x0003 | 参数无效 |
-| AGENTOS_ENOMEM | -2 | 0x0002 | 内存不足 |
-| AGENTOS_ENOENT | -4 | 0x0004 | 资源不存在 |
-| AGENTOS_EPERM | -5 | 0x0005 | 权限不足 |
-| AGENTOS_ETIMEDOUT | -6 | 0x0006 | 操作超时 |
+| AGENTOS_ERR_INVALID_PARAM | -2 | 0x0003 | 参数无效 |
+| AGENTOS_ERR_OUT_OF_MEMORY | -4 | 0x0002 | 内存不足 |
+| AGENTOS_ERR_NOT_FOUND | -6 | 0x0004 | 资源不存在 |
+| AGENTOS_ERR_PERMISSION_DENIED | -10 | 0x0005 | 权限不足 |
+| AGENTOS_ERR_TIMEOUT | -8 | 0x0006 | 操作超时 |
 
 > **📝 双错误码体系说明**  
 > Airymax 采用双错误码体系：C 内核使用负整数（定义于 `error.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../project_erp/error_code_reference.md)。

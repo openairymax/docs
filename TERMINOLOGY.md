@@ -206,7 +206,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 体系 | 适用场景 | 格式 |
 |------|---------|------|
-| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AGENTOS_SUCCESS=0`、`AGENTOS_EINVAL=-2` |
+| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AGENTOS_OK=0`、`AGENTOS_EINVAL=-2` |
 | **SDK 十六进制体系**（次要） | SDK 和外部接口 | `0x0000`-`0x7FFF` 分段 |
 
 **系统内代码**: `AGENTOS_E*` / `AGENTOS_ERR_*`
@@ -550,7 +550,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 七、附录
 
-### A. Daemon 服务完整列表（10 个）
+### A. Daemon 服务完整列表（12 个）
 
 | 服务 | 功能 |
 |------|------|
@@ -564,6 +564,8 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 | observe_d | 观测服务 |
 | notify_d | 通知服务 |
 | info_d | 信息服务 |
+| hook_d | 钩子服务（事件处理与系统钩子） |
+| plugin_d | 插件服务（外部插件管理） |
 
 ### B. 协议适配层完整列表（9 种）
 
@@ -583,7 +585,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | 段 | 范围 | 含义 |
 |----|------|------|
-| 成功 | 0 | `AGENTOS_SUCCESS` |
+| 成功 | 0 | `AGENTOS_OK` |
 | 通用 | -1 ~ -999 | `AGENTOS_ERR_UNKNOWN` 等 |
 | Task | -1001 ~ -1099 | 任务相关错误 |
 | Memory | -2001 ~ -2099 | 记忆相关错误 |

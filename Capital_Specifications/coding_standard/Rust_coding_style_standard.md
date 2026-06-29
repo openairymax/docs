@@ -578,7 +578,7 @@ pub struct ProtocolConfig {
 impl Default for ProtocolConfig {
     fn default() -> Self {
         let endpoint = std::env::var("AGENTOS_ENDPOINT")
-            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
         Self {
             protocol_type: ProtocolType::JsonRpc,
             endpoint,
@@ -1288,7 +1288,7 @@ pub enum AgentOSError { ... }
 /// ```rust
 /// use agentos_rs::new_client;
 ///
-/// let client = new_client("http://localhost:18789");
+/// let client = new_client("http://localhost:8080");
 /// ```
 pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
 ```
@@ -1728,7 +1728,7 @@ mod tests {
 
     #[test]
     fn test_xxx_client_new() {
-        let client = XxxClient::new("http://localhost:18789");
+        let client = XxxClient::new("http://localhost:8080");
         assert!(client.is_ok());
     }
 

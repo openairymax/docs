@@ -20,7 +20,7 @@
 │                              └──────┬───────┘                                    │
 │                                     │ IPC Bus                                     │
 │                              ┌──────▼───────┐                                    │
-│                              │   CoreKern   │  ◄── 微核心调度器 (MicroCoreRT)       │
+│                              │   CoreKern   │  ◄── MicroCoreRT 微核心调度器       │
 │                              │              │                                    │
 │                              │ ┌──────────┐ │                                    │
 │                              │ │CoreLoop  │ │                                    │
@@ -47,9 +47,9 @@
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2. 微核心架构 (MicroCoreRT Architecture)
+## 2. MicroCoreRT 微核心架构
 
-Airymax 采用微核心 (MicroCoreRT) 架构模式，以 **CoreKern** 作为系统核心调度器，以 **Cupola** 作为安全穹顶 (Safety Dome)。
+Airymax 采用 MicroCoreRT 微核心架构模式，以 **CoreKern** 作为系统核心调度器，以 **Cupola** 作为安全穹顶 (Safety Dome)。
 
 ### 2.1 CoreKern — 中央调度器
 

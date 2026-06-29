@@ -7,7 +7,7 @@
 
 ## 前置条件
 
-- Airymax 网关运行在 `http://localhost:18789`（或您配置的 URL）
+- Airymax 网关运行在 `http://localhost:8080`（或您配置的 URL）
 - Python 3.8+（示例使用 Python；也支持 Go/Rust/TypeScript）
 - 具备 JSON 和 HTTP 基础知识
 
@@ -63,7 +63,7 @@ from agentos.protocol import ProtocolClient, ProtocolConfig
 
 async def main():
     config = ProtocolConfig(
-        base_url="http://localhost:18789",
+        base_url="http://localhost:8080",
         default_protocol="jsonrpc",
     )
 
@@ -120,7 +120,7 @@ echo '{"model":"gpt-4","messages":[{}]}' | agentos protocol detect --content-typ
 ```python
 from agentos.protocol import create_mcp_client
 
-mcp = create_mcp_client(base_url="http://localhost:18789")
+mcp = create_mcp_client(base_url="http://localhost:8080")
 
 tools = await mcp.list_tools()
 print(f"可用工具: {[t['name'] for t in tools]}")
@@ -135,7 +135,7 @@ print(f"结果: {result}")
 from agentos.protocol import create_openai_client
 
 openai = create_openai_client(
-    base_url="http://localhost:18789",
+    base_url="http://localhost:8080",
     model="gpt-4o",
 )
 
@@ -237,7 +237,7 @@ import (
 
 func main() {
     ctx := context.Background()
-    cfg := protocol.NewConfig(protocol.WithBaseURL("http://localhost:18789"))
+    cfg := protocol.NewConfig(protocol.WithBaseURL("http://localhost:8080"))
     client := protocol.NewProtocolClient(cfg)
 
     result, err := client.SendRequest(ctx, &protocol.RequestOptions{
@@ -258,7 +258,7 @@ use agentos_toolkit::protocol::{ProtocolClient, ProtocolConfig};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ProtocolConfig::builder()
-        .base_url("http://localhost:18789")
+        .base_url("http://localhost:8080")
         .build()?;
     let client = ProtocolClient::new(config);
 
@@ -273,7 +273,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```typescript
 import { createProtocolClient } from '@agentos/toolkit';
 
-const client = createProtocolClient({ baseURL: 'http://localhost:18789' });
+const client = createProtocolClient({ baseURL: 'http://localhost:8080' });
 
 const result = await client.sendRequest({ method: 'ping' });
 console.log('结果:', result);

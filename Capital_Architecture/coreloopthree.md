@@ -128,10 +128,10 @@ CoreLoopThree 架构的理论基础深刻体现了 **体系并行 (MCIS)** 与 *
 
 CoreLoopThree 作为 Airymax 的核心运行时，与系统中其他关键模块形成紧密的协同关系，共同构成完整的智能体生态系统：
 
-### 与微核心 (MicroCoreRT) 的关系
-CoreLoopThree 运行在微核心提供的抽象层之上：
-- **任务调度** → 通过 `syscall` 层调用微核心的 `Task Scheduler`，实现任务的加权轮询调度
-- **内存管理** → 利用微核心 `Memory Manager` 的智能指针和内存池机制，优化运行时内存使用
+### 与 MicroCoreRT 微核心的关系
+CoreLoopThree 运行在 MicroCoreRT 微核心提供的抽象层之上：
+- **任务调度** → 通过 `syscall` 层调用 MicroCoreRT 微核心的 `Task Scheduler`，实现任务的加权轮询调度
+- **内存管理** → 利用 MicroCoreRT 微核心 `Memory Manager` 的智能指针和内存池机制，优化运行时内存使用
 - **进程通信** → 基于 `IPC Binder` 实现三层间的高效数据传递，支持零拷贝传输
 
 ### 与系统调用 (Syscall) 层的关系
@@ -766,7 +766,7 @@ CoreLoopThree
    ↓
 Syscall 层
    ↓
-Core (微核心)
+Core (MicroCoreRT 微核心)
    ├─ IPC Binder: 进程间通信
    ├─ Memory: 内存管理
    ├─ Task: 任务调度
@@ -899,7 +899,7 @@ agentos_error_t my_plan_strategy(
     my_plan_data_t* data = (my_plan_data_t*)context;
     // 实现规划逻辑
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 
 void my_plan_destroy(agentos_plan_strategy_t* strategy) {
@@ -931,7 +931,7 @@ agentos_error_t my_execute(
     my_unit_t* my_unit = (my_unit_t*)unit;
     // 实现执行逻辑
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 
 // 注册

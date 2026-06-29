@@ -313,7 +313,7 @@ const API_KEY: &str = "sk-prod-abc123def456";
 const DB_PASSWORD: &str = "super_secret_password";
 
 fn create_client() -> Client {
-    Client::new_with_api_key("http://localhost:18789", API_KEY).unwrap()
+    Client::new_with_api_key("http://localhost:8080", API_KEY).unwrap()
 }
 ```
 
@@ -324,7 +324,7 @@ use std::env;
 
 fn create_client() -> Result<Client, AgentOSError> {
     let endpoint = env::var("AGENTOS_ENDPOINT")
-        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+        .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
     let api_key = env::var("AGENTOS_API_KEY")
         .map_err(|_| AgentOSError::Config("AGENTOS_API_KEY 环境变量未设置".to_string()))?;
     Client::new_with_api_key(&endpoint, &api_key)
@@ -580,7 +580,7 @@ impl From<reqwest::Error> for AgentOSError {
 
 ```rust
 AgentOSError::network(&err.to_string())
-// err.to_string() 可能包含 "http://admin:secret@internal-host:18789/..."
+// err.to_string() 可能包含 "http://admin:secret@internal-host:8080/..."
 ```
 
 ✅ **正确**：过滤敏感信息

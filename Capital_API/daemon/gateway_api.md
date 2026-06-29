@@ -157,16 +157,16 @@ int main() {
 
     // 3. 创建服务
     agentos_error_t err = gateway_service_create(&service, &config);
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         SVC_LOG_ERROR("Failed to create gateway: %d", err);
         return -1;
     }
 
     // 4. 初始化并启动
     err = gateway_service_init(service);
-    if (err == AGENTOS_SUCCESS) {
+    if (err == AGENTOS_OK) {
         err = gateway_service_start(service);
-        if (err == AGENTOS_SUCCESS) {
+        if (err == AGENTOS_OK) {
             SVC_LOG_INFO("Gateway started on port %d", config.http.port);
 
             // 主循环
@@ -293,7 +293,7 @@ int main() {
     llm_response_t* response = NULL;
     agentos_error_t err = llm_service_request(svc, &request, &response);
 
-    if (err == AGENTOS_SUCCESS && response) {
+    if (err == AGENTOS_OK && response) {
         printf("Response:\n%s\n", response->content);
         printf("Tokens used: %d\n", response->usage.total_tokens);
         printf("Cost: $%.4f\n", response->cost);

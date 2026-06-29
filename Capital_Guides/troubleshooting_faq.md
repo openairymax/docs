@@ -20,13 +20,13 @@
 
 ```bash
 # 1. 检查端口占用
-lsof -i :18789 || netstat -tlnp | grep 18789
+lsof -i :8080 || netstat -tlnp | grep 8080
 
 # 2. 检查配置文件
 cat agentos/gateway/config/gateway.yaml
 
 # 3. 前台模式启动查看详细日志
-./bin/gateway_d --port 18789 --foreground --log-level debug
+./bin/gateway_d -h 0.0.0.0 -p 8080 -d
 
 # 4. 检查依赖服务
 curl -s http://localhost:6379/ping 2>/dev/null || echo "Redis不可达"
@@ -51,14 +51,14 @@ psql -h localhost -U agentos -c "SELECT 1" 2>/dev/null || echo "PostgreSQL不可
 
 ```bash
 # 1. 检查网关健康状态
-curl -s http://localhost:18789/health | python3 -m json.tool
+curl -s http://localhost:8080/health | python3 -m json.tool
 
 # 2. 检查熔断器状态
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"circuit_breaker.status","id":1}'
 
 # 3. 检查服务发现状态
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"service.list","id":1}'
 
 # 4. 检查系统资源
@@ -108,14 +108,14 @@ echo '{"jsonrpc":"2.0","method":"agent.list","id":1}' | python3 -m json.tool
 
 ```bash
 # 1. 验证工具是否存在
-curl -s -X POST http://localhost:18789/api/v1/mcp \
+curl -s -X POST http://localhost:8080/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 
 # 2. 检查参数格式
 # 确保arguments匹配inputSchema定义
 
 # 3. 检查工具服务状态
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"service.list","params":{"protocol":"mcp"},"id":1}'
 ```
 
@@ -136,11 +136,11 @@ curl -s http://localhost:18789/api/v1/rpc \
 
 ```bash
 # 1. 检查是否有注册的智能体
-curl -s -X POST http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"agent.list","id":1}'
 
 # 2. 检查服务发现健康
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"service.discovery.status","id":1}'
 
 # 3. 检查Redis连接（服务发现依赖Redis）
@@ -155,17 +155,17 @@ redis-cli ping
 
 ```bash
 # 1. 验证请求格式
-curl -v -X POST http://localhost:18789/v1/chat/completions \
+curl -v -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer test-key" \
   -d '{"model":"agentos-default","messages":[{"role":"user","content":"test"}]}'
 
 # 2. 检查模型列表
-curl -s http://localhost:18789/v1/models \
+curl -s http://localhost:8080/v1/models \
   -H "Authorization: Bearer test-key"
 
 # 3. 检查LLM服务状态
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"service.list","params":{"type":"llm"},"id":1}'
 ```
 
@@ -248,7 +248,7 @@ grep heartbeat agentos/gateway/config/*.yaml
 
 ```bash
 # 1. 查看熔断器状态
-curl -s http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"circuit_breaker.list","id":1}'
 
 # 2. 查看失败原因
@@ -278,7 +278,7 @@ traceroute downstream-service
 curl -s http://downstream-service:port/health
 
 # 手动重置熔断器（仅紧急情况）
-curl -s -X POST http://localhost:18789/api/v1/rpc \
+curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"circuit_breaker.reset","params":{"service":"target"},"id":1}'
 ```
 
@@ -344,7 +344,7 @@ docker compose exec gateway nslookup postgres
 
 ```bash
 # 检查指标端点
-curl -s http://localhost:18789/metrics | head -20
+curl -s http://localhost:8080/metrics | head -20
 
 # 检查Prometheus配置
 cat agentos/gateway/docker/monitoring/prometheus.yml
@@ -377,7 +377,7 @@ curl -s 'http://localhost:9090/api/v1/query?query=up'
 **A**: 开发环境 2核CPU/4GB内存/20GB磁盘；生产环境 4核CPU/8GB内存/50GB磁盘。
 
 ### Q3: 如何查看Airymax版本？
-**A**: `./bin/gateway_d --version` 或 `curl http://localhost:18789/health`
+**A**: `./gateway_d -v` 或 `curl http://localhost:8080/health`
 
 ### Q4: 如何启用多协议支持？
 **A**: 编译时添加 `-DENABLE_MCP=ON -DENABLE_A2A=ON -DENABLE_OPENAI=ON`

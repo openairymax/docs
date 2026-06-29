@@ -51,7 +51,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 | C 内核宏定义 | C 内核值 | SDK 十六进制值 | SDK 宏定义 | 描述 |
 |-------------|---------|--------------|-----------|------|
-| `AGENTOS_SUCCESS` | 0 | 0x0000 | `AGENTOS_ERROR_SUCCESS` | 操作成功 |
+| `AGENTOS_OK` | 0 | 0x0000 | `AGENTOS_ERROR_SUCCESS` | 操作成功 |
 | `AGENTOS_ERR_UNKNOWN` | -1 | 0x0001 | `AGENTOS_ERROR_UNKNOWN` | 未知错误 |
 | `AGENTOS_ERR_INVALID_PARAM` | -2 | 0x0003 | `AGENTOS_ERROR_INVALID_PARAMETER` | 参数无效 |
 | `AGENTOS_ERR_NULL_POINTER` | -3 | 0x0004 | `AGENTOS_ERROR_NULL_POINTER` | 空指针 |

@@ -112,7 +112,7 @@ def test_task_submit_with_valid_input_returns_task_id(self):
     result = agentos_task_submit(agent_id, "process data", 30000)
 
     # Assert - 验证结果
-    assert result.error_code == AGENTOS_SUCCESS
+    assert result.error_code == AGENTOS_OK
     assert result.task_id is not None
     assert result.task_id.startswith("task_")
 ```
@@ -183,14 +183,14 @@ async def test_async_memory_query():
 async def test_concurrent_task_submission():
     tasks = [submit_task(f"task_{i}") for i in range(10)]
     results = await asyncio.gather(*tasks)
-    assert all(r.error_code == AGENTOS_SUCCESS for r in results)
+    assert all(r.error_code == AGENTOS_OK for r in results)
 ```
 
 ### 参数化测试
 
 ```python
 @pytest.mark.parametrize("input_data,expected_status", [
-    ("valid input", AGENTOS_SUCCESS),
+    ("valid input", AGENTOS_OK),
     ("", AGENTOS_EINVAL),
     (None, AGENTOS_EINVAL),
     ("a" * 10001, AGENTOS_EINVAL),
@@ -217,10 +217,10 @@ def test_log_level_severity(level, expected_min_severity):
 # 使用 pytest-mock（推荐）
 def test_agent_invoke_with_mock(mocker):
     mock_execute = mocker.patch("agentos.cupolas.cupolas_execute_command")
-    mock_execute.return_value = AGENTOS_SUCCESS
+    mock_execute.return_value = AGENTOS_OK
 
     result = agentos_agent_invoke("agent_0", "test input", 10, None)
-    assert result == AGENTOS_SUCCESS
+    assert result == AGENTOS_OK
     mock_execute.assert_called_once()
 
 # Mock 上下文管理器
@@ -228,7 +228,7 @@ def test_session_with_mock_persistence(mocker):
     mock_persist = mocker.patch(
         "agentos.syscall.session.persist_session_with_retry"
     )
-    mock_persist.return_value = AGENTOS_SUCCESS
+    mock_persist.return_value = AGENTOS_OK
 
     session_id = agentos_session_create(None)
     mock_persist.assert_called_once()
@@ -238,7 +238,7 @@ def test_session_with_mock_persistence(mocker):
 
 ```python
 # 推荐：使用明确的断言消息
-assert result.error_code == AGENTOS_SUCCESS, \
+assert result.error_code == AGENTOS_OK, \
     f"Expected SUCCESS, got {result.error_code}"
 
 # 推荐：使用 pytest.approx 处理浮点数

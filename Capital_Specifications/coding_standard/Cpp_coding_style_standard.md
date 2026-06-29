@@ -1139,7 +1139,7 @@ TEST_F(MemoryPoolTest, ExhaustPool) {
 ## 十四、Airymax 模块 C++ 编码示例
 
 ### 14.1 Atoms（原子层）C++ 编码
-Atoms模块实现微核心核心功能，要求最高级别的性能和可靠性：
+Atoms模块实现 MicroCoreRT 微核心核心功能，要求最高级别的性能和可靠性：
 
 #### 14.1.1 内存管理器（映射原则：M-3 拓扑优化）
 ```cpp

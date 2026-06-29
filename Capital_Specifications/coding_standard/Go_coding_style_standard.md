@@ -685,7 +685,7 @@ type ConfigOption func(*Config)
 // 2. 提供默认值函数
 func DefaultConfig() *Config {
     return &Config{
-        Endpoint:   "http://127.0.0.1:18789",
+        Endpoint:   "http://127.0.0.1:8080",
         Timeout:    30 * time.Second,
         MaxRetries: 3,
     }
