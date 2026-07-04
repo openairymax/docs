@@ -158,13 +158,13 @@ Airymax 的微核心 (MicroCoreRT) 从微内核思想中借鉴了三条核心原
 |-----------|-----------------|
 | 机制与策略分离 | CoreKern 仅提供 IPC、内存池、调度等原子机制；LLM 路由策略、工具选择策略由 llm_d、tool_d 等用户态服务实现 |
 | 最小特权 | CoreKern 代码量严格控制，所有高级功能由 Daemon 服务在用户态实现 |
-| 服务用户态化 | gateway_d、llm_d、tool_d 等 10 个 Daemon 均运行于用户态，通过 IPC 与 CoreKern 交互 |
+| 服务用户态化 | gateway_d、llm_d、tool_d 等 12 个 Daemon 均运行于用户态，通过 IPC 与 CoreKern 交互 |
 
 具体而言：
 
 - **机制与策略分离**在 Airymax 中的体现：CoreKern 提供任务调度机制（加权轮询队列、优先级管理），但"选择哪个 LLM 模型""使用哪个工具"等策略决策由 llm_d、tool_d 等用户态服务完成。CoreKern 提供内存池分配机制，但"记忆如何组织与淘汰"的策略由 MemoryRovol 在上层决定。
 - **最小特权**在 Airymax 中的体现：CoreKern 仅包含 IPC、内存管理（含池化与守卫）、任务调度、时间服务，以及 OOM 处理、可观测性、错误处理共七个核心子系统，代码量控制在 <10,000 LOC。所有 AI 特定逻辑（推理编排、工具调用、会话管理）均在用户态服务中实现。
-- **服务用户态化**在 Airymax 中的体现：10 个 Daemon（gateway_d、llm_d、tool_d、market_d、sched_d、monit_d、channel_d、observe_d、notify_d、info_d）全部运行于用户态，通过 IPC Binder 与 CoreKern 通信。单个 Daemon 崩溃不会影响 CoreKern 或其他 Daemon，故障隔离性 >99.9%。
+- **服务用户态化**在 Airymax 中的体现：12 个 Daemon（gateway_d、llm_d、tool_d、market_d、sched_d、monit_d、channel_d、observe_d、notify_d、info_d、hook_d、plugin_d）全部运行于用户态，通过 IPC Binder 与 CoreKern 通信。单个 Daemon 崩溃不会影响 CoreKern 或其他 Daemon，故障隔离性 >99.9%。
 
 ### 2.3 Airymax 与微内核的本质区别
 

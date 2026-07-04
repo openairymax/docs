@@ -194,7 +194,7 @@ Airymax项目的标准化规范体系：
 
 - [**统一术语表**](Capital_Specifications/TERMINOLOGY.md) — 统一术语定义
 - [**变更日志**](../CHANGELOG.md) — 版本更新历史
-- [**许可证**](../AgentRT/LICENSE) — Apache-2.0 许可证全文
+- [**许可证**](../AgentRT/LICENSE) — AGPL v3 + Apache 2.0 双许可证全文
 
 ---
 

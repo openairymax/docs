@@ -1,0 +1,196 @@
+<mxfile host="app.diagrams.net" modified="2026-07-04T00:00:00.000Z" agent="Airymax Docs Generator" version="24.0.0" type="device">
+  <diagram name="MemoryRovol 记忆卷载分层" id="memoryrovol_layers">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 标题 -->
+        <mxCell id="title" value="MemoryRovol 记忆卷载分层架构（L4 Pattern → L1 Raw + 横向检索/遗忘机制）" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#3866FA;" vertex="1" parent="1">
+          <mxGeometry x="100" y="20" width="1200" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- 写入路径 / 检索路径 标注 -->
+        <mxCell id="write_path" value="写入路径 (Bottom-Up 向上抽象)&#xa;L1 → L2 → L3 → L4&#xa;异步索引，不阻塞主请求" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#82b366;fontStyle=1;backgroundColor=#f5f5f5;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="read_path" value="检索路径 (Top-Down 向下细化)&#xa;L4 → L3 → L2 → L1&#xa;→ 吸引子收敛 → 重排序" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#d79b00;fontStyle=1;backgroundColor=#f5f5f5;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="60" y="780" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== L4 Pattern Layer ===== -->
+        <mxCell id="l4" value="L4 Pattern Layer 模式层 — 存储后端: 图数据库 (Neo4j / 内置图引擎)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="780" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l4_1" value="Topology Analysis&#xa;拓扑分析&#xa;──────────&#xa;Ripser 持久同调&#xa;persistence_calculator_t" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="120" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l4_2" value="HDBSCAN Clustering&#xa;密度聚类&#xa;──────────&#xa;miner_discover_patterns()&#xa;聚类发现模式" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="120" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l4_3" value="Rule Generator&#xa;规则生成器&#xa;──────────&#xa;rule_generator_t&#xa;聚类 → 可复用规则" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="120" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l4_4" value="Pattern Matcher&#xa;模式匹配器&#xa;──────────&#xa;pattern_matcher_t&#xa;模式匹配检索" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="120" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- L4 → L3 连接（写入向上，检索向下） -->
+        <mxCell id="e_l4_l3_up" value="模式挖掘" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#82b366;strokeWidth=2;fontSize=10;fontColor=#82b366;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="240" as="sourcePoint" />
+            <mxPoint x="700" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_l3_l4_down" value="抽象进化" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#d79b00;strokeWidth=2;fontSize=10;fontColor=#d79b00;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="260" as="sourcePoint" />
+            <mxPoint x="740" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== L3 Structure Layer ===== -->
+        <mxCell id="l3" value="L3 Structure Layer 结构层 — 存储后端: 文档数据库 (JSON/BSON) + SQLite KG" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="260" width="780" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l3_1" value="Bind Operator&#xa;绑定算子&#xa;──────────&#xa;binder_t&#xa;VSA 卷积绑定 + Q 正交矩阵" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="300" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l3_2" value="Unbinder&#xa;解绑算子&#xa;──────────&#xa;unbinder_t&#xa;VSA 解卷积" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="300" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l3_3" value="Relation Encoder&#xa;关系编码器&#xa;──────────&#xa;relation_encoder_t&#xa;subj/pred/obj 角色" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="300" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l3_4" value="Knowledge Graph&#xa;知识图谱&#xa;──────────&#xa;knowledge_graph_t&#xa;BEFORE/AFTER/CAUSES&#xa;ENABLED_BY/SIMILAR_TO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="300" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- L3 → L2 连接 -->
+        <mxCell id="e_l3_l2_up" value="关系绑定" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#82b366;strokeWidth=2;fontSize=10;fontColor=#82b366;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="420" as="sourcePoint" />
+            <mxPoint x="700" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_l2_l3_down" value="特征提取" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#d79b00;strokeWidth=2;fontSize=10;fontColor=#d79b00;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="440" as="sourcePoint" />
+            <mxPoint x="740" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== L2 Feature Layer ===== -->
+        <mxCell id="l2" value="L2 Feature Layer 特征层 — 存储后端: 向量数据库 (FAISS 索引 + 倒排索引)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="440" width="780" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l2_1" value="Embedder Models&#xa;嵌入模型&#xa;──────────&#xa;OpenAI / DeepSeek&#xa;Sentence Transformers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="320" y="480" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l2_2" value="FAISS Index&#xa;向量索引&#xa;──────────&#xa;HNSW / IVF / FLAT&#xa;feature_vector_t" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="480" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l2_3" value="BM25 Index&#xa;关键词倒排索引&#xa;──────────&#xa;bm25_index_t&#xa;混合检索" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="480" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l2_4" value="Vector Store&#xa;向量持久化&#xa;──────────&#xa;SQLite: vectors&#xa;(record_id, vector, dim)&#xa;+ LRU Cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="890" y="480" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- L2 → L1 连接 -->
+        <mxCell id="e_l2_l1_up" value="嵌入编码" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#82b366;strokeWidth=2;fontSize=10;fontColor=#82b366;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="600" as="sourcePoint" />
+            <mxPoint x="700" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_l1_l2_down" value="数据压缩" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#d79b00;strokeWidth=2;fontSize=10;fontColor=#d79b00;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="620" as="sourcePoint" />
+            <mxPoint x="740" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== L1 Raw Layer ===== -->
+        <mxCell id="l1" value="L1 Raw Layer 原始卷 — 存储后端: 文件系统 + SQLite 元数据" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="620" width="780" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1_1" value="File Storage&#xa;文件存储&#xa;──────────&#xa;.dat 文件&#xa;.tombstone 软删除" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="350" y="660" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1_2" value="Metadata SQLite&#xa;元数据索引&#xa;──────────&#xa;raw_metadata_db_t&#xa;(record_id, source, tags)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="560" y="660" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1_3" value="Async Write Pool&#xa;异步写入线程池&#xa;──────────&#xa;write_queue_t&#xa;非阻塞批量写入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="770" y="660" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 横向机制层：Retrieval & Forgetting ===== -->
+        <mxCell id="mech" value="横向机制层 Retrieval &amp; Forgetting" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="80" width="280" height="680" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mech_1" value="Attractor Network&#xa;吸引子网络&#xa;──────────&#xa;现代 Hopfield 网络&#xa;E = -β⁻¹·log(Σexp(β·dot))&#xa;+ 0.5·||x||²" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="120" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mech_2" value="Retrieval Cache&#xa;检索缓存&#xa;──────────&#xa;LRU 淘汰&#xa;热点检索结果缓存" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="250" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mech_3" value="Mount Context&#xa;上下文挂载&#xa;──────────&#xa;memoryrov_mount()&#xa;检索结果挂载到认知层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="360" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mech_4" value="Reranker&#xa;重排序&#xa;──────────&#xa;交叉编码器精排&#xa;+ RRF 融合" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="470" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mech_5" value="Ebbinghaus Forgetting&#xa;艾宾浩斯遗忘&#xa;──────────&#xa;R(t) = exp(-t/λ)&#xa;策略: NONE/EBBINGHAUS&#xa;/LINEAR/ACCESS_BASED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="580" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- 横向机制层 → 各层的虚线连接（表示跨层作用） -->
+        <mxCell id="e_mech_l4" style="endArrow=classic;html=1;strokeColor=#9673a6;dashed=1;strokeWidth=1;" edge="1" parent="1" source="mech_1" target="l4_4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mech_l3" style="endArrow=classic;html=1;strokeColor=#9673a6;dashed=1;strokeWidth=1;" edge="1" parent="1" source="mech_3" target="l3_3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mech_l2" style="endArrow=classic;html=1;strokeColor=#9673a6;dashed=1;strokeWidth=1;" edge="1" parent="1" source="mech_4" target="l2_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mech_l1" style="endArrow=classic;html=1;strokeColor=#9673a6;dashed=1;strokeWidth=1;" edge="1" parent="1" source="mech_5" target="l1_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 顶层主接口标注 -->
+        <mxCell id="api_note" value="主接口 API:&#xa;agentos_memoryrov_init / create / destroy&#xa;write_raw / get_raw / delete_raw&#xa;query / retrieve / mount / forget / evolve&#xa;l3_bind_entity / l3_query_relations&#xa;get_rules (L4 规则导出)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;backgroundColor=#fafafa;strokeColor=#cccccc;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="220" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- 图例 -->
+        <mxCell id="legend" value="图例：&#xa;━━ 写入路径（绿实线，向上抽象）&#xa;┄┄ 检索路径（橙虚线，向下细化）&#xa;┄┄ 横向机制作用（紫虚线）&#xa;&#xa;遗忘策略:&#xa;NONE=0 / EBBINGHAUS=1&#xa;LINEAR=2 / ACCESS_BASED=3" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;backgroundColor=#ffffff;strokeColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="220" height="130" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

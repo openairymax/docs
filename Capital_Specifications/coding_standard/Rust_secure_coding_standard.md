@@ -1,5 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 SPHARX Ltd. -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 -->
 
 # Airymax Rust 安全编码标准
 
@@ -1223,4 +1223,4 @@ security-check:
 
 *本文档由 Cupolas 安全团队维护。如有疑问，请联系 `cupolas-team@example.com`。*
 
-*SPDX-FileCopyrightText: 2026 SPHARX Ltd. SPDX-License-Identifier: Apache-2.0*
+*SPDX-FileCopyrightText: 2026 SPHARX Ltd. SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*

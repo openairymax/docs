@@ -297,7 +297,7 @@ if (mcp->encode) {
 ```
 SPHARX Airymax v0.0.4
 Copyright (c) 2026 SPHARX Ltd.
-SPDX-License-Identifier: GPL-3.0-or-later OR Apache-2.0
+SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 ```
 
 **注意**: 本文档描述的是Developer Preview版本，API可能在后续版本中调整。生产环境使用请等待正式Release版本。

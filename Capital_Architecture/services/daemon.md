@@ -13,7 +13,7 @@ Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCo
 
 ## 服务清单
 
-> **注**: 本文档 V7.0 原列 6 个核心服务。经源码审计确认实际存在 **10 个独立服务进程**（详见 TERMINOLOGY.md v3.0 裁决 #4）。以下为完整清单：
+> **注**: 本文档 V7.0 原列 6 个核心服务。经源码审计确认实际存在 **12 个独立服务进程**（详见 TERMINOLOGY.md v3.0 裁决 #4，P4.8.2 补遗新增 hook_d / plugin_d）。以下为完整清单：
 
 | 服务 | 端口 (TCP) | Unix Socket | 功能 |
 |------|-----------|-------------|------|
@@ -27,6 +27,8 @@ Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCo
 | **observe_d** | — | /var/run/agentos/observe.sock | 观测服务，系统状态观测与数据采集 |
 | **notify_d** | — | /var/run/agentos/notify.sock | 通知服务，事件通知与消息推送 |
 | **info_d** | — | /var/run/agentos/info.sock | 信息服务，元数据查询与系统信息暴露 |
+| **hook_d** | — | /var/run/agentos/hook.sock | 全局 Hook 生命周期管理：注册、触发、卸载、审计；支持 8 种 Hook 类型（PRE/POST_EXEC、PRE/POST_LLM、PRE/POST_TOOL、ON_ERROR、ON_MEMORY_EVOLVE）；按优先级顺序执行，聚合决策（ABORT>RETRY>MODIFY>SKIP>CONTINUE）；PRE 阶段安全护栏前置拦截；委托 hook_registry/hook_executor/hook_interceptor/hook_timeout 模块化实现 |
+| **plugin_d** | — | /var/run/agentos/plugin.sock | 动态插件加载/卸载/生命周期管理：通过 dlopen/dlsym 加载动态库，状态机 UNLOADED→LOADED→INITIALIZED→RUNNING→ERROR/DISABLED；支持 4 种插件类型（TOOL_PROVIDER、PROTOCOL_ADAPTER、MEMORY_PROVIDER、HOOK_EXTENSION）；线程安全注册表（读写锁，最大 64 插件）；启动时自动扫描 ecosystem/plugins/ 经权限校验后加载 |
 
 ---
 
@@ -37,12 +39,14 @@ Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCo
 | 组件文件 | 功能 | 使用率 |
 |---------|------|--------|
 | jsonrpc_helpers.h/c | JSON-RPC 2.0 响应构建 | 100% |
-| method_dispatcher.h/c | 方法路由分发器 | 80% (8/10) |
-| param_validator.h/c | 参数验证工具集 | 80% (8/10) |
+| method_dispatcher.h/c | 方法路由分发器 | 67% (8/12) |
+| param_validator.h/c | 参数验证工具集 | 67% (8/12) |
 | log_sanitizer.h/c | 日志安全脱敏 | 按需 |
 | svc_common.h | 公共类型和宏定义 | 100% |
 | svc_logger.h/c | 统一日志接口 | 100% |
 | platform.h | 跨平台抽象层 | 100% |
+
+> **注**: hook_d 与 plugin_d 当前仅完成 IPC Bus 通道引导（`daemon_bootstrap_ipc_start`），未通过 `method_dispatcher_register` 注册具名 JSON-RPC 方法处理器，故 method_dispatcher / param_validator 使用率为 8/12。这两个 daemon 的本地 C 层服务 API（`hook_service_*` / `plugin_service_*`）已完整实现，RPC 方法暴露为后续补全项（P4.8.2 已记录）。
 
 ---
 
@@ -124,6 +128,7 @@ echo '{"jsonrpc":"2.0","method":"health_check","id":1}' \
 
 | 版本 | 日期 | 变更说明 |
 |------|------|---------|
+| V8.0 | 2026-07-04 | P4.8.2 补遗：daemon 清单从 10 个修正为 12 个，新增 hook_d（全局 Hook 生命周期管理，8 种 Hook 类型）与 plugin_d（动态插件加载/卸载，4 种插件类型）的完整架构说明；公共库使用率同步更新为 8/12 |
 | V7.0 | 2026-04-06 | 生产级优化：统一响应宏、参数验证集成、代码风格标准化 |
 | V6.0 | 2026-04-05 | V6 全面检查通过 (S+/96.5分) |
 | V5.0 | 2026-04-05 | param_validator + log_sanitizer 实现 |
