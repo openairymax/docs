@@ -18,7 +18,7 @@
 - 统一错误码体系（权威源唯一性、分段、禁令）；
 - 审计日志格式（结构化 JSON）；
 - 数据保护与敏感信息脱敏规范；
-- 三许可证体系（AGPL v3 / Apache 2.0 / SPHARX-Proprietary）；
+- 双许可证体系（AGPL v3 + Apache 2.0，SPDX: `AGPL-3.0-or-later OR Apache-2.0`）；
 - SBOM 软件物料清单规范；
 - 合规检查清单与第三方实现安全审计要求。
 
@@ -493,44 +493,47 @@ redaction:
 
 ## 8. 许可证治理
 
-### 8.1 三许可证体系
+### 8.1 双许可证体系
 
-ARE 生态采用**分层许可证**体系，不同组件适用不同许可证，避免许可证污染：
+ARE 生态采用**统一双许可证**体系（SPDX: `AGPL-3.0-or-later OR Apache-2.0`，版权人 SPHARX Ltd.），所有源代码、构建脚本、文档与配套 NOTICE 文件统一适用，避免许可证碎片化与污染：
 
 | 组件类别 | 许可证 | 适用范围 | 传染性 | 链接约束 |
 |----------|--------|----------|--------|----------|
-| **运行时核心** | AGPL v3 | atoms 层（corekern/syscall/memory/taskflow）、cupolas、IPC Bus 核心 | 强传染（网络服务也须开源） | 链接者须 AGPL 兼容 |
-| **工具链/SDK** | Apache 2.0 | SDK、CLI 工具、构建脚本、CTS 测试套件 | 不传染 | 无约束 |
-| **PRO 模块** | SPHARX-Proprietary | 商业增值模块（高级监控、企业 SSO、SLA 支持） | 不传染（独立可选） | 不得反向链接至 AGPL 组件 |
+| **运行时核心** | AGPL-3.0-or-later OR Apache-2.0 | atoms 层（corekern/syscall/memory/taskflow）、cupolas、IPC Bus 核心、daemon、SDK、文档、Docker、Desktop | 双许可证：接收方可任选其一遵循 | 任选其一，AGPL 路径强传染（网络服务也须开源），Apache 路径不传染 |
+| **工具链/SDK/文档** | AGPL-3.0-or-later OR Apache-2.0 | SDK（Python/Rust/Go/TypeScript）、CLI 工具、构建脚本、CTS 测试套件、ARE Standards 文档 | 同上 | 同上 |
+
+> **历史决策**：v0.1.1 之前曾设计"三许可证体系（AGPL v3 + Apache 2.0 + SPHARX-Proprietary）+ CC-BY-SA-4.0"，已于 2026-07-04 由 SPHARX Ltd. 决定统一为 AGPL v3 + Apache 2.0 双许可证，取消 SPHARX-Proprietary 与 CC-BY-SA-4.0 路径。MemoryRovol 作为独立闭源仓库不在此体系内。
 
 ### 8.2 许可证兼容性矩阵
 
-| 上游许可证 → 下游 | AGPL v3 核心 | Apache 2.0 工具链 | SPHARX-Proprietary |
-|------------------|--------------|-------------------|---------------------|
-| AGPL v3 核心 | ✓ 兼容 | ✓ 兼容（Apache 可链接 AGPL） | ✗ 不兼容（专有不传染 AGPL） |
-| Apache 2.0 工具链 | ✓ 兼容 | ✓ 兼容 | ✓ 兼容 |
-| SPHARX-Proprietary | ✗ 不兼容 | ✓ 兼容（专有可链接 Apache） | ✓ 兼容 |
+| 上游许可证 → 下游 | AGPL-3.0-or-later OR Apache-2.0（双许可证） |
+|------------------|---------------------------------------------|
+| AGPL-3.0-or-later OR Apache-2.0（双许可证） | ✓ 兼容（同源许可证） |
+| Apache 2.0（仅） | ✓ 兼容（Apache 是双许可证子集） |
+| AGPL v3（仅） | ✓ 兼容（AGPL 是双许可证子集，下游需选择 AGPL 路径） |
+| MIT / BSD-3-Clause | ✓ 兼容（可被双许可证任一路径吸收） |
+| GPL v3 | ✓ 兼容（仅 AGPL 路径，与 Apache 2.0 路径不兼容） |
+| 专有/闭源 | ✗ 不兼容（除非仅链接 Apache 路径且不修改 Airymax 源代码） |
 
 ### 8.3 第三方实现者的许可证选择
 
 | 实现目标 | 推荐许可证 | 约束 |
 |----------|-----------|------|
-| 实现完整 ARE 运行时（含 atoms 替代） | AGPL v3 | 必须 opensource 全部修改 |
-| 实现 daemon 兼容层（基于 Airymax atoms） | AGPL v3 | 同上 |
-| 实现 SDK 客户端 | Apache 2.0 / MIT / BSD | 可闭源 |
+| 实现完整 ARE 运行时（含 atoms 替代） | AGPL-3.0-or-later | 必须 opensource 全部修改 |
+| 实现 daemon 兼容层（基于 Airymax atoms） | AGPL-3.0-or-later | 同上 |
+| 实现 SDK 客户端 | Apache-2.0 / MIT / BSD | 可闭源 |
 | 实现私有 daemon（不链接 AGPL 核心） | 任意 | 必须 IPC Bus 隔离，不得静态/动态链接 AGPL 代码 |
 
 ### 8.4 许可证声明要求
 
-- 每个源文件顶部必须包含 SPDX-License-Identifier 标识；
+- 每个源文件顶部必须包含 SPDX-License-Identifier 标识（统一为 `AGPL-3.0-or-later OR Apache-2.0`）；
 - 二进制分发必须附带 `LICENSE` 文件与 `NOTICE` 文件；
 - AGPL 组件的衍生作品必须在用户界面显著位置声明（AGPL §5）；
 - 不得移除或修改版权声明与许可证头。
 
 ```c
 // SPDX-FileCopyrightText: 2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// 或：Apache-2.0
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 ```
 
 ---

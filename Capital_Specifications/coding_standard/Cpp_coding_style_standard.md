@@ -913,7 +913,7 @@ private:
  * 提供固定大小内存块的分配器。适用于高频分配/释放场景，
  * 如任务调度、事件处理等。
  * 
- * @author Airymax Team
+ * @author SPHARX Ltd. - Airymax Team
  * @date 2026-03-25
  * @version 1.6
  * 

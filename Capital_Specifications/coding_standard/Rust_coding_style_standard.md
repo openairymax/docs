@@ -1533,7 +1533,7 @@ description = "Airymax Rust SDK - 与 Go SDK 保持一致的模块化结构"
 license = "MIT"
 homepage = "https://github.com/spharx/agentos"
 repository = "https://github.com/spharx/agentos"
-authors = ["Spharx Airymax Team"]
+authors = ["SPHARX Ltd."]
 ```
 
 ```toml
@@ -2034,5 +2034,5 @@ deny = [
 
 ---
 
-> **文档维护者**: Spharx Airymax Team
+> **文档维护者**: SPHARX Ltd. - Airymax Team
 > **审核周期**: 每季度审核一次，与 SDK 主版本同步更新

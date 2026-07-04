@@ -74,7 +74,7 @@ src/
  * 优先级队列和依赖解析。
  *
  * @module agentos/scheduler
- * @author Airymax Team
+ * @author SPHARX Ltd. - Airymax Team
  * @version 1.6.0
  */
 

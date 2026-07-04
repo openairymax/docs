@@ -100,7 +100,7 @@ Example:
     >>> result = scheduler.wait(task_id)
 
 Author:
-    Airymax Team
+    SPHARX Ltd. - Airymax Team
 
 Version:
     1.5.0

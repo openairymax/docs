@@ -267,7 +267,7 @@ python drift_detector.py --action detect --verbose
 
 ---
 
-**文档维护**: Airymax Team  
+**文档维护**: SPHARX Ltd.
 **最后更新**: 2026-04-05  
 
 © 2026 SPHARX Ltd. All Rights Reserved.

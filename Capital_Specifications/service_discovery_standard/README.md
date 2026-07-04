@@ -1,7 +1,7 @@
 # Airymax 服务发现规范
 
 > **版本**: v0.1.0-draft | **状态**: 草案 | **日期**: 2026-07-04
-> **版权归属人**: SPHARX Ltd. | **许可证**: CC-BY-SA-4.0
+> **版权归属人**: SPHARX Ltd. | **许可证**: AGPL-3.0-or-later OR Apache-2.0（双许可证，SPHARX Ltd.）
 
 ---
 

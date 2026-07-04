@@ -254,7 +254,7 @@ Airymax 采用双错误码体系：
 ├─────────────────────────────────────────────────┤
 │  L3 安全与治理                                    │
 │  • Cupolas 权限引擎 • 五级沙箱 • 统一错误码       │
-│  • 审计日志 • 三许可证体系 • SBOM                  │
+│  • 审计日志 • 双许可证体系 • SBOM                  │
 ├─────────────────────────────────────────────────┤
 │  L2 服务通信协议                                  │
 │  • IPC 消息头（128 字节）• JSON-RPC 命名空间       │
@@ -273,7 +273,7 @@ Airymax 采用双错误码体系：
 | [are_standards/README.md](are_standards/README.md) | v0.1.0-draft | 📝 草案 | ARE Standards 三层标准总览、独立仓库可行性、标准化路线图 |
 | [are_standards/L1_runtime_interface.md](are_standards/L1_runtime_interface.md) | v0.1.0-draft | 📝 草案 | L1 核心运行时接口规范（微核心原语 + ops 注入） |
 | [are_standards/L2_service_protocol.md](are_standards/L2_service_protocol.md) | v0.1.0-draft | 📝 草案 | L2 服务通信协议规范（IPC 消息头 + JSON-RPC 命名空间） |
-| [are_standards/L3_security_governance.md](are_standards/L3_security_governance.md) | v0.1.0-draft | 📝 草案 | L3 安全与治理规范（Cupolas + 错误码 + 三许可证） |
+| [are_standards/L3_security_governance.md](are_standards/L3_security_governance.md) | v0.1.0-draft | 📝 草案 | L3 安全与治理规范（Cupolas + 错误码 + 双许可证） |
 
 **核心要求**:
 - 三层标准接口使第三方可独立实现兼容 Agent 运行时
@@ -560,7 +560,7 @@ python scripts/license_compliance.py --report
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
-| Doc V2.3 | 2026-07-04 | SPHARX Ltd. | 新增"开放标准 (ARE Standards)"章节，覆盖 6 个标准子目录（are_standards/sdk_standard/ipc_standard/service_discovery_standard/rpc_api_standard/error_code_standard）+ L1/L2/L3 三层标准架构；更新许可证为 AGPL v3 + Apache 2.0 + SPHARX-Proprietary 三许可证体系 |
+| Doc V2.3 | 2026-07-04 | SPHARX Ltd. | 新增"开放标准 (ARE Standards)"章节，覆盖 6 个标准子目录（are_standards/sdk_standard/ipc_standard/service_discovery_standard/rpc_api_standard/error_code_standard）+ L1/L2/L3 三层标准架构；统一许可证为 AGPL v3 + Apache 2.0 双许可证（SPDX: `AGPL-3.0-or-later OR Apache-2.0`），版权人 SPHARX Ltd. |
 | Doc V2.2 | 2026-06-08 | Airymax 规范委员会 | 统一版本号至 v1.3.0，新增双错误码体系说明，新增 Rust/Go 编码风格与安全编码标准 |
 | Doc V2.1 | 2026-06-07 | Airymax 规范委员会 | 修正所有失效链接，新增集成标准章节，整理散落文件 |
 | Doc V2.0 | 2026-03-31 | Airymax Team | 更新规范版本，完善内容结构 |
