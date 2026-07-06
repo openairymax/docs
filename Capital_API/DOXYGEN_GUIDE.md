@@ -323,8 +323,8 @@ git commit -m "docs: update API documentation"
 ## 参考资料
 
 - **Doxygen 官方手册**: https://www.doxygen.nl/manual/
-- **Airymax 架构原则**: ../../../docs/ARCHITECTURAL_PRINCIPLES.md
-- **代码注释规范**: ../../../docs/Capital_Specifications/
+- **Airymax 架构原则**: ../../ARCHITECTURAL_PRINCIPLES.md
+- **代码注释规范**: ../../Capital_Specifications/
 - **Doxygen 特殊命令**: https://www.doxygen.nl/manual/commands.html
 
 ---
@@ -334,4 +334,4 @@ git commit -m "docs: update API documentation"
 **维护者**: SPHARX Ltd. - Airymax Team
 
 **SPDX-FileCopyrightText: 2026 SPHARX Ltd.**
-**SPDX-License-Identifier: Apache-2.0**
+**SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0**

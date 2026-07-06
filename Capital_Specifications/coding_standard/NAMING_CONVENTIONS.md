@@ -202,10 +202,10 @@ int heapstore_init(const heapstore_config_t *config);
 int heapstore_put(const char *key, const void *data, size_t size);
 int heapstore_get(const char *key, void **data, size_t *size);
 
-// corekern 模块
-int corekern_start(void);
-int corekern_stop(void);
-int corekern_register_cupola(const char *name, cupola_entry_t entry);
+// CoreKern 模块（代码前缀 agentos_core_）
+int agentos_core_start(void);
+int agentos_core_stop(void);
+int agentos_core_register_cupola(const char *name, cupola_entry_t entry);
 ```
 
 ### 4.3 常见动作动词
@@ -217,8 +217,8 @@ int corekern_register_cupola(const char *name, cupola_entry_t entry);
 | `get` | 获取值（不修改状态） | `config_value_get_type` |
 | `set` | 设置值 | `config_context_set` |
 | `init` | 初始化 | `heapstore_init` |
-| `start` | 启动 | `corekern_start` |
-| `stop` | 停止 | `corekern_stop` |
+| `start` | 启动 | `agentos_core_start` |
+| `stop` | 停止 | `agentos_core_stop` |
 | `write` | 写入 | `agentos_log_write` |
 | `clone` | 克隆/深拷贝 | `config_value_clone` |
 | `has` | 检查是否存在 | `config_context_has` |
@@ -355,18 +355,18 @@ AGENTOS_<类别>_<名称>
 
 | 模块 | 格式 | 示例 |
 |------|------|------|
-| agentos（通用） | `AGENTOS_E<CODE>` | `AGENTOS_EINVAL`、`AGENTOS_ENOMEM` |
+| agentos（通用） | `AGENTOS_ERR_<CODE>` | `AGENTOS_ERR_INVALID_PARAM`、`AGENTOS_ERR_OUT_OF_MEMORY` |
 | config | `CONFIG_ERROR_<NAME>` | `CONFIG_ERROR_INVALID_ARG`、`CONFIG_ERROR_NOT_FOUND` |
 
 ### 7.2 通用错误码（agentos 层）
 
 ```c
-#define AGENTOS_SUCCESS      (0)   // 成功
-#define AGENTOS_EINVAL       (-1)  // 参数无效
-#define AGENTOS_ENOMEM       (-2)  // 内存不足
-#define AGENTOS_EBUSY        (-3)  // 资源忙碌
+#define AGENTOS_OK      (0)   // 成功
+#define AGENTOS_ERR_INVALID_PARAM       (-2)  // 参数无效
+#define AGENTOS_ERR_OUT_OF_MEMORY       (-4)  // 内存不足
+#define AGENTOS_ERR_BUSY        (-17)  // 资源忙碌
 #define AGENTOS_ENOENT       (-4)  // 资源不存在
-#define AGENTOS_EPERM        (-5)  // 权限不足
+#define AGENTOS_ERR_PERMISSION_DENIED        (-10)  // 权限不足
 #define AGENTOS_ETIMEDOUT    (-6)  // 操作超时
 #define AGENTOS_EIO          (-7)  // I/O 错误
 #define AGENTOS_EEXIST       (-8)  // 资源已存在
@@ -450,7 +450,7 @@ const config_value_t *config_context_get(const config_context_t *ctx, const char
  * @brief 设置跨平台线程局部存储变量
  * @param key 变量键名
  * @param value 变量值
- * @return AGENTOS_SUCCESS 成功，AGENTOS_ENOMEM 内存不足
+ * @return AGENTOS_OK 成功，AGENTOS_ENOMEM 内存不足
  * @since v0.2.0
  */
 int agentos_tls_set(const char *key, void *value);
@@ -482,7 +482,7 @@ int agentos_tls_set(const char *key, void *value);
 | 类型 | `module_type_t` | `agentos_error_t`、`config_value_t` |
 | 枚举 | `MODULE_UPPER` | `CONFIG_TYPE_INT`、`AGENTOS_MEM_LAYER1_RAW` |
 | 宏 | `UPPER_SNAKE_CASE` | `AGENTOS_LOG_LEVEL_DEBUG`、`AGENTOS_CHECK_NULL` |
-| 通用错误码 | `AGENTOS_E*` | `AGENTOS_EINVAL`、`AGENTOS_ENOMEM` |
+| 通用错误码 | `AGENTOS_ERR_*` | `AGENTOS_ERR_INVALID_PARAM`、`AGENTOS_ERR_OUT_OF_MEMORY` |
 | 模块错误码 | `MODULE_ERROR_*` | `CONFIG_ERROR_NOT_FOUND` |
 | 头文件保护 | `UPPER_SNAKE_CASE` | `AGENTOS_TYPES_H`、`AGENTOS_PLATFORM_H` |
 | API 版本 | `@since vX.Y.Z` | `@since v0.1.0` |

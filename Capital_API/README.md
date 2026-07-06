@@ -14,13 +14,13 @@
   - 记忆引擎 API
   - 主循环 API
   
-- [内核系统 (CoreKern)](core/corekern_api.md)
+- [内核系统 (CoreKern)（待编写）](core/corekern_api.md)
   - 初始化与关闭
   - 任务管理
   - IPC通信
   - 时间事件系统
 
-- [记忆系统 (MemoryRovol)](core/memoryrovol_api.md)
+- [记忆系统 (MemoryRovol)（待编写）](core/memoryrovol_api.md)
   - 四层记忆架构
   - L1原始卷 API
   - L2特征层 API
@@ -28,12 +28,12 @@
   - L4模式层 API
   - 检索与遗忘 API
 
-- [任务流 (TaskFlow)](core/taskflow_api.md)
+- [任务流 (TaskFlow)（待编写）](core/taskflow_api.md)
   - 任务定义
   - 流程编排
   - 依赖管理
 
-- [系统调用 (SysCall)](core/syscall_api.md)
+- [系统调用 (SysCall)（待编写）](core/syscall_api.md)
   - 路由器
   - 调用入口
   - 权限控制
@@ -44,80 +44,80 @@
   - 服务管理
   - 配置接口
 
-- [LLM服务 (llm_d)](daemon/llm_api.md)
+- [LLM服务 (llm_d)（待编写）](daemon/llm_api.md)
   - LLM调用接口
   - Token计数
   - 缓存管理
   - 定价规则
 
-- [通道服务 (channel_d)](daemon/channel_api.md)
+- [通道服务 (channel_d)（待编写）](daemon/channel_api.md)
   - 通道管理
   - 消息传递
   - 线程安全保证
 
-- [调度器 (sched_d)](daemon/scheduler_api.md)
+- [调度器 (sched_d)（待编写）](daemon/scheduler_api.md)
   - 调度策略
   - 任务队列
   - 优先级管理
 
-- [监控服务 (monit_d)](daemon/monitoring_api.md)
+- [监控服务 (monit_d)（待编写）](daemon/monitoring_api.md)
   - 指标收集
   - 告警系统
   - 追踪功能
 
-- [市场服务 (market_d)](daemon/market_api.md)
+- [市场服务 (market_d)（待编写）](daemon/market_api.md)
   - 代理注册
   - 技能注册
   - 安装器接口
 
-- [工具执行器 (tool_d)](daemon/tool_api.md)
+- [工具执行器 (tool_d)（待编写）](daemon/tool_api.md)
   - 工具注册
   - 执行引擎
   - 验证器
   - 缓存机制
 
 ### 协议栈 API
-- [统一协议框架](protocols/unified_protocol_api.md)
+- [统一协议框架（待编写）](protocols/unified_protocol_api.md)
   - 协议适配器接口
   - 消息编解码
   - 协议路由
 
-- [协议扩展框架](protocols/protocol_extension_api.md)
+- [协议扩展框架（待编写）](protocols/protocol_extension_api.md)
   - 适配器注册
   - 中间件链
   - 能力协商
 
-- [标准协议适配器](protocols/adapters_api.md)
+- [标准协议适配器（待编写）](protocols/adapters_api.md)
   - MCP v1.0
   - A2A v0.3
   - OpenAI Enterprise
 
-- [第三方集成](protocols/integrations_api.md)
+- [第三方集成（待编写）](protocols/integrations_api.md)
   - OpenClaw
   - Claude
   - LangChain
   - AutoGen
 
 ### 公共工具库 API
-- [字符串处理](commons/string_api.md)
-- [内存管理](commons/memory_api.md)
-- [日志系统](commons/logging_api.md)
-- [错误处理](commons/error_api.md)
-- [同步原语](commons/sync_api.md)
-- [配置管理](commons/config_api.md)
-- [UUID生成](commons/uuid_api.md)
+- [字符串处理（待编写）](commons/string_api.md)
+- [内存管理（待编写）](commons/memory_api.md)
+- [日志系统（待编写）](commons/logging_api.md)
+- [错误处理（待编写）](commons/error_api.md)
+- [同步原语（待编写）](commons/sync_api.md)
+- [配置管理（待编写）](commons/config_api.md)
+- [UUID生成（待编写）](commons/uuid_api.md)
 
 ### Docker部署
 - [Docker快速启动](docker/README.md)
 - [Dockerfile参考](docker/Dockerfile)
-- [docker-compose.yml](docker/docker-compose.yml)
-- [环境变量配置](docker/env_config.md)
+- [docker-compose.yml（待编写）](docker/docker-compose.yml)
+- [环境变量配置（待编写）](docker/env_config.md)
 
 ### 示例代码
 - [快速入门示例](examples/quickstart.md)
-- [完整Agent实现](examples/full_agent_example.c)
-- [自定义协议适配器](examples/custom_adapter_example.c)
-- [多Agent协作](examples/multi_agent_example.c)
+- [完整Agent实现（待编写）](examples/full_agent_example.c)
+- [自定义协议适配器（待编写）](examples/custom_adapter_example.c)
+- [多Agent协作（待编写）](examples/multi_agent_example.c)
 
 ---
 
@@ -132,14 +132,14 @@
 int main() {
     // 1. 初始化核心系统
     agentos_error_t err = agentos_core_init();
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         return -1;
     }
 
     // 2. 创建三层循环
     agentos_core_loop_t* loop = NULL;
     err = agentos_loop_create(NULL, &loop);
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         agentos_core_shutdown();
         return -1;
     }
@@ -157,7 +157,7 @@ int main() {
     size_t result_len = 0;
     err = agentos_loop_wait(loop, task_id, 30000, &result, &result_len);
     
-    if (err == AGENTOS_SUCCESS && result) {
+    if (err == AGENTOS_OK && result) {
         printf("Agent响应: %.*s\n", (int)result_len, result);
         AGENTOS_FREE(result);
     }
@@ -247,7 +247,7 @@ if (mcp->encode) {
 
 ### 1. 错误处理约定
 所有API函数返回 `agentos_error_t` 类型：
-- `AGENTOS_SUCCESS` (0): 成功
+- `AGENTOS_OK` (0): 成功
 - `AGENTOS_EINVAL` (-1): 无效参数
 - `AGENTOS_ENOMEM` (-2): 内存不足
 - `AGENTOS_ENOTINIT` (-3): 未初始化
@@ -268,7 +268,7 @@ if (mcp->encode) {
 ### 4. 命名规范
 - 函数: `module_action_object` (如 `agentos_loop_create`)
 - 类型: `module_object_t` (如 `agentos_core_loop_t`)
-- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTOS_SUCCESS`)
+- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTOS_OK`)
 - 枚举: `MODULE_TYPE_VALUE` (如 `TASK_STATUS_PENDING`)
 
 ---
@@ -297,7 +297,7 @@ if (mcp->encode) {
 ```
 SPHARX Airymax v0.0.4
 Copyright (c) 2026 SPHARX Ltd.
-SPDX-License-Identifier: GPL-3.0-or-later OR Apache-2.0
+SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 ```
 
 **注意**: 本文档描述的是Developer Preview版本，API可能在后续版本中调整。生产环境使用请等待正式Release版本。

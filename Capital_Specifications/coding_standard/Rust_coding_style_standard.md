@@ -1,5 +1,5 @@
 <!-- SPDX-FileCopyrightText: 2026 SPHARX Ltd. -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 -->
 
 # Airymax Rust 编码风格标准
 
@@ -578,7 +578,7 @@ pub struct ProtocolConfig {
 impl Default for ProtocolConfig {
     fn default() -> Self {
         let endpoint = std::env::var("AGENTOS_ENDPOINT")
-            .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+            .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
         Self {
             protocol_type: ProtocolType::JsonRpc,
             endpoint,
@@ -1288,7 +1288,7 @@ pub enum AgentOSError { ... }
 /// ```rust
 /// use agentos_rs::new_client;
 ///
-/// let client = new_client("http://localhost:18789");
+/// let client = new_client("http://localhost:8080");
 /// ```
 pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
 ```
@@ -1533,7 +1533,7 @@ description = "Airymax Rust SDK - 与 Go SDK 保持一致的模块化结构"
 license = "MIT"
 homepage = "https://github.com/spharx/agentos"
 repository = "https://github.com/spharx/agentos"
-authors = ["Spharx Airymax Team"]
+authors = ["SPHARX Ltd."]
 ```
 
 ```toml
@@ -1728,7 +1728,7 @@ mod tests {
 
     #[test]
     fn test_xxx_client_new() {
-        let client = XxxClient::new("http://localhost:18789");
+        let client = XxxClient::new("http://localhost:8080");
         assert!(client.is_ok());
     }
 
@@ -2034,5 +2034,5 @@ deny = [
 
 ---
 
-> **文档维护者**: Spharx Airymax Team
+> **文档维护者**: SPHARX Ltd. - Airymax Team
 > **审核周期**: 每季度审核一次，与 SDK 主版本同步更新

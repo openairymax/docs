@@ -18,11 +18,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 概述
 
-Airymax 的进程间通信（IPC）系统基于 **IPC Binder** 实现，是 **体系并行论 (MCIS)** 与 **工程两论** 在进程通信层面的核心实践。IPC Binder 通过共享内存和信号量机制提供高效、安全、可靠的跨进程通信，形成微核心架构的控制论反馈回路，确保系统各组件间的协同工作与动态平衡。
+Airymax 的进程间通信（IPC）系统基于 **IPC Binder** 实现，是 **体系并行 (MCIS)** 与 **工程两论** 在进程通信层面的核心实践。IPC Binder 通过共享内存和信号量机制提供高效、安全、可靠的跨进程通信，形成 MicroCoreRT 微核心架构的控制论反馈回路，确保系统各组件间的协同工作与动态平衡。
 
-从 **体系并行论** 视角分析，IPC 系统是 MCIS 中 **多体协同 (Multi-Body Collaboration)** 机制的具体实现。通过高效的进程间通信，实现了认知体、执行体、记忆体等不同 **体 (Body)** 之间的数据交换与状态同步，支撑了智能体系统的整体协同工作。
+从 **体系并行** 视角分析，IPC 系统是 MCIS 中 **多体协同 (Multi-Body Collaboration)** 机制的具体实现。通过高效的进程间通信，实现了认知体、执行体、记忆体等不同 **体 (Body)** 之间的数据交换与状态同步，支撑了智能体系统的整体协同工作。
 
-作为 Airymax **系统观维度** 的关键组件，IPC 系统将微核心的机制与策略分离原则具象化为可执行的通信协议，通过零拷贝传输、无锁环形缓冲区等极致优化，体现 **设计美学** 中简约至上与极致细节的平衡。同时，IPC 系统也与 **工程观维度**（性能优化）、**认知观维度**（跨进程认知支持）、**内核观维度**（微核心通信基础）形成正交协同，共同构成 Airymax 完整的通信基础设施。
+作为 Airymax **系统观维度** 的关键组件，IPC 系统将 MicroCoreRT 微核心的机制与策略分离原则具象化为可执行的通信协议，通过零拷贝传输、无锁环形缓冲区等极致优化，体现 **设计美学** 中简约至上与极致细节的平衡。同时，IPC 系统也与 **工程观维度**（性能优化）、**认知观维度**（跨进程认知支持）、**内核观维度**（MicroCoreRT 微核心通信基础）形成正交协同，共同构成 Airymax 完整的通信基础设施。
 
 IPC Binder 不仅是进程间数据传输的技术通道，更是智能体系统中 **控制论负反馈回路** 的物理实现。通过高效的信号量同步和消息队列机制，确保了系统各组件间的状态协调与动态平衡，为整个 Airymax 生态提供高效、可靠、安全的进程间通信基础设施。
 
@@ -67,9 +67,9 @@ IPC Binder 不仅是进程间数据传输的技术通道，更是智能体系统
 
 ### 1.4 理论基础与原则映射：MCIS与通信理论的融合
 
-IPC Binder 的设计深刻体现了 **体系并行论 (MCIS)** 与 **五维正交体系** 的设计思想，将分布式系统理论、通信协议设计、性能优化与系统安全完美融合：
+IPC Binder 的设计深刻体现了 **体系并行 (MCIS)** 与 **五维正交体系** 的设计思想，将分布式系统理论、通信协议设计、性能优化与系统安全系统整合：
 
-#### 理论基础：体系并行论 (MCIS) 的通信协同映射
+#### 设计依据：体系并行 (MCIS) 的通信协同映射
 - **多体协同原理** → IPC 系统作为 MCIS 中不同 **体 (Body)** 间的通信桥梁，支撑认知体、执行体、记忆体之间的数据交换与状态同步
 - **反馈调节原理** → 信号量同步与消息队列形成 **控制论负反馈回路**，确保进程间通信的时序正确性与状态一致性
 - **层次分解原理** → 应用层、IPC客户端API、内核核心的三层架构，体现 **垂直层次分解 (Vertical Layering)** 思想
@@ -251,7 +251,7 @@ agentos_error_t agentos_shm_create(
     shm->fd = fd;
     
     *out_shm = shm;
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 ```
 
@@ -444,7 +444,7 @@ agentos_error_t agentos_mq_send(
     // 通知有消息
     agentos_sem_post(mq->not_empty);
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 ```
 
@@ -675,13 +675,13 @@ agentos_error_t agentos_service_lookup(
     }
     
     *out_info = candidate;
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 ```
 
 ---
 
-## 4. 通信模式
+### 4. 通信模式
 
 ### 4.1 请求 - 响应模式（Request-Response）
 
@@ -731,7 +731,7 @@ agentos_error_t agentos_pubsub_publish(
         agentos_ipc_send(subs->clients[i], data, len, 1000);
     }
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 
 // 订阅主题
@@ -740,7 +740,7 @@ agentos_error_t agentos_pubsub_subscribe(
     agentos_ipc_channel_t* client_channel) {
     
     add_subscriber(topic, client_channel);
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 ```
 
@@ -861,7 +861,7 @@ typedef struct mpmc_queue {
 
 ## 6. 与其他模块的交互
 
-### 6.1 在微核心中的位置
+### 6.1 在 MicroCoreRT 微核心中的位置
 
 ```
 CoreLoopThree / daemon Services
@@ -965,7 +965,7 @@ agentos_ipc_recv(channel, (void**)&response, &len, 5000);
 | **跨语言** | ✅ C/C++/Go/Rust | ✅ .NET/C++ | ✅ Objective-C/Swift | ✅ Rust/C++ |
 
 **设计哲学对比**:
-- **Airymax**: 极简主义 + 高性能（Liedtke 微核心原则）
+- **Airymax**: 极简主义 + 高性能（Liedtke MicroCoreRT 微核心原则）
 - **Windows ALPC**: 安全性优先（完整性级别、沙箱隔离）
 - **Mach ports**: 通用性优先（消息传递抽象）
 - **Fuchsia Zircon**: 现代设计（类型安全、形式化验证规划中）
@@ -1018,7 +1018,7 @@ agentos_ipc_channel_destroy(channel);
 
 // 3. 错误处理
 agentos_error_t err = agentos_ipc_send(...);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     // 重试或报错
 }
 ```
@@ -1067,7 +1067,7 @@ agentos_ipc_send(channel, data, len, 1000);  // 可能失败！
 ## 10. 参考资料
 
 - [README.md](../../README.md) - 项目总览
-- [microkernel.md](microkernel.md) - 微核心架构详解
+- [microcorert.md](microcorert.md) - MicroCoreRT 微核心架构详解
 - [shared_memory.h](../include/shared_memory.h) - 共享内存头文件
 - [semaphore.h](../include/semaphore.h) - 信号量头文件
 - [message_queue.h](../include/message_queue.h) - 消息队列头文件

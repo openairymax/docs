@@ -15,7 +15,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
 - **Thinkdual 双思考系统**（原则 C-1）：提供 t1 快思考（快速、低延迟）与 t2 慢思考（安全、全面）两条路径，并允许运行时策略切换
-- **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
+- **MicroCoreRT 微核心设计**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 - **设计美学**（原则 A-1, A-2, A-4）：代码结构简约对称，命名自解释，注释清晰优雅，追求完美主义
 
 **关联原则**:
@@ -319,7 +319,7 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 
 | 编号 | 禁止模式 | 检测命令 |
 |------|---------|----------|
-| BAN-01 | `return AGENTOS_SUCCESS` 占位返回 | `grep -rn "return AGENTOS_SUCCESS" --include="*.c"` |
+| BAN-01 | `return AGENTOS_OK` 占位返回 | `grep -rn "return AGENTOS_OK" --include="*.c"` |
 | BAN-02 | `(void)param` 忽略参数 | `grep -rn "(void)" --include="*.c"` |
 | BAN-03 | 空函数体 `{}` | 代码审查 |
 | BAN-04 | TODO/FIXME 无关联 Issue | `grep -rn "TODO\|FIXME" --include="*.c"` |

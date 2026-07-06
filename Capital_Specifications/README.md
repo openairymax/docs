@@ -5,20 +5,20 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges."
 title: "Airymax 技术规范"
-version: "Doc V2.1"
-last_updated: "2026-06-08"
+version: "Doc V2.3"
+last_updated: "2026-07-04"
 status: "production_ready"
-review_due: "2026-06-30"
-theoretical_basis: "工程两论、五维正交系统、Thinkdual 双思考系统"
+review_due: "2026-07-31"
+theoretical_basis: "工程两论、五维正交系统、Thinkdual 双思考系统、ARE Standards 开放标准体系"
 target_audience: "开发者/架构师/安全专家"
 prerequisites: "了解软件开发流程，熟悉技术规范概念"
-estimated_reading_time: "1小时"
-core_concepts: "契约规范, 编码标准, 项目管理, 集成标准, 术语统一, 安全合规"
+estimated_reading_time: "1.5小时"
+core_concepts: "契约规范, 编码标准, 项目管理, 集成标准, 开放标准, 术语统一, 安全合规"
 ---
 
 # Airymax 技术规范
 
-**最新**: 2026-06-09
+**最新**: 2026-07-04
 **状态**: 维护中
 **路径**: OpenAirymax/Docs/Capital_Specifications/README.md
 
@@ -242,6 +242,109 @@ Airymax 采用双错误码体系：
 
 ---
 
+## 🌐 开放标准 (Open Standards / ARE Standards)
+
+开放标准定义 Airymax 推动的"行业底座"开放标准体系（ARE Standards — Agent Runtime Environment Standards），目标是定义 Agent Runtime Environment 的三层标准接口，使第三方可独立实现兼容的 Agent 运行时。**版权归属人：SPHARX Ltd.** | 许可证：AGPL v3 + Apache 2.0 双许可证（SPDX: `AGPL-3.0-or-later OR Apache-2.0`）。
+
+### 标准分层架构
+
+```
+┌─────────────────────────────────────────────────┐
+│            ARE Standards 三层标准                  │
+├─────────────────────────────────────────────────┤
+│  L3 安全与治理                                    │
+│  • Cupolas 权限引擎 • 五级沙箱 • 统一错误码       │
+│  • 审计日志 • 双许可证体系 • SBOM                  │
+├─────────────────────────────────────────────────┤
+│  L2 服务通信协议                                  │
+│  • IPC 消息头（128 字节）• JSON-RPC 命名空间       │
+│  • 服务发现多后端 • trace_id 贯穿                  │
+├─────────────────────────────────────────────────┤
+│  L1 核心运行时接口                                │
+│  • 微核心原语（IPC/Mem/Task/Time/Sync）           │
+│  • 生命周期 • ops 注入机制 • 一致性测试            │
+└─────────────────────────────────────────────────┘
+```
+
+### 1. ARE Standards 总览
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [are_standards/README.md](are_standards/README.md) | v0.1.0-draft | 📝 草案 | ARE Standards 三层标准总览、独立仓库可行性、标准化路线图 |
+| [are_standards/L1_runtime_interface.md](are_standards/L1_runtime_interface.md) | v0.1.0-draft | 📝 草案 | L1 核心运行时接口规范（微核心原语 + ops 注入） |
+| [are_standards/L2_service_protocol.md](are_standards/L2_service_protocol.md) | v0.1.0-draft | 📝 草案 | L2 服务通信协议规范（IPC 消息头 + JSON-RPC 命名空间） |
+| [are_standards/L3_security_governance.md](are_standards/L3_security_governance.md) | v0.1.0-draft | 📝 草案 | L3 安全与治理规范（Cupolas + 错误码 + 双许可证） |
+
+**核心要求**:
+- 三层标准接口使第三方可独立实现兼容 Agent 运行时
+- 参考实现保留在 Airymax 主仓库，标准文档独立发布
+- 标准化路线：草案（v0.1.1）→ 试用（v0.2.0）→ 候选（v0.3.0）→ 正式（v1.0.0）
+
+### 2. SDK 标准规范
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [sdk_standard/README.md](sdk_standard/README.md) | v0.1.0-draft | 📝 草案 | SDK 双层 API（Manager + 嵌套资源）+ Cognition/Safety/Tool/Chat 客户端覆盖 |
+
+**核心要求**:
+- 双层 API：Manager 层（向后兼容）+ 嵌套资源 API 层（对齐 OpenAI `/v1/chat/completions`）
+- 四语言 SDK（Rust/Python/Go/TypeScript）同步实现
+- 显式覆盖 CognitionClient/SafetyClient/ToolClient/ChatClient
+
+### 3. IPC Bus 消息头规范
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [ipc_standard/README.md](ipc_standard/README.md) | v0.1.0-draft | 📝 草案 | `are_ipc_message_header_t` 128 字节统一消息头 + 开放标准推动路径 |
+
+**核心要求**:
+- 统一消息头 128 字节（magic/version/trace_id/correlation_id/source/target）
+- magic=0x41524531 ("ARE1") 校验
+- 开放标准推动：v0.1.1 文档 → v0.2.0 参考实现 → v0.3.0 IETF 草案 → v1.0.0 正式
+
+### 4. 服务发现规范
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [service_discovery_standard/README.md](service_discovery_standard/README.md) | v0.1.0-draft | 📝 草案 | 多后端适配器架构（shm/dns-sd/consul/etcd/k8s）+ 统一接口 |
+
+**核心要求**:
+- 统一适配器接口 `are_svc_discovery_adapter_t`
+- 五种后端：SHM（高性能本地）/ DNS-SD（局域网）/ Consul（生产）/ etcd（K8s 原生）/ K8s（原生 Service）
+- 配置选择：`agentos.yaml` 的 `service_discovery.backend` 字段
+
+### 5. JSON-RPC API 规范
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [rpc_api_standard/README.md](rpc_api_standard/README.md) | v0.1.0-draft | 📝 草案 | 强制 `<daemon>.<method>` 命名空间 + 12 daemon 方法清单 + 第三方实现指南 |
+
+**核心要求**:
+- 强制命名空间格式 `<daemon>.<method>`（如 `llm.complete`、`tool.execute`）
+- 12 个 daemon 命名空间：`llm.`/`tool.`/`sched.`/`mem.`/`agent.`/`a2a.`/`mcp.`/`hook.`/`plugin.`/`cupolas.`/`monit.`/`market.`
+- 消除扁平方法名冲突（如 `register_agent`/`health_check` 跨 daemon 冲突）
+
+### 6. 错误码规范
+
+| 文档 | 版本 | 状态 | 描述 |
+|------|------|------|------|
+| [error_code_standard/README.md](error_code_standard/README.md) | v0.1.0-draft | 📝 草案 | 统一错误码分段 + 权威源唯一性 + Cupolas 错误码完全统一 |
+
+**核心要求**:
+- 权威源唯一：`agentos/commons/utils/error/include/error.h` 为唯一定义源
+- 分段规范：通用 -1~-99 / 系统 -100~-199 / 内核 -200~-299 / 服务 -300~-399 / LLM -400~-499 / 执行 -500~-599 / 记忆 -600~-699 / 安全 -700~-799 / 协议 -800~-899
+- 消除三套并行错误码系统（commons / cupolas enum / cupolas 本地 #define）
+
+### 独立仓库可行性
+
+**结论**: 高度可行。
+- `Docs/` 本身已是独立 git submodule（`git@atomgit.com:openairymax/docs.git`）
+- `Capital_Specifications/are_standards/` 作为标准容器，未来可独立发布为 `are-standards` 仓库
+- 参考实现保留在 Airymax 主仓库，标准文档独立发布
+- 治理模型：SPHARX Ltd. 主导标准制定 + 社区贡献流程
+
+---
+
 ## 📚 术语与索引 (Terminology & Index)
 
 ### 1. 统一术语表
@@ -457,6 +560,7 @@ python scripts/license_compliance.py --report
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |------|------|------|----------|
+| Doc V2.3 | 2026-07-04 | SPHARX Ltd. | 新增"开放标准 (ARE Standards)"章节，覆盖 6 个标准子目录（are_standards/sdk_standard/ipc_standard/service_discovery_standard/rpc_api_standard/error_code_standard）+ L1/L2/L3 三层标准架构；统一许可证为 AGPL v3 + Apache 2.0 双许可证（SPDX: `AGPL-3.0-or-later OR Apache-2.0`），版权人 SPHARX Ltd. |
 | Doc V2.2 | 2026-06-08 | Airymax 规范委员会 | 统一版本号至 v1.3.0，新增双错误码体系说明，新增 Rust/Go 编码风格与安全编码标准 |
 | Doc V2.1 | 2026-06-07 | Airymax 规范委员会 | 修正所有失效链接，新增集成标准章节，整理散落文件 |
 | Doc V2.0 | 2026-03-31 | Airymax Team | 更新规范版本，完善内容结构 |
@@ -464,8 +568,8 @@ python scripts/license_compliance.py --report
 
 ---
 
-**最后更新**: 2026-06-08
-**维护者**: Airymax 规范委员会
+**最后更新**: 2026-07-04
+**维护者**: SPHARX Ltd.
 
 ---
 

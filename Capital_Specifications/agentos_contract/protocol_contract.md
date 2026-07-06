@@ -19,7 +19,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 本规范根植于 Airymax 五维正交设计体系，是架构设计原则在通信层的具体体现：
 
 - **系统观（S维度）**: 协议栈按层次组织（外部网关、服务间通信、系统调用），体现层次分解方法，每层有明确的职责边界
-- **内核观（K维度）**: 通信接口保持长期稳定，支持向后兼容和渐进式演进，体现微核心的接口稳定原则
+- **内核观（K维度）**: 通信接口保持长期稳定，支持向后兼容和渐进式演进，体现 MicroCoreRT 微核心的接口稳定原则
 - **认知观（C维度）**: 协议设计支持 Thinkdual 双思考系统的效率与精度权衡，通过不同的传输策略适配不同认知需求
 - **工程观（E维度）**: 每一层都内置安全机制（认证、授权、审计），体现安全内生原则；协议设计考虑 TraceID 贯穿、结构化日志、指标收集等可观测性需求
 - **设计美学（A维度）**: 协议消息格式遵循简约、对称、自解释的美学原则，确保人类可读性和机器可处理性的平衡
@@ -191,7 +191,7 @@ GET  /api/v1/*    # RESTful API(可选)
 **请求头:**
 ```http
 POST /rpc HTTP/1.1
-Host: localhost:18789
+Host: localhost:8080
 Content-Type: application/json
 Authorization: Bearer <API_KEY>
 X-Trace-ID: abc123def456  # 可选，用于链路追踪
@@ -259,13 +259,13 @@ X-Trace-ID: abc123def456  # 可选，用于链路追踪
 
 **端点:**
 ```
-ws://localhost:18789/ws
+ws://localhost:8080/ws
 ```
 
 **握手请求:**
 ```http
 GET /ws HTTP/1.1
-Host: localhost:18789
+Host: localhost:8080
 Upgrade: websocket
 Connection: Upgrade
 Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
@@ -275,7 +275,7 @@ Sec-WebSocket-Protocol: json-rpc-2.0
 
 **认证参数 (可选):**
 ```
-ws://localhost:18789/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ws://localhost:8080/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 #### 3.2.2 消息格式
@@ -351,7 +351,7 @@ Authorization: Basic base64(username:password)
 
 **URL 参数方式:**
 ```
-ws://localhost:18789/ws?token=<JWT_TOKEN>
+ws://localhost:8080/ws?token=<JWT_TOKEN>
 ```
 
 **握手后认证:**
@@ -368,7 +368,7 @@ ws://localhost:18789/ws?token=<JWT_TOKEN>
 
 #### 3.4.3 认证策略配置
 
-认证策略由 `agentos/manager/security.yaml` 配置：
+认证策略由 `configs/agentos.yaml` 配置：
 
 ```yaml
 authentication:
@@ -467,7 +467,7 @@ service LLMService {
 
 **JSON-RPC over HTTP:**
 ```http
-POST http://llm_d:8080/rpc
+POST http://llm_d:9091/rpc
 Content-Type: application/json
 
 {"jsonrpc":"2.0","method":"llm.complete","params":{...},"id":1}
@@ -491,7 +491,7 @@ Content-Type: application/json
 typedef int32_t agentos_error_t;
 
 // 常见错误码
-#define AGENTOS_SUCCESS      0    // 成功
+#define AGENTOS_OK      0    // 成功
 #define AGENTOS_EINVAL      -1    // 参数无效
 #define AGENTOS_ENOMEM      -2    // 内存不足
 #define AGENTOS_EBUSY       -3    // 资源忙
@@ -531,7 +531,7 @@ agentos_error_t agentos_sys_task_submit(
 ```c
 char* result = NULL;
 agentos_error_t err = agentos_sys_task_submit("...", 10, 30000, &result);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Result: %s\n", result);
     free(result);  // 必须释放
 }
@@ -682,7 +682,7 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_EINVAL=-1`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_ERR_INVALID_PARAM=-2`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../project_erp/error_code_reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 系统调用错误码
 
@@ -692,13 +692,13 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 | 错误码 | 值 | 说明 |
 |--------|-----|------|
-| `AGENTOS_SUCCESS` | 0 | 成功 |
-| `AGENTOS_EINVAL` | -1 | 无效参数 |
-| `AGENTOS_ENOMEM` | -2 | 内存不足 |
-| `AGENTOS_EBUSY` | -3 | 资源忙 |
-| `AGENTOS_ENOENT` | -4 | 资源不存在 |
-| `AGENTOS_EPERM` | -5 | 权限不足 |
-| `AGENTOS_ETIMEDOUT` | -6 | 操作超时 |
+| `AGENTOS_OK` | 0 | 成功 |
+| `AGENTOS_ERR_INVALID_PARAM` | -2 | 无效参数 |
+| `AGENTOS_ERR_OUT_OF_MEMORY` | -4 | 内存不足 |
+| `AGENTOS_ERR_BUSY` | -17 | 资源忙 |
+| `AGENTOS_ERR_NOT_FOUND` | -6 | 资源不存在 |
+| `AGENTOS_ERR_PERMISSION_DENIED` | -10 | 权限不足 |
+| `AGENTOS_ERR_TIMEOUT` | -8 | 操作超时 |
 | `AGENTOS_EEXIST` | -7 | 资源已存在 |
 | `AGENTOS_ECANCELED` | -8 | 操作取消 |
 | `AGENTOS_ENOTSUP` | -9 | 不支持 |
@@ -742,7 +742,7 @@ int main() {
 
     // 1. 创建会话
     char* session_id = NULL;
-    if (agentos_sys_session_create("{\"user\":\"alice\"}", &session_id) != AGENTOS_SUCCESS) {
+    if (agentos_sys_session_create("{\"user\":\"alice\"}", &session_id) != AGENTOS_OK) {
         fprintf(stderr, "Failed to create session\n");
         return 1;
     }
@@ -754,7 +754,7 @@ int main() {
     agentos_error_t err = agentos_sys_task_submit(
         "Develop a simple e-commerce product listing page",
         50, 30000, &result);
-    if (err == AGENTOS_SUCCESS) {
+    if (err == AGENTOS_OK) {
         printf("Task result: %s\n", result);
         free(result);
     } else {
@@ -772,7 +772,7 @@ int main() {
 
 ```bash
 # 使用 curl 调用 HTTP 网关
-curl -X POST http://localhost:18789/rpc \
+curl -X POST http://localhost:8080/rpc \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{

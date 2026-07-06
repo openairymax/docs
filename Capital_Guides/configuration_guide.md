@@ -10,11 +10,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 🎯 理论指导：MCIS视角的配置管理
 
-配置管理是系统工程的基石，在 **体系并行论 (MCIS)** 理论框架中具有重要的理论意义。从 MCIS 视角理解 Airymax 的配置管理，有助于构建更加灵活、可靠、可维护的系统配置体系。
+配置管理是系统工程的基石，在 **体系并行 (MCIS)** 框架中具有重要的意义。从 MCIS 视角理解 Airymax 的配置管理，有助于构建更加灵活、可靠、可维护的系统配置体系。
 
 ### 配置在 MCIS 系统中的理论意义
 
-在 MCIS 理论中，配置管理体现了以下几个核心原理：
+在 MCIS 中，配置管理体现了以下几个核心原理：
 
 1. **系统观维度：系统工程层次分解**
    - 分层配置策略对应系统的层次分解结构
@@ -53,14 +53,14 @@ Airymax 的配置体系与 MCIS 中的不同 **体 (Body)** 紧密相关：
 
 ### 配置管理的理论原则
 
-基于 MCIS 理论的配置管理遵循以下原则：
+基于 MCIS 的配置管理遵循以下原则：
 
 1. **正交分离原则** → 不同组件的配置相互独立，避免配置耦合
 2. **渐进式抽象原则** → 从基础配置到高级配置的层次化设计
 3. **反馈调节原则** → 配置变更的验证与回滚机制，形成控制论负反馈
 4. **安全内生原则** → 配置的安全验证与加密保护，确保系统安全性
 
-通过 MCIS 理论视角理解配置管理，你将能够设计出更加系统、灵活、可靠的配置体系，为 Airymax 的稳定运行与持续演进提供坚实基础。
+通过 MCIS 视角理解配置管理，你将能够设计出更加系统、灵活、可靠的配置体系，为 Airymax 的稳定运行与持续演进提供坚实基础。
 
 ---
 
@@ -75,14 +75,14 @@ Airymax采用**分层配置**策略，支持多环境、多实例配置：
 
 ### 配置文件位置
 
+Airymax 使用**单一统一配置文件** `configs/agentos.yaml`，包含所有子系统的配置段。
+
 | 环境 | 配置路径 | 用途 |
 |------|---------|------|
-| **Docker开发** | `docker/.env` | Docker Compose环境变量 |
+| **源码安装** | `configs/agentos.yaml` | 统一配置（kernel/llm/memory/security/multi_agent/gateway/hooks/plugins/observability） |
+| **Docker开发** | `docker/.env` | Docker Compose 环境变量 |
 | **Docker生产** | `docker/.env.production` | 生产环境变量 |
-| **源码安装** | `config/kernel.yaml` | 内核主配置 |
-| **源码安装** | `config/llm.yaml` | LLM服务配置 |
-| **源码安装** | `config/memory.yaml` | 记忆系统配置 |
-| **Kubernetes** | ConfigMap/Secret | K8s原生配置 |
+| **Kubernetes** | ConfigMap/Secret | K8s 原生配置 |
 
 ---
 

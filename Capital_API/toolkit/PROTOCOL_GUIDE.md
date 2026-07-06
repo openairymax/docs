@@ -254,7 +254,7 @@ Anthropic Claude 大语言模型 API 集成，支持 Extended Thinking 和 Tool 
   "model": "claude-sonnet-4-20250514",
   "max_tokens": 4096,
   "messages": [
-    { "role": "user", "content": "解释 MCIS 理论" }
+    { "role": "user", "content": "解释 MCIS" }
   ],
   "tools": [
     {
@@ -345,7 +345,7 @@ from agentos.protocol import (
 
 async def main():
     config = ProtocolConfig(
-        base_url="http://localhost:18789",
+        base_url="http://localhost:8080",
         api_key="your-api-key",
         default_protocol=ProtocolType.JSONRPC,
     )
@@ -373,16 +373,16 @@ asyncio.run(main())
 ```python
 from agentos.protocol import create_mcp_client, create_openai_client
 
-mcp_client = create_mcp_client(base_url="http://localhost:18789")
+mcp_client = create_mcp_client(base_url="http://localhost:8080")
 tools = await mcp_client.list_tools()
 result = await mcp_client.call_tool("browser_navigate", {"url": "https://example.com"})
 
 openai_client = create_openai_client(
-    base_url="http://localhost:18789",
+    base_url="http://localhost:8080",
     api_key="your-key",
     model="gpt-4o",
 )
-response = await openai_client.chat("解释 MCIS 理论")
+response = await openai_client.chat("解释 MCIS")
 ```
 
 #### 完整 API 参考
@@ -442,7 +442,7 @@ func main() {
     ctx := context.Background()
 
     cfg := protocol.NewConfig(
-        protocol.WithBaseURL("http://localhost:18789"),
+        protocol.WithBaseURL("http://localhost:8080"),
         protocol.WithAPIKey("your-api-key"),
     )
 
@@ -539,7 +539,7 @@ use tokio;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ProtocolConfig::builder()
-        .base_url("http://localhost:18789")
+        .base_url("http://localhost:8080")
         .api_key("your-api-key")
         .build()?;
 
@@ -572,7 +572,7 @@ use agentos_toolkit::protocol::{ProtocolClient, ProtocolConfig};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ProtocolConfig::builder()
-        .base_url("http://localhost:18789")
+        .base_url("http://localhost:8080")
         .build()?;
     let client = ProtocolClient::new(config);
 
@@ -654,7 +654,7 @@ import {
 
 async function main() {
   const client = createProtocolClient({
-    baseURL: 'http://localhost:18789',
+    baseURL: 'http://localhost:8080',
     apiKey: 'your-api-key',
   });
 
@@ -677,16 +677,16 @@ main();
 #### 工厂函数
 
 ```typescript
-const mcpClient = createMCPClient({ baseURL: 'http://localhost:18789' });
+const mcpClient = createMCPClient({ baseURL: 'http://localhost:8080' });
 const tools = await mcpClient.listTools();
 const result = await mcpClient.callTool('search', { query: 'Airymax' });
 
 const openaiClient = createOpenAIClient({
-  baseURL: 'http://localhost:18789',
+  baseURL: 'http://localhost:8080',
   apiKey: 'your-key',
   model: 'gpt-4o',
 });
-const chat = await openaiClient.chat('什么是 MCIS 理论?');
+const chat = await openaiClient.chat('什么是 MCIS?');
 ```
 
 #### 完整 API 参考
@@ -982,7 +982,7 @@ from openlab.protocols import (
 )
 
 config = ProtocolSessionConfig(
-    gateway_url="http://localhost:18789",
+    gateway_url="http://localhost:8080",
     default_protocol="jsonrpc",
     auto_detect=True,
 )
@@ -1042,7 +1042,7 @@ manager.register_handler(MyCustomHandler())
 #include "gateway_protocol_bridge.h"
 
 gateway_bridge_config_t config = {
-    .gateway_url = "http://localhost:18789",
+    .gateway_url = "http://localhost:8080",
     .auto_detect = true,
     .default_protocol = PROTO_JSONRPC,
     .max_payload_size = 10 * 1024 * 1024,
@@ -1217,5 +1217,5 @@ agentos protocol test openai
 - [转换器实现](../protocols/core/transformers/include/protocol_transformers.h)
 - [网关桥接 API](../gateway/include/gateway_protocol_bridge.h)
 - [OpenLab 协议绑定](../openlab/openlab/protocols/__init__.py)
-- [Airymax 架构](../../docs/Capital_Architecture/)
-- [快速入门指南](../../docs/Capital_Guides/getting_started.md)
+- [Airymax 架构](../../Capital_Architecture/)
+- [快速入门指南](../../Capital_Guides/getting_started.md)

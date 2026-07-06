@@ -10,11 +10,11 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 概述
 
-Airymax 系统调用接口遵循微核心架构的 **机制与策略分离** 原则，通过精简的系统调用表（**28+ 个公开 API**，覆盖七大功能域：Agent/Task/Skill/Session/Sandbox/Memory/Telemetry）提供最基础的内核服务访问，所有高级功能通过用户态服务实现。这一设计深刻体现了 **体系并行论 (MCIS)** 与 **工程两论** 的系统工程层次分解思想，同时通过标准化系统调用参数传递形成 **控制论负反馈** 回路，确保接口稳定性和向前兼容性。
+Airymax 系统调用接口遵循 MicroCoreRT 微核心架构的 **机制与策略分离** 原则，通过精简的系统调用表（**28+ 个公开 API**，覆盖七大功能域：Agent/Task/Skill/Session/Sandbox/Memory/Telemetry）提供最基础的内核服务访问，所有高级功能通过用户态服务实现。这一设计深刻体现了 **体系并行 (MCIS)** 与 **工程两论** 的系统工程层次分解思想，同时通过标准化系统调用参数传递形成 **控制论负反馈** 回路，确保接口稳定性和向前兼容性。
 
-从 **体系并行论** 视角分析，系统调用接口是 MCIS 中 **基础体 (Base Body)** 对外提供的标准服务接口。作为用户态应用与内核态基础服务之间的桥梁，系统调用实现了不同 **体 (Body)** 之间的安全、可控、标准化的交互机制，支撑了认知体、执行体、记忆体等上层组件对底层系统服务的统一访问。
+从 **体系并行** 视角分析，系统调用接口是 MCIS 中 **基础体 (Base Body)** 对外提供的标准服务接口。作为用户态应用与内核态基础服务之间的桥梁，系统调用实现了不同 **体 (Body)** 之间的安全、可控、标准化的交互机制，支撑了认知体、执行体、记忆体等上层组件对底层系统服务的统一访问。
 
-作为 Airymax **内核观维度** 的关键组件，系统调用接口将微核心的最小特权原则具象化为可执行的安全边界，通过严格参数验证、能力基安全模型和地址空间隔离，实现用户态与内核态的清晰分离与安全交互。同时，系统调用接口也与 **系统观维度**（层次分离）、**工程观维度**（性能优化）、**认知观维度**（智能体交互）、**设计美学维度**（接口简洁）形成正交协同，共同构成 Airymax 完整的系统服务访问体系。
+作为 Airymax **内核观维度** 的关键组件，系统调用接口将 MicroCoreRT 微核心的最小特权原则具象化为可执行的安全边界，通过严格参数验证、能力基安全模型和地址空间隔离，实现用户态与内核态的清晰分离与安全交互。同时，系统调用接口也与 **系统观维度**（层次分离）、**工程观维度**（性能优化）、**认知观维度**（智能体交互）、**设计美学维度**（接口简洁）形成正交协同，共同构成 Airymax 完整的系统服务访问体系。
 
 ### 1.1 设计理念
 
@@ -29,7 +29,7 @@ Airymax 系统调用接口遵循微核心架构的 **机制与策略分离** 原
 │  • 任务管理 • 记忆管理                     │
 │  • 会话管理 • 可观测性                     │
 └───────────────↓─────────────────────────┘
-         微核心原语
+         MicroCoreRT 微核心原语
 ┌─────────────────────────────────────────┐
 │         MicroCoreRT                │
 │  • IPC • Memory • Scheduler • Time      │
@@ -79,7 +79,7 @@ Airymax 系统调用接口遵循微核心架构的 **机制与策略分离** 原
    - 权限检查 → capability-based security
    - 资源限制 → quota management
 
-3. **微核心 syscall 优化** [Liedtke1996]:
+3. **MicroCoreRT 微核心 syscall 优化** [Liedtke1996]:
    - 同步 IPC 优化：减少上下文切换
    - 批处理 syscall： amortize overhead
    - 共享内存传递大数据：零拷贝优化
@@ -101,16 +101,16 @@ Airymax 系统调用接口遵循微核心架构的 **机制与策略分离** 原
 
 ### 1.5 理论基础与原则映射：MCIS与系统接口理论的融合
 
-Airymax 系统调用接口的设计深刻体现了 **体系并行论 (MCIS)** 与 **五维正交体系** 的设计思想，将操作系统接口理论、安全模型、性能优化与用户体验完美融合：
+Airymax 系统调用接口的设计深刻体现了 **体系并行 (MCIS)** 与 **五维正交体系** 的设计思想，将操作系统接口理论、安全模型、性能优化与用户体验系统整合：
 
-#### 理论基础：体系并行论 (MCIS) 的接口映射
+#### 设计依据：体系并行 (MCIS) 的接口映射
 - **接口体原理** → 系统调用作为 MCIS 中 **基础体 (Base Body)** 的对外接口，为上层的认知体、执行体、记忆体提供标准化的服务访问通道
 - **层次分解原理** → 用户态应用层、AirymaxSyscall 层、内核服务层的清晰分离，体现 **垂直层次分解 (Vertical Layering)** 思想
 - **正交解耦原理** → 任务管理、记忆系统、会话管理、可观测性等接口的正交分离，实现功能的高内聚低耦合
 - **反馈调节原理** → 错误处理与状态反馈机制形成 **控制论负反馈回路**，确保接口调用的正确性与稳定性
 
-#### 内核观维度：微核心接口与安全模型
-- **微核心系统调用设计** → 精简的系统调用表（**28+ 公开 API**，覆盖七大功能域），体现微核心的 **最小特权** 与 **机制策略分离** 原则
+#### 内核观维度：MicroCoreRT 微核心接口与安全模型
+- **MicroCoreRT 微核心系统调用设计** → 精简的系统调用表（**28+ 公开 API**，覆盖七大功能域），体现 MicroCoreRT 微核心的 **最小特权** 与 **机制策略分离** 原则
 - **能力基安全模型** → 基于能力的访问控制，实现最小特权原则和权限委托机制，保障系统安全性
 - **地址空间隔离** → 严格的用户态与内核态边界，防止非法内存访问，确保系统稳定性
 - **形式化验证支持** → 系统调用接口的设计支持形式化验证，确保接口语义的正确性与一致性
@@ -304,7 +304,7 @@ const char* task_json =
   
 char* task_id;
 agentos_error_t err = sys_task_submit(task_json, &task_id);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Task submitted: %s\n", task_id);
     free(task_id);
 }
@@ -636,7 +636,7 @@ agentos_error_t sys_telemetry_traces(
 ```c
 typedef enum {
     // 成功
-    AGENTOS_SUCCESS = 0,
+    AGENTOS_OK = 0,
     
     // 通用错误
     AGENTOS_ERR_INVALID_PARAM = 1001,
@@ -675,7 +675,7 @@ const char* agentos_strerror(agentos_error_t err);
 **示例**:
 ```c
 agentos_error_t err = sys_task_submit(params, &task_id);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     fprintf(stderr, "Error: %s\n", agentos_strerror(err));
 }
 ```
@@ -731,7 +731,7 @@ agentos_error_t sys_memory_write(
                              ...,
                              record_id);
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 ```
 
@@ -796,7 +796,7 @@ int main() {
 ```c
 // 1. 总是检查返回值
 agentos_error_t err = sys_task_submit(params, &task_id);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     // 错误处理
 }
 
@@ -926,7 +926,7 @@ sys_task_wait(task_id, 0, &result);  // 无超时
 ## 14. 参考资料
 
 - [README.md](../../README.md) - 项目总览
-- [microkernel.md](microkernel.md) - 微核心架构详解
+- [microcorert.md](microcorert.md) - MicroCoreRT 微核心架构详解
 - [coreloopthree.md](coreloopthree.md) - CoreLoopThree 架构
 - [syscall.h](../include/syscall.h) - 系统调用头文件
 

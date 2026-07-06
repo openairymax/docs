@@ -81,7 +81,7 @@ AGENTOS_API agentos_error_t agentos_loop_create(
 ```
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 成功创建
+- `AGENTOS_OK`: 成功创建
 - `AGENTOS_EINVAL`: 参数无效
 - `AGENTOS_ENOMEM`: 内存不足
 
@@ -89,7 +89,7 @@ AGENTOS_API agentos_error_t agentos_loop_create(
 ```c
 agentos_core_loop_t* loop = NULL;
 agentos_error_t err = agentos_loop_create(NULL, &loop);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     // 处理错误
 }
 ```
@@ -168,7 +168,7 @@ AGENTOS_API agentos_error_t agentos_loop_submit(
 ```
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 任务已提交
+- `AGENTOS_OK`: 任务已提交
 - `AGENTOS_EINVAL`: 参数无效或引擎未初始化
 - `AGENTOS_ENOMEM`: 内存不足
 
@@ -176,7 +176,7 @@ AGENTOS_API agentos_error_t agentos_loop_submit(
 ```c
 char* task_id = NULL;
 err = agentos_loop_submit(loop, "你好", 2, &task_id);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("任务ID: %s\n", task_id);
     // 后续使用 task_id 等待结果
 }
@@ -200,7 +200,7 @@ AGENTOS_API agentos_error_t agentos_loop_wait(
 ```
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 任务完成，结果可用
+- `AGENTOS_OK`: 任务完成，结果可用
 - `AGENTOS_ETIMEDOUT`: 超时
 - `AGENTOS_EINVAL**: 参数无效
 - `AGENTOS_ENOENT`: 任务不存在
@@ -213,7 +213,7 @@ AGENTOS_API agentos_error_t agentos_loop_wait(
 char* result = NULL;
 size_t result_len = 0;
 err = agentos_loop_wait(loop, task_id, 30000, &result, &result_len);
-if (err == AGENTOS_SUCCESS && result) {
+if (err == AGENTOS_OK && result) {
     printf("响应: %.*s\n", (int)result_len, result);
     AGENTOS_FREE(result);
 }
@@ -353,7 +353,7 @@ agentos_error_t agentos_cognition_process(
 - **Metacognition**: 元认知评估，自动纠错
 
 **返回值**:
-- `AGENTOS_SUCCESS`: 计划生成成功
+- `AGENTOS_OK`: 计划生成成功
 - `AGENTOS_EINVAL`: 参数无效
 - `AGENTOS_ENOTSUP`: 无可用规划策略
 
@@ -362,7 +362,7 @@ agentos_error_t agentos_cognition_process(
 agentos_task_plan_t* plan = NULL;
 err = agentos_cognition_process(engine, "帮我写一份报告", strlen("帮我写一份报告"), &plan);
 
-if (err == AGENTOS_SUCCESS && plan) {
+if (err == AGENTOS_OK && plan) {
     printf("计划ID: %s\n", plan->task_plan_id);
     printf("节点数: %zu\n", plan->task_plan_node_count);
     
@@ -875,7 +875,7 @@ int main() {
     size_t answer_len = 0;
     agentos_error_t err = agentos_loop_wait(loop, task_id, 30000, &answer, &answer_len);
     
-    if (err == AGENTOS_SUCCESS) {
+    if (err == AGENTOS_OK) {
         printf("Q: %s\n", question);
         printf("A: %.*s\n", (int)answer_len, answer);
         AGENTOS_FREE(answer);
@@ -923,7 +923,7 @@ static agentos_error_t text_analyzer_execute(
     asprintf(&result, "{\"word_count\":%d}", word_count);
     *output = result;
     
-    return AGENTOS_SUCCESS;
+    return AGENTOS_OK;
 }
 
 // 注册执行单元
@@ -961,7 +961,7 @@ void register_text_analyzer() {
 ```c
 agentos_error_t err = agentos_loop_submit(loop, input, len, &task_id);
 switch (err) {
-    case AGENTOS_SUCCESS:
+    case AGENTOS_OK:
         // 正常处理
         break;
     case AGENTOS_EINVAL:
@@ -990,7 +990,7 @@ switch (err) {
 
 ## 🔗 相关文档
 
-- [MemoryRovol 详细API](../core/memoryrovol_api.md)
+- [MemoryRovol 详细API（待编写）](../core/memoryrovol_api.md)
 - [用户态服务集成指南](../daemon/gateway_api.md)
-- [协议栈适配](../protocols/unified_protocol_api.md)
+- [协议栈适配（待编写）](../protocols/unified_protocol_api.md)
 - [快速入门示例](../examples/quickstart.md)

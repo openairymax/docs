@@ -185,7 +185,7 @@ int main(int argc, char* argv[]) {
     // 1️⃣ 初始化核心系统
     printf("[1/6] 初始化核心系统...");
     agentos_error_t err = agentos_core_init();
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         fprintf(stderr, "❌ 初始化失败: %d\n", err);
         return 1;
     }
@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
     printf("[2/6] 创建三层循环...");
     agentos_core_loop_t* loop = NULL;
     err = agentos_loop_create(NULL, &loop);
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         fprintf(stderr, "❌ 创建循环失败: %d\n", err);
         agentos_core_shutdown();
         return 1;
@@ -212,7 +212,7 @@ int main(int argc, char* argv[]) {
     printf("[4/6] 提交问题给认知层...");
     char* task_id = NULL;
     err = agentos_loop_submit(loop, question, strlen(question), &task_id);
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         fprintf(stderr, "❌ 提交失败: %d\n", err);
         agentos_loop_destroy(loop);
         agentos_core_shutdown();
@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
     // 设置超时为30秒
     err = agentos_loop_wait(loop, task_id, 30000, &answer, &answer_len);
     
-    if (err == AGENTOS_SUCCESS && answer) {
+    if (err == AGENTOS_OK && answer) {
         printf("\n🎯 Agent回答:\n");
         printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
         printf("%.*s\n", (int)answer_len, answer);
@@ -337,7 +337,7 @@ int main() {
             strlen(memories[i])
         );
         
-        if (err == AGENTOS_SUCCESS) {
+        if (err == AGENTOS_OK) {
             printf("   ✅ [%zu] %s\n", i+1, memories[i]);
         } else {
             printf("   ❌ [%zu] 写入失败: %d\n", i+1, err);
@@ -366,7 +366,7 @@ int main() {
         agentos_memory_result_ext_t* result = NULL;
         agentos_error_t err = agentos_memoryrov_query(memory, &query, &result);
         
-        if (err == AGENTOS_SUCCESS && result && result->memory_result_count > 0) {
+        if (err == AGENTOS_OK && result && result->memory_result_count > 0) {
             printf("   📝 找到 %zu 条相关记忆:\n", result->memory_result_count);
             
             for (size_t i = 0; i < result->memory_result_count && i < 3; i++) {
@@ -567,7 +567,7 @@ agentos_loop_create(&config, &loop);
 4. 🧪 编写单元测试
 
 ### 高级开发者
-1. 📖 研究 [协议栈扩展](../protocols/protocol_extension_api.md)
+1. 📖 研究 [协议栈扩展（待编写）](../protocols/protocol_extension_api.md)
 2. 🏗️ 开发自定义协议适配器
 3. 🔬 性能优化与调优
 4. 🤝 贡献代码到主仓库

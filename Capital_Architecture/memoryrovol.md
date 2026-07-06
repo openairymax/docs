@@ -10,9 +10,9 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 概述
 
-记忆卷载 (MemoryRovol) 是 Airymax 内核级记忆系统的完整实现，是 **体系并行论 (MCIS)** 在记忆系统层面的具体实践。遵循 **工程两论** 指导原则，通过四层渐进式抽象架构（L1→L4）实现从原始数据到高级模式的全栈记忆管理。作为智能体持续学习、知识积累与智能进化的核心基础设施，MemoryRovol 严格遵循 **五维正交体系** 的设计美学，将认知科学的记忆理论与拓扑数据分析算法工程化为可执行的系统组件。
+记忆卷载 (MemoryRovol) 是 Airymax 内核级记忆系统的完整实现，是 **体系并行 (MCIS)** 在记忆系统层面的具体实践。遵循 **工程两论** 指导原则，通过四层渐进式抽象架构（L1→L4）实现从原始数据到高级模式的全栈记忆管理。作为智能体持续学习、知识积累与智能进化的核心基础设施，MemoryRovol 严格遵循 **五维正交体系** 的设计美学，将认知科学的记忆理论与拓扑数据分析算法工程化为可执行的系统组件。
 
-从 **体系并行论** 视角分析，MemoryRovol 是 MCIS 中的 **记忆体 (Memory Body)**，负责智能体经验的存储、组织、检索与进化。其四层架构（L1原始卷→L2特征层→L3结构层→L4模式层）体现了 **渐进式抽象 (Progressive Abstraction)** 的思想，模拟了人类记忆从感官输入到抽象概念的认知过程。
+从 **体系并行** 视角分析，MemoryRovol 是 MCIS 中的 **记忆体 (Memory Body)**，负责智能体经验的存储、组织、检索与进化。其四层架构（L1原始卷→L2特征层→L3结构层→L4模式层）体现了 **渐进式抽象 (Progressive Abstraction)** 的思想，模拟了人类记忆从感官输入到抽象概念的认知过程。
 
 该系统不仅是 Airymax **认知观维度**（双系统认知理论）的关键支撑，也是 **工程观维度**（层次分解与反馈调节）的经典实践。通过检索-遗忘双向机制形成控制论负反馈回路，确保记忆系统的动态平衡与持续优化，体现了 MCIS 中 **反馈调节 (Feedback Regulation)** 与 **动态平衡 (Dynamic Equilibrium)** 的核心原理。同时，MemoryRovol 与 CoreLoopThree 的紧密集成，实现了认知体、执行体、记忆体三者的有机协同，形成了完整的智能体认知循环。
 
@@ -66,9 +66,9 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.4 理论基础与原则映射：MCIS与认知科学的深度融合
 
-MemoryRovol 的设计深刻体现了 **体系并行论 (MCIS)** 与 **五维正交体系** 的设计思想，将认知科学、拓扑数据分析、工程控制论与系统论完美融合，形成了层次分明、自适应调节的智能记忆系统：
+MemoryRovol 的设计深刻体现了 **体系并行 (MCIS)** 与 **五维正交体系** 的设计思想，将认知科学、拓扑数据分析、工程控制论与系统论有机结合，形成了层次分明、自适应调节的智能记忆系统：
 
-#### 理论基础：体系并行论 (MCIS) 的记忆体映射
+#### 设计依据：体系并行 (MCIS) 的记忆体映射
 - **记忆体原理** → MemoryRovol 作为 MCIS 中的 **记忆体 (Memory Body)**，负责智能体经验的编码、存储、检索与进化
 - **渐进式抽象** → L1→L2→L3→L4 四层架构体现了 **垂直层次分解 (Vertical Layering)** 思想，实现从原始数据到抽象概念的逐步提炼
 - **反馈调节原理** → 检索-遗忘双向机制形成 **控制论负反馈回路**，实现记忆系统的自我优化与动态平衡
@@ -124,10 +124,10 @@ MemoryRovol 是 CoreLoopThree 记忆层的具体实现：
 - **记忆检索** → CoreLoopThree 认知层通过吸引子网络从 MemoryRovol L2-L4 层检索相关经验
 - **记忆进化** → CoreLoopThree 记忆进化委员会定期触发 MemoryRovol L4 模式层的持久同调分析
 
-### 与微核心 (MicroCoreRT) 的关系
-MemoryRovol 运行在微核心提供的资源管理基础设施之上：
-- **内存管理** → 利用微核心的智能指针和内存池机制，优化向量索引的内存使用
-- **进程隔离** → 通过微核心的地址空间隔离，确保记忆数据的安全边界
+### 与 MicroCoreRT 微核心的关系
+MemoryRovol 运行在 MicroCoreRT 微核心提供的资源管理基础设施之上：
+- **内存管理** → 利用 MicroCoreRT 微核心的智能指针和内存池机制，优化向量索引的内存使用
+- **进程隔离** → 通过 MicroCoreRT 微核心的地址空间隔离，确保记忆数据的安全边界
 - **系统调用** → 通过统一的 `syscall` 接口访问底层存储和计算资源
 
 ### 与系统调用 (Syscall) 层的关系
@@ -877,7 +877,7 @@ manager.forget_lambda = 0.5;
 
 agentos_memoryrov_handle_t* handle;
 agentos_error_t err = agentos_memoryrov_init(&manager, &handle);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     fprintf(stderr, "Error: %s\n", agentos_strerror(err));
     return err;
 }

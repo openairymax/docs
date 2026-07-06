@@ -441,9 +441,9 @@ deploy/kubernetes/helm/
 └── templates/
     ├── _helpers.tpl        # 模板辅助函数
     ├── configmap.yaml      # ConfigMap 配置
-    ├── deployments.yaml    # 18 个 daemon Deployment
+    ├── deployments.yaml    # 10 个 Daemon 用户态服务 + 核心模块 Deployment
     ├── ingress.yaml        # Ingress 入口
-    └── services.yaml       # 18 个 daemon Service
+    └── services.yaml       # 10 个 Daemon 用户态服务 + 核心模块 Service
 ```
 
 ### 4.3 安装 Chart
@@ -472,14 +472,14 @@ helm install agentrt ./deploy/kubernetes/helm \
 
 ### 4.4 部署的 Daemon 列表
 
-Helm Chart 部署 18 个 daemon 服务，分为四个层级：
+Helm Chart 部署 10 个 Daemon 用户态服务 + 核心模块，分为四个层级：
 
 | 层级 | 类别 | Daemon | 默认端口 | 生产副本数 |
 |------|------|--------|---------|-----------|
-| 内核原子 | 核心 | corekern | 9001 | 3 |
-| 内核原子 | 核心 | coreloopthree | 9002 | 3 |
-| 内核原子 | 核心 | taskflow | 9003 | 2 |
-| 内核原子 | 核心 | memory | 9004 | 2 |
+| 内核原子 | 核心模块 | corekern | 9001 | 3 |
+| 内核原子 | 核心模块 | coreloopthree | 9002 | 3 |
+| 内核原子 | 核心模块 | taskflow | 9003 | 2 |
+| 内核原子 | 核心模块 | memory | 9004 | 2 |
 | 基础 daemon | 基础设施 | channel_d | 9101 | 2 |
 | 基础 daemon | 基础设施 | monit_d | 9102 | 2 |
 | 基础 daemon | 基础设施 | observe_d | 9103 | 2 |

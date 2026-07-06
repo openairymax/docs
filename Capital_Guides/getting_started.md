@@ -73,7 +73,7 @@ Airymax 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。
 
 ```bash
 # 启动 Airymax 网关（默认监听 0.0.0.0:8080）
-./agentrt-gateway --host 0.0.0.0 --port 8080
+./gateway_d -h 0.0.0.0 -p 8080
 ```
 
 启动成功后你会看到类似输出：
@@ -88,26 +88,32 @@ Airymax 通过 **Gateway（网关）** 对外暴露 HTTP 和 WebSocket 接口。
 在另一个终端中，使用 curl 向网关注册一个简单的 Agent：
 
 ```bash
-# 注册 Agent
-curl -X POST http://localhost:8080/api/v1/agents/register \
+# 通过 JSON-RPC 调用 Agent
+curl -X POST http://localhost:8080/ \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "hello-agent",
-    "version": "1.0.0",
-    "model": "gpt-4o-mini",
-    "system_prompt": "你是一个友好的助手，请用简洁的中文回答用户的问题。"
+    "jsonrpc": "2.0",
+    "method": "agent.invoke",
+    "params": {
+      "agent_id": "hello-agent",
+      "input": "你好，请做自我介绍。"
+    },
+    "id": 1
   }'
 ```
 
-### 3.3 提交第一个任务
+### 3.3 提交对话任务
 
 ```bash
-# 提交对话任务
-curl -X POST http://localhost:8080/api/v1/chat \
+# 通过 OpenAI 兼容层提交对话请求
+curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "agent": "hello-agent",
-    "message": "你好，请介绍一下 Airymax"
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "你好，请介绍一下 Airymax"}
+    ]
   }'
 ```
 
@@ -143,36 +149,22 @@ pip install agentos
 ```python
 """hello_agent.py — 你的第一个 Airymax Agent"""
 
-from agentos import Airymax
+from agentos import AgentRT
 
-# 连接 Airymax 运行时
-client = Airymax(endpoint="http://localhost:18789", timeout=30)
+# 连接 Airymax 运行时（通过 JSON-RPC 网关）
+client = AgentRT(endpoint="http://localhost:8080")
 
 # 提交一个任务
-task = client.submit_task(
-    description="请用一句话介绍 Airymax 的核心优势",
-    agent_config={
-        "name": "hello-agent",
-        "model": "gpt-4o-mini",
-        "system_prompt": "你是一个专业的 Airymax 技术顾问。"
-    }
+result = client.task_submit(
+    input='{"prompt": "请用一句话介绍 Airymax 的核心优势"}',
+    timeout_ms=30000
 )
-
-# 等待任务完成并获取结果
-result = task.wait(timeout=60)
-print(f"Agent 回复: {result.output}")
-
-# 写入记忆
-memory_id = client.write_memory(
-    content="Airymax 的核心优势：操作系统级架构、安全内生设计、Token 节省约 500%。",
-    metadata={"source": "hello_agent", "tag": "intro"}
-)
-print(f"记忆已写入: {memory_id}")
+print(f"Agent 回复: {result}")
 
 # 搜索记忆
-memories = client.search_memory("Airymax 优势", top_k=3)
-for m in memories:
-    print(f"  [{m.score:.2f}] {m.memory.content}")
+records = client.memory_search("Airymax 优势", limit=3)
+for r in records:
+    print(f"  [score={r['score']:.2f}] {r['record_id']}")
 
 # 关闭连接
 client.close()
@@ -186,16 +178,16 @@ python hello_agent.py
 
 ### 4.4 使用异步客户端
 
-对于高并发场景，推荐使用 `AsyncAgentOS`：
+对于高并发场景，推荐使用 `AsyncAgentRT`：
 
 ```python
 """async_agent.py — 异步 Agent 示例"""
 
 import asyncio
-from agentos import AsyncAgentOS
+from agentos import AsyncAgentRT
 
 async def main():
-    async with AsyncAgentOS(endpoint="http://localhost:18789") as client:
+    async with AsyncAgentRT(endpoint="http://localhost:8080") as client:
         # 同时提交多个任务
         tasks = [
             client.submit_task("分析市场趋势"),

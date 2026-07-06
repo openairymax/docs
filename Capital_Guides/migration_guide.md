@@ -105,7 +105,7 @@ if (result < 0) {
 
 /* v1.0：结构化错误码 */
 agentos_error_t err = agentos_cognition_create(NULL, &engine);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     AGENTOS_LOG_ERROR("cognition_init",
         "Failed to create engine: %s (code=0x%04X)",
         agentos_strerror(err), err);
@@ -141,7 +141,7 @@ v1.0 引入了严格的资源所有权模型，每个资源都有明确的生命
  */
 agentos_cognition_engine_t* engine = NULL;
 agentos_error_t err = agentos_cognition_create(NULL, &engine);
-if (err != AGENTOS_SUCCESS) {
+if (err != AGENTOS_OK) {
     return err;
 }
 
@@ -181,7 +181,7 @@ v1.0 的 MemoryRovol 采用四层渐进抽象架构：
  * @param memory 记忆引擎实例
  * @param record 记忆记录（包含内容、元数据、重要度）
  * @param out_id 输出分配的记录 ID
- * @return AGENTOS_SUCCESS 成功，其他值表示失败
+ * @return AGENTOS_OK 成功，其他值表示失败
  */
 agentos_memory_record_t record = {
     .content     = "Hello, Airymax!",

@@ -21,7 +21,7 @@ Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 - **《工程控制论》**（原则 S-1, E-2）：通过错误码、日志、健康检查和指标构建反馈闭环，使系统能自我观测并对异常自动响应
 - **《论系统工程》**（原则 S-2, K-2）：模块化、接口驱动，边界清晰、实现可替换
 - **Thinkdual 双思考系统**（原则 C-1）：提供 t1 快思考（快速、低延迟）与 t2 慢思考（安全、全面）两条路径，并允许运行时策略切换
-- **微核心哲学**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
+- **MicroCoreRT 微核心设计**（原则 K-1, K-4）：接口精炼、命名优雅、注释说明"为什么"，而非"做什么"
 
 **关联原则**:
 - E-1 安全内生原则
@@ -913,7 +913,7 @@ private:
  * 提供固定大小内存块的分配器。适用于高频分配/释放场景，
  * 如任务调度、事件处理等。
  * 
- * @author Airymax Team
+ * @author SPHARX Ltd. - Airymax Team
  * @date 2026-03-25
  * @version 1.6
  * 
@@ -1139,7 +1139,7 @@ TEST_F(MemoryPoolTest, ExhaustPool) {
 ## 十四、Airymax 模块 C++ 编码示例
 
 ### 14.1 Atoms（原子层）C++ 编码
-Atoms模块实现微核心核心功能，要求最高级别的性能和可靠性：
+Atoms模块实现 MicroCoreRT 微核心核心功能，要求最高级别的性能和可靠性：
 
 #### 14.1.1 内存管理器（映射原则：M-3 拓扑优化）
 ```cpp
@@ -1213,7 +1213,7 @@ private:
  * - t2 慢思考：复杂任务，深度分析后执行
  * 
  * @see coreloopthree.md 中的三循环架构
- * @see microkernel.md 中的任务管理原语
+ * @see microcorert.md 中的任务管理原语
  */
 class DualSystemScheduler : public SchedulerBase {
 public:
@@ -1467,7 +1467,7 @@ private:
 5. **Airymax 核心架构文档**:
    - [coreloopthree.md](../../Capital_Architecture/coreloopthree.md)
    - [memoryrovol.md](../../Capital_Architecture/memoryrovol.md)  
-   - [microkernel.md](../../Capital_Architecture/microkernel.md)
+   - [microcorert.md](../../Capital_Architecture/microcorert.md)
    - [ipc.md](../../Capital_Architecture/kernel/ipc.md)
    - [syscall.md](../../Capital_Architecture/syscall.md)
    - [logging_system.md](../../Capital_Architecture/services/logging.md)

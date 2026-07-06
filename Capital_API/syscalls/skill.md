@@ -218,7 +218,7 @@ typedef struct agentos_skill_result {
  * @param skill_url   Skill 来源 URL（必填，格式：scheme://host/path）
  * @param out_skill_id [out] 返回分配的 Skill ID（调用者负责 agentos_sys_free 释放）
  *
- * @return AGENTOS_SUCCESS 成功
+ * @return AGENTOS_OK 成功
  * @return AGENTOS_EINVAL  参数无效（skill_url 或 out_skill_id 为 NULL）
  * @return AGENTOS_ENOMEM  内存不足
  * @return AGENTOS_EEXIST  Skill 已安装（URL 重复）
@@ -245,7 +245,7 @@ agentos_error_t err = agentos_sys_skill_install(
     "https://market.agentos.dev/skills/web-search/v2.1.0",
     &skill_id
 );
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Skill installed: %s\n", skill_id);
     agentos_sys_free(skill_id);
 } else if (err == AGENTOS_EEXIST) {
@@ -270,7 +270,7 @@ if (err == AGENTOS_SUCCESS) {
  * @param input      输入数据（JSON 格式字符串，必填）
  * @param out_output [out] 返回执行输出（调用者负责 agentos_sys_free 释放）
  *
- * @return AGENTOS_SUCCESS 成功
+ * @return AGENTOS_OK 成功
  * @return AGENTOS_EINVAL  参数无效（任何参数为 NULL）
  * @return AGENTOS_ENOMEM  内存不足
  * @return AGENTOS_ENOENT  Skill 未找到
@@ -300,7 +300,7 @@ const char* input = "{\"query\": \"Airymax architecture\", \"limit\": 5}";
 char* output = NULL;
 
 agentos_error_t err = agentos_sys_skill_execute(skill_id, input, &output);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Skill output: %s\n", output);
     agentos_sys_free(output);
 } else if (err == AGENTOS_ENOENT) {
@@ -352,7 +352,7 @@ agentos_sys_free(agent_id);
  * @param out_skills [out] 返回 Skill ID 数组（调用者负责逐个 agentos_sys_free 释放，然后释放数组本身）
  * @param out_count  [out] 返回 Skill 数量
  *
- * @return AGENTOS_SUCCESS 成功
+ * @return AGENTOS_OK 成功
  * @return AGENTOS_EINVAL  参数无效（out_skills 或 out_count 为 NULL）
  * @return AGENTOS_ENOMEM  内存不足
  *
@@ -375,7 +375,7 @@ char** skills = NULL;
 size_t count = 0;
 
 agentos_error_t err = agentos_sys_skill_list(&skills, &count);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Installed skills (%zu):\n", count);
     for (size_t i = 0; i < count; i++) {
         printf("  - %s\n", skills[i]);
@@ -398,7 +398,7 @@ if (err == AGENTOS_SUCCESS) {
  *
  * @param skill_id 要卸载的 Skill 标识符（必填）
  *
- * @return AGENTOS_SUCCESS 成功
+ * @return AGENTOS_OK 成功
  * @return AGENTOS_EINVAL  参数无效（skill_id 为 NULL）
  * @return AGENTOS_ENOENT  Skill 未找到
  * @return AGENTOS_EBUSY   Skill 正在被 Agent 使用，无法卸载
@@ -422,7 +422,7 @@ agentos_error_t agentos_sys_skill_uninstall(const char* skill_id);
 const char* skill_id = "skill_0";
 
 agentos_error_t err = agentos_sys_skill_uninstall(skill_id);
-if (err == AGENTOS_SUCCESS) {
+if (err == AGENTOS_OK) {
     printf("Skill uninstalled successfully\n");
 } else if (err == AGENTOS_ENOENT) {
     printf("Skill not found: %s\n", skill_id);
@@ -506,7 +506,7 @@ int main(void) {
 
     // 1. 初始化系统调用层
     err = agentos_syscalls_init();
-    if (err != AGENTOS_SUCCESS) {
+    if (err != AGENTOS_OK) {
         fprintf(stderr, "Failed to init syscalls: %d\n", err);
         return 1;
     }
@@ -521,7 +521,7 @@ int main(void) {
     char* skill_ids[3] = {NULL};
     for (int i = 0; i < 3; i++) {
         err = agentos_sys_skill_install(skill_urls[i], &skill_ids[i]);
-        if (err != AGENTOS_SUCCESS) {
+        if (err != AGENTOS_OK) {
             fprintf(stderr, "Failed to install skill from %s: %d\n", skill_urls[i], err);
             goto cleanup;
         }
@@ -532,7 +532,7 @@ int main(void) {
     char** skills = NULL;
     size_t count = 0;
     err = agentos_sys_skill_list(&skills, &count);
-    if (err == AGENTOS_SUCCESS) {
+    if (err == AGENTOS_OK) {
         printf("\nInstalled skills (%zu):\n", count);
         for (size_t i = 0; i < count; i++) {
             printf("  [%zu] %s\n", i, skills[i]);
@@ -544,9 +544,9 @@ int main(void) {
     // 4. 执行 Skill
     char* output = NULL;
     err = agentos_sys_skill_execute(skill_ids[0],
-        "{\"query\": \"microkernel architecture patterns\", \"limit\": 5}",
+        "{\"query\": \"MicroCoreRT architecture patterns\", \"limit\": 5}",
         &output);
-    if (err == AGENTOS_SUCCESS) {
+    if (err == AGENTOS_OK) {
         printf("\nSkill output: %s\n", output);
         agentos_sys_free(output);
     }
@@ -635,7 +635,7 @@ agentos_sys_free(agent_id);
 
 | 错误码 | 值 | 描述 |
 |-------|-----|------|
-| `AGENTOS_SUCCESS` | 0 | 成功 |
+| `AGENTOS_OK` | 0 | 成功 |
 | `AGENTOS_EINVAL` | -2 | 参数无效 |
 | `AGENTOS_ENOMEM` | -4 | 内存不足 |
 | `AGENTOS_ENOENT` | -6 | Skill 未找到 |

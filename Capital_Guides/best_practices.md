@@ -247,7 +247,7 @@ services:
           cpus: '0.5'
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18789/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -302,7 +302,7 @@ ipc_service_bus_send(bus, &msg);  // 可能静默失败
 
 - 单元测试覆盖率 ≥ 85%
 - 新功能必须包含集成测试
-- 协议兼容性测试覆盖所有4种协议
+- 协议兼容性测试覆盖所有 9 种协议
 - 性能基准测试记录P50/P95/P99延迟
 - 安全测试覆盖输入净化和权限检查
 
