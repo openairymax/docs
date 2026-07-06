@@ -139,4 +139,4 @@ echo '{"jsonrpc":"2.0","method":"health_check","id":1}' \
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

@@ -1,6 +1,6 @@
 # {指南标题}
 
-> Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+> Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **版本**: {版本号}  
 **最后更新**: {YYYY-MM-DD}  
@@ -138,4 +138,4 @@ verify-command
 
 ---
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

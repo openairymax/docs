@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax JavaScript 编码规范
@@ -1615,5 +1615,5 @@ export class UnifiedStateManager {
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.  
+© 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."

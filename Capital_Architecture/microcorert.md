@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 微核心 (MicroCoreRT) 架构详解
@@ -799,7 +799,7 @@ agentos_core_smart_ptr_release(ptr);  // 自动释放
 
 <div align="center">
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**
 
 *From data intelligence emerges*
 

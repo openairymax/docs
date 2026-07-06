@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # 监控运维指南
@@ -688,4 +688,4 @@ docker exec agentos-kernel-prod curl -sf http://redis:6379 && echo "Redis OK" ||
 
 > *"可观测性是现代系统的神经系统——没有它，你就是在盲目飞行。"*
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

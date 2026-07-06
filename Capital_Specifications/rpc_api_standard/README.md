@@ -85,6 +85,6 @@ method_dispatcher_register(disp, "complete", handler_complete);
 
 <div align="center">
 
-**© 2026 SPHARX Ltd.**
+**© 2025-2026 SPHARX Ltd.**
 
 </div>

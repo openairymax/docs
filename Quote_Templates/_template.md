@@ -1,6 +1,6 @@
 # {文档标题}
 
-> Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+> Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **版本**: {版本号，如 v1.0.0}  
 **状态**: {草案/评审中/已发布/已归档}  
@@ -74,4 +74,4 @@
 
 ---
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

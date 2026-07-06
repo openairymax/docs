@@ -792,6 +792,6 @@ uint64_t are_time_monotonic_ns(void) {
 
 <div align="center">
 
-**© 2026 SPHARX Ltd.** | 本文档及参考实现均以 AGPL v3 + Apache 2.0 双许可证发布（SPDX: AGPL-3.0-or-later OR Apache-2.0）。
+**© 2025-2026 SPHARX Ltd.** | 本文档及参考实现均以 AGPL v3 + Apache 2.0 双许可证发布（SPDX: AGPL-3.0-or-later OR Apache-2.0）。
 
 </div>

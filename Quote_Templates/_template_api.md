@@ -1,6 +1,6 @@
 # {API 名称} API 参考
 
-> Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+> Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **版本**: {版本号}  
 **状态**: {草案/已发布}  
@@ -128,4 +128,4 @@ curl -X POST https://api.airymax.dev/api/v1/resource \
 
 ---
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

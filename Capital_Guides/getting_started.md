@@ -259,4 +259,4 @@ app.run()
 
 > "From data intelligence emerges." — 始于数据，终于智能。
 >
-> © 2026 SPHARX Ltd. All Rights Reserved.
+> © 2025-2026 SPHARX Ltd. All Rights Reserved.

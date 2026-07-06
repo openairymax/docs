@@ -1856,5 +1856,5 @@ docker-compose -f docker-compose.prod.yml logs --tail=50 gateway
 
 ---
 
-> © 2026 SPHARX Ltd. All Rights Reserved.  
+> © 2025-2026 SPHARX Ltd. All Rights Reserved.  
 > "From data intelligence emerges."

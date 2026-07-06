@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax C++ 编码规范
@@ -82,7 +82,7 @@ agentos/atoms/corekern/
 ### 2.2 头文件结构
 
 ```cpp
-// Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+// Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 #ifndef AGENTOS_MODULE_NAME_H
 #define AGENTOS_MODULE_NAME_H
@@ -1474,5 +1474,5 @@ private:
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.  
+© 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."

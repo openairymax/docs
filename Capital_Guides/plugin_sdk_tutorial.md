@@ -1234,4 +1234,4 @@ A: 是的。默认超时时间为 30 秒（可在 `plugin.yaml` 中通过 `timeo
 
 ---
 
-> © 2026 SPHARX Ltd. All Rights Reserved.
+> © 2025-2026 SPHARX Ltd. All Rights Reserved.

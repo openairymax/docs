@@ -44,6 +44,6 @@
 
 <div align="center">
 
-**© 2026 SPHARX Ltd.** | ARE Standards 是 SPHARX Ltd. 推动的开放标准
+**© 2025-2026 SPHARX Ltd.** | ARE Standards 是 SPHARX Ltd. 推动的开放标准
 
 </div>

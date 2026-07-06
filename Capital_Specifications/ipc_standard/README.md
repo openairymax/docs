@@ -64,6 +64,6 @@ typedef struct are_ipc_message_header {
 
 <div align="center">
 
-**© 2026 SPHARX Ltd.**
+**© 2025-2026 SPHARX Ltd.**
 
 </div>

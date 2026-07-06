@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # 配置指南
@@ -652,4 +652,4 @@ docker compose -f docker/docker-compose.yml config  # 验证Compose语法
 
 > *"好的配置是可读、可维护、可验证的。"*
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

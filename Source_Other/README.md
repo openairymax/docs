@@ -1,6 +1,6 @@
 # 其他资源 (Source Other)
 
-> Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+> Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 本目录存放 Airymax 文档体系中的其他辅助资源，包括预览图、演示素材等。
 
@@ -28,4 +28,4 @@ Desktop 桌面应用的预览素材由 `products/desktop` 仓库生成。
 
 ---
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**

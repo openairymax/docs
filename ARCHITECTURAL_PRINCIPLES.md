@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.  
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."  
 
 # Airymax 架构设计原则  
@@ -1526,5 +1526,5 @@ python scripts/check_error_i18n.py --lang zh-CN,en-US
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.  
+© 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."  

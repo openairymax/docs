@@ -439,4 +439,4 @@ jobs:
 **最后更新**: 2026-04-28  
 **适用版本**: v0.0.4+
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

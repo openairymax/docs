@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 日志打印规范
@@ -1048,6 +1048,6 @@ func (c *VectorDBClient) Search(query Vector, k int) ([]SearchResult, error) {
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.  
+© 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."
 **质量管理**：6.1-6.3

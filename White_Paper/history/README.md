@@ -1,6 +1,6 @@
 # Airymax 技术白皮书 — 版本历史归档
 
-> Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+> Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 本目录用于归档 Airymax 官方技术白皮书的历史版本。
 
@@ -18,7 +18,7 @@
 
 ## 版权声明
 
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.  
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.  
 "From data intelligence emerges."
 
 本目录所有归档文档遵循 AGPL-3.0-or-later OR Apache-2.0 双许可证。

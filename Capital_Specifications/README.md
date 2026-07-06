@@ -1,8 +1,8 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 ---
-copyright: "Copyright (c) 2026 SPHARX Ltd. All Rights Reserved."
+copyright: "Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved."
 slogan: "From data intelligence emerges."
 title: "Airymax 技术规范"
 version: "Doc V2.3"
@@ -573,5 +573,5 @@ python scripts/license_compliance.py --report
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.
 *"From data intelligence emerges."*

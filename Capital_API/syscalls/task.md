@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 任务管理系统调用 API
@@ -141,5 +141,5 @@ AGENTOS_API agentos_error_t agentos_sys_task_cancel(const char *task_id);
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.
 *"From data intelligence emerges."*

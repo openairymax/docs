@@ -1,4 +1,4 @@
-SPDX-Copyright: Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 SPDX-License-Identifier: GPL-3.0-only
 
 # Airymax 配置变更审计日志格式规范
@@ -251,4 +251,4 @@ audit:
 **文档维护**: SPHARX Ltd.
 **最后更新**: 2026-04-05  
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

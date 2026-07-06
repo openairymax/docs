@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # 认知循环运行时 (CoreLoopThree)：三层认知循环核心运行时架构详解
@@ -980,7 +980,7 @@ agentos_execution_register_unit(engine, "my_unit", &my_unit->base);
 
 <div align="center">
 
-**© 2026 SPHARX Ltd. All Rights Reserved.**
+**© 2025-2026 SPHARX Ltd. All Rights Reserved.**
 
 *From data intelligence emerges*
 
