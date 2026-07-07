@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AirymaxOS 代码风格标准
 
@@ -486,4 +486,4 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

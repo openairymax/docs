@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AirymaxOS 测试体系设计
 

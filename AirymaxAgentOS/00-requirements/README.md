@@ -413,5 +413,5 @@ AirymaxOS 的需求体系与「五维正交 24 原则」保持紧密映射，每
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."

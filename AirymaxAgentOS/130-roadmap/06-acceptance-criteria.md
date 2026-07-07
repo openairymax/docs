@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AirymaxOS 验收标准与质量门禁
 
@@ -87,7 +87,7 @@ AirymaxOS 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part：
 |------|--------|---------|---------|--------|--------|
 | OS-ACC-001 ★ | 50-engineering-standards/ 8 文档完成 | `find docs/AirymaxAgentOS/50-engineering-standards/ -name "*.md" \| wc -l` | ≥8 | P0 | M0 |
 | OS-ACC-002 ★ | 文档行数 | `wc -l docs/AirymaxAgentOS/50-engineering-standards/*.md` | 每个文档 ≥400 行 | P0 | M0 |
-| OS-ACC-003 ★ | 文档版权声明 | `grep -L "Copyright (c) 2026 SPHARX" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 0 结果（全部包含） | P0 | M0 |
+| OS-ACC-003 ★ | 文档版权声明 | `grep -L "Copyright (c) 2025-2026 SPHARX" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 0 结果（全部包含） | P0 | M0 |
 | OS-ACC-004 ★ | 无禁用关键词（其他 OS 发行版名 / 测试框架名 / 智能体框架名等，详见 50-engineering-standards 黑名单） | `grep -rEf docs/AirymaxAgentOS/50-engineering-standards/forbidden-keywords.txt docs/AirymaxAgentOS/50-engineering-standards/` | 0 结果 | P0 | M0 |
 | OS-ACC-005 ★ | OS-IRON 规则编号定义 | `grep -rE "OS-IRON-[0-9]+" docs/AirymaxAgentOS/50-engineering-standards/ \| wc -l` | ≥10 项 | P0 | M0 |
 | OS-ACC-006 ★ | OS-STD 规则编号定义 | `grep -rE "OS-STD-[0-9]+" docs/AirymaxAgentOS/50-engineering-standards/ \| wc -l` | ≥20 项 | P0 | M0 |

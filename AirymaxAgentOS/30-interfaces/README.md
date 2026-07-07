@@ -152,4 +152,4 @@ AirymaxOS 接口采用语义化版本 + ABI 兼容承诺的演进策略：
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

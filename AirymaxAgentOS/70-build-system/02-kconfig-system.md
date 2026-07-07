@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AirymaxOS Kconfig 配置系统详解
 

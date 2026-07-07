@@ -1,4 +1,4 @@
-Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AirymaxOS 工程标准规范
 
@@ -28,13 +28,32 @@ AirymaxOS 作为基于 Linux 内核的智能体操作系统发行版，其工程
 | **Airymax 五维正交 24 原则** | `ARCHITECTURAL_PRINCIPLES.md`（S/K/C/E/A 五维） | §4 工程思想章节 |
 | **agentrt 17 类规则编号体系** | `0.1.1工程标准规范手册.md`（IRON/BAN/FOUND 等） | §8 OS 工程规则编号体系 |
 
-### 1.3 与 agentrt 工程规范的关系（同源但独立，IRON-9）
+### 1.3 与 agentrt 工程规范的关系（同源且部分代码共享，IRON-9 v2）
 
-AirymaxOS 工程标准与 agentrt 工程标准是**同源但独立**的关系：
+AirymaxOS 工程标准与 agentrt 工程标准是**同源且部分代码共享**的关系（IRON-9 v2，2026-07-07 用户决策变更）：
 
-- **同源**：共享 Airymax 五维正交 24 原则作为顶层设计哲学；共享 17 类规则编号体系骨架（IRON/BAN/STD/ACC 等）；共享 E-7 文档即代码、E-6 错误可追溯、E-1 安全内生等核心工程观原则。
+#### 三层共享模型
+
+| 层次 | 共享程度 | 内容 | 组织方式 |
+|------|---------|------|---------|
+| **共享契约层**（Shared-Contract） | 完全共享代码 | IPC 消息头结构（`agentrt_ipc_msg_hdr_t` + magic/version/type 常量）、syscall 编号（`AGENTRT_SYS_*`）、capability 令牌格式、MemoryRovol L1-L4 数据结构、CoreLoopThree 接口定义、错误码（`agentrt_error_t`）、规则编号体系（IRON/BAN/STD/ACC）、五维正交 24 原则 | `include/airymax/` 独立头文件库，两端共同依赖 |
+| **语义同源层**（Shared-Semantics） | API 签名相同，实现独立 | 调度语义（MicroCoreRT：agentrt 用户态 vs AirymaxOS sched_ext）、安全模型（Cupolas：agentrt 用户态 vs AirymaxOS LSM）、IPC 传输（AgentsIPC：agentrt 消息队列 vs AirymaxOS io_uring）、记忆模型（MemoryRovol：agentrt heapstore vs AirymaxOS 内核态） | 各自独立实现，通过契约层保证互操作 |
+| **完全独立层**（Independent） | 完全独立 | AirymaxOS 专属：内核驱动框架、Kbuild、systemd 集成、内核内部 API；agentrt 专属：跨平台用户态运行时、SDK 四语言、CLI/TUI | 各自独立仓库，无依赖关系 |
+
+#### 与旧版 IRON-9 的差异
+
+| 维度 | 旧版 IRON-9（同源但独立） | 新版 IRON-9 v2（同源且部分代码共享） |
+|------|-------------------------|-------------------------------|
+| 设计哲学 | 共享 | 共享（不变） |
+| 规则编号 | 共享骨架 | 共享骨架（不变） |
+| 契约层代码 | **不共享**，仅语义同源 | **完全共享**（`include/airymax/` 头文件库） |
+| 实现层代码 | 独立 | 独立（不变） |
+| 互操作方式 | 通过同源语义无适配层 | **通过共享代码无适配层**（增强） |
+| CI 校验 | 无 | 契约层变更双向校验（agentrt + AirymaxOS CI 同时验证） |
+
+- **同源**：共享 Airymax 五维正交 24 原则作为顶层设计哲学；共享 17 类规则编号体系骨架；共享 E-7 文档即代码、E-6 错误可追溯、E-1 安全内生等核心工程观原则。**共享契约层代码**（`include/airymax/` 头文件库）。
 - **独立**：AirymaxOS 是 OS 发行版，承担内核态严肃性责任，其工程标准必须独立处理内核 ABI 稳定性、内核内部 API 不稳定性、补丁生命周期、维护者层级制度等 agentrt 不涉及的领域；同时 AirymaxOS 需要为内核态特有的场景（驱动模型、构建系统、可观测性、安全 LSM 等）制定专门规范。
-- **互操作**：agentrt 在 AirymaxOS 上运行时，两端工程标准形成天然互补——agentrt 遵循其用户态运行时规范（如 `agentrt_log_write` 日志），AirymaxOS 遵循其内核发行版规范（如 `printk` 等级），两端通过同源语义（如 AgentsIPC 128B 消息头）实现无适配层互操作。
+- **互操作**：agentrt 在 AirymaxOS 上运行时，两端工程标准形成天然互补——agentrt 遵循其用户态运行时规范（如 `agentrt_log_write` 日志），AirymaxOS 遵循其内核发行版规范（如 `printk` 等级），两端通过**共享契约层代码**（如 `include/airymax/ipc_msg.h` 的 IPC 消息头定义）实现无适配层互操作。
 
 ---
 
