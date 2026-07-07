@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化
-> **核心约束**: IRON-9 同源但独立（agentrt 用户态运行时规范与 AirymaxOS 内核发行版规范并行演进，通过同源 API 保持互操作）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 AirymaxOS 内核发行版规范并行演进，通过同源 API 保持互操作）
 
 ---
 
@@ -451,13 +451,13 @@ Reviewed-by: Reviewer Name <reviewer@example.com>
 | **E-6 错误可追溯** | 错误可溯源可追踪 | Fixes/Closes/Link 标签 + 12 字符 SHA + Signed-off-by DCO 链 |
 | **E-7 文档即代码** | 文档与代码同源同审 | RFC issue + 五维原则映射小节（OS-DEV-102） |
 | **A-3 人文关怀** | 不烧桥管理哲学 | 审查礼仪 + 感谢审查者 + Morton 原则（OS-DEV-163） |
-| **IRON-9 同源但独立** | 同源 API 并行演进 | MicroCoreRT 与 AgentsIPC 同源 API 变更需两端兼容性测试（OS-DEV-133） |
+| **IRON-9 v2 同源且部分代码共享** | 同源 API 并行演进 | MicroCoreRT 与 AgentsIPC 同源 API 变更需两端兼容性测试（OS-DEV-133） |
 
 ---
 
 ## 13. 同源 agentrt 映射
 
-本文档的开发流程与 agentrt 用户态运行时规范同源但独立（IRON-9 同源但独立）：
+本文档的开发流程与 agentrt 用户态运行时规范同源且部分代码共享（IRON-9 v2 同源且部分代码共享）：
 
 | 维度 | agentrt（用户态） | AirymaxOS（内核发行版） |
 |------|------------------|----------------------|

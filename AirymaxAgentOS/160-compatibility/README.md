@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 AirymaxOS 兼容性体系是系统长期演进的工程保障。它继承 Linux 内核 30+ 年沉淀的兼容性哲学（用户空间 ABI 永不破坏 + 内核内部 API 不保证稳定 + KABI 内核符号兼容性），并在其上扩展智能体操作系统专属的 AgentsIPC 协议兼容性、SDK 跨版本兼容性、Agent 应用迁移兼容性等。
 
-兼容性是操作系统的生命线。AirymaxOS 作为智能体操作系统发行版，必须承诺：在 0.1.1 上编写的 Agent 应用，到 1.0.1、3.0 LTS、5.0 LTS 上仍能正常运行；在 1.0.1 上开发的 Agent 应用，能通过兼容层在 0.1.1 上降级运行。这种双向兼容承诺是 IRON-9 同源但独立原则的延伸——agentrt 应用级接口与 AirymaxOS OS 级接口同源但独立演进。
+兼容性是操作系统的生命线。AirymaxOS 作为智能体操作系统发行版，必须承诺：在 0.1.1 上编写的 Agent 应用，到 1.0.1、3.0 LTS、5.0 LTS 上仍能正常运行；在 1.0.1 上开发的 Agent 应用，能通过兼容层在 0.1.1 上降级运行。这种双向兼容承诺是 IRON-9 v2 同源且部分代码共享原则的延伸——agentrt 应用级接口与 AirymaxOS OS 级接口同源且部分代码共享演进。
 
 ### 1.1 兼容性分层
 
@@ -144,7 +144,7 @@ agentrt 的 ABI 稳定性与 AirymaxOS 同源：
 - AirymaxOS 内核态：`AGENTRT_SYS_*` 系统调用稳定
 - 两端通过同源语义保持兼容
 
-### 4.5 IRON-9 同源但独立
+### 4.5 IRON-9 v2 同源且部分代码共享
 
 兼容性体系遵循 IRON-9 原则：
 - agentrt 兼容性（用户态运行时 ABI）
@@ -161,7 +161,7 @@ agentrt 的 ABI 稳定性与 AirymaxOS 同源：
 | **C-2 增量演化** | 语义版本号 + 弃用流程 |
 | **E-6 错误可追溯** | ABI 变更追溯 |
 | **E-7 文档即代码** | ABI 文档化（Documentation/ABI/） |
-| **IRON-9 同源但独立** | 与 agentrt ABI 同源 |
+| **IRON-9 v2 同源且部分代码共享** | 与 agentrt ABI 同源 |
 
 ---
 

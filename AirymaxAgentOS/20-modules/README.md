@@ -1,9 +1,12 @@
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
 # 模块设计
 
 > **文档定位**: AirymaxOS 8 子仓模块设计的总览与索引
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**: 2026-07-07
 > **父文档**: [AirymaxOS 总览](../README.md)
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 4 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h）落地于 include/airymax/
 
 ---
 
@@ -195,7 +198,7 @@ AirymaxOS 与 agentrt（AirymaxAgentRT）共享设计理念，每个子仓都能
 | benchmark | 性能测试 | 微/宏基准 + 回归 |
 | observability-verify | 无（新增） | eBPF 可观测性验证 |
 
-**同源传承要点**: 保留 agentrt 模块的语义与 API 兼容性，底层实现升级为 OS 级（内核态加速、硬件感知、systemd 集成），遵循 IRON-9"同源但独立"原则。
+**同源传承要点**: 保留 agentrt 模块的语义与 API 兼容性，底层实现升级为 OS 级（内核态加速、硬件感知、systemd 集成），遵循 IRON-9"同源且部分代码共享"原则。
 
 ---
 

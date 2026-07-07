@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 7 层验证 L1（白盒单元测试）+ Linux 6.6 内核基线 `lib/kunit/`、`include/kunit/test.h`
 > **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义）
-> **核心约束**: IRON-9 同源但独立——KUnit 框架与 Linux 6.6 上游保持源码同源，AirymaxOS 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
+> **核心约束**: IRON-9 v2 同源且部分代码共享——KUnit 框架与 Linux 6.6 上游保持源码同源，AirymaxOS 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
 
 ---
 
@@ -38,7 +38,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 KUnit 是 Linux 6.6 内核基线中的官方单元测试框架，由 Brendan Higgins（Google）于 2019 年合入主线。其设计目标有三：白盒可测（直接调内核内部函数）、毫秒级反馈（UML 编译即跑）、TAP 输出（CI 可解析）。
 
-AirymaxOS 完整继承 Linux 6.6 内核基线的 KUnit 框架（`lib/kunit/`、`include/kunit/`），不修改任何上游源文件。AirymaxOS 专属测试以独立 `*_airymax_test.c` 文件形式驻留于 `airymaxos/` 子仓内，遵循 IRON-9 同源但独立原则。
+AirymaxOS 完整继承 Linux 6.6 内核基线的 KUnit 框架（`lib/kunit/`、`include/kunit/`），不修改任何上游源文件。AirymaxOS 专属测试以独立 `*_airymax_test.c` 文件形式驻留于 `airymaxos/` 子仓内，遵循 IRON-9 v2 同源且部分代码共享原则。
 
 ```mermaid
 flowchart TB
@@ -209,7 +209,7 @@ MODULE_LICENSE("GPL v2");
 
 `kunit_kmalloc`/`kunit_kzalloc`/`kunit_kcalloc` 在用例上下文中分配内存，`kunit_kfree` 释放单块，`kunit_cleanup` 在用例结束时自动释放所有托管资源。托管资源无需在 `exit` 中手写释放代码。
 
-**OS-KER-002**：AirymaxOS 扩展套件必须以 `airymax_*` 前缀命名，与上游套件区分；上游套件禁止改名（保持 IRON-9 同源但独立）。
+**OS-KER-002**：AirymaxOS 扩展套件必须以 `airymax_*` 前缀命名，与上游套件区分；上游套件禁止改名（保持 IRON-9 v2 同源且部分代码共享）。
 
 **OS-TEST-007**：每个 `kunit_suite` 的 `name` 字段在编译单元内必须唯一；跨子仓的命名冲突由 CI 第 7 层（单元测试层）静态检查报告。
 
@@ -304,7 +304,7 @@ agentsipc_test-y := agentsipc_test.o agentsipc_header_test.o
 
 ## 10. AirymaxOS 专属扩展：Agent 契约测试
 
-AirymaxOS 在 Linux 6.6 内核基线 KUnit 之上扩展 Agent 契约测试（README 第 1.2 节 L8 层），但严格遵循 IRON-9 同源但独立：所有扩展作为独立套件注入，不修改上游 KUnit 框架。
+AirymaxOS 在 Linux 6.6 内核基线 KUnit 之上扩展 Agent 契约测试（README 第 1.2 节 L8 层），但严格遵循 IRON-9 v2 同源且部分代码共享：所有扩展作为独立套件注入，不修改上游 KUnit 框架。
 
 ```c
 /* airymaxos-cognition/cognition_test.c */
@@ -348,7 +348,7 @@ MODULE_LICENSE("GPL v2");
 | **S-1 反馈闭环** | UML 毫秒级反馈 + TAP CI 解析（OS-TEST-010） |
 | **K-1 内核优先** | KUnit 直接调内核函数，不经 syscall 边界 |
 | **K-3 协议优先** | AgentsIPC 128B 协议通过 KUnit 契约测试固化 |
-| **IRON-9 同源但独立** | AirymaxOS 扩展套件独立注入，不改上游（OS-KER-002/004） |
+| **IRON-9 v2 同源且部分代码共享** | AirymaxOS 扩展套件独立注入，不改上游（OS-KER-002/004） |
 
 > Airymax 五维正交 24 原则要求各维度的强制规则两两正交，避免一条规则同时承担多个原则的检查职责，从而保证评审清单可独立执行。
 
@@ -417,7 +417,7 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 
 ### 13.1 维护规则
 
-- 本卷与 Linux 6.6 内核基线 KUnit 框架保持源码同源（IRON-9 同源但独立）。
+- 本卷与 Linux 6.6 内核基线 KUnit 框架保持源码同源（IRON-9 v2 同源且部分代码共享）。
 - 上游 KUnit API 变更时，本卷必须在 1 个上游 LTS 周期内同步更新。
 - AirymaxOS 扩展套件的新增/删除必须同步更新本卷第 10 节与 `80-testing/README.md` 的 L8 章节。
 - 本卷所有规则编号（OS-KER-XXX/OS-STD-XXX/OS-TEST-XXX）注册于 07 维护者制度的"规则编号注册表"。

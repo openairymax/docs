@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统（`Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib`）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）
-> **核心约束**: IRON-9 同源但独立——AirymaxOS 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
+> **核心约束**: IRON-9 v2 同源且部分代码共享——AirymaxOS 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
 
 ---
 
@@ -380,7 +380,7 @@ AirymaxOS 构建系统以 **Linux 6.6 内核基线** 为工程思想来源，但
 
 ## 8. 同源 agentrt 映射
 
-AirymaxOS 构建系统与 agentrt 构建系统遵循 **IRON-9 同源但独立** 原则。agentrt 是 Airymax 智能体运行时（应用层），其 `cmake/` 目录提供 5 模块的跨模块共享 CMake 工具链；AirymaxOS 是智能体操作系统（OS 层），内核态使用 Kbuild。二者在分层与工具链上独立，在工程思想与原则上映射同源。
+AirymaxOS 构建系统与 agentrt 构建系统遵循 **IRON-9 v2 同源且部分代码共享** 原则。agentrt 是 Airymax 智能体运行时（应用层），其 `cmake/` 目录提供 5 模块的跨模块共享 CMake 工具链；AirymaxOS 是智能体操作系统（OS 层），内核态使用 Kbuild。二者在分层与工具链上独立，在工程思想与原则上映射同源。
 
 | 维度 | agentrt | AirymaxOS 内核态 | 关系 |
 |------|---------|------------------|------|
@@ -392,9 +392,9 @@ AirymaxOS 构建系统与 agentrt 构建系统遵循 **IRON-9 同源但独立** 
 
 **同源红利**：agentrt 在 AirymaxOS 上运行时，构建产物的版本号语义对齐（`AIRYMAXOS_*` 与 agentrt `project(VERSION)` 的 MAJOR/MINOR 同源），便于联调时定位版本漂移；增量构建思想一致，开发者心智模型可复用。
 
-**独立性**：AirymaxOS 内核态构建为 OS 层 Kbuild，agentrt 用户态构建为应用层 CMake，二者通过产物契约（`.ko`/`vmlinux` 与可执行文件）解耦。当 agentrt 构建工具链演进时，AirymaxOS 通过构建评审决定是否同步，避免被动跟随。这一独立性正是 **IRON-9 同源但独立** 在构建系统层的体现——同源思想，独立演进。
+**独立性**：AirymaxOS 内核态构建为 OS 层 Kbuild，agentrt 用户态构建为应用层 CMake，二者通过产物契约（`.ko`/`vmlinux` 与可执行文件）解耦。当 agentrt 构建工具链演进时，AirymaxOS 通过构建评审决定是否同步，避免被动跟随。这一独立性正是 **IRON-9 v2 同源且部分代码共享** 在构建系统层的体现——同源思想，独立演进。
 
-AirymaxOS 构建系统在 **Linux 6.6 内核基线** 上构建，其递归 descending、三态门控、`if_changed`、`filechk` 等机制均直接源自上游沉淀；AirymaxOS 的扩展（`Makefile.airymaxos`、多语言协调层、多仓集成）以 **五维正交 24 原则** 为设计准绳，确保扩展不破坏上游机制的可预测性。这种"上游思想 + 自身原则"的双层结构，是 **IRON-9 同源但独立** 在工程实现层的落实。
+AirymaxOS 构建系统在 **Linux 6.6 内核基线** 上构建，其递归 descending、三态门控、`if_changed`、`filechk` 等机制均直接源自上游沉淀；AirymaxOS 的扩展（`Makefile.airymaxos`、多语言协调层、多仓集成）以 **五维正交 24 原则** 为设计准绳，确保扩展不破坏上游机制的可预测性。这种"上游思想 + 自身原则"的双层结构，是 **IRON-9 v2 同源且部分代码共享** 在工程实现层的落实。
 
 ---
 
@@ -440,7 +440,7 @@ AirymaxOS 构建系统在 **Linux 6.6 内核基线** 上构建，其递归 desce
 ### 10.2 上游与跨卷文档
 
 - `50-engineering-standards/06-toolchain-and-automation.md`（CI/CD 与多矩阵构建，OS-STD-032/OS-STD-072）
-- `50-engineering-standards/04-engineering-philosophy.md`（IRON-9 同源但独立原则定义）
+- `50-engineering-standards/04-engineering-philosophy.md`（IRON-9 v2 同源且部分代码共享原则定义）
 - `10-architecture/02-five-dimensional-principles.md`（五维正交 24 原则定义）
 - `60-driver-model/README.md`（驱动子系统构建约定）
 

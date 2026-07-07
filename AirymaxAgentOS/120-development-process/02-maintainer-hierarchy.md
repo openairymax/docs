@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 维护者层级 + Linux 6.6 内核 MAINTAINERS 文件与 Lieutenant System
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-3 总体设计部 + A-3 人文关怀
-> **核心约束**: IRON-9 同源但独立（agentrt 用户态维护者层级与 AirymaxOS 内核发行版维护者层级并行，通过同源 API 变更评审保持协同）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态维护者层级与 AirymaxOS 内核发行版维护者层级并行，通过同源 API 变更评审保持协同）
 
 ---
 
@@ -359,13 +359,13 @@ emeritus（荣誉维护者）是已卸任但仍保留咨询身份的维护者：
 | **E-6 错误可追溯** | 错误可溯源可追踪 | Signed-off-by 链条 + DCO 1.1 溯源每层维护者 |
 | **E-7 文档即代码** | 文档与代码同源同审 | MAINTAINERS.md 14 字段 + 子系统手册（P: 字段） |
 | **A-3 人文关怀** | 不烧桥管理哲学 | 审查礼仪 + emeritus 荣誉身份 + 接班 6 个月缓冲 |
-| **IRON-9 同源但独立** | 同源 API 并行演进 | MicroCoreRT/AgentsIPC 同源 API 变更需两端维护者协同评审 |
+| **IRON-9 v2 同源且部分代码共享** | 同源 API 并行演进 | MicroCoreRT/AgentsIPC 同源 API 变更需两端维护者协同评审 |
 
 ---
 
 ## 10. 同源 agentrt 映射
 
-本文档的维护者层级与 agentrt 用户态运行时维护者层级同源但独立（IRON-9 同源但独立）：
+本文档的维护者层级与 agentrt 用户态运行时维护者层级同源且部分代码共享（IRON-9 v2 同源且部分代码共享）：
 
 | 维度 | agentrt（用户态） | AirymaxOS（内核发行版） |
 |------|------------------|----------------------|

@@ -6,8 +6,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（占位）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 7 层验证 L2（系统级测试）+ Linux 6.6 内核基线 `tools/testing/selftests/`
-> **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / IRON-9 同源但独立）
-> **核心约束**: IRON-9 同源但独立——kselftest 框架与 Linux 6.6 上游保持源码同源，AirymaxOS 扩展必须以独立子目录形式注入，禁止改写上游 kselftest 框架代码。
+> **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / IRON-9 v2 同源且部分代码共享）
+> **核心约束**: IRON-9 v2 同源且部分代码共享——kselftest 框架与 Linux 6.6 上游保持源码同源，AirymaxOS 扩展必须以独立子目录形式注入，禁止改写上游 kselftest 框架代码。
 
 ---
 
@@ -40,7 +40,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 kselftest 是 Linux 6.6 内核基线中的官方用户态系统级测试框架，由 Shuah Khan（Samsung）于 2014 年首次合入主线。其设计目标有三：系统级覆盖（系统调用、`/proc`、`/sys`、ioctl 等用户态接口测试内核特性，覆盖 KUnit 难以触及的端到端路径）、真实环境（QEMU 或真实硬件反映用户实际工作负载）、零依赖（仅依赖 glibc 或 NOLIBC，无需额外测试运行时）。
 
-AirymaxOS 完整继承 Linux 6.6 内核基线的 kselftest 框架（`tools/testing/selftests/`），不修改任何上游源文件。AirymaxOS 专属测试以独立 `airymax_*` 子目录形式驻留于 `tools/testing/selftests/`，遵循 IRON-9 同源但独立原则。
+AirymaxOS 完整继承 Linux 6.6 内核基线的 kselftest 框架（`tools/testing/selftests/`），不修改任何上游源文件。AirymaxOS 专属测试以独立 `airymax_*` 子目录形式驻留于 `tools/testing/selftests/`，遵循 IRON-9 v2 同源且部分代码共享原则。
 
 ### 1.2 kselftest 架构层次
 
@@ -381,11 +381,11 @@ TEST_HARNESS_MAIN
 | **A-4 完美主义** | root/非 root 双矩阵 + 退出码严格（OS-TEST-015/018） |
 | **K-3 协议优先** | AgentsIPC 128B 协议系统级契约（OS-KER-009） |
 | **K-6 调度优先** | MicroCoreRT 调度策略系统级时间片测量（OS-TEST-016） |
-| **IRON-9 同源但独立** | AirymaxOS 扩展子目录独立注入，不改上游（OS-KER-007/008） |
+| **IRON-9 v2 同源且部分代码共享** | AirymaxOS 扩展子目录独立注入，不改上游（OS-KER-007/008） |
 
 > Airymax 五维正交 24 原则要求各维度强制规则两两正交无重叠，kselftest 卷规则（OS-TEST-013 至 OS-TEST-022）按原则维度分组，避免一条规则同时承担多个原则检查。
 
-### 9.1 IRON-9 同源但独立在本卷的具体落地
+### 9.1 IRON-9 v2 同源且部分代码共享在本卷的具体落地
 
 - **同源**：AirymaxOS 不修改上游 `tools/testing/selftests/Makefile` 顶层结构；上游测试集与 Linux 6.6 内核基线一一对应。
 - **独立**：AirymaxOS 扩展子目录以 `airymax_*` 前缀命名，独立 `config`/`settings`/`Makefile`，独立 Kconfig 依赖。
@@ -481,7 +481,7 @@ kselftest 输出 TAP（version 13），形如 `ok <num> <suite>:<case>` / `not o
 
 ### 13.1 维护规则
 
-- 本卷与 Linux 6.6 内核基线 kselftest 框架保持源码同源（IRON-9 同源但独立）。
+- 本卷与 Linux 6.6 内核基线 kselftest 框架保持源码同源（IRON-9 v2 同源且部分代码共享）。
 - 上游 kselftest API 变更时，本卷必须在 1 个上游 LTS 周期内同步更新。
 - AirymaxOS 扩展子目录的新增/删除必须同步更新本卷第 8 节与 `80-testing/README.md` 的 L2 章节。
 - 本卷所有规则编号（OS-KER-XXX/OS-STD-XXX/OS-TEST-XXX）注册于 07 维护者制度的"规则编号注册表"。

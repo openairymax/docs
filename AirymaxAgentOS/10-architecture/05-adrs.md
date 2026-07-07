@@ -39,7 +39,7 @@
 | ADR-007 | MemoryRovol 内核态实现（airymaxos-memory，L1-L4 四层递进） | Accepted |
 | ADR-008 | Wasm 3.0 沙箱运行时（airymaxos-cognition frameworks） | Accepted |
 | ADR-009 | K8s CRD + containerd shim 云原生（airymaxos-cloudnative） | Accepted |
-| ADR-010 | 与 agentrt 同源但独立（IRON-9，无适配层天然契合） | Accepted |
+| ADR-010 | 与 agentrt 同源且部分代码共享（IRON-9，无适配层天然契合） | Accepted |
 
 ---
 
@@ -696,7 +696,7 @@ AirymaxOS 在 airymaxos-cloudnative 子仓实现 **K8s CRD + containerd shim 云
 
 ---
 
-## ADR-010: 与 agentrt 同源但独立（IRON-9，无适配层天然契合）
+## ADR-010: 与 agentrt 同源且部分代码共享（IRON-9，无适配层天然契合）
 
 - **状态**: Accepted
 - **日期**: 2026-07-06
@@ -713,12 +713,12 @@ AirymaxOS 与 agentrt 的关系是架构设计的核心问题。需要明确：
 
 ### 决策
 
-AirymaxOS 与 agentrt 是 **同源但独立** 的关系（IRON-9 工程铁律）：
+AirymaxOS 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9 v2 工程铁律）：
 
 | 维度 | agentrt | AirymaxOS |
 |------|---------|-----------|
 | 性质 | 跨平台用户态运行时（Linux/macOS/Windows） | Linux 发行版（仅 Linux 6.6） |
-| 代码 | 不共享代码 | 不共享代码 |
+| 代码 | 共享契约层（`include/airymax/`）+ 实现独立 | 共享契约层（`include/airymax/`）+ 实现独立 |
 | 设计理念 | 共享 Airymax 设计理念 | 共享 Airymax 设计理念 |
 | 同源体现 | MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 语义 | SCHED_AGENT/128B IPC/capability/L1-L4/kthread 语义 |
 | 关系 | 可独立运行于任何平台 | AirymaxOS 是 agentrt 的最佳载体 |
@@ -726,18 +726,18 @@ AirymaxOS 与 agentrt 是 **同源但独立** 的关系（IRON-9 工程铁律）
 
 ### 理由
 
-1. **同源定义**：同源 = 共享设计理念，不共享代码。agentrt 和 AirymaxOS 共享 MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 的语义，但代码独立
+1. **同源定义**：同源 = 共享设计理念 + 共享契约层代码（IRON-9 v2）。agentrt 和 AirymaxOS 共享 MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 的语义，并共享契约层代码（IPC 消息头结构、syscall 编号、capability 令牌格式、MemoryRovol L1-L4 数据结构、CoreLoopThree 接口定义、错误码、规则编号体系，统一存放于 `include/airymax/` 头文件库），实现层各自独立
 2. **天然契合**：因为设计假设和实现假设一致，agentrt 在 AirymaxOS 上运行**无适配层**，天然更稳健
 3. **独立性**：agentrt 是跨平台用户态运行时，必须独立于任何特定 OS；AirymaxOS 是 Linux 发行版，专注于 Linux 6.6 优化
-4. **演进协同**：两者通过共享设计理念（ARCHITECTURAL_PRINCIPLES.md）协同演进，但代码版本独立
-5. **IRON-9 约束**：工程标准规范手册 IRON-9 明确规定"agentrt 和 AirymaxOS 同源但独立，禁止代码共享"
+4. **演进协同**：两者通过共享设计理念（ARCHITECTURAL_PRINCIPLES.md）与共享契约层代码（`include/airymax/`）协同演进，契约层变更须经 agentrt + AirymaxOS 两端 CI 双向校验
+5. **IRON-9 v2 约束**：工程标准规范手册 IRON-9 v2（2026-07-07 决策变更）明确规定"agentrt 和 AirymaxOS 同源且部分代码共享"——共享契约层代码完全共享（`include/airymax/`），语义同源层 API 签名同源实现独立，完全独立层各自独立
 6. **边界清晰**：agentrt 是用户态库 + 守护进程，AirymaxOS 是 Linux 内核 + 用户态服务，边界清晰
 
 ### 影响
 
 | 影响范围 | 描述 |
 |----------|------|
-| 工程规范 | IRON-9 工程铁律约束同源但独立关系 |
+| 工程规范 | IRON-9 工程铁律约束同源且部分代码共享关系 |
 | 演进协同 | 通过 ARCHITECTURAL_PRINCIPLES.md 共享设计理念 |
 | 测试验证 | airymaxos-tests 需验证 agentrt 在 AirymaxOS 上的天然契合性 |
 | 文档规范 | 所有文档明确标注"同源 agentrt"对应关系 |

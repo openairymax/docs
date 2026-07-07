@@ -1,9 +1,12 @@
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
 # 认知循环数据流
 
 > **文档定位**: AirymaxOS 认知循环数据流的详细设计，刻画 System 1/2 双系统协同与 CoreLoopThree kthread 实现
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**: 2026-07-07
 > **父文档**: [数据流程设计概览](README.md)
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] cognition_types.h 落地于 include/airymax/（CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符），[SS] CoreLoopThree/Thinkdual/LLM 推理 API 语义同源，[IND] kthread 内核态/Wasm runtime/GPU-NPU 驱动独立实现
 
 ---
 
@@ -325,7 +328,7 @@ airymaxos_cognition_dag_depth_avg 4.2
   "level": "INFO",
   "trace_id": "abc123def456",
   "module": "coreloopthree.cognition",
-  "function": "agentos_cognition_process",
+  "function": "agentrt_cognition_process",
   "line": 142,
   "message": "任务规划完成",
   "context": {
@@ -339,7 +342,95 @@ airymaxos_cognition_dag_depth_avg 4.2
 
 ---
 
-## 9. 相关文档
+## 9. IRON-9 v2 三层共享模型落地
+
+认知循环数据流严格遵守 IRON-9 v2 三层共享模型：
+
+### 9.1 [SC] 共享契约层（`include/airymax/cognition_types.h`）
+
+agentrt 与 AirymaxOS 完全共享的契约定义：
+
+| 契约 | 内容 | 落地位置 |
+|------|------|---------|
+| CoreLoopThree 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION`（3 项） | `include/airymax/cognition_types.h` |
+| Thinkdual 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW`（2 项） | `include/airymax/cognition_types.h` |
+| LLM 推理阶段枚举 | `LLM_STAGE_PREFILL/DECODE/SPECULATIVE`（3 项） | `include/airymax/cognition_types.h` |
+| CoreLoopThree 上下文结构 | `agentrt_clt_ctx_t`（per-cpu 上下文） | `include/airymax/cognition_types.h` |
+| Token 能效指标结构 | `agentrt_token_efficiency_t`（tokens/J、tokens/s） | `include/airymax/cognition_types.h` |
+| GPU/NPU 能力描述符 | `agentrt_accel_capabilities_t`（VRAM/算力/带宽） | `include/airymax/cognition_types.h` |
+
+### 9.2 [SS] 语义同源层（API 签名同源，实现独立）
+
+| API | agentrt（用户态） | AirymaxOS（内核态） | 同源语义 |
+|-----|------------------|---------------------|---------|
+| `agentrt_clt_run()` | 用户态事件循环 | 内核 kthread 主循环 | 三阶段循环 |
+| `agentrt_clt_notify_phase()` | 同步通知 | 内核 `wake_up_process()` | 阶段切换通知 |
+| `agentrt_thinkdual_switch()` | 协程切换 | kthread 优先级切换 | System 1/2 切换 |
+| `agentrt_llm_scheduler_submit()` | 用户态队列 | io_uring 提交 | LLM 推理提交 |
+| `agentrt_clt_query_phase()` | atomic 读取 | 内核 `atomic64_read()` | 当前阶段查询 |
+| `agentrt_token_efficiency_record()` | 用户态 metric | 内核 perf_event | 能效指标记录 |
+| `agentrt_gpu_npu_schedule()` | 用户态 ioctl | 内核 accel ops | GPU/NPU 调度 |
+| `agentrt_wasm_runtime_instantiate()` | 用户态 Wasm | 内核 eBPF 验证器风格 | Wasm 实例化 |
+
+### 9.3 [IND] 完全独立层
+
+| 机制 | AirymaxOS 独立设计 | 独立原因 |
+|------|-------------------|---------|
+| kthread 创建 | `kthread_run()`（内核原生） | 用户态无 kthread |
+| GPU/NPU 驱动 | `drivers/accel/`（habanalabs/ivpu/qaic） | 用户态无硬件驱动 |
+| drm_sched 调度 | `drm_gpu_scheduler`（DRM 框架） | 用户态无 DRM |
+| 超节点沙箱 | 内核 capability + cgroup | AirymaxOS 专属 |
+| 具身智能 | 内核 sensorio + 工业总线 | AirymaxOS 专属 |
+| KVC-Gateway | 内核 LLMCache + Bifrost | AirymaxOS 专属 |
+
+### 9.4 同源红利示例
+
+```
+agentrt CoreLoopThree（用户态，跨平台）
+   ├── 阶段枚举: CLT_PHASE_PERCEPTION/THINKING/ACTION（同源 [SC]）
+   ├── 模式枚举: THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW（同源 [SC]）
+   ├── 上下文: agentrt_clt_ctx_t（同源 [SC]）
+   └── API: agentrt_clt_run / notify_phase / thinkdual_switch（同源 [SS]）
+       │
+       └── 在 AirymaxOS 上:
+           ├── 作为用户态进程运行（标准 libc/POSIX）
+           │   └── 天然更高效 ← 同源契约一致
+           │
+           └── 可选使用内核 kthread 加速路径（同源红利）
+               ├── kthread_run() 创建持久化内核 kthread
+               ├── 享受 sched_ext SCHED_AGENT 调度优先级
+               └── 与 GPU/NPU drm_sched 协同（无需适配层）
+```
+
+---
+
+## 10. agentrt 一致性检查
+
+agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理则提出修改意见"三段式方法。本节列出认知循环数据流与 agentrt 用户态 coreloopthree 模块的一致性验证结果。
+
+| # | 检查项 | agentrt（用户态） | AirymaxOS（内核态） | 一致性结论 |
+|---|--------|------------------|---------------------|-----------|
+| 1 | [SC] 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION` | 同源 `CLT_PHASE_*` | ✅ PASS 完全共享 |
+| 2 | [SC] 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW` | 同源 `THINKDUAL_*` | ✅ PASS 完全共享 |
+| 3 | [SC] 上下文结构 | `agentrt_clt_ctx_t` | 同源 `agentrt_clt_ctx_t` | ✅ PASS 完全共享 |
+| 4 | [SC] 能效指标结构 | `agentrt_token_efficiency_t` | 同源结构 | ✅ PASS 完全共享 |
+| 5 | [SC] GPU/NPU 描述符 | `agentrt_accel_capabilities_t` | 同源结构 | ✅ PASS 完全共享 |
+| 6 | [SS] CLT_run 签名 | `agentrt_clt_run(ctx)` | 签名一致，实现独立 | ✅ PASS 语义同源 |
+| 7 | [SS] notify_phase 签名 | `agentrt_clt_notify_phase(ctx, phase)` | 签名一致 | ✅ PASS 语义同源 |
+| 8 | [SS] thinkdual_switch 签名 | `agentrt_thinkdual_switch(ctx, mode)` | 签名一致 | ✅ PASS 语义同源 |
+| 9 | [SS] llm_scheduler_submit 签名 | `agentrt_llm_scheduler_submit(req)` | 签名一致 | ✅ PASS 语义同源 |
+| 10 | [SS] query_phase 签名 | `agentrt_clt_query_phase(ctx)` | 签名一致 | ✅ PASS 语义同源 |
+| 11 | [IND] kthread 实现 | 不涉及（用户态无 kthread） | `kthread_run()` 独立 | ✅ PASS 独立正确 |
+| 12 | [IND] GPU/NPU 驱动 | 不涉及（用户态无驱动） | `drivers/accel/` 独立 | ✅ PASS 独立正确 |
+| 13 | [IND] drm_sched 实现 | 不涉及（用户态无 DRM） | `drm_gpu_scheduler` 独立 | ✅ PASS 独立正确 |
+| 14 | [IND] Wasm runtime | 用户态 Wasm 3.0（wasmtime） | 内核 eBPF 验证器风格独立实现 | ✅ PASS 独立正确 |
+| 15 | 跨平台兼容性 | 跨 Linux/macOS/Windows | 仅 Linux（agentrt-linux 专属） | ✅ PASS agentrt 保持跨平台，AirymaxOS 仅 Linux |
+
+**结论**：15 项检查全部 PASS。认知循环数据流与 agentrt coreloopthree 模块在 [SC] 共享契约层完全一致（阶段/模式/上下文/能效/GPU-NPU 5 项），[SS] 语义同源层 API 签名一致（5 项核心 API），[IND] 独立层正确分离（kthread/GPU-NPU 驱动/drm_sched/Wasm 内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态；AirymaxOS 在 [IND] 独立层正确引入 kthread + GPU/NPU + drm_sched 内核加速路径，遵循 IRON-9 v2 同源且部分代码共享原则。
+
+---
+
+## 11. 相关文档
 
 - [数据流程设计概览](README.md)：4 大数据流分类
 - [记忆卷载数据流](02-memory-flow.md)：L1→L4 四层递进
@@ -351,11 +442,12 @@ airymaxos_cognition_dag_depth_avg 4.2
 
 ---
 
-## 10. 文档变更记录
+## 12. 文档变更记录
 
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
 | 0.1.1 | 2026-07-06 | 初始版本，定义认知循环数据流 12 步与双系统切换 | Airymax 架构委员会 |
+| 0.1.1 | 2026-07-07 | 新增 Copyright 头 + §9 IRON-9 v2 三层共享模型落地 + §10 agentrt 一致性检查（15 项全 PASS） | Airymax 架构委员会 |
 
 ---
 

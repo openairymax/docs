@@ -1,9 +1,12 @@
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
 # 调度数据流
 
 > **文档定位**: AirymaxOS 调度数据流的详细设计，刻画 EEVDF + sched_ext + SCHED_AGENT 三位一体调度体系
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**: 2026-07-07
 > **父文档**: [数据流程设计概览](README.md)
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] bpf_struct_ops.h（sched_ext struct_ops 状态机 + common_value）落地于 include/airymax/，[SS] EEVDF + sched_ext + SCHED_AGENT 调度类语义同源，[IND] sched_ext 内核驱动实现 + BPF 调度策略程序独立
 
 ---
 
@@ -11,7 +14,7 @@
 
 调度数据流是 AirymaxOS 内核的核心数据流，落地于 `airymaxos-kernel` 子仓（同源 agentrt atoms/corekern Task 模块）。该数据流基于 Linux 6.6 内核基线的三大调度能力：
 
-1. **EEVDF 调度器**（Earliest Eligible Virtual Deadline First，FR-001, FR-008）：Linux 6.6 默认调度算法，替代传统 CFS。通过虚拟截止时间（virtual deadline）+ 资格判定（eligibility）实现更精确的延迟控制，抢占延迟 < 10μs。
+1. **EEVDF 调度器**（FR-001, FR-008）：Linux 6.6 默认调度算法，替代传统 CFS。通过虚拟截止时间（virtual deadline）+ 资格判定（eligibility）实现更精确的延迟控制，抢占延迟 < 10μs。
 2. **sched_ext**（FR-001, FR-002）：AirymaxOS 内核增强（主线 6.12+），基于 eBPF 的可插拔调度框架。AirymaxOS 通过 sched_ext 实现 SCHED_AGENT 调度类，调度策略以 BPF 程序形式加载，支持运行时替换（FR-050）。
 3. **SCHED_AGENT 调度类**（FR-002）：AirymaxOS 自研调度类，专为 Agent 工作负载优化。优先级范围 0-139，支持抢占式调度与策略可插拔。
 
@@ -20,6 +23,9 @@
 - **EEVDF 算法**：基于 eligible virtual deadline 选择下一个任务，相比 CFS 的红黑树，延迟分布更紧凑（P99 < 100ms，P99.9 < 200ms，NFR-P-001）。
 - **sched_ext BPF 策略可插拔**：调度策略以 BPF 程序形式加载，运行时替换不影响运行任务（FR-050）。
 - **eBPF kfunc + dynamic pointer**（FR-006，Linux 6.6 原生）：sched_ext BPF 程序通过 kfunc 调用内核函数，通过 dynamic pointer 安全访问内核数据。
+- **DSQ（Dispatch Queue）调度队列**：sched_ext 的核心队列抽象，每个 CPU 拥有本地 DSQ，支持全局 DSQ 与用户 DSQ，提供 FIFO 与 vtime 优先队列两种模式。
+- **软可靠性状态机**：sched_ext 通过 ops_state 原子追踪任务所有权（NONE→QUEUEING→QUEUED→DISPATCHING），SCX 核心可靠判定任务是否可被 BPF 派发，放宽对 BPF 调度器的要求。
+- **fallback_dsq 自动回退**：BPF 调度器失败/超时/SysRq-S 时，所有任务迁入 SCX_DSQ_BYPASS，CFS 重新接管调度，确保系统完整性。
 - **超节点间任务迁移**（FR-048）：基于 CXL + RDMA 实现跨节点任务迁移，迁移延迟 < 100ms。
 
 **性能目标**（NFR-P-001）：
@@ -36,33 +42,40 @@
 
 ## 2. Mermaid 流程图
 
-下图为 Agent 任务从提交到执行的完整调度数据流，包含 SCHED_AGENT 调度类、EEVDF 选择、策略可插拔：
+下图为 Agent 任务从提交到执行的完整调度数据流，包含 SCHED_AGENT 调度类、EEVDF 选择、策略可插拔、DSQ 派发：
 
 ```mermaid
 flowchart TD
     A[Agent 任务提交] --> B[syscall: agentrt_sys_task_submit]
     B --> C[SCHED_AGENT 调度类<br/>sched_ext]
-    C --> D{优先级评估}
-    D -->|高优先级| E[抢占当前任务]
-    D -->|正常优先级| F[加入就绪队列]
-    E --> G[EEVDF 调度器选择]
+    C --> D{select_cpu<br/>NUMA 亲和 + idle 判定}
+    D -->|idle CPU 找到| E[direct insert<br/>SCX_DSQ_LOCAL]
+    D -->|无 idle CPU| F[ops.enqueue<br/>入 BPF 调度器]
+    E --> G[ops.dispatch<br/>派发到 LOCAL_DSQ]
     F --> G
-    G --> H[分配 CPU 核心]
-    H --> I[执行任务]
-    I --> J{执行完成?}
-    J -->|是| K[记录 Metrics]
-    J -->|否| L{被抢占?}
-    L -->|是| F
-    L -->|否| I
-    K --> M[返回结果]
+    G --> H{EEVDF 选择<br/>eligible + earliest deadline}
+    H --> I[分配 CPU 核心]
+    I --> J[执行任务]
+    J --> K{slice 耗尽?}
+    K -->|是| L[ops.stopping<br/>vtime 衰减]
+    K -->|否| M{执行完成?}
+    L --> F
+    M -->|是| N[ops.quiescent<br/>记录 Metrics]
+    M -->|否| I
+    N --> O[返回结果]
     
-    N[调度策略可插拔]
-    C -.策略注入.-> N
-    N -.运行时替换.-> C
+    P[调度策略可插拔]
+    C -.策略注入.-> P
+    P -.运行时替换.-> C
+    
+    Q[fallback_dsq 自动回退]
+    C -.失败/超时.-> Q
+    Q -.EEVDF 接管.-> H
     
     style A fill:#e1f5fe
     style E fill:#fff3e0
-    style M fill:#c8e6c9
+    style O fill:#c8e6c9
+    style Q fill:#ffcdd2
 ```
 
 ---
@@ -73,25 +86,26 @@ flowchart TD
 
 | # | 步骤 | 输入 | 输出 | 约束 | 同源 agentrt |
 |---|------|------|------|------|--------------|
-| 1 | 用户态 SDK 提交 | Agent 任务描述 | task_desc 结构 | 字段完整 | sdk submit |
-| 2 | 系统调用入口 | task_desc | task_id | 参数校验 | atoms/corekern syscall |
+| 1 | 用户态 SDK 提交 | Agent 任务描述 | agentrt_task_desc 结构 | 字段完整 + magic 0x41475453 | sdk submit |
+| 2 | 系统调用入口 | agentrt_task_desc | task_id | 参数校验 | atoms/corekern syscall |
 | 3 | 安全权限检查 | task 权限 | 通过/拒绝 | capability + LSM | cupolas permission |
-| 4 | SCHED_AGENT 入队 | task + 优先级 | 入队确认 | 优先级 0-139 | atoms/corekern Task |
-| 5 | 优先级评估 | task 优先级 | 调度决策 | 抢占阈值可配 | atoms/corekern prio |
-| 6 | EEVDF 虚拟截止时间 | task weight + nice | vruntime + deadline | EEVDF 算法 | - |
-| 7 | 资格判定 | vruntime + min_vruntime | eligible/ineligible | eligible 才可调度 | - |
+| 4 | ops.select_cpu | task + prev_cpu + wake_flags | target CPU | NUMA 亲和 + idle 判定 | atoms/corekern CPU |
+| 5 | ops.enqueue | task + enq_flags | 入 SCX_DSQ 或 SHARED_DSQ | FIFO 或 vtime 入队 | atoms/corekern Task |
+| 6 | ops.dispatch | cpu + prev | 派发到 SCX_DSQ_LOCAL | 单次 dispatch_max_batch | atoms/corekern dispatch |
+| 7 | EEVDF 选择 | eligible task + deadline | next task | eligible 才可调度 | - |
 | 8 | CPU 核心分配 | eligible task | CPU core | NUMA 亲和 | atoms/corekern CPU |
 | 9 | 上下文切换 | current → next | 切换完成 | 切换 < 5μs | atoms/corekern ctxsw |
-| 10 | 任务执行 | CPU 时间片 | 执行结果 | 时间片可配 | atoms/corekern exec |
-| 11 | Metrics 记录 | 执行数据 | Metrics | Prometheus 格式 | - |
-| 12 | 结果返回 | task result | 用户态响应 | 延迟 < 100ms | sdk respond |
+| 10 | 任务执行 | slice 预算 | 执行结果 | slice 自动衰减 | atoms/corekern exec |
+| 11 | ops.stopping | task + runnable | vtime 衰减 | 权重逆比例公式 | atoms/corekern tick |
+| 12 | ops.quiescent | task + deq_flags | Metrics 记录 | Prometheus 格式 | - |
+| 13 | 结果返回 | task result | 用户态响应 | 延迟 < 100ms | sdk respond |
 
 **步骤间数据传递**：
 
 - 步骤 1-3 在用户态 + 系统调用入口完成。
-- 步骤 4-9 在内核态 sched_ext BPF 程序中完成（FR-002）。
-- 步骤 10-12 在内核态 + 用户态交替完成。
-- 步骤 5 的优先级评估与步骤 6 的 EEVDF 计算通过 eBPF kfunc 调用内核函数（FR-006）。
+- 步骤 4-9 在内核态 sched_ext BPF 程序中完成（FR-002），通过 eBPF kfunc 调用内核函数（FR-006）。
+- 步骤 10-12 在内核态 + 用户态交替完成，ops.stopping 触发 vtime 衰减并决定是否重新入队。
+- 步骤 5-6 的 enqueue/dispatch 通过 DSQ（Dispatch Queue）抽象解耦，BPF 调度器与调度核心通过 DSQ 交互。
 
 ---
 
@@ -165,22 +179,84 @@ echo 500000 > /proc/sys/kernel/sched_base_slice_ns  # 0.5ms
 
 ---
 
-## 5. SCHED_AGENT 调度类
+## 5. DSQ（Dispatch Queue）调度队列
 
-SCHED_AGENT 是 AirymaxOS 基于 sched_ext 实现的自研调度类（FR-002），专为 Agent 工作负载优化。同源 agentrt atoms/corekern 的 MicroCoreRT 调度器。
+DSQ（Dispatch Queue）是 sched_ext 的核心队列抽象，是 BPF 调度器与调度核心之间的解耦层。每个 CPU 拥有本地 DSQ，可创建用户 DSQ，提供 FIFO 与 vtime 优先队列两种模式。
 
-### 5.1 SCHED_AGENT 调度类定义
+### 5.1 DSQ 类型与语义
+
+| DSQ 类型 | 标识 | 语义 | AirymaxOS SCHED_AGENT 使用 |
+|---------|------|------|---------------------------|
+| `SCX_DSQ_INVALID` | builtin 0 | 无效 DSQ | 未初始化状态 |
+| `SCX_DSQ_GLOBAL` | builtin 1 | 全局 FIFO DSQ | 全局 Agent 调度队列（fallback） |
+| `SCX_DSQ_LOCAL` | builtin 2 | 当前 CPU 本地 DSQ | per-CPU Agent 本地队列（默认派发目标） |
+| `SCX_DSQ_BYPASS` | builtin 3 | bypass 队列 | 策略卸载过渡队列（fallback_dsq） |
+| `SCX_DSQ_LOCAL_ON` | builtin + cpu | 指定 CPU 的本地 DSQ | 远端 CPU Agent 派发 |
+| 用户 DSQ | user-created | BPF 自定义队列 | Agent 优先级队列、cgroup 队列 |
+
+### 5.2 DSQ ID 编码
+
+DSQ ID 为 64 位，最高位区分 builtin（1）与 user（0）：
+
+```
+[63] B = 1 builtin / 0 user
+[62] L = 1 LOCAL_ON（仅 builtin）
+[61..32] R = reserved
+[31..0]  V = value / cpu number
+```
+
+### 5.3 DSQ 数据结构
 
 ```c
 /**
- * @brief SCHED_AGENT 调度类
+ * @brief DSQ 调度队列（同源 sched_ext struct scx_dispatch_q）
+ * @since 1.0.1
+ * @note IRON-9 v2 [SS] 语义同源层：API 签名同源，实现独立
+ */
+struct agent_dispatch_q {
+    raw_spinlock_t  lock;        /* 队列自旋锁 */
+    struct list_head list;       /* FIFO 顺序链表 */
+    struct rb_root   priq;       /* vtime 优先红黑树 */
+    u32              nr;         /* 队列任务计数 */
+    u32              seq;        /* BPF iter 序号 */
+    u64              id;         /* DSQ ID（builtin/user 区分） */
+};
+```
+
+### 5.4 DSQ 操作 kfunc
+
+| kfunc | 语义 | 调用上下文 | AirymaxOS 使用 |
+|-------|------|----------|---------------|
+| `scx_bpf_dsq_insert` | 入队到 DSQ（FIFO） | ops.enqueue / ops.select_cpu | Agent 任务入队 |
+| `scx_bpf_dsq_insert_vtime` | 入队到 vtime 优先 DSQ | ops.enqueue | vtime 排序入队 |
+| `scx_bpf_dsq_move_to_local` | 从用户 DSQ 派发到 LOCAL_DSQ | ops.dispatch | 派发到当前 CPU |
+| `scx_bpf_dsq_create` | 创建用户 DSQ | ops.init（sleepable） | Agent 创建优先级队列 |
+| `scx_bpf_dsq_destroy` | 销毁用户 DSQ | ops.exit | 策略卸载时清理 |
+| `scx_bpf_select_cpu_dfl` | 默认 CPU 选择 | ops.select_cpu | NUMA 亲和 + idle 判定 |
+| `scx_bpf_select_cpu_dfl` | 默认 idle CPU 选择 | ops.select_cpu | idle CPU 直接入队 |
+| `scx_bpf_kick_cpu` | 唤醒/抢占目标 CPU | 任意回调 | 高优先级 Agent 抢占 |
+
+---
+
+## 6. SCHED_AGENT 调度类
+
+SCHED_AGENT 是 AirymaxOS 基于 sched_ext 实现的自研调度类（FR-002），专为 Agent 工作负载优化。同源 agentrt atoms/corekern 的 MicroCoreRT 调度器。
+
+### 6.1 SCHED_AGENT 调度类定义
+
+```c
+/**
+ * @brief SCHED_AGENT 调度类编号
  * @since 1.0.1
  * @see sched_ext（AirymaxOS 内核增强，主线 6.12+）
+ * @note IRON-9 v2 [SC] 共享契约层：agentrt 与 AirymaxOS 共享此定义
  */
 #define SCHED_AGENT 7  /* 调度类编号 */
 
 /**
  * @brief Agent 任务描述符
+ * @note IRON-9 v2 [SC] 共享契约层：定义于 include/airymax/sched.h
+ * @note magic 0x41475453 'AGTS' 独立于 IPC 消息头 0x41524531 'ARE1'
  */
 typedef struct __attribute__((aligned(64))) agentrt_task_desc {
     uint32_t magic;          /* 0x41475453 'AGTS' magic（任务描述符，独立于 IPC 消息头） */
@@ -195,90 +271,247 @@ typedef struct __attribute__((aligned(64))) agentrt_task_desc {
     char     role[32];       /* Agent 角色（researcher/assistant/...） */
     uint8_t  reserved[32];   /* 保留字段 */
 } agentrt_task_desc_t;
+
+/* AIRYMAX_SLICE_DFL 同源 sched_ext SCX_SLICE_DFL（20ms） */
+#define AIRYMAX_SLICE_DFL  (20 * 1000000ULL)
 ```
 
-### 5.2 SCHED_AGENT BPF 程序
+### 6.2 SCHED_AGENT BPF 程序
+
+SCHED_AGENT BPF 程序实现 `struct sched_ext_ops` 的关键回调，定义调度策略。以下为 `default_eevdf` 策略的参考实现：
 
 ```c
 /**
- * @brief SCHED_AGENT 调度策略 BPF 程序
+ * @brief SCHED_AGENT default_eevdf 策略 BPF 程序
  * @since 1.0.1
  * @see sched_ext BPF
+ * @note IRON-9 v2 [SS] 语义同源层：API 签名同源 sched_ext_ops，实现独立
  * @note 通过 eBPF kfunc + dynamic pointer 访问内核数据
  */
 
-#include <scx/bpf.h>
+#include <airymax/sched.h>  /* [SC] 共享契约层 */
+#include <scx/common.bpf.h>
 
-/* Agent 调度队列（per-CPU） */
-struct agent_queue {
-    struct bpf_spin_lock lock;
-    struct agentrt_task_desc *head;
-    struct agentrt_task_desc *tail;
-    __u64 count;
-};
+#define SHARED_DSQ 0  /* 全局 vtime DSQ */
 
-struct {
-    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
-    __type(key, __u32);
-    __type(value, struct agent_queue);
-    __uint(max_entries, 1);
-} agent_queues SEC(".maps");
+static u64 vtime_now;
 
 /**
- * @brief 选择下一个 Agent 任务
- * @note sched_ext 入口点
+ * @brief select_cpu: NUMA 亲和 + idle CPU 直接入队
  */
-s32 BPF_STRUCT_OPS(agent_select_cpu, struct task_struct *p, s32 prev_cpu, u64 wake_flags) {
-    /* NUMA 亲和性 + EEVDF 资格判定 */
-    return scx_bpf_select_cpu_dfl(p, prev_cpu, wake_flags, NULL);
+s32 BPF_STRUCT_OPS(agent_select_cpu, struct task_struct *p,
+                   s32 prev_cpu, u64 wake_flags) {
+    bool is_idle = false;
+    s32 cpu = scx_bpf_select_cpu_dfl(p, prev_cpu, wake_flags, &is_idle);
+    if (is_idle)
+        scx_bpf_dsq_insert(p, SCX_DSQ_LOCAL, AIRYMAX_SLICE_DFL, 0);
+    return cpu;
 }
 
 /**
- * @brief 入队 Agent 任务
+ * @brief enqueue: vtime 入队到 SHARED_DSQ
  */
 void BPF_STRUCT_OPS(agent_enqueue, struct task_struct *p, u64 enq_flags) {
-    __u32 key = 0;
-    struct agent_queue *q = bpf_map_lookup_elem(&agent_queues, &key);
-    if (!q) return;
-    
-    bpf_spin_lock(&q->lock);
-    /* 入队到队尾 */
-    /* ... */
-    bpf_spin_unlock(&q->lock);
-    
-    scx_bpf_kick_cpu(smp_processor_id(), SCX_KICK_PREEMPT);
+    u64 vtime = p->scx.dsq_vtime;
+    /* 限制 idle 任务累积 vtime 到一个 slice */
+    if (time_before(vtime, vtime_now - AIRYMAX_SLICE_DFL))
+        vtime = vtime_now - AIRYMAX_SLICE_DFL;
+    scx_bpf_dsq_insert_vtime(p, SHARED_DSQ, AIRYMAX_SLICE_DFL, vtime, enq_flags);
 }
 
 /**
- * @brief 出队 Agent 任务（EEVDF 选择）
+ * @brief dispatch: SHARED_DSQ → LOCAL_DSQ
  */
 void BPF_STRUCT_OPS(agent_dispatch, s32 cpu, struct task_struct *prev) {
-    __u32 key = 0;
-    struct agent_queue *q = bpf_map_lookup_elem(&agent_queues, &key);
-    if (!q) return;
-    
-    bpf_spin_lock(&q->lock);
-    /* EEVDF 选择：earliest eligible virtual deadline */
-    /* ... */
-    bpf_spin_unlock(&q->lock);
+    scx_bpf_dsq_move_to_local(SHARED_DSQ);
+}
+
+/**
+ * @brief running: 推进全局 vtime_now
+ */
+void BPF_STRUCT_OPS(agent_running, struct task_struct *p) {
+    if (time_before(vtime_now, p->scx.dsq_vtime))
+        vtime_now = p->scx.dsq_vtime;
+}
+
+/**
+ * @brief stopping: 按权重逆比例衰减 vtime（同源公式 airymax_vtime_decay）
+ */
+void BPF_STRUCT_OPS(agent_stopping, struct task_struct *p, bool runnable) {
+    p->scx.dsq_vtime += (AIRYMAX_SLICE_DFL - p->scx.slice) * 100 / p->scx.weight;
+}
+
+/**
+ * @brief enable: 任务进入 SCHED_AGENT 时初始化 vtime
+ */
+void BPF_STRUCT_OPS(agent_enable, struct task_struct *p) {
+    p->scx.dsq_vtime = vtime_now;
+}
+
+/**
+ * @brief init: 创建 SHARED_DSQ
+ */
+s32 BPF_STRUCT_OPS_SLEEPABLE(agent_init) {
+    return scx_bpf_create_dsq(SHARED_DSQ, -1);
+}
+
+/**
+ * @brief exit: 策略卸载时记录退出信息
+ */
+void BPF_STRUCT_OPS(agent_exit, struct scx_exit_info *ei) {
+    UEI_RECORD(uei, ei);
+}
+
+SCX_OPS_DEFINE(agent_default_eevdf_ops,
+    .select_cpu = (void *)agent_select_cpu,
+    .enqueue    = (void *)agent_enqueue,
+    .dispatch   = (void *)agent_dispatch,
+    .running    = (void *)agent_running,
+    .stopping   = (void *)agent_stopping,
+    .enable     = (void *)agent_enable,
+    .init       = (void *)agent_init,
+    .exit       = (void *)agent_exit,
+    .name       = "default_eevdf");
+```
+
+### 6.3 SCHED_AGENT 优先级映射
+
+| 优先级范围 | 任务类型 | 抢占能力 | 示例 | 权重映射 |
+|---|---|---|---|---|
+| 0-49 | 实时 Agent（高） | 抢占所有 | 工业控制、具身智能 | weight 8000-10000 |
+| 50-99 | 标准 Agent | 抢占低优先级 | 科研、客服 | weight 2000-7999 |
+| 100-139 | 后台 Agent | 不抢占 | 批处理、记忆整理 | weight 1-1999 |
+
+### 6.4 SCHED_AGENT 优先级到权重转换
+
+```c
+/**
+ * @brief 优先级到权重映射（同源 sched_ext set_weight）
+ * @since 1.0.1
+ * @note IRON-9 v2 [SC] 共享契约层：权重范围 [1..10000] 同源
+ */
+static inline u32 agentrt_prio_to_weight(u16 priority) {
+    if (priority <= 49)
+        return 8000 + (49 - priority) * 40;  /* 8000-9960 */
+    else if (priority <= 99)
+        return 2000 + (99 - priority) * 120; /* 2000-7940 */
+    else
+        return 1 + (139 - priority) * 14;    /* 1-693 */
 }
 ```
 
-### 5.3 SCHED_AGENT 优先级映射
+---
 
-| 优先级范围 | 任务类型 | 抢占能力 | 示例 |
-|---|---|---|---|
-| 0-49 | 实时 Agent（高） | 抢占所有 | 工业控制、具身智能 |
-| 50-99 | 标准 Agent | 抢占低优先级 | 科研、客服 |
-| 100-139 | 后台 Agent | 不抢占 | 批处理、记忆整理 |
+## 7. sched_ext 状态机
+
+sched_ext 通过两级状态机管理调度器与任务的生命周期，确保 BPF 调度器加载/卸载/失败时的系统完整性。
+
+### 7.1 调度器级状态机（scx_ops_enable_state）
+
+```mermaid
+stateDiagram-v2
+    [*] --> DISABLED: 系统启动
+    DISABLED --> ENABLING: scx_ops_enable()
+    ENABLING --> ENABLED: init 成功 + 任务迁移完成
+    ENABLING --> DISABLING: init 失败
+    ENABLED --> DISABLING: exit / 错误 / SysRq-S / 超时
+    DISABLING --> DISABLED: 卸载完成
+    DISABLED --> [*]: 系统关闭
+```
+
+| 状态 | AirymaxOS 对应 | 触发 |
+|------|---------------|------|
+| `DISABLED` | 未加载策略 | 系统启动/策略卸载完成 |
+| `ENABLING` | 策略加载中 | `scx_ops_enable()` 调用 |
+| `ENABLED` | 策略运行中 | init 成功 + 所有任务迁移完成 |
+| `DISABLING` | 策略卸载中 | exit / 错误 / SysRq-S / 超时 |
+
+### 7.2 任务级状态机（scx_task_state）
+
+```mermaid
+stateDiagram-v2
+    [*] --> NONE: task fork
+    NONE --> INIT: ops.init_task() 成功
+    INIT --> READY: 完全初始化
+    READY --> ENABLED: 进入 sched_ext
+    ENABLED --> READY: 退出 sched_ext
+    INIT --> [*]: init_task 取消
+    READY --> [*]: task exit
+    ENABLED --> [*]: task exit + ops.exit_task()
+```
+
+| 状态 | 语义 | AirymaxOS 对应 |
+|------|------|---------------|
+| `NONE` | init_task 未调用 | Agent 任务未注册 |
+| `INIT` | init_task 成功，可取消 | Agent 注册中 |
+| `READY` | 完全初始化，未进入 SCX | Agent 待激活 |
+| `ENABLED` | 完全初始化且在 SCX | Agent 运行中 |
+
+### 7.3 任务 ops_state（BPF/SCX 所有权追踪）
+
+```mermaid
+stateDiagram-v2
+    [*] --> NONE
+    NONE --> QUEUEING: BPF 入队
+    QUEUEING --> QUEUED: 入队完成
+    QUEUED --> DISPATCHING: BPF 派发
+    DISPATCHING --> NONE: 派发完成
+    QUEUED --> NONE: 出队
+```
+
+`atomic_long_t ops_state` 让 SCX 核心随时可靠判定任务是否可被 BPF 派发，从而放宽对 BPF 调度器的要求（BPF 可尝试派发任意状态的任务，SCX 核心拒绝无效派发）。AirymaxOS SCHED_AGENT 同源采用此机制实现**软可靠性**。
 
 ---
 
-## 6. 超节点间任务迁移数据流
+## 8. fallback_dsq 自动回退机制
+
+AirymaxOS SCHED_AGENT 的核心安全网，确保 BPF 调度器失败时系统完整性不破坏。
+
+### 8.1 触发条件
+
+| 触发 | 说明 | 检测机制 |
+|------|------|---------|
+| BPF 调度器主动 exit | `ops.exit()` 调用 | 用户态请求 |
+| runnable 超时 | 任务等待超过 timeout_ms | watchdog 检测 |
+| BPF 程序错误 | 验证器拒绝 / 运行时错误 | scx_ops_error() |
+| SysRq-S | 紧急回退快捷键 | 内核 SysRq 处理 |
+| 内存分配失败 | BPF 程序 OOM | kfunc 返回错误 |
+
+### 8.2 回退流程
+
+```mermaid
+sequenceDiagram
+    participant BPF as BPF 调度器
+    participant SCX as SCX 核心
+    participant CFS as EEVDF/CFS
+    participant T as 任务
+    
+    BPF->>SCX: 触发错误（exit/超时/SysRq）
+    SCX->>SCX: 状态迁移 ENABLED → DISABLING
+    SCX->>T: 所有任务迁入 SCX_DSQ_BYPASS（FIFO）
+    SCX->>CFS: CFS 重新接管调度
+    CFS->>T: 按 EEVDF 调度 BYPASS 队列任务
+    SCX->>SCX: 状态迁移 DISABLING → DISABLED
+    Note over T: 任务无感知，调度延迟 < 1ms
+```
+
+### 8.3 分级超时保护
+
+AirymaxOS SCHED_AGENT 增强 sched_ext 的单一 30s 超时为分级超时：
+
+| 优先级范围 | 超时阈值 | 适用场景 |
+|-----------|---------|---------|
+| 0-49（实时） | 5s | 工业控制、具身智能 |
+| 50-99（标准） | 30s | 科研、客服 |
+| 100-139（后台） | 60s | 批处理、记忆整理 |
+
+---
+
+## 9. 超节点间任务迁移数据流
 
 AirymaxOS 超节点 OS（FR-048）支持跨节点任务迁移，基于 CXL + RDMA 实现迁移延迟 < 100ms。同源 agentrt atoms/corekern 的超节点扩展。
 
-### 6.1 任务迁移触发条件
+### 9.1 任务迁移触发条件
 
 | 触发条件 | 阈值 | 迁移策略 |
 |---|---|---|
@@ -288,7 +521,7 @@ AirymaxOS 超节点 OS（FR-048）支持跨节点任务迁移，基于 CXL + RDM
 | 显式迁移 | 用户/API 调用 | 立即迁移 |
 | 能耗优化 | 节点能效比差异 > 15% | 迁移到高能效节点 |
 
-### 6.2 任务迁移数据流
+### 9.2 任务迁移数据流
 
 ```mermaid
 sequenceDiagram
@@ -309,7 +542,7 @@ sequenceDiagram
     Note over SN1,SN2: CXL 内存无需拷贝<br/>（池化共享）
 ```
 
-### 6.3 迁移性能分解
+### 9.3 迁移性能分解
 
 | 阶段 | 操作 | 延迟 | 备注 |
 |---|---|---|---|
@@ -324,11 +557,11 @@ sequenceDiagram
 
 ---
 
-## 7. 调度策略可插拔数据流
+## 10. 调度策略可插拔数据流
 
 调度策略可插拔（FR-050）是 AirymaxOS 的核心特征，基于 sched_ext 实现运行时策略替换，不影响运行任务。同源 agentrt coreloopthree 的策略可插拔机制。
 
-### 7.1 策略可插拔回退
+### 10.1 策略可插拔回退
 
 ```mermaid
 flowchart TD
@@ -351,7 +584,7 @@ flowchart TD
     style J fill:#fff3e0
 ```
 
-### 7.2 策略加载 API
+### 10.2 策略加载 API
 
 ```c
 /**
@@ -361,6 +594,7 @@ flowchart TD
  * @return 0 成功，<0 失败
  * @since 1.0.1
  * @see sched_ext BPF
+ * @note IRON-9 v2 [SS] 语义同源层：API 签名同源 agentrt
  */
 AGENTRT_API int agentrt_sched_load_policy(const char *bpf_obj,
                                            const char *policy_name);
@@ -384,17 +618,17 @@ AGENTRT_API int agentrt_sched_list_policies(char (*policies)[64],
                                              int max_count);
 ```
 
-### 7.3 内置调度策略
+### 10.3 内置调度策略
 
-| 策略名 | 适用场景 | 特征 |
-|---|---|---|
-| `default_eevdf` | 通用 | Linux 6.6 默认 EEVDF |
-| `agent_realtime` | 实时 Agent | 高优先级抢占，P99 < 10ms |
-| `agent_throughput` | 批处理 Agent | 高吞吐，时间片放大 |
-| `agent_fairness` | 多租户 | 严格公平共享 |
-| `agent_energy` | 边缘部署 | 能效优先，频率缩放 |
+| 策略名 | 适用场景 | 特征 | BPF 策略参考 |
+|---|---|---|---|
+| `default_eevdf` | 通用 | Linux 6.6 默认 EEVDF | 全局 vtime（simple） |
+| `agent_realtime` | 实时 Agent | 高优先级抢占，P99 < 10ms | 多优先级队列（qmap） |
+| `agent_throughput` | 批处理 Agent | 高吞吐，时间片放大 | 集中调度（central） |
+| `agent_fairness` | 多租户 | 严格公平共享 | 扁平 cgroup（flatcg） |
+| `agent_energy` | 边缘部署 | 能效优先，频率缩放 | 自定义 |
 
-### 7.4 策略替换约束
+### 10.4 策略替换约束
 
 | 约束 | 说明 |
 |---|---|
@@ -404,13 +638,56 @@ AGENTRT_API int agentrt_sched_list_policies(char (*policies)[64],
 | 审计追踪 | 策略切换记录审计日志（NFR-S-005） |
 | 权限控制 | 切换需 SCHED_ADMIN capability |
 
+### 10.5 BPF kfunc 调用上下文限制
+
+sched_ext 通过 `kf_mask` 限制不同回调上下文可调用的 kfunc 集合，避免 BPF 程序在不安全上下文中调用需 rq 锁的 kfunc：
+
+| 掩码 | 上下文 | AirymaxOS SCHED_AGENT 使用 |
+|------|-------|---------------------------|
+| `SCX_KF_UNLOCKED` | sleepable，无 rq 锁 | agent_init / agent_exit |
+| `SCX_KF_CPU_RELEASE` | `cpu_release()` 回调内 | Agent CPU 释放 |
+| `SCX_KF_DISPATCH` | `dispatch()` 回调内 | Agent dispatch |
+| `SCX_KF_ENQUEUE` | `enqueue()` / `select_cpu()` | Agent 入队 |
+| `SCX_KF_SELECT_CPU` | `select_cpu()` 回调内 | Agent CPU 选择 |
+| `SCX_KF_REST` | 其他 rq-locked 操作 | Agent 其他回调 |
+
+**AirymaxOS 决策**：完全同源采用 kf_mask 机制，严格按回调上下文调用 kfunc。
+
 ---
 
-## 8. 调度性能约束
+## 11. sched_ext 与 EEVDF 协同机制
+
+### 11.1 调度类优先级
+
+`ext_sched_class`（sched_ext）位于 `fair_sched_class`（EEVDF）之上、`rt_sched_class`（实时）之下。当 BPF 调度器加载且 `SCX_OPS_SWITCH_PARTIAL` 未设置时，所有 SCHED_NORMAL/BATCH/IDLE/EXT 任务走 sched_ext，EEVDF 退化为 fallback。
+
+### 11.2 SCX_OPS 标志位
+
+| 标志位 | 值 | 语义 | AirymaxOS SCHED_AGENT 使用 |
+|--------|-----|------|---------------------------|
+| `SCX_OPS_KEEP_BUILTIN_IDLE` | 1<<0 | 保留内核内置 idle 追踪 | Agent 调度器依赖内置 idle |
+| `SCX_OPS_ENQ_LAST` | 1<<1 | enqueue 最后一个任务时通知 BPF | Agent 独占 CPU 模式 |
+| `SCX_OPS_SWITCH_PARTIAL` | 1<<3 | 仅 SCHED_EXT 任务走 SCX | Agent 混合部署模式 |
+
+**关键决策**：AirymaxOS SCHED_AGENT 默认**不设置** `SCX_OPS_SWITCH_PARTIAL`，即 BPF 加载后所有 SCHED_NORMAL/SCHED_BATCH/SCHED_IDLE/SCHED_EXT 任务均走 SCHED_AGENT，最大化 Agent 调度优先级。
+
+### 11.3 fallback_dsq 回退机制
+
+sched_ext 内置 `SCX_DSQ_BYPASS` 队列，当 BPF 调度器卸载或失败时：
+
+1. 所有任务迁入 `SCX_DSQ_BYPASS`（FIFO）
+2. CFS（EEVDF）重新接管调度
+3. 触发 `SCX_OPS_DISABLING` → `SCX_OPS_DISABLED` 状态迁移
+
+AirymaxOS SCHED_AGENT 同源实现 fallback 机制，确保 BPF 调度器失败时回退到 EEVDF 默认调度。
+
+---
+
+## 12. 调度性能约束
 
 调度数据流满足以下非功能需求（NFR-P-001）：
 
-### 8.1 延迟分布目标
+### 12.1 延迟分布目标
 
 | 场景 | P50 | P99 | P99.9 | 验证方法 |
 |---|---|---|---|---|
@@ -419,7 +696,7 @@ AGENTRT_API int agentrt_sched_list_policies(char (*policies)[64],
 | 高负载场景（CPU 90%） | < 80ms | < 150ms | < 300ms | 压力测试 |
 | 跨节点迁移场景 | < 50ms | < 100ms | < 200ms | 节点间迁移测试 |
 
-### 8.2 性能验证方法
+### 12.2 性能验证方法
 
 ```bash
 # 1. perf 测量调度延迟
@@ -431,18 +708,23 @@ echo 1 > /sys/kernel/debug/tracing/events/sched/sched_wakeup/enable
 echo 1 > /sys/kernel/debug/tracing/events/sched/sched_switch/enable
 echo 1 > /sys/kernel/debug/tracing/tracing_on
 sleep 60
-cat /sys/kernel/debug/tracing/trace | agentos-sched-latency-analyzer
+cat /sys/kernel/debug/tracing/trace | agentrt-sched-latency-analyzer
 
 # 3. sched_ext 策略性能对比
-agentos-sched-bench --policy default_eevdf --duration 60s
-agentos-sched-bench --policy agent_realtime --duration 60s
-agentos-sched-bench --policy agent_throughput --duration 60s
+agentrt-sched-bench --policy default_eevdf --duration 60s
+agentrt-sched-bench --policy agent_realtime --duration 60s
+agentrt-sched-bench --policy agent_throughput --duration 60s
 
 # 4. BPF 工具测量调度延迟
 bpftool prog profile id 123 duration 5 cycles instructions
+
+# 5. sched_ext 状态查看
+cat /sys/kernel/sched_ext/state         # enabled / disabled
+cat /sys/kernel/sched_ext/root/ops      # 当前策略名
+cat /sys/kernel/sched_ext/enable_seq    # 加载次数
 ```
 
-### 8.3 性能调优参数
+### 12.3 性能调优参数
 
 ```bash
 # EEVDF 调度参数
@@ -456,15 +738,16 @@ echo 100ms > /sys/fs/agentrt/sched/agent_default_timeslice  # 默认时间片
 
 # sched_ext BPF 参数
 echo 1024 > /sys/fs/bpf/sched_ext/max_queue_depth       # 队列深度
+echo 30000 > /sys/kernel/sched_ext/timeout_ms           # runnable 超时（30s）
 ```
 
 ---
 
-## 9. 可观测性
+## 13. 可观测性
 
 调度数据流通过 perf + ftrace + Prometheus Metrics + 结构化日志实现端到端可观测性。
 
-### 9.1 perf + ftrace
+### 13.1 perf + ftrace
 
 ```bash
 # perf 调度延迟分布
@@ -480,7 +763,7 @@ echo 1 > /sys/kernel/debug/tracing/events/sched/sched_stat_runtime/enable
 cat /sys/kernel/debug/sched_ext/trace
 ```
 
-### 9.2 Prometheus Metrics
+### 13.2 Prometheus Metrics
 
 ```prometheus
 # 调度延迟分布
@@ -514,13 +797,22 @@ airymaxos_sched_migration_latency_seconds{quantile="0.99"} 0.085
 # 策略切换统计
 airymaxos_sched_policy_switches_total 8
 airymaxos_sched_policy_active{name="agent_realtime"} 1
+
+# sched_ext 状态机统计
+airymaxos_sched_scx_state{state="disabled"} 0
+airymaxos_sched_scx_state{state="enabled"} 1
+airymaxos_sched_scx_fallback_total 0
+airymaxos_sched_scx_task_state{state="none"} 0
+airymaxos_sched_scx_task_state{state="init"} 2
+airymaxos_sched_scx_task_state{state="ready"} 12
+airymaxos_sched_scx_task_state{state="enabled"} 380
 ```
 
-### 9.3 结构化日志
+### 13.3 结构化日志
 
 ```json
 {
-  "timestamp": "2026-07-06T10:30:45.123456789Z",
+  "timestamp": "2026-07-07T10:30:45.123456789Z",
   "level": "INFO",
   "trace_id": "sched_abc123def456",
   "module": "atoms.corekern.sched",
@@ -535,16 +827,18 @@ airymaxos_sched_policy_active{name="agent_realtime"} 1
     "cpu": 7,
     "latency_ns": 4200000,
     "vruntime": 1234567890,
-    "deadline": 1234568000
+    "deadline": 1234568000,
+    "dsq_id": "SCX_DSQ_LOCAL",
+    "ops_state": "QUEUED"
   }
 }
 ```
 
-### 9.4 调度策略切换审计日志
+### 13.4 调度策略切换审计日志
 
 ```json
 {
-  "timestamp": "2026-07-06T10:30:45.123456789Z",
+  "timestamp": "2026-07-07T10:30:45.123456789Z",
   "level": "WARN",
   "trace_id": "policy_switch_001",
   "module": "atoms.corekern.sched.policy",
@@ -558,14 +852,159 @@ airymaxos_sched_policy_active{name="agent_realtime"} 1
     "initiator_pid": 1234,
     "initiator_uid": 0,
     "affected_running_tasks": 12,
-    "switch_duration_ns": 8500
+    "switch_duration_ns": 8500,
+    "scx_ops_state_before": "ENABLED",
+    "scx_ops_state_after": "ENABLED"
+  }
+}
+```
+
+### 13.5 fallback 回退审计日志
+
+```json
+{
+  "timestamp": "2026-07-07T10:31:22.456789012Z",
+  "level": "ERROR",
+  "trace_id": "fallback_001",
+  "module": "atoms.corekern.sched.fallback",
+  "function": "agentrt_sched_fallback_to_eevdf",
+  "line": 312,
+  "message": "sched_ext 策略回退到 EEVDF",
+  "context": {
+    "trigger": "runnable_timeout",
+    "timeout_task_id": "task_abc456",
+    "timeout_priority": 50,
+    "timeout_ms": 30000,
+    "migrated_tasks": 380,
+    "fallback_dsq": "SCX_DSQ_BYPASS",
+    "scx_ops_state_before": "ENABLED",
+    "scx_ops_state_after": "DISABLING",
+    "exit_reason": "runnable_task_stalled"
   }
 }
 ```
 
 ---
 
-## 10. 相关文档
+## 14. IRON-9 v2 三层共享模型落地
+
+调度数据流严格遵守 IRON-9 v2 三层共享模型：
+
+### 14.1 [SC] 共享契约层（`include/airymax/sched.h`）
+
+agentrt 与 AirymaxOS 完全共享的契约定义：
+
+| 契约 | 内容 | 落地位置 |
+|------|------|---------|
+| 调度类编号 | `SCHED_AGENT 7` | `include/airymax/sched.h` |
+| 任务描述符 magic | `0x41475453 'AGTS'` | `include/airymax/sched.h` |
+| 任务描述符结构 | `agentrt_task_desc_t`（64 字节对齐） | `include/airymax/sched.h` |
+| 默认时间片 | `AIRYMAX_SLICE_DFL`（20ms，同源 SCX_SLICE_DFL） | `include/airymax/sched.h` |
+| 权重范围 | `[1..10000]`（同源 sched_ext set_weight） | `include/airymax/sched.h` |
+| 优先级范围 | 0-139（实时 0-49 / 标准 50-99 / 后台 100-139） | `include/airymax/sched.h` |
+| vtime 类型 | `airymax_vtime_t`（u64） | `include/airymax/sched.h` |
+| vtime 衰减公式 | `airymax_vtime_decay(vtime, consumed, weight)` | `include/airymax/sched.h` |
+
+### 14.2 [SS] 语义同源层（API 签名同源，实现独立）
+
+AirymaxOS SCHED_AGENT BPF 程序实现以下回调（签名与 `struct sched_ext_ops` 同源，但实现独立于 agentrt）：
+
+- 队列管理：`agent_select_cpu` / `agent_enqueue` / `agent_dequeue` / `agent_dispatch`
+- 状态通知：`agent_runnable` / `agent_running` / `agent_stopping` / `agent_quiescent`
+- 生命周期：`agent_init` / `agent_exit` / `agent_enable` / `agent_disable`
+- 性能与 CPU：`agent_tick` / `agent_set_weight` / `agent_set_cpumask` / `agent_update_idle`
+- 热插拔：`agent_cpu_online` / `agent_cpu_offline`
+
+agentrt 的 MicroCoreRT 不实现这些回调（用户态无 BPF），但消费同样的 `agentrt_task_desc_t` 契约，调度语义一致。
+
+### 14.3 [IND] 完全独立层
+
+AirymaxOS 专属（agentrt 不涉及）：
+- `ext_sched_class` 注册（内核调度类）
+- `scx_ops_enable` / `scx_ops_disable` 实现（内核态 BPF 加载）
+- kf_mask 上下文追踪（内核态机制）
+- fallback_dsq 回退（内核态机制）
+- cgroup 集成（`CONFIG_EXT_GROUP_SCHED`）
+- core-sched 集成（`core_sched_before`）
+- debug dump（`dump` / `dump_cpu` / `dump_task`）
+- Kbuild 集成（`Makefile` + `Kconfig`）
+
+agentrt 专属（AirymaxOS 不涉及）：
+- Python/Go/Rust/TS SDK 绑定
+- 跨平台抽象层（Linux/macOS/Windows）
+- CLI / TUI 工具
+
+---
+
+## 15. 同源红利示例
+
+### 15.1 调度同源红利
+
+agentrt 的 MicroCoreRT 调度语义与 AirymaxOS 的 SCHED_AGENT 调度类一致：
+
+```
+agentrt MicroCoreRT（跨平台用户态，代码不变）
+   ├── 优先级范围: 0-139（同源 [SC]）
+   ├── 任务描述符: agentrt_task_desc_t（同源 [SC]）
+   ├── vtime 衰减: airymax_vtime_decay()（同源 [SC]）
+   └── 时间片: AIRYMAX_SLICE_DFL = 20ms（同源 [SC]）
+       │
+       └── 在 AirymaxOS 上:
+           ├── 作为普通用户态应用运行（标准 libc/POSIX）
+           │   └── 天然更稳健 ← 同源契约一致
+           │
+           └── 可选使用 SCHED_AGENT 调度类（同源红利）
+               ├── 调用 sched_setscheduler(p, SCHED_AGENT, &param)
+               │   └── SCHED_AGENT = 7（同源 [SC]）
+               ├── 享受内核原生调度优先级
+               └── 无需任何适配层
+```
+
+### 15.2 IPC 同源示例（调度消息传递）
+
+```
+agentrt 的 AgentsIPC 调度消息定义（are_ipc.h）:
+  - 128 字节定长消息头
+  - magic: 0x41524531 "ARE1"（同源 [SC]）
+  - 调度 payload 协议（含 agentrt_task_desc_t）
+
+AirymaxOS 的内核原生 IPC（airymaxos-kernel + airymaxos-services）:
+  - 内核原生支持 128 字节消息头（同源 [SC]）
+  - magic 0x41524531 作为内核识别码（同源 [SC]）
+  - agentrt_task_desc_t 直接作为内核调度描述符（同源 [SC]）
+
+→ agentrt 在 AirymaxOS 上运行时，调度消息无需任何转换层，天然契合
+```
+
+---
+
+## 16. agentrt 一致性检查
+
+agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理则提出修改意见"三段式方法。本节列出调度数据流与 agentrt 用户态 atoms/corekern（MicroCoreRT）模块的一致性验证结果。
+
+| # | 检查项 | agentrt（用户态） | AirymaxOS（内核态） | 一致性结论 |
+|---|--------|------------------|---------------------|-----------|
+| 1 | [SC] 调度类编号 | `SCHED_AGENT = 7` | 同源 `SCHED_AGENT = 7` | ✅ PASS 完全共享 |
+| 2 | [SC] 任务描述符 magic | `0x41475453 'AGTS'` | 同源 `0x41475453` | ✅ PASS 完全共享 |
+| 3 | [SC] 任务描述符结构 | `agentrt_task_desc_t`（64 字节对齐） | 同源结构 | ✅ PASS 完全共享 |
+| 4 | [SC] 默认时间片 | `AIRYMAX_SLICE_DFL = 20ms` | 同源 | ✅ PASS 完全共享 |
+| 5 | [SC] 权重范围 | `[1..10000]` | 同源 | ✅ PASS 完全共享 |
+| 6 | [SC] vtime 类型 | `airymax_vtime_t (u64)` | 同源 | ✅ PASS 完全共享 |
+| 7 | [SC] vtime 衰减公式 | `airymax_vtime_decay()` | 同源 | ✅ PASS 完全共享 |
+| 8 | [SS] ops 回调签名 | 不实现（用户态无 BPF） | 签名与 `struct sched_ext_ops` 同源 | ✅ PASS 语义同源 |
+| 9 | [SS] 消费契约 | agentrt 消费 `agentrt_task_desc_t` | AirymaxOS 同时消费同源契约 | ✅ PASS 语义同源 |
+| 10 | [SS] 调度语义 | MicroCoreRT 调度语义一致 | SCHED_AGENT 调度语义同源 | ✅ PASS 语义同源 |
+| 11 | [IND] ext_sched_class 注册 | 不涉及（用户态无内核类） | 内核态独立注册 | ✅ PASS 独立正确 |
+| 12 | [IND] BPF 加载机制 | 不涉及（用户态无 BPF） | `scx_ops_enable` 独立 | ✅ PASS 独立正确 |
+| 13 | [IND] fallback_dsq | 不涉及 | 内核态独立回退机制 | ✅ PASS 独立正确 |
+| 14 | [IND] cgroup 集成 | 不涉及（用户态抽象） | `CONFIG_EXT_GROUP_SCHED` 独立 | ✅ PASS 独立正确 |
+| 15 | 跨平台兼容性 | 跨 Linux/macOS/Windows | 仅 Linux（agentrt-linux 专属） | ✅ PASS agentrt 保持跨平台，AirymaxOS 仅 Linux |
+
+**结论**：15 项检查全部 PASS。调度数据流与 agentrt atoms/corekern 在 [SC] 共享契约层完全一致（调度类/magic/描述符/时间片/权重/vtime 7 项），[SS] 语义同源层签名一致，[IND] 独立层正确分离（内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态；AirymaxOS 在 [IND] 独立层正确引入 sched_ext 内核加速路径，遵循 IRON-9 v2 同源且部分代码共享原则。
+
+---
+
+## 17. 相关文档
 
 - [数据流程设计概览](README.md)：4 大数据流分类
 - [认知循环数据流](01-cognition-flow.md)：CoreLoopThree kthread 调度
@@ -574,14 +1013,18 @@ airymaxos_sched_policy_active{name="agent_realtime"} 1
 - [系统调用](../30-interfaces/01-syscalls.md)：agentrt_sys_task_submit
 - [功能需求 FR-001/FR-002/FR-008/FR-048/FR-050](../00-requirements/02-functional-requirements.md)
 - [非功能需求 NFR-P-001](../00-requirements/03-non-functional-requirements.md)
+- [工程铁律 IRON-9 v2](../50-engineering-standards/README.md)：三层共享模型
+- [架构决策 ADR-002](../10-architecture/05-adrs.md)：微内核化改造策略
 
 ---
 
-## 11. 文档变更记录
+## 18. 文档变更记录
 
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
 | 0.1.1 | 2026-07-06 | 初始版本，定义 EEVDF + sched_ext + SCHED_AGENT 调度数据流 | Airymax 架构委员会 |
+| 0.1.1 | 2026-07-07 | 增强：补充 DSQ 调度队列、状态机、fallback_dsq、kf_mask、IRON-9 v2 三层共享模型落地；修复 agentos→agentrt 命名 | Airymax 架构委员会 |
+| 0.1.1 | 2026-07-07 | 新增 Copyright 头 + §16 agentrt 一致性检查（15 项全 PASS） | Airymax 架构委员会 |
 
 ---
 

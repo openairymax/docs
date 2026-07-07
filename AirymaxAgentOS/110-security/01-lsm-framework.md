@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生
-> **核心约束**: IRON-9 同源但独立
+> **核心约束**: IRON-9 v2 同源且部分代码共享
 
 ---
 
@@ -50,7 +50,7 @@ AirymaxOS Cupolas 作为最后初始化的 LSM 注册到框架中，与 capabili
 
 ### 1.3 与 MicroCoreRT 的关系
 
-MicroCoreRT 是 AirymaxOS 内核的极简 RT 适配层，它把 LSM 的 200+ 钩子收敛为一份"内核安全契约"白名单，确保 Cupolas 只依赖被 MicroCoreRT 锁定的稳定入口，避免被 Linux 内部 API 漂移破坏。这是 IRON-9 同源但独立原则在内核安全层的具体落地：同源在于 Cupolas 在 agentrt 用户态与 AirymaxOS 内核态两端语义一致；独立在于 AirymaxOS 端的 Cupolas 必须独立维护与 LSM 框架的 ABI 契约。
+MicroCoreRT 是 AirymaxOS 内核的极简 RT 适配层，它把 LSM 的 200+ 钩子收敛为一份"内核安全契约"白名单，确保 Cupolas 只依赖被 MicroCoreRT 锁定的稳定入口，避免被 Linux 内部 API 漂移破坏。这是 IRON-9 v2 同源且部分代码共享原则在内核安全层的具体落地：同源在于 Cupolas 在 agentrt 用户态与 AirymaxOS 内核态两端语义一致；独立在于 AirymaxOS 端的 Cupolas 必须独立维护与 LSM 框架的 ABI 契约。
 
 ```mermaid
 flowchart TB
@@ -313,7 +313,7 @@ static void hook_cred_transfer(struct cred *const new, const struct cred *const 
 }
 ```
 
-Landlock 在此把父域引用计数 +1 并附加到新凭据，从而保证子进程继承父进程的 Landlock 域。Cupolas 在 `cred_prepare` 阶段执行"能力下沉"——按 IRON-9 同源但独立原则，AirymaxOS 端的 capability 子集被复制到子进程，agentrt 端的运行时 capability 则由 agentrt 自行维护。
+Landlock 在此把父域引用计数 +1 并附加到新凭据，从而保证子进程继承父进程的 Landlock 域。Cupolas 在 `cred_prepare` 阶段执行"能力下沉"——按 IRON-9 v2 同源且部分代码共享原则，AirymaxOS 端的 capability 子集被复制到子进程，agentrt 端的运行时 capability 则由 agentrt 自行维护。
 
 ### 6.5 钩子类型小结
 
@@ -363,7 +363,7 @@ DEFINE_LSM(cupolas) = { .name = "cupolas", .init = cupolas_init, .blobs = &cupol
 
 ### 8.2 与 MicroCoreRT 的契约
 
-Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"白名单内。任何新增钩子都需经 RFC 评审、ABI 稳定性确认（OS-IRON-001）、五维原则映射检查（OS-STD-007）三道关。这是 IRON-9 同源但独立原则的硬性要求：agentrt 端的 Cupolas 用户态 API（`agentrt_cupolas_*`）在 AirymaxOS 内核态对应实现必须独立维护，但语义必须同源。
+Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"白名单内。任何新增钩子都需经 RFC 评审、ABI 稳定性确认（OS-IRON-001）、五维原则映射检查（OS-STD-007）三道关。这是 IRON-9 v2 同源且部分代码共享原则的硬性要求：agentrt 端的 Cupolas 用户态 API（`agentrt_cupolas_*`）在 AirymaxOS 内核态对应实现必须独立维护，但语义必须同源。
 
 ### 8.3 与 AgentsIPC 的桥接
 
@@ -419,13 +419,13 @@ AirymaxOS 五维正交 24 原则在 LSM 框架层的体现：
 | **C-3 RAII** | OS-STD-003 | blob 由 kmem_cache 自动管理生命周期 |
 | **A-1 诚实优先** | OS-STD-004 | `init_debug` 暴露内部状态供审计 |
 | **A-3 人文关怀** | OS-STD-005 | 钩子拒绝路径需提供可读原因 |
-| **IRON-9 同源但独立** | OS-IRON-003 | Cupolas 与 agentrt 安全 API 同源但各自独立维护 |
+| **IRON-9 v2 同源且部分代码共享** | OS-IRON-003 | Cupolas 与 agentrt 安全 API 同源但各自独立维护 |
 
 ---
 
 ## 第 11 章 同源 agentrt 映射
 
-agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRON-9 同源但独立原则。Cupolas 的 7 大子系统在两端各自落地：
+agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRON-9 v2 同源且部分代码共享原则。Cupolas 的 7 大子系统在两端各自落地：
 
 | Cupolas 子系统 | agentrt 端（用户态） | AirymaxOS 端（内核态 LSM） |
 |----------------|----------------------|------------------------------|
@@ -437,7 +437,7 @@ agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRO
 | **Security Vault 安全金库** | `agentrt_cupolas_vault_seal()` 密封 | TPM + 模块签名 + Lockdown |
 | **Network Security 网络安全** | `agentrt_cupolas_net_filter()` 网络过滤 | `security_socket_*` 钩子 |
 
-两端通过 `AgentsIPC` 总线（128B 消息头由 MicroCoreRT 锁定）传递安全策略与审计事件，无任何适配层。这是 IRON-9 同源但独立原则的工程兑现：同源在语义层，独立在实现层。
+两端通过 `AgentsIPC` 总线（128B 消息头由 MicroCoreRT 锁定）传递安全策略与审计事件，无任何适配层。这是 IRON-9 v2 同源且部分代码共享原则的工程兑现：同源在语义层，独立在实现层。
 
 ---
 
@@ -447,7 +447,7 @@ agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRO
 |----------|------|------|
 | OS-IRON-001 | 铁律 | `security_hook_heads` 字段集为永久 ABI，导出后不可破坏 |
 | OS-IRON-002 | 铁律 | `lsm_hook_defs.h` 钩子签名改动必须修复所有调用点 |
-| OS-IRON-003 | 铁律 | Cupolas 与 agentrt 安全 API 同源但独立维护 |
+| OS-IRON-003 | 铁律 | Cupolas 与 agentrt 安全 API 同源且部分代码共享维护 |
 | OS-KER-001 | 内核契约 | `security_hook_heads` 由 `__ro_after_init` 保护 |
 | OS-KER-002 | 内核契约 | exclusive LSM 互斥语义不可绕过 |
 | OS-KER-003 | 内核契约 | `CONFIG_LSM` 顺序在编译期固化，运行时不可追加 |
@@ -485,7 +485,7 @@ agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRO
 | 维护者 | AirymaxOS 安全工程组 |
 | 同源映射 | agentrt Cupolas + Linux 6.6 LSM/Landlock/capability |
 | 理论根基 | Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生 |
-| 核心约束 | IRON-9 同源但独立 |
+| 核心约束 | IRON-9 v2 同源且部分代码共享 |
 
 **变更历史**：
 

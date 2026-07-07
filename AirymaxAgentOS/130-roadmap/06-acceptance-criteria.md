@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `0.1.1工程标准规范手册.md`（v28.0，§38.10 ACC-OS04 + 149 项 ACC）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）
-> **核心约束**: IRON-9 同源但独立（agentrt 与 AirymaxOS 验收标准共享编号骨架，独立实施）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 与 AirymaxOS 验收标准共享编号骨架，独立实施）
 
 ---
 
@@ -96,7 +96,7 @@ AirymaxOS 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part：
 | OS-ACC-009 | 代码示例 | `grep -rE "\`\`\`(c\|rust\|python\|ts\|bash)" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 每个文档 ≥5 个代码示例 | P0 | M0 |
 | OS-ACC-010 ★ | Mermaid 图表 | `grep -rE "\`\`\`mermaid" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 关键文档包含图表 | P0 | M0 |
 | OS-ACC-011 | Linux 6.6 内核基线声明 | `grep -rE "Linux 6.6 内核基线\|Linux 6.6（OLK-6.6）" docs/AirymaxAgentOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
-| OS-ACC-012 ★ | IRON-9 同源但独立声明 | `grep -rE "IRON-9 同源但独立" docs/AirymaxAgentOS/50-engineering-standards/` | ≥3 处声明 | P0 | M0 |
+| OS-ACC-012 ★ | IRON-9 v2 同源且部分代码共享声明 | `grep -rE "IRON-9 v2 同源且部分代码共享" docs/AirymaxAgentOS/50-engineering-standards/` | ≥3 处声明 | P0 | M0 |
 | OS-ACC-013 | 五维正交 24 原则声明 | `grep -rE "五维正交 24 原则\|五维正交" docs/AirymaxAgentOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
 | OS-ACC-014 | .clang-format 配置 | `find . -name ".clang-format" \| wc -l` | ≥1 个 | P0 | M0 |
 | OS-ACC-015 | .rustfmt.toml 配置 | `find . -name ".rustfmt.toml" \| wc -l` | ≥1 个 | P0 | M0 |
@@ -399,7 +399,7 @@ graph LR
 | **S-3 总体设计部** | 工程标准委员会统筹里程碑验收与版本发布门禁 | §13.3 委员会验收 |
 | **K-2 接口契约化** | OS-ACC 是 Part 间接口契约的可执行形态 | §2 编号体系 + §12.2 |
 | **E-7 文档即代码** | 验收标准本身是 Markdown 表格即代码；CI 自动执行 | 全文 |
-| **IRON-9 同源但独立** | OS-ACC 继承 agentrt ACC 编号骨架，独立实施内核态专属验收 | §2.1 编号前缀 |
+| **IRON-9 v2 同源且部分代码共享** | OS-ACC 继承 agentrt ACC 编号骨架，独立实施内核态专属验收 | §2.1 编号前缀 |
 
 ---
 
@@ -437,4 +437,4 @@ graph LR
 
 ---
 
-> **文档结束** | 共 16 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 同源但独立 | 约 110 项 OS-ACC 验收标准 + 三层质量门禁 + 三级验收流程
+> **文档结束** | 共 16 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 v2 同源且部分代码共享 | 约 110 项 OS-ACC 验收标准 + 三层质量门禁 + 三级验收流程

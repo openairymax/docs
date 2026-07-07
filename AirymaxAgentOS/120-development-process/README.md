@@ -159,7 +159,7 @@ agentrt 与 AirymaxOS 的同源 API（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/
 - **兼容性测试**：变更必须通过两端兼容性测试
 - **季度评审**：季度评审同源 API 漂移
 
-### 4.3 IRON-9 同源但独立
+### 4.3 IRON-9 v2 同源且部分代码共享
 
 开发流程遵循 IRON-9 原则：
 - agentrt 开发流程（用户态运行时规范）
@@ -176,7 +176,7 @@ agentrt 与 AirymaxOS 的同源 API（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/
 | **C-2 增量演化** | git bisect 友好 + commit 序列中点可编译 |
 | **E-6 错误可追溯** | Fixes/Closes/Link 标签 + DCO 链条 |
 | **A-3 人文关怀** | 审查礼仪 + 不烧桥管理哲学 |
-| **IRON-9 同源但独立** | 与 agentrt 开发流程并行 |
+| **IRON-9 v2 同源且部分代码共享** | 与 agentrt 开发流程并行 |
 
 ---
 
