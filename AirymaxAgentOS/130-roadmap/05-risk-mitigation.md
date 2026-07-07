@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 风险识别与缓解
+# agentrt-liunx（AirymaxOS）风险识别与缓解
 
-> **文档定位**: AirymaxOS（agentrt-linux，极境智能体操作系统）开发详细方案（路线图）模块第 5 文档
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS，极境智能体操作系统）开发详细方案（路线图）模块第 5 文档
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `0.1.1技术全面改进方案v3.0.md`（v4.2，§37 风险登记册）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）
-> **核心约束**: IRON-9 同源但独立（agentrt 与 AirymaxOS 架构契合，非代码耦合）
+> **核心约束**: IRON-9 同源且部分代码共享（IRON-9 v2）（agentrt 与 agentrt-liunx 架构契合，非代码耦合）
 
 ---
 
@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 风险登记册
 
-AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
+agentrt-liunx 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 | 风险 ID | 风险描述 | 概率 | 影响 | 风险等级 | 缓解措施 |
 |---------|---------|------|------|---------|---------|
@@ -54,7 +54,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.1 R-001：工程标准与 Linux 内核社区实践脱节
 
-- **风险描述**：AirymaxOS 工程标准（OS-IRON / OS-STD / OS-BAN）若未持续跟踪 Linux 6.6+ 主线变更，可能与内核社区实践脱节，导致补丁无法回流通线。
+- **风险描述**：agentrt-liunx 工程标准（OS-IRON / OS-STD / OS-BAN）若未持续跟踪 Linux 6.6+ 主线变更，可能与内核社区实践脱节，导致补丁无法回流通线。
 - **触发条件**：
   1. Linux 6.6 LTS 在 1.0.1 周期内发生重大主线变更（如 EEVDF 调度器参数调整）
   2. 工程标准未季度同步社区实践
@@ -104,7 +104,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.4 R-004：维护者不足导致项目停滞
 
-- **风险描述**：AirymaxOS 核心团队 3-5 人，若维护者层级制度（Lieutenant System）未建立或贡献者培养不足，可能导致项目停滞。这是 AirymaxOS 最高等级风险。
+- **风险描述**：agentrt-liunx 核心团队 3-5 人，若维护者层级制度（Lieutenant System）未建立或贡献者培养不足，可能导致项目停滞。这是 agentrt-liunx 最高等级风险。
 - **触发条件**：
   1. 核心团队成员流失（关键人员离职或转岗）
   2. 贡献者培养不足，无新维护者接手
@@ -122,7 +122,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.5 R-005：同源 agentrt API 漂移
 
-- **风险描述**：agentrt 在 1.0.1 周期内若变更同源 API（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree 语义），可能导致 AirymaxOS 同源实现失配，破坏 IRON-9 同源但独立原则。
+- **风险描述**：agentrt 在 1.0.1 周期内若变更同源 API（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree 语义），可能导致 agentrt-liunx 同源实现失配，破坏 IRON-9 同源且部分代码共享（IRON-9 v2）原则。
 - **触发条件**：
   1. agentrt 1.0.1 修订同源 API 语义
   2. 季度同步评审未发现漂移
@@ -133,13 +133,13 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
   2. 兼容性测试——airymaxos-tests 必须覆盖同源 API
   3. 同源 API 契约文档——双方维护共同契约文档
   4. 缓冲工时预留——80h 用于同源 API 对齐
-- **应急预案**：发现 API 漂移时，启动紧急同步评审，72 小时内决定是 AirymaxOS 适配还是 agentrt 回退
+- **应急预案**：发现 API 漂移时，启动紧急同步评审，72 小时内决定是 agentrt-liunx 适配还是 agentrt 回退
 - **责任人**：总架构师 + agentrt 维护者
 - **风险等级**：高（概率中 × 影响高）
 
 ### 2.6 R-006：ABI 破坏导致用户空间不兼容
 
-- **风险描述**：AirymaxOS 用户空间 ABI（系统调用、IOCTL、/sys、/proc 接口）若被破坏，将导致用户空间应用不兼容，违反"不破坏用户空间"原则（K-2 接口契约化）。
+- **风险描述**：agentrt-liunx 用户空间 ABI（系统调用、IOCTL、/sys、/proc 接口）若被破坏，将导致用户空间应用不兼容，违反"不破坏用户空间"原则（K-2 接口契约化）。
 - **触发条件**：
   1. 系统调用语义变更（参数、返回值）
   2. /sys 或 /proc 接口格式变更
@@ -156,7 +156,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.7 R-007：文档与代码不同步
 
-- **风险描述**：AirymaxOS 文档（19 模块 ~140 文档）与代码若不同步，将导致文档失去参考价值，违反 E-7 文档即代码原则。
+- **风险描述**：agentrt-liunx 文档（19 模块 ~140 文档）与代码若不同步，将导致文档失去参考价值，违反 E-7 文档即代码原则。
 - **触发条件**：
   1. 代码变更未同步更新文档
   2. CI 未强制文档构建验证
@@ -190,7 +190,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.9 R-009：安全漏洞（capability 绕过）
 
-- **风险描述**：AirymaxOS capability 安全模型若存在绕过漏洞，可能导致权限提升，违反 E-1 安全内生原则。这是 AirymaxOS 最严重的风险之一。
+- **风险描述**：agentrt-liunx capability 安全模型若存在绕过漏洞，可能导致权限提升，违反 E-1 安全内生原则。这是 agentrt-liunx 最严重的风险之一。
 - **触发条件**：
   1. capability 检查逻辑存在漏洞
   2. LSM 钩子未覆盖所有权限敏感路径
@@ -207,7 +207,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ### 2.10 R-010：性能瓶颈未识别
 
-- **风险描述**：AirymaxOS 若存在未识别的性能瓶颈，可能导致生产环境性能不达标，违反 E-2 可观测性原则的延伸——性能可观测。
+- **风险描述**：agentrt-liunx 若存在未识别的性能瓶颈，可能导致生产环境性能不达标，违反 E-2 可观测性原则的延伸——性能可观测。
 - **触发条件**：
   1. ftrace + perf + eBPF 监控未覆盖关键路径
   2. 性能基准测试未覆盖真实负载
@@ -230,7 +230,7 @@ AirymaxOS 1.0.1 开发周期内的 10 项核心风险登记如下：
 
 ```mermaid
 quadrantChart
-    title AirymaxOS 风险等级矩阵（概率 × 影响）
+    title agentrt-liunx 风险等级矩阵（概率 × 影响）
     x-axis 低概率 --> 高概率
     y-axis 低影响 --> 高影响
     quadrant-1 高概率高影响（极高）
@@ -262,7 +262,7 @@ quadrantChart
 
 ```mermaid
 pie showData
-    title AirymaxOS 风险等级分布
+    title agentrt-liunx 风险等级分布
     "极高(R-004)" : 1
     "高(R-001/002/005/006/008/009)" : 6
     "中(R-003/007/010)" : 3
@@ -401,7 +401,7 @@ graph LR
 | **E-8 可测试性** | 测试覆盖率不足（R-008）通过强制 ≥80% 缓解 | §2.8 |
 | **K-2 接口契约化** | ABI 破坏（R-006）通过强制 ABI 审查 + 6 个月宽限期缓解 | §2.6 |
 | **A-4 完美主义** | P0 不可妥协；高风险必须降至中以下才可发布 | §1.3 |
-| **IRON-9 同源但独立** | 同源 API 漂移（R-005）通过季度同步评审缓解 | §2.5 |
+| **IRON-9 同源且部分代码共享（IRON-9 v2）** | 同源 API 漂移（R-005）通过季度同步评审缓解 | §2.5 |
 
 ---
 
@@ -441,10 +441,10 @@ graph LR
 ### 8.2 同源 Airymax 文档
 
 - `docs/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则
-- `docs-closed/0.1.1工程标准规范手册.md` — 17 类规则编号体系（v28.0，含 IRON-9）
-- `docs-closed/0.1.1技术全面改进方案v3.0.md` — agentrt 三大支柱方案（v4.2，§37 风险登记册）
+- IRON-9 v2 工程铁律（闭源内部参考） — 17 类规则编号体系（v28.0，含 IRON-9）
+- 内部工程改进方案（闭源） — agentrt 三大支柱方案（v4.2，§37 风险登记册）
 
-### 8.3 AirymaxOS 工程标准
+### 8.3 agentrt-liunx 工程标准
 
 - `50-engineering-standards/README.md` — 工程标准主框架
 - `50-engineering-standards/06-toolchain-and-automation.md` — 工具链与自动化（7 层验证）
@@ -455,10 +455,10 @@ graph LR
 ## 9. 文档版本与维护
 
 - **当前版本**: v1.0（2026-07-06）
-- **维护者**: AirymaxOS 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
+- **维护者**: agentrt-liunx 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何风险登记册变更必须经过周度/月度/季度评审流程
 - **回顾周期**: 周度评审 + 月度报告 + 季度回顾 + 年度大版本校准
 
 ---
 
-> **文档结束** | 共 9 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 同源但独立 | 10 项核心风险 + 风险等级矩阵 + 3 套应急预案
+> **文档结束** | 共 9 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 同源且部分代码共享（IRON-9 v2） | 10 项核心风险 + 风险等级矩阵 + 3 套应急预案

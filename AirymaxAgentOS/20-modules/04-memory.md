@@ -1,6 +1,6 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 记忆设计文档（airymaxos-memory，极境记忆）
+# agentrt-liunx（AirymaxOS）记忆设计文档（airymaxos-memory，极境记忆）
 
 > **子仓编号**：04
 > **子仓代号**：极境记忆（Airymax Memory）
@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [4. 核心特性](#4-核心特性)
 - [5. 微内核思想体现](#5-微内核思想体现)
 - [6. IRON-9 v2 三层共享模型落地](#6-iron-9-v2-三层共享模型落地)
-- [7. AirymaxOS 工程基线](#7-airymaxos-工程基线)
+- [7. agentrt-liunx 工程基线](#7-agentrt-liunx-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
 - [10. 里程碑（M0-M8）](#10-里程碑m0-m8)
@@ -32,7 +32,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 子仓职责
 
-`airymaxos-memory` 是 AirymaxOS 的记忆与存储子仓，承担以下核心职责：
+`airymaxos-memory` 是 agentrt-liunx（AirymaxOS）的记忆与存储子仓，承担以下核心职责：
 
 1. **MemoryRovol 内核态实现 [SS]**：将 agentrt 的 MemoryRovol（记忆卷载）升级为内核态实现，提供 Agent 记忆的持久化与卷载能力。L1-L4 数据结构 [SC] 与 agentrt 共享。
 2. **CXL 内存分层与池化 [IND]**：利用 2026 年 CXL 3.0 硬件普及，实现内存分层与池化。
@@ -44,7 +44,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 横切关注点声明
 
-记忆卷载贯穿 AirymaxOS 全部 4 大数据流：
+记忆卷载贯穿 agentrt-liunx 全部 4 大数据流：
 
 | 数据流 | 记忆切入点 | 同源标注 |
 |--------|-----------|----------|
@@ -57,7 +57,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v2 三层共享模型）
 
-依据 IRON-9 v2 决策，agentrt（用户态 memoryrovol）与 AirymaxOS（内核态 airymaxos-memory）通过三层共享模型协作：
+依据 IRON-9 v2 决策，agentrt（用户态 memoryrovol）与 agentrt-liunx（内核态 airymaxos-memory）通过三层共享模型协作：
 
 | 层次 | 共享程度 | 记忆子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
@@ -67,7 +67,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 维度对比
 
-| 维度 | agentrt（heapstore + memoryrovol） | AirymaxOS（airymaxos-memory） | 同源标注 |
+| 维度 | agentrt（heapstore + memoryrovol） | agentrt-liunx（airymaxos-memory） | 同源标注 |
 |------|-----------------------------------|------------------------------|----------|
 | 记忆存储 | heapstore（用户态） | MemoryRovol 内核态 + heapstore 用户态 | [SS] |
 | 记忆卷载 | MemoryRovol（用户态） | MemoryRovol 内核态实现 | [SS] |
@@ -247,7 +247,7 @@ typedef struct agentrt_memoryrovol_l4_persistent {
 **PMEM 持久化接口** [SC]（`include/airymax/memory_types.h`）：
 
 ```c
-/* PMEM 持久化接口 [SC]——agentrt 与 AirymaxOS 共享 */
+/* PMEM 持久化接口 [SC]——agentrt 与 agentrt-liunx 共享 */
 typedef struct agentrt_pmem_ops {
     int (*persist)(const void *addr, size_t len);    /* 持久化（clwb + sfence）*/
     int (*flush)(const void *addr, size_t len);       /* 刷新缓存行 */
@@ -271,7 +271,7 @@ typedef struct agentrt_pmem_ops {
 **GFP 掩码语义** [SC]（`include/airymax/memory_types.h`）：
 
 ```c
-/* GFP 掩码 [SC]——agentrt 与 AirymaxOS 共享分配语义 */
+/* GFP 掩码 [SC]——agentrt 与 agentrt-liunx 共享分配语义 */
 #define AGENTRT_GFP_IO         0x40    /* 允许 I/O（写回脏页）*/
 #define AGENTRT_GFP_FS         0x80    /* 允许文件系统操作 */
 #define AGENTRT_GFP_RECLAIM    0x400   /* 允许直接回收（阻塞）*/
@@ -372,7 +372,7 @@ echo madvise > /sys/kernel/mm/transparent_hugepage/shmem_enabled
 
 ### 6.1 [SC] 共享契约层——`include/airymax/memory_types.h`
 
-本头文件完全共享代码，agentrt 用户态与 AirymaxOS 内核态两端直接 include。内容清单：
+本头文件完全共享代码，agentrt 用户态与 agentrt-liunx 内核态两端直接 include。内容清单：
 
 | 内容 | 说明 |
 |------|------|
@@ -387,7 +387,7 @@ echo madvise > /sys/kernel/mm/transparent_hugepage/shmem_enabled
 
 API 签名同源，实现独立：
 
-| 序号 | API | 语义 | agentrt 实现 | AirymaxOS 实现 |
+| 序号 | API | 语义 | agentrt 实现 | agentrt-liunx 实现 |
 |------|-----|------|-------------|---------------|
 | 1 | `rovol_snapshot()` | 创建记忆快照 | 用户态 fork+COW | 内核 fork+userfaultfd |
 | 2 | `rovol_restore()` | 恢复记忆 | 用户态 mmap | 内核 mmap+userfaultfd |
@@ -400,11 +400,11 @@ API 签名同源，实现独立：
 
 | 序号 | 内容 | 不共享原因 |
 |------|------|-----------|
-| 1 | CXL 设备驱动 | 硬件驱动仅 AirymaxOS 内核态 |
-| 2 | PMEM 设备驱动 | nvdimm 驱动仅 AirymaxOS 内核态 |
-| 3 | VFS 持久化层实现 | 文件系统后端仅 AirymaxOS |
-| 4 | THP 优化实现 | khugepaged 仅 AirymaxOS 内核态 |
-| 5 | zswap/zram 集成 | 内核压缩框架仅 AirymaxOS |
+| 1 | CXL 设备驱动 | 硬件驱动仅 agentrt-liunx 内核态 |
+| 2 | PMEM 设备驱动 | nvdimm 驱动仅 agentrt-liunx 内核态 |
+| 3 | VFS 持久化层实现 | 文件系统后端仅 agentrt-liunx |
+| 4 | THP 优化实现 | khugepaged 仅 agentrt-liunx 内核态 |
+| 5 | zswap/zram 集成 | 内核压缩框架仅 agentrt-liunx |
 
 ### 6.4 跨态协作流
 
@@ -413,7 +413,7 @@ sequenceDiagram
     participant AGENT as Agent 进程
     participant ROV_U as agentrt MemoryRovol (用户态)
     participant IPC as io_uring / AgentsIPC
-    participant ROV_K as AirymaxOS MemoryRovol kthread (内核态)
+    participant ROV_K as agentrt-liunx MemoryRovol kthread (内核态)
     participant MGLRU as MGLRU 回收
     participant PMEM as PMEM/CXL 设备
 
@@ -433,12 +433,12 @@ sequenceDiagram
 
 ---
 
-## 7. AirymaxOS 工程基线
+## 7. agentrt-liunx 工程基线
 
-- **AirymaxOS 内存管理**：MGLRU、CXL、THP 等特性贡献。
-- **AirymaxOS 内存分层**：内存分层策略基线。
-- **AirymaxOS PMEM**：持久化内存支持。
-- **AirymaxOS CXL**：CXL 设备支持。
+- **agentrt-liunx 内存管理**：MGLRU、CXL、THP 等特性贡献。
+- **agentrt-liunx 内存分层**：内存分层策略基线。
+- **agentrt-liunx PMEM**：持久化内存支持。
+- **agentrt-liunx CXL**：CXL 设备支持。
 - **Linux 6.6 内核基线**：MGLRU + userfaultfd + THP + CXL bus + ZONE_DEVICE + DAX。
 
 ### 7.1 五维正交 24 原则映射
@@ -511,7 +511,7 @@ sequenceDiagram
 
 对 agentrt heapstore + memoryrovol 设计进行一致性检查，确认两端在 IRON-9 v2 三层共享模型下无冲突：
 
-| 序号 | 检查项 | agentrt 状态 | AirymaxOS 状态 | 结论 |
+| 序号 | 检查项 | agentrt 状态 | agentrt-liunx 状态 | 结论 |
 |------|--------|-------------|---------------|------|
 | 1 | L1 实时记忆数据结构一致性 | l1_record_t | l1_record_t（同） | ✅ PASS [SC] |
 | 2 | L2 短期记忆数据结构一致性 | l2_block_t（含 generation） | l2_block_t（同） | ✅ PASS [SC] |
@@ -545,7 +545,7 @@ sequenceDiagram
 
 以下文档为闭源内部参考，不公开：
 
-- 闭源源码映射文档（OLK-6.6 mm/ 源码 → AirymaxOS MemoryRovol 映射）
+- 闭源源码映射文档（OLK-6.6 mm/ 源码 → agentrt-liunx MemoryRovol 映射）
 - 闭源内存技术规范参考文档（内核发行版内存工程规范全面参考）
 
 ---
@@ -560,7 +560,7 @@ sequenceDiagram
 - Linux 6.6 CXL bus 文档（`drivers/cxl/`）
 - Linux 6.6 ZONE_DEVICE 文档（`include/linux/mmzone.h`）
 - PMEM 文档（Intel）
-- AirymaxOS 内存管理文档
+- agentrt-liunx 内存管理文档
 - agentrt heapstore + memoryrovol 设计文档
 - Liedtke SOSP'95（微内核最小化原则）
 

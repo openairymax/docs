@@ -1,9 +1,9 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 运维体系设计
+# agentrt-liunx（AirymaxOS）运维体系设计
 
-> **文档定位**: AirymaxOS（agentrt-linux）运维工程体系主索引
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）运维工程体系主索引
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt daemons（12 个用户态服务）+ Linux 6.6 systemd 集成
 > **理论根基**: Linux 发行版运维哲学 + Airymax S-1 反馈闭环 + E-2 可观测性
@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 模块定位
 
-AirymaxOS 运维体系是系统稳定运行的核心保障。它继承 Linux 发行版 30+ 年沉淀的运维哲学（systemd 集成 + 包管理 + 配置管理 + 监控告警 + 故障恢复），并在其上扩展智能体操作系统专属的 Agent 运维（Agent 健康检查、Token 预算监控、记忆卷载运维等）。
+agentrt-liunx 运维体系是系统稳定运行的核心保障。它继承 Linux 发行版 30+ 年沉淀的运维哲学（systemd 集成 + 包管理 + 配置管理 + 监控告警 + 故障恢复），并在其上扩展智能体操作系统专属的 Agent 运维（Agent 健康检查、Token 预算监控、记忆卷载运维等）。
 
 ### 1.1 运维体系分层
 
@@ -23,10 +23,10 @@ AirymaxOS 运维体系是系统稳定运行的核心保障。它继承 Linux 发
 | L3 | 监控 | ftrace + eBPF + perf + 监控代理 | 运行时状态 |
 | L4 | 告警 | Alertmanager + 自定义规则 | 异常检测与通知 |
 | L5 | 故障恢复 | systemd restart + 故障转移 | 自动恢复 |
-| **L6** | **Agent 运维** | **AirymaxOS 专属** | **Agent 健康与 Token** |
-| **L7** | **记忆运维** | **AirymaxOS 专属** | **记忆卷载维护** |
+| **L6** | **Agent 运维** | **agentrt-liunx 专属** | **Agent 健康与 Token** |
+| **L7** | **记忆运维** | **agentrt-liunx 专属** | **记忆卷载维护** |
 
-### 1.2 AirymaxOS 扩展
+### 1.2 agentrt-liunx 扩展
 
 - **Agent 健康检查**：通过 systemd watchdog 监控 Agent 进程健康
 - **Token 预算监控**：实时告警 Token 消耗超预算
@@ -38,11 +38,11 @@ AirymaxOS 运维体系是系统稳定运行的核心保障。它继承 Linux 发
 
 ### 2.1 systemd 集成
 
-AirymaxOS 12 个 daemons 与 systemd 集成：
+agentrt-liunx 12 个 daemons 与 systemd 集成：
 ```ini
 # /etc/systemd/system/agentrt-gateway.service
 [Unit]
-Description=AirymaxOS Gateway Daemon
+Description=agentrt-liunx Gateway Daemon
 After=network.target
 
 [Service]
@@ -57,7 +57,7 @@ WantedBy=multi-user.target
 
 ### 2.2 包管理（RPM + dnf）
 
-AirymaxOS 采用 RPM 包格式 + dnf 包管理器：
+agentrt-liunx 采用 RPM 包格式 + dnf 包管理器：
 - 内核包：`airymaxos-kernel`
 - 服务包：`airymaxos-services-*`
 - SDK 包：`airymaxos-sdk-*`
@@ -94,8 +94,8 @@ AirymaxOS 采用 RPM 包格式 + dnf 包管理器：
 ├── 05-incident-response.md         # 故障响应（runbook + 应急预案）
 ├── 06-backup-recovery.md           # 备份恢复
 ├── 07-systemd-integration.md       # systemd 集成
-├── 08-agent-operations.md          # AirymaxOS 专属：Agent 运维
-├── 09-memory-operations.md         # AirymaxOS 专属：记忆卷载运维
+├── 08-agent-operations.md          # agentrt-liunx 专属：Agent 运维
+├── 09-memory-operations.md         # agentrt-liunx 专属：记忆卷载运维
 └── 10-devstation.md                # DevStation 开发运维环境
 ```
 
@@ -109,7 +109,7 @@ AirymaxOS 采用 RPM 包格式 + dnf 包管理器：
 
 ---
 
-## 4. AirymaxOS 专属扩展
+## 4. agentrt-liunx 专属扩展
 
 ### 4.1 Agent 运维
 
@@ -126,7 +126,7 @@ AirymaxOS 采用 RPM 包格式 + dnf 包管理器：
 
 ### 4.3 同源 agentrt 运维
 
-agentrt 的 12 个 daemons（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/channel_d/info_d/notify_d/observe_d/hook_d/plugin_d）在 AirymaxOS 中以 systemd 服务运行：
+agentrt 的 12 个 daemons（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/channel_d/info_d/notify_d/observe_d/hook_d/plugin_d）在 agentrt-liunx 中以 systemd 服务运行：
 - 进程二进制名保持 `*_d` 后缀不变
 - systemd 服务名采用 `agentrt-*.service` 格式
 - 配置文件统一在 `/etc/agentrt/`（与 agentrt 同源）
@@ -140,7 +140,7 @@ agentrt 的 12 个 daemons（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/cha
 | **S-1 反馈闭环** | 监控告警 → 故障恢复 → 状态反馈 |
 | **E-2 可观测性** | 全栈监控 |
 | **E-6 错误可追溯** | 故障 runbook + 事后分析 |
-| **IRON-9 同源但独立** | 与 agentrt daemons 同源 |
+| **IRON-9 v2 同源且部分代码共享** | 与 agentrt daemons 同源 |
 | **A-3 人文关怀** | DevStation 提升开发者体验 |
 
 ---

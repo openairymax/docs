@@ -1,24 +1,24 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS Kconfig 配置系统详解
+# agentrt-liunx（AirymaxOS）Kconfig 配置系统详解
 
-> **文档定位**: AirymaxOS（agentrt-linux）构建系统第 2 卷——Kconfig 配置系统详解。本卷剖析 Kconfig 语法（`config`/`menuconfig`/`choice`/`depends on`/`select`）、`CONFIG_*` 宏与 `obj-$(CONFIG_*)` 门控、Kconfig 子目录组织、`Kconfig.airymaxos` 供应商扩展、配置工具（`menuconfig`/`nconfig`/`gconfig`）与 `KCONFIG_ALLCONFIG` 全配置覆盖机制。
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）构建系统第 2 卷——Kconfig 配置系统详解。本卷剖析 Kconfig 语法（`config`/`menuconfig`/`choice`/`depends on`/`select`）、`CONFIG_*` 宏与 `obj-$(CONFIG_*)` 门控、Kconfig 子目录组织、`Kconfig.airymaxos` 供应商扩展、配置工具（`menuconfig`/`nconfig`/`gconfig`）与 `KCONFIG_ALLCONFIG` 全配置覆盖机制。
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `cmake/`（用户态选项缓存）+ Linux 6.6 Kconfig 系统（`Kconfig`、`lib/Kconfig`、`lib/Kconfig.debug`、`Kconfig.airymaxos`、`scripts/kconfig/`）
 > **理论根基**: Linux 6.6 内核基线 Kconfig 工程 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）
-> **核心约束**: IRON-9 同源但独立——AirymaxOS 配置门控沿用 Kconfig 语义但供应商扩展独立维护
+> **核心约束**: IRON-9 同源且部分代码共享（IRON-9 v2）——agentrt-liunx 配置门控沿用 Kconfig 语义但供应商扩展独立维护
 
 ---
 
 ## 0. 章节定位
 
-本卷是 AirymaxOS 构建系统 8 卷文档中的第 2 卷，回答"配置如何驱动构建"这一问题。它在 01-kbuild-system.md（递归构建）与 03-makefile-patterns.md（Makefile 惯用法）之间形成配置门控层：
+本卷是 agentrt-liunx 构建系统 8 卷文档中的第 2 卷，回答"配置如何驱动构建"这一问题。它在 01-kbuild-system.md（递归构建）与 03-makefile-patterns.md（Makefile 惯用法）之间形成配置门控层：
 
 - **上游依赖**：01 定义"构建如何被驱动"；本卷定义"构建目标的三态从何而来"——`CONFIG_*` 宏由 Kconfig 求解，再被 `obj-$(CONFIG_*)` 引用决定 `obj-y`/`obj-m`/`obj-n`。
-- **下游依赖**：03 定义 Makefile 如何引用 `CONFIG_*`；04 定义模块构建如何被 `CONFIG_*=m` 驱动；06 定义 AirymaxOS 多仓配置如何与内核 Kconfig 协调。
+- **下游依赖**：03 定义 Makefile 如何引用 `CONFIG_*`；04 定义模块构建如何被 `CONFIG_*=m` 驱动；06 定义 agentrt-liunx 多仓配置如何与内核 Kconfig 协调。
 
-本卷所有强制规则均赋予 **OS-KER** / **OS-STD** / **OS-BUILD** 编号，与 50-engineering-standards/07 维护者制度的"规则编号注册表"对齐。AirymaxOS 配置系统以 **Linux 6.6 内核基线** Kconfig 工程思想为来源，融合 Airymax **五维正交 24 原则** 后重新表述为工程契约。
+本卷所有强制规则均赋予 **OS-KER** / **OS-STD** / **OS-BUILD** 编号，与 50-engineering-standards/07 维护者制度的"规则编号注册表"对齐。agentrt-liunx 配置系统以 **Linux 6.6 内核基线** Kconfig 工程思想为来源，融合 Airymax **五维正交 24 原则** 后重新表述为工程契约。
 
 ### 0.1 关键术语
 
@@ -39,7 +39,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. Kconfig 配置系统总览
 
-AirymaxOS 配置系统继承 **Linux 6.6 内核基线** 的 Kconfig 工程：用一种声明式语言描述配置选项及其依赖，由配置工具（`menuconfig` 等）求解为 `CONFIG_*=y/m/n` 三态宏，写入 `.config` 与 `include/config/auto.conf`，再被 Kbuild 的 `obj-$(CONFIG_*)` 引用驱动构建。
+agentrt-liunx 配置系统继承 **Linux 6.6 内核基线** 的 Kconfig 工程：用一种声明式语言描述配置选项及其依赖，由配置工具（`menuconfig` 等）求解为 `CONFIG_*=y/m/n` 三态宏，写入 `.config` 与 `include/config/auto.conf`，再被 Kbuild 的 `obj-$(CONFIG_*)` 引用驱动构建。
 
 ### 1.1 配置求解流水线
 
@@ -58,25 +58,25 @@ flowchart LR
 
 关键点：Kconfig 不仅求解宏值，还求解**依赖闭包**——当 `select` 强制选中某选项时，其依赖必须同时满足；当 `depends on` 不满足时选项不可见。`syncconfig` 把 `.config` 转化为 make 侧（`auto.conf`）、C 侧（`autoconf.h`）与依赖时间戳（`include/config/*.h`）三套产物，使配置变化能被 `if_changed_dep`/`fixdep` 捕获。
 
-- **OS-STD-201**：AirymaxOS 内核态配置必须以 Kconfig 为唯一描述手段，禁止用 `Makefile` 的 `ifeq`/环境变量绕过 Kconfig 做特性开关（对齐 K-4 可插拔策略）。
+- **OS-STD-201**：agentrt-liunx 内核态配置必须以 Kconfig 为唯一描述手段，禁止用 `Makefile` 的 `ifeq`/环境变量绕过 Kconfig 做特性开关（对齐 K-4 可插拔策略）。
 - **OS-BUILD-021**：所有 `CONFIG_*` 宏必须由 Kconfig 求解并写入 `auto.conf`，禁止在 `Makefile` 中手动 `CONFIG_XXX := y`；手动赋值会绕过依赖求解导致配置不一致。
 
 ---
 
 ## 2. Kconfig 语法
 
-Kconfig 语法在 **Linux 6.6 内核基线** 的 `Documentation/kbuild/kconfig-language.rst` 中定义。本节给出 AirymaxOS 子系统最常用的语法形态。
+Kconfig 语法在 **Linux 6.6 内核基线** 的 `Documentation/kbuild/kconfig-language.rst` 中定义。本节给出 agentrt-liunx 子系统最常用的语法形态。
 
 ### 2.1 config：声明配置选项
 
 ```
 # drivers/airymax/ipc/Kconfig
 config AIRYMAX_IPC
-	bool "AirymaxOS AgentsIPC kernel channel"
+	bool "agentrt-liunx AgentsIPC kernel channel"
 	depends on IO_URING
 	default y
 	help
-	  Enable the AirymaxOS AgentsIPC 128B fixed-length message
+	  Enable the agentrt-liunx AgentsIPC 128B fixed-length message
 	  channel built on io_uring. This is the OS-level transport
 	  for agent runtime messages. Say Y unless you have a
 	  specific reason to disable it.
@@ -92,10 +92,10 @@ config AIRYMAX_IPC
 
 ```
 menuconfig AIRYMAX_IPC_ADVANCED
-	bool "AirymaxOS IPC advanced options"
+	bool "agentrt-liunx IPC advanced options"
 	depends on AIRYMAX_IPC
 	help
-	  Advanced tuning for the AirymaxOS AgentsIPC channel.
+	  Advanced tuning for the agentrt-liunx AgentsIPC channel.
 
 if AIRYMAX_IPC_ADVANCED
 
@@ -122,7 +122,7 @@ endif # AIRYMAX_IPC_ADVANCED
 
 ```
 choice
-	prompt "AirymaxOS agent scheduler policy"
+	prompt "agentrt-liunx agent scheduler policy"
 	default AIRYMAX_SCHED_AGENT
 	depends on SCHED_CLASS_EXT
 
@@ -141,7 +141,7 @@ config AIRYMAX_SCHED_FIFO
 endchoice
 ```
 
-`choice` 内的选项互斥，只有一个可为 `y`；`default` 指定默认选中项。AirymaxOS 用 `choice` 表达"二选一/多选一"的调度策略、内存模型等决策。
+`choice` 内的选项互斥，只有一个可为 `y`；`default` 指定默认选中项。agentrt-liunx 用 `choice` 表达"二选一/多选一"的调度策略、内存模型等决策。
 
 - **OS-KER-022**：互斥决策（如调度策略、IPC 传输后端）必须用 `choice`，禁止用多个独立 `bool` 模拟互斥；`choice` 在求解时自动保证唯一性（对齐 S-1 单一职责）。
 
@@ -254,28 +254,28 @@ source "Documentation/Kconfig"
 
 每个子系统目录有自己的 `Kconfig`，被父目录的 `Kconfig` 用 `source "path/Kconfig"` 引入。`drivers/Kconfig` 再 `source` 各 `drivers/*/Kconfig`，形成递归结构。
 
-- **OS-KER-026**：AirymaxOS 新增子系统的 `Kconfig` 必须被父目录 `Kconfig` `source` 引入，未 `source` 的 `Kconfig` 不参与求解（对齐 S-2 层次分解）。
+- **OS-KER-026**：agentrt-liunx 新增子系统的 `Kconfig` 必须被父目录 `Kconfig` `source` 引入，未 `source` 的 `Kconfig` 不参与求解（对齐 S-2 层次分解）。
 - **OS-BUILD-023**：`source` 路径使用相对源码树根的相对路径（如 `"drivers/airymax/Kconfig"`），禁止绝对路径，以保证 out-of-tree 构建正确。
 
 ---
 
 ## 5. Kconfig.airymaxos 供应商扩展
 
-AirymaxOS 用 `lib/Kconfig.airymaxos` 取代上游供应商配置聚合文件，作为 AirymaxOS 自身特性的通用配置聚合点。子系统特定配置仍嵌入各原生 `Kconfig`（如 `drivers/airymax/Kconfig`），`Kconfig.airymaxos` 仅聚合跨子系统的供应商级特性。
+agentrt-liunx 用 `lib/Kconfig.airymaxos` 取代上游供应商配置聚合文件，作为 agentrt-liunx 自身特性的通用配置聚合点。子系统特定配置仍嵌入各原生 `Kconfig`（如 `drivers/airymax/Kconfig`），`Kconfig.airymaxos` 仅聚合跨子系统的供应商级特性。
 
 ### 5.1 Kconfig.airymaxos 结构
 
 ```
 # SPDX-License-Identifier: GPL-2.0
-# lib/Kconfig.airymaxos —— AirymaxOS 供应商配置聚合
+# lib/Kconfig.airymaxos —— agentrt-liunx 供应商配置聚合
 
-menu "AirymaxOS vendor extensions"
+menu "agentrt-liunx vendor extensions"
 
 config AIRYMAXOS_LTS
 	int
 	default 0
 	help
-	  AirymaxOS LTS track number. Used by the build to tag
+	  agentrt-liunx LTS track number. Used by the build to tag
 	  release artifacts.
 
 config AIRYMAXOS_KWORKER_NUMA_AFFINITY
@@ -289,13 +289,13 @@ config AIRYMAXOS_KWORKER_NUMA_AFFINITY
 	  NUMA node.
 
 config AIRYMAXOS_GMEM
-	bool "AirymaxOS group memory (GMEM)"
+	bool "agentrt-liunx group memory (GMEM)"
 	depends on MMU
 	select SHMEM
 	help
 	  Enable group memory accounting for agent workloads.
 
-endmenu # AirymaxOS vendor extensions
+endmenu # agentrt-liunx vendor extensions
 ```
 
 ### 5.2 与原生 Kconfig 的边界
@@ -308,7 +308,7 @@ flowchart TD
     TOP --> SRC4[lib/Kconfig]
     TOP --> SRC5[lib/Kconfig.debug]
     TOP --> SRC6[lib/Kconfig.airymaxos]
-    SRC6 --> V1[AirymaxOS 跨子系统特性]
+    SRC6 --> V1[agentrt-liunx 跨子系统特性]
     SRC3 --> D1[drivers/airymax/Kconfig]
     D1 --> D2[子系统特定特性]
     V1 -.聚合.-> VEND[供应商级通用配置]
@@ -317,7 +317,7 @@ flowchart TD
 
 **边界原则**：`Kconfig.airymaxos` 只放跨子系统的供应商级特性（如 `AIRYMAXOS_LTS`、通用 NUMA 亲和、GMEM 等会影响多子系统的开关）；子系统特定特性（如 IPC 环形缓冲大小、Cupolas 策略细节）放在子系统的 `Kconfig`。这符合 S-1（单一职责）与 S-2（层次分解）。
 
-- **OS-KER-027**：`lib/Kconfig.airymaxos` 仅承载 AirymaxOS 跨子系统的供应商级特性；子系统特定配置嵌入该子系统的 `Kconfig`，禁止把子系统细节塞入聚合文件。
+- **OS-KER-027**：`lib/Kconfig.airymaxos` 仅承载 agentrt-liunx 跨子系统的供应商级特性；子系统特定配置嵌入该子系统的 `Kconfig`，禁止把子系统细节塞入聚合文件。
 - **OS-BUILD-024**：`Kconfig.airymaxos` 的 `config` 名字必须以 `AIRYMAXOS_` 前缀开头，与子系统前缀（如 `AIRYMAX_IPC_`）区分，便于在 `.config` 中快速定位归属。
 - **OS-STD-148**（沿用 50 卷）：`Kconfig.airymaxos` 中的 `DEBUG` 类选项必须同时声明对应的测试钩子，确保调试开关与测试同步（对齐 OS-STD-148）。
 
@@ -325,7 +325,7 @@ flowchart TD
 
 ## 6. 配置工具 menuconfig / nconfig / gconfig
 
-Kconfig 提供多种配置工具，AirymaxOS 沿用 **Linux 6.6 内核基线** 的工具集：
+Kconfig 提供多种配置工具，agentrt-liunx 沿用 **Linux 6.6 内核基线** 的工具集：
 
 | 工具 | 界面 | 依赖 | 适用场景 |
 |------|------|------|---------|
@@ -359,15 +359,15 @@ make allnoconfig      # 全关闭配置（CI 用）
 `KCONFIG_ALLCONFIG` 是 Kconfig 的"全配置基线"机制：当运行 `allmodconfig`/`allnoconfig`/`defconfig` 时，Kconfig 先读取 `KCONFIG_ALLCONFIG` 指定的文件作为基线，再应用"全部设为 m/n"策略。这让 CI 能在固定一组"必须启用"的选项之上做最大覆盖测试。
 
 ```bash
-# 使用 AirymaxOS 全配置基线
+# 使用 agentrt-liunx 全配置基线
 make allmodconfig KCONFIG_ALLCONFIG=airymaxos-base.config
 make allnoconfig KCONFIG_ALLCONFIG=airymaxos-base.config
 ```
 
-`airymaxos-base.config` 是一个 `.config` 片段，列出 AirymaxOS 必须启用的选项（如 `CONFIG_AIRYMAX_IPC=y`、`CONFIG_IO_URING=y`）。这样 `allnoconfig` 也会保留这些必选项，避免"最小内核"把 AirymaxOS 核心特性关掉。
+`airymaxos-base.config` 是一个 `.config` 片段，列出 agentrt-liunx 必须启用的选项（如 `CONFIG_AIRYMAX_IPC=y`、`CONFIG_IO_URING=y`）。这样 `allnoconfig` 也会保留这些必选项，避免"最小内核"把 agentrt-liunx 核心特性关掉。
 
-- **OS-BUILD-026**：AirymaxOS 必须维护 `airymaxos-base.config` 全配置基线文件，列出 OS 核心必须启用的 `CONFIG_*`；CI 的 `allmodconfig`/`allnoconfig` 必须带 `KCONFIG_ALLCONFIG` 引用此文件。
-- **OS-KER-029**：`airymaxos-base.config` 的变更必须经构建系统评审，新增/移除项需说明理由；该文件是"AirymaxOS 最小可用配置"的契约（对齐 S-2 层次分解与 K-4 可插拔策略）。
+- **OS-BUILD-026**：agentrt-liunx 必须维护 `airymaxos-base.config` 全配置基线文件，列出 OS 核心必须启用的 `CONFIG_*`；CI 的 `allmodconfig`/`allnoconfig` 必须带 `KCONFIG_ALLCONFIG` 引用此文件。
+- **OS-KER-029**：`airymaxos-base.config` 的变更必须经构建系统评审，新增/移除项需说明理由；该文件是"agentrt-liunx 最小可用配置"的契约（对齐 S-2 层次分解与 K-4 可插拔策略）。
 - **OS-BUILD-027**：CI 必须验证 `make allmodconfig KCONFIG_ALLCONFIG=airymaxos-base.config` 与 `make allnoconfig KCONFIG_ALLCONFIG=airymaxos-base.config` 都能成功求解（无 unsatisfied dependence 警告）。
 
 ### 7.1 defconfig 与 allconfig 的关系
@@ -392,28 +392,28 @@ make allnoconfig KCONFIG_ALLCONFIG=airymaxos-base.config
 | **A-1 极简主义** | `select` 仅用于强约束；弱关联用 `depends on`；`choice` 保证互斥唯一性 |
 | **A-2 细节关注** | `config` 名字前缀规范；`obj-$(CONFIG_*)` 拼写必须严格一致；`defconfig` 与 `base.config` 一致性 |
 
-AirymaxOS 配置系统以 **Linux 6.6 内核基线** Kconfig 工程为来源，但每一项机制都经过 **五维正交 24 原则** 的映射校验。例如 `tristate` 三态门控同时映射 K-4（可插拔策略）与 S-1（单一职责：一个选项一种状态），`select` 的强约束同时映射 A-1（极简主义：避免配置悖论）与 A-4（完美主义：依赖闭包完备）。这种正交映射确保配置决策有原则可循。
+agentrt-liunx 配置系统以 **Linux 6.6 内核基线** Kconfig 工程为来源，但每一项机制都经过 **五维正交 24 原则** 的映射校验。例如 `tristate` 三态门控同时映射 K-4（可插拔策略）与 S-1（单一职责：一个选项一种状态），`select` 的强约束同时映射 A-1（极简主义：避免配置悖论）与 A-4（完美主义：依赖闭包完备）。这种正交映射确保配置决策有原则可循。
 
 ---
 
 ## 9. 同源 agentrt 映射
 
-AirymaxOS 配置系统与 agentrt 配置系统遵循 **IRON-9 同源但独立** 原则。agentrt 是 Airymax 智能体运行时（应用层），其配置通过 CMake 缓存（`CMakeCache.txt`）与 `-D<option>=ON/OFF` 选项描述；AirymaxOS 是智能体操作系统（OS 层），内核态配置通过 Kconfig 描述。二者在配置语义上同源（配置驱动构建），在描述手段上独立（Kconfig vs CMake）。
+agentrt-liunx 配置系统与 agentrt 配置系统遵循 **IRON-9 同源且部分代码共享（IRON-9 v2）** 原则。agentrt 是 Airymax 智能体运行时（应用层），其配置通过 CMake 缓存（`CMakeCache.txt`）与 `-D<option>=ON/OFF` 选项描述；agentrt-liunx 是智能体操作系统（OS 层），内核态配置通过 Kconfig 描述。二者在配置语义上同源（配置驱动构建），在描述手段上独立（Kconfig vs CMake）。
 
-| 维度 | agentrt | AirymaxOS 内核态 | 关系 |
+| 维度 | agentrt | agentrt-liunx 内核态 | 关系 |
 |------|---------|------------------|------|
 | 配置语言 | CMake `-D` 选项 | Kconfig `config` 语法 | 同源语义（配置开关），独立语言 |
-| 三态模型 | ON/OFF（二态） | y/m/n（三态：内建/模块/关闭） | AirymaxOS 扩展（模块化能力） |
+| 三态模型 | ON/OFF（二态） | y/m/n（三态：内建/模块/关闭） | agentrt-liunx 扩展（模块化能力） |
 | 依赖求解 | CMake `find_dependency` | Kconfig `depends on`/`select` | 同源思想（依赖闭包），独立机制 |
 | 配置基线 | CMake preset 文件 | `airymaxos-base.config` + `defconfig` | 同源语义（保底基线），独立格式 |
 | 配置工具 | `ccmake`（终端）/`cmake-gui` | `menuconfig`/`nconfig`/`gconfig` | 同源交互形态，独立实现 |
 | 供应商扩展 | CMake `option()` 聚合 | `lib/Kconfig.airymaxos` 聚合 | 同源聚合点，独立文件 |
 
-**同源红利**：agentrt 在 AirymaxOS 上运行时，配置语义对齐——agentrt 的 `AIRYMAX_*` 选项与 AirymaxOS 的 `CONFIG_AIRYMAX_*` 在概念上一一对应，便于联调时确认特性开关状态；`ccmake` 与 `menuconfig` 的交互形态相似，开发者心智模型可复用。
+**同源红利**：agentrt 在 agentrt-liunx 上运行时，配置语义对齐——agentrt 的 `AIRYMAX_*` 选项与 agentrt-liunx 的 `CONFIG_AIRYMAX_*` 在概念上一一对应，便于联调时确认特性开关状态；`ccmake` 与 `menuconfig` 的交互形态相似，开发者心智模型可复用。
 
-**独立性**：AirymaxOS 内核态配置为 OS 层 Kconfig（求解 `CONFIG_*` 三态宏），agentrt 用户态配置为应用层 CMake（求解 CMake 变量），二者通过产物契约解耦。当 agentrt 配置工具演进时，AirymaxOS 通过配置评审决定是否同步，避免被动跟随。这种"同源思想 + 独立实现"的双层结构，正是 **IRON-9 同源但独立** 在配置系统层的落实——同源语义，独立工具链。
+**独立性**：agentrt-liunx 内核态配置为 OS 层 Kconfig（求解 `CONFIG_*` 三态宏），agentrt 用户态配置为应用层 CMake（求解 CMake 变量），二者通过产物契约解耦。当 agentrt 配置工具演进时，agentrt-liunx 通过配置评审决定是否同步，避免被动跟随。这种"同源思想 + 独立实现"的双层结构，正是 **IRON-9 同源且部分代码共享（IRON-9 v2）** 在配置系统层的落实——同源语义，独立工具链。
 
-AirymaxOS 配置系统在 **Linux 6.6 内核基线** 上构建，其 `config`/`menuconfig`/`choice`/`depends on`/`select` 语法、`obj-$(CONFIG_*)` 门控、`syncconfig` 产物链均直接源自上游沉淀；AirymaxOS 的扩展（`lib/Kconfig.airymaxos`、`airymaxos-base.config`、`AIRYMAXOS_`/`AIRYMAX_` 命名前缀）以 **五维正交 24 原则** 为设计准绳，确保扩展不破坏上游 Kconfig 的依赖求解可预测性。这一双层结构与构建系统卷（01）的"上游 Kbuild 思想 + AirymaxOS 供应商扩展"形成对称，共同构成 AirymaxOS 内核态构建的配置与执行双轮。
+agentrt-liunx 配置系统在 **Linux 6.6 内核基线** 上构建，其 `config`/`menuconfig`/`choice`/`depends on`/`select` 语法、`obj-$(CONFIG_*)` 门控、`syncconfig` 产物链均直接源自上游沉淀；agentrt-liunx 的扩展（`lib/Kconfig.airymaxos`、`airymaxos-base.config`、`AIRYMAXOS_`/`AIRYMAX_` 命名前缀）以 **五维正交 24 原则** 为设计准绳，确保扩展不破坏上游 Kconfig 的依赖求解可预测性。这一双层结构与构建系统卷（01）的"上游 Kbuild 思想 + agentrt-liunx 供应商扩展"形成对称，共同构成 agentrt-liunx 内核态构建的配置与执行双轮。
 
 ---
 
@@ -458,34 +458,34 @@ AirymaxOS 配置系统在 **Linux 6.6 内核基线** 上构建，其 `config`/`m
 - `01-kbuild-system.md`（Kbuild 递归构建——obj-$(CONFIG_*) 的消费者）
 - `03-makefile-patterns.md`（Makefile 引用 CONFIG_* 的惯用法）
 - `04-module-building.md`（CONFIG_*=m 驱动的模块构建）
-- `06-airymaxos-build.md`（AirymaxOS 多仓配置协调）
+- `06-airymaxos-build.md`（agentrt-liunx 多仓配置协调）
 
 ### 11.2 上游与跨卷文档
 
 - `50-engineering-standards/06-toolchain-and-automation.md`（OS-STD-032 CI 矩阵、OS-STD-143/144/145/146/147/148 Kconfig 规则来源）
-- `50-engineering-standards/04-engineering-philosophy.md`（IRON-9 同源但独立原则定义）
+- `50-engineering-standards/04-engineering-philosophy.md`（IRON-9 同源且部分代码共享（IRON-9 v2）原则定义）
 - `10-architecture/02-five-dimensional-principles.md`（五维正交 24 原则定义）
 - `20-modules/01-kernel.md`（airymaxos-kernel 子仓配置）
 
 ### 11.3 参考材料
 
-- `/home/spharx/SpharxWorks/01Reference/kernel-OLK-6.6/Kconfig`（顶层 Kconfig 源文件树）
-- `/home/spharx/SpharxWorks/01Reference/kernel-OLK-6.6/init/Kconfig`（config/menuconfig/choice 语法范例）
-- `/home/spharx/SpharxWorks/01Reference/kernel-OLK-6.6/lib/Kconfig`（lib 聚合 Kconfig）
-- `/home/spharx/SpharxWorks/01Reference/kernel-OLK-6.6/lib/Kconfig.debug`（调试选项聚合范例）
-- `/home/spharx/SpharxWorks/01Reference/kernel-OLK-6.6/scripts/kconfig/`（Kconfig 解析器源码）
+- `Linux 6.6 内核源码 Kconfig`（顶层 Kconfig 源文件树）
+- `Linux 6.6 内核源码 init/Kconfig`（config/menuconfig/choice 语法范例）
+- `Linux 6.6 内核源码 lib/Kconfig`（lib 聚合 Kconfig）
+- `Linux 6.6 内核源码 lib/Kconfig.debug`（调试选项聚合范例）
+- `Linux 6.6 内核源码 scripts/kconfig/`（Kconfig 解析器源码）
 
 ---
 
 ## 12. 文档版本与维护
 
-- **当前版本**: v0.1.1（占位，2026-07-06）/ v1.0.1（开发中）
-- **维护者**: AirymaxOS 构建系统 SIG（待成立，详见 07 卷维护者制度）
+- **当前版本**: v0.1.1（文档体系完成）/ v1.0.1（开发中）
+- **维护者**: agentrt-liunx 构建系统 SIG（待成立，详见 07 卷维护者制度）
 - **变更流程**: 本卷变更必须经过 RFC → 评审 → ACC 验收流程；Kconfig 语法层变更需同步评估对 `airymaxos-base.config` 与各架构 `defconfig` 的影响。
-- **回顾周期**: 随 Linux 6.6 内核基线 LTS 更新季度回顾 + AirymaxOS 大版本年度回顾。
+- **回顾周期**: 随 Linux 6.6 内核基线 LTS 更新季度回顾 + agentrt-liunx 大版本年度回顾。
 - **0.1.1 范围**: README + 01 + 02（3 文档）。
 - **1.0.1 范围**: 完成全部 8 文档并实施构建系统工程标准。
 
 ---
 
-> **文档结束** | AirymaxOS 构建系统第 2 卷 | Kconfig 配置系统详解 | 共 12 章节 + 规则编号汇总
+> **文档结束** | agentrt-liunx 构建系统第 2 卷 | Kconfig 配置系统详解 | 共 12 章节 + 规则编号汇总

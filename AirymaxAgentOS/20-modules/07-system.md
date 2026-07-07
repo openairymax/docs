@@ -1,4 +1,4 @@
-# AirymaxOS 系统设计文档（airymaxos-system，极境系统）
+# agentrt-liunx（AirymaxOS）系统设计文档（airymaxos-system，极境系统）
 
 > 子仓编号：07
 > 子仓代号：极境系统（Airymax System）
@@ -10,14 +10,14 @@
 
 ## 1. 子仓职责
 
-`airymaxos-system` 是 AirymaxOS 的系统管理工具子仓，承担以下核心职责：
+`airymaxos-system` 是 agentrt-liunx（AirymaxOS）的系统管理工具子仓，承担以下核心职责：
 
-1. **包管理**：基于 RPM + dnf 的包管理系统（AirymaxOS 标准）。
+1. **包管理**：基于 RPM + dnf 的包管理系统（agentrt-liunx 标准）。
 2. **配置工具**：系统配置工具（sysctl、systemd-config 等）。
 3. **shell**：提供 bash + fish 等 shell 环境。
 4. **基础库**：提供 glibc + musl 基础 C 库。
 5. **系统监控**：提供 top、htop、perf 等监控工具。
-6. **DevStation**：基于 AirymaxOS DevStation，提供 AI 智能助手辅助开发运维。
+6. **DevStation**：基于 agentrt-liunx DevStation，提供 AI 智能助手辅助开发运维。
 
 作为发行版必需的工具集合，本子仓为其他子仓提供基础系统工具支持。
 
@@ -25,17 +25,17 @@
 
 ## 2. 同源关系
 
-| 维度 | agentrt（commons） | AirymaxOS（airymaxos-system） |
+| 维度 | agentrt（commons） | agentrt-liunx（airymaxos-system） |
 |------|--------------------|-------------------------------|
 | 公共工具 | commons（应用层） | 系统管理工具（OS 级） |
 | 配置 | 应用配置 | 系统配置（sysctl、systemd） |
 | 监控 | 应用监控 | 系统监控（top、htop、perf） |
-| 助手 | 自研助手 | DevStation（AirymaxOS 自研） |
+| 助手 | 自研助手 | DevStation（agentrt-liunx 自研） |
 
 **同源传承要点**：
 - 保留 agentrt commons 的"公共工具"语义。
 - 升级为 OS 级系统管理工具。
-- 基于 AirymaxOS DevStation 提供 AI 智能助手。
+- 基于 agentrt-liunx DevStation 提供 AI 智能助手。
 
 ---
 
@@ -54,7 +54,7 @@ airymaxos-system/
 
 ### 3.1 package-manager/（包管理）
 
-遵循 **AirymaxOS 标准**：
+遵循 **agentrt-liunx 标准**：
 - `rpm/`：RPM 包构建工具（rpmbuild）。
 - `dnf/`：dnf 包管理器配置。
 - `repos/`：仓库配置（airymaxos.repo）。
@@ -67,7 +67,7 @@ airymaxos-system/
 - `systemd-config/`：systemd 配置（/etc/systemd/）。
 - `network-config/`：网络配置（NetworkManager）。
 - `kernel-config/`：内核配置工具（kernel-config）。
-- `airymaxos-config/`：AirymaxOS 专属配置。
+- `airymaxos-config/`：agentrt-liunx 专属配置。
 
 ### 3.3 shell/（shell）
 
@@ -90,15 +90,15 @@ airymaxos-system/
 - `perf/`：perf 性能分析工具。
 - `bpftrace/`：bpftrace 动态追踪。
 - `sysstat/`：sar、iostat 等系统统计。
-- `airymaxmon/`：AirymaxOS 专属监控工具。
+- `airymaxmon/`：agentrt-liunx 专属监控工具。
 
 ### 3.6 devstation/（DevStation，AI 智能助手）
 
-基于 **AirymaxOS DevStation**：
+基于 **agentrt-liunx DevStation**：
 - `ai-assistant`：AI 智能助手（自然语言交互）。
 - `dev-tools`：开发工具集成。
 - `ops-tools`：运维工具集成。
-- `knowledge-base`：知识库（AirymaxOS 文档）。
+- `knowledge-base`：知识库（agentrt-liunx 文档）。
 - `auto-fix`：自动修复（常见问题自动诊断与修复）。
 - `code-gen`：代码生成（基于 LLM）。
 
@@ -106,10 +106,10 @@ airymaxos-system/
 
 ## 4. 核心特性
 
-### 4.1 包管理（RPM + dnf，AirymaxOS 标准）
+### 4.1 包管理（RPM + dnf，agentrt-liunx 标准）
 
-遵循 **AirymaxOS 包管理标准**：
-- RPM 包格式：与 AirymaxOS、Fedora、CentOS 兼容。
+遵循 **agentrt-liunx 包管理标准**：
+- RPM 包格式：与 agentrt-liunx、Fedora、CentOS 兼容。
 - dnf 包管理器：依赖解析、仓库管理、事务处理。
 - 包签名：GPG 签名验证，防止篡改。
 - 模块化：支持模块（module）与流（stream）。
@@ -118,14 +118,14 @@ airymaxos-system/
 ```ini
 # /etc/yum.repos.d/airymaxos.repo
 [airymaxos-base]
-name=AirymaxOS Base Repository
+name=agentrt-liunx Base Repository
 baseurl=https://repo.airymaxos.io/$releasever/base/$basearch/
 enabled=1
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-airymaxos
 
 [airymaxos-updates]
-name=AirymaxOS Updates Repository
+name=agentrt-liunx Updates Repository
 baseurl=https://repo.airymaxos.io/$releasever/updates/$basearch/
 enabled=1
 gpgcheck=1
@@ -188,15 +188,15 @@ net.ipv4.tcp_max_syn_backlog = 65535
 **bpftrace**：动态追踪（基于 eBPF）。
 **sysstat**：系统统计（sar、iostat）。
 
-**AirymaxOS 专属监控**：
+**agentrt-liunx 专属监控**：
 - `airymaxmon`：综合监控 Agent 认知循环、LLM 推理、GPU/NPU 利用率等。
 - 与 `airymaxos-cloudnative/observability` 集成。
 
-### 4.6 DevStation（基于 AirymaxOS AI 智能助手）
+### 4.6 DevStation（基于 agentrt-liunx AI 智能助手）
 
-基于 **AirymaxOS DevStation**：
+基于 **agentrt-liunx DevStation**：
 - AI 智能助手：自然语言交互，辅助开发运维。
-- 知识库：集成 AirymaxOS 文档。
+- 知识库：集成 agentrt-liunx 文档。
 - 自动修复：常见问题自动诊断与修复。
 - 代码生成：基于 LLM 生成配置脚本、systemd unit 等。
 - 与 `airymaxos-cognition` 协作，调用 LLM 推理。
@@ -242,13 +242,13 @@ DevStation: 检测到 agent.slice 内存使用达到上限。
 
 ---
 
-## 6. AirymaxOS 工程基线
+## 6. agentrt-liunx 工程基线
 
-- **AirymaxOS 基础系统治理组**：基础系统工具最佳实践。
-- **AirymaxOS 包管理**：RPM + dnf 集成经验。
-- **AirymaxOS DevStation**：AI 智能助手基线。
-- **AirymaxOS 监控工具**：系统监控工具基线。
-- **AirymaxOS shell**：shell 配置基线。
+- **agentrt-liunx 基础系统治理组**：基础系统工具最佳实践。
+- **agentrt-liunx 包管理**：RPM + dnf 集成经验。
+- **agentrt-liunx DevStation**：AI 智能助手基线。
+- **agentrt-liunx 监控工具**：系统监控工具基线。
+- **agentrt-liunx shell**：shell 配置基线。
 
 ---
 
@@ -256,9 +256,9 @@ DevStation: 检测到 agent.slice 内存使用达到上限。
 
 | 理论 | 来源 | 应用 |
 |------|------|------|
-| AirymaxOS DevStation | AirymaxOS | AI 智能助手 |
+| agentrt-liunx DevStation | agentrt-liunx | AI 智能助手 |
 | 标准 Linux 工具链 | Linux 生态 | 系统工具 |
-| RPM + dnf | Fedora/AirymaxOS | 包管理 |
+| RPM + dnf | Fedora/agentrt-liunx | 包管理 |
 | systemd | systemd 项目 | 系统管理 |
 | bpftrace | eBPF | 动态追踪 |
 | perf | Linux | 性能分析 |
@@ -294,8 +294,8 @@ DevStation: 检测到 agent.slice 内存使用达到上限。
 
 ## 10. 参考
 
-- AirymaxOS 基础系统治理组文档
-- AirymaxOS DevStation 文档
+- agentrt-liunx 基础系统治理组文档
+- agentrt-liunx DevStation 文档
 - RPM 项目文档
 - dnf 项目文档
 - systemd 官方文档

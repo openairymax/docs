@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # LSM 框架详解
 
-> **文档定位**: AirymaxOS（agentrt-linux）安全工程体系第 1 主题文档——Linux 安全模块（LSM）框架深度剖析
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）安全工程体系第 1 主题文档——Linux 安全模块（LSM）框架深度剖析
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生
@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [第 5 章 LSM 初始化流程](#第-5-章-lsm-初始化流程)
 - [第 6 章 LSM 钩子类型](#第-6-章-lsm-钩子类型)
 - [第 7 章 LSM 与 capability 共存](#第-7-章-lsm-与-capability-共存)
-- [第 8 章 AirymaxOS Cupolas 作为 LSM 模块集成](#第-8-章-airymaxos-cupolas-作为-lsm-模块集成)
+- [第 8 章 agentrt-liunx Cupolas 作为 LSM 模块集成](#第-8-章-airymaxos-cupolas-作为-lsm-模块集成)
 - [第 9 章 LSM 钩子注册示例](#第-9-章-lsm-钩子注册示例)
 - [第 10 章 五维原则映射](#第-10-章-五维原则映射)
 - [第 11 章 同源 agentrt 映射](#第-11-章-同源-agentrt-映射)
@@ -34,9 +34,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 设计目标
 
-LSM（Linux Security Module）是 Linux 6.6 内核基线提供的通用安全钩子框架，在不破坏既有 DAC/MAC 语义的前提下，为内核关键路径提供可插拔的策略注入点。LSM 不实现具体策略，只提供钩子骨架——具体策略由 SELinux、AppArmor、Smack、Tomoyo、Landlock、capability 等模块填充。AirymaxOS 将 LSM 视为整个安全体系的承重点：所有内核态安全决策都经 LSM 钩子入口路由到 Cupolas 安全穹顶的对应子系统。LSM 经过 20+ 年实战沉淀，其钩子覆盖面、并发安全、blob 共享、排序机制都已严格验证，符合 AirymaxOS 在 Linux 6.6 内核基线之上"不重造轮子"的工程哲学。
+LSM（Linux Security Module）是 Linux 6.6 内核基线提供的通用安全钩子框架，在不破坏既有 DAC/MAC 语义的前提下，为内核关键路径提供可插拔的策略注入点。LSM 不实现具体策略，只提供钩子骨架——具体策略由 SELinux、AppArmor、Smack、Tomoyo、Landlock、capability 等模块填充。agentrt-liunx 将 LSM 视为整个安全体系的承重点：所有内核态安全决策都经 LSM 钩子入口路由到 Cupolas 安全穹顶的对应子系统。LSM 经过 20+ 年实战沉淀，其钩子覆盖面、并发安全、blob 共享、排序机制都已严格验证，符合 agentrt-liunx 在 Linux 6.6 内核基线之上"不重造轮子"的工程哲学。
 
-### 1.2 在 AirymaxOS 安全体系中的位置
+### 1.2 在 agentrt-liunx 安全体系中的位置
 
 | 层级 | 机制 | 由谁实现 |
 |------|------|----------|
@@ -44,13 +44,13 @@ LSM（Linux Security Module）是 Linux 6.6 内核基线提供的通用安全钩
 | L2 | capability | `LSM_ORDER_FIRST`，永远第一 |
 | L3 | Landlock | 用户态可加载沙箱 |
 | L4 | Yama / LoadPin / Lockdown | 内置可选模块 |
-| L5 | Cupolas 安全穹顶 | AirymaxOS 专属 LSM |
+| L5 | Cupolas 安全穹顶 | agentrt-liunx 专属 LSM |
 
-AirymaxOS Cupolas 作为最后初始化的 LSM 注册到框架中，与 capability、Landlock、Yama 等共存。
+agentrt-liunx Cupolas 作为最后初始化的 LSM 注册到框架中，与 capability、Landlock、Yama 等共存。
 
 ### 1.3 与 MicroCoreRT 的关系
 
-MicroCoreRT 是 AirymaxOS 内核的极简 RT 适配层，它把 LSM 的 200+ 钩子收敛为一份"内核安全契约"白名单，确保 Cupolas 只依赖被 MicroCoreRT 锁定的稳定入口，避免被 Linux 内部 API 漂移破坏。这是 IRON-9 v2 同源且部分代码共享原则在内核安全层的具体落地：同源在于 Cupolas 在 agentrt 用户态与 AirymaxOS 内核态两端语义一致；独立在于 AirymaxOS 端的 Cupolas 必须独立维护与 LSM 框架的 ABI 契约。
+MicroCoreRT 是 agentrt-liunx 内核的极简 RT 适配层，它把 LSM 的 200+ 钩子收敛为一份"内核安全契约"白名单，确保 Cupolas 只依赖被 MicroCoreRT 锁定的稳定入口，避免被 Linux 内部 API 漂移破坏。这是 IRON-9 v2 同源且部分代码共享原则在内核安全层的具体落地：同源在于 Cupolas 在 agentrt 用户态与 agentrt-liunx 内核态两端语义一致；独立在于 agentrt-liunx 端的 Cupolas 必须独立维护与 LSM 框架的 ABI 契约。
 
 ```mermaid
 flowchart TB
@@ -59,7 +59,7 @@ flowchart TB
     DAC --> LSM["LSM 钩子框架<br/>security_hook_heads"]
     LSM --> CAP["capability<br/>(LSM_ORDER_FIRST)"]
     LSM --> LANDLOCK["Landlock"]
-    LSM --> CUPOLAS["Cupolas<br/>(AirymaxOS 专属)"]
+    LSM --> CUPOLAS["Cupolas<br/>(agentrt-liunx 专属)"]
     CAP --> KRES["内核资源<br/>inode/file/task/cred"]
     LANDLOCK --> KRES
     CUPOLAS --> KRES
@@ -169,7 +169,7 @@ landlock_cred(const struct cred *cred)
 }
 ```
 
-Cupolas 同样遵循此约定：定义 `cupolas_blob_sizes`，在 `prepare_lsm()` 阶段被框架合并进全局 `blob_sizes`，运行时通过 `cupolas_cred(cred)` / `cupolas_inode(inode)` 等内联函数取出自己的 blob 区。这种"扁平 blob + 偏移访问"模式是 AirymaxOS Cupolas 与 Landlock、capability 在同一对象上共存的关键机制。
+Cupolas 同样遵循此约定：定义 `cupolas_blob_sizes`，在 `prepare_lsm()` 阶段被框架合并进全局 `blob_sizes`，运行时通过 `cupolas_cred(cred)` / `cupolas_inode(inode)` 等内联函数取出自己的 blob 区。这种"扁平 blob + 偏移访问"模式是 agentrt-liunx Cupolas 与 Landlock、capability 在同一对象上共存的关键机制。
 
 ---
 
@@ -186,7 +186,7 @@ static __initdata const char *chosen_major_lsm;       /* 来自 security= 引导
 static __initconst const char *const builtin_lsm_order = CONFIG_LSM;  /* 编译期默认 */
 ```
 
-AirymaxOS 的 `CONFIG_LSM` 默认配置为：`landlock,yama,cupolas`（capability 与 integrity 分别以 `LSM_ORDER_FIRST` / `LSM_ORDER_LAST` 强制首尾）。
+agentrt-liunx 的 `CONFIG_LSM` 默认配置为：`landlock,yama,cupolas`（capability 与 integrity 分别以 `LSM_ORDER_FIRST` / `LSM_ORDER_LAST` 强制首尾）。
 
 ### 4.2 排序解析流程
 
@@ -252,7 +252,7 @@ int __init security_init(void)
 
 ## 第 6 章 LSM 钩子类型
 
-AirymaxOS Cupolas 主要消费以下五类钩子。
+agentrt-liunx Cupolas 主要消费以下五类钩子。
 
 ### 6.1 inode 钩子
 
@@ -313,7 +313,7 @@ static void hook_cred_transfer(struct cred *const new, const struct cred *const 
 }
 ```
 
-Landlock 在此把父域引用计数 +1 并附加到新凭据，从而保证子进程继承父进程的 Landlock 域。Cupolas 在 `cred_prepare` 阶段执行"能力下沉"——按 IRON-9 v2 同源且部分代码共享原则，AirymaxOS 端的 capability 子集被复制到子进程，agentrt 端的运行时 capability 则由 agentrt 自行维护。
+Landlock 在此把父域引用计数 +1 并附加到新凭据，从而保证子进程继承父进程的 Landlock 域。Cupolas 在 `cred_prepare` 阶段执行"能力下沉"——按 IRON-9 v2 同源且部分代码共享原则，agentrt-liunx 端的 capability 子集被复制到子进程，agentrt 端的运行时 capability 则由 agentrt 自行维护。
 
 ### 6.5 钩子类型小结
 
@@ -332,18 +332,18 @@ if (!task_no_new_privs(current) &&
     return -EPERM;
 ```
 
-Cupolas 进一步把 capability 抽象为"主体能力位图"的一部分，主体校验时按 capability → Landlock 域 → Cupolas 域的顺序短路返回。这种分层短路正是 AirymaxOS 五维正交 24 原则中 E-1（安全内生）与 K-4（可插拔策略）的合奏：每一层只做自己最擅长的事，互不越界。
+Cupolas 进一步把 capability 抽象为"主体能力位图"的一部分，主体校验时按 capability → Landlock 域 → Cupolas 域的顺序短路返回。这种分层短路正是 agentrt-liunx 五维正交 24 原则中 E-1（安全内生）与 K-4（可插拔策略）的合奏：每一层只做自己最擅长的事，互不越界。
 
 ---
 
-## 第 8 章 AirymaxOS Cupolas 作为 LSM 模块集成
+## 第 8 章 agentrt-liunx Cupolas 作为 LSM 模块集成
 
 ### 8.1 Cupolas 的 LSM 注册
 
 Cupolas 通过 `DEFINE_LSM` 宏在编译期注册自身：
 
 ```c
-// security/cupolas/setup.c（AirymaxOS 专属）
+// security/cupolas/setup.c（agentrt-liunx 专属）
 struct lsm_blob_sizes cupolas_blob_sizes __ro_after_init = {
     .lbs_cred       = sizeof(struct cupolas_cred_security),
     .lbs_file       = sizeof(struct cupolas_file_security),
@@ -363,7 +363,7 @@ DEFINE_LSM(cupolas) = { .name = "cupolas", .init = cupolas_init, .blobs = &cupol
 
 ### 8.2 与 MicroCoreRT 的契约
 
-Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"白名单内。任何新增钩子都需经 RFC 评审、ABI 稳定性确认（OS-IRON-001）、五维原则映射检查（OS-STD-007）三道关。这是 IRON-9 v2 同源且部分代码共享原则的硬性要求：agentrt 端的 Cupolas 用户态 API（`agentrt_cupolas_*`）在 AirymaxOS 内核态对应实现必须独立维护，但语义必须同源。
+Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"白名单内。任何新增钩子都需经 RFC 评审、ABI 稳定性确认（OS-IRON-001）、五维原则映射检查（OS-STD-007）三道关。这是 IRON-9 v2 同源且部分代码共享原则的硬性要求：agentrt 端的 Cupolas 用户态 API（`agentrt_cupolas_*`）在 agentrt-liunx 内核态对应实现必须独立维护，但语义必须同源。
 
 ### 8.3 与 AgentsIPC 的桥接
 
@@ -404,7 +404,7 @@ DEFINE_LSM(demo) = { .name = "demo", .init = demo_init };
 
 ## 第 10 章 五维原则映射
 
-AirymaxOS 五维正交 24 原则在 LSM 框架层的体现：
+agentrt-liunx 五维正交 24 原则在 LSM 框架层的体现：
 
 | 原则 | 编号 | 在 LSM 框架的体现 |
 |------|------|-------------------|
@@ -425,9 +425,9 @@ AirymaxOS 五维正交 24 原则在 LSM 框架层的体现：
 
 ## 第 11 章 同源 agentrt 映射
 
-agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRON-9 v2 同源且部分代码共享原则。Cupolas 的 7 大子系统在两端各自落地：
+agentrt 的 `cupolas/` 模块与 agentrt-liunx 内核态 Cupolas 同源，遵循 IRON-9 v2 同源且部分代码共享原则。Cupolas 的 7 大子系统在两端各自落地：
 
-| Cupolas 子系统 | agentrt 端（用户态） | AirymaxOS 端（内核态 LSM） |
+| Cupolas 子系统 | agentrt 端（用户态） | agentrt-liunx 端（内核态 LSM） |
 |----------------|----------------------|------------------------------|
 | **Guards 守卫** | `agentrt_cupolas_guard_enter()` 入口防护 | `security_file_open` / `security_task_alloc` 钩子 |
 | **Permission 权限裁决** | `agentrt_cupolas_perm_check()` 策略裁决 | `security_inode_permission` 钩子 + capability |
@@ -480,9 +480,9 @@ agentrt 的 `cupolas/` 模块与 AirymaxOS 内核态 Cupolas 同源，遵循 IRO
 | 字段 | 值 |
 |------|------|
 | 文档定位 | LSM 框架详解 |
-| 当前版本 | 0.1.1（占位）/ 1.0.1（开发） |
+| 当前版本 | 0.1.1（文档体系完成）/ 1.0.1（开发） |
 | 最后更新 | 2026-07-06 |
-| 维护者 | AirymaxOS 安全工程组 |
+| 维护者 | agentrt-liunx 安全工程组 |
 | 同源映射 | agentrt Cupolas + Linux 6.6 LSM/Landlock/capability |
 | 理论根基 | Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生 |
 | 核心约束 | IRON-9 v2 同源且部分代码共享 |

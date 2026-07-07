@@ -1,7 +1,7 @@
 # 功能需求分析
 
-> **文档定位**: AirymaxOS 功能需求（Functional Requirements）的详细分析，回答"AirymaxOS 提供哪些具体能力（输入 → 处理 → 输出）"。
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS） 功能需求（Functional Requirements）的详细分析，回答"agentrt-liunx 提供哪些具体能力（输入 → 处理 → 输出）"。
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **父文档**: [需求分析概览](README.md)
 
@@ -9,7 +9,7 @@
 
 ## 1. 概述
 
-本文档定义 AirymaxOS 的功能需求（FR，Functional Requirements），覆盖 8 个子仓的全部功能能力。每条功能需求满足以下要求：
+本文档定义 agentrt-liunx 的功能需求（FR，Functional Requirements），覆盖 8 个子仓的全部功能能力。每条功能需求满足以下要求：
 
 1. **可追溯到业务需求**：每条 FR 至少对应一条 BR
 2. **有明确的输入输出**：定义清晰的输入、处理逻辑与输出
@@ -22,7 +22,7 @@
 
 ## 2. 8 子仓功能矩阵
 
-下表展示 AirymaxOS 8 个子仓的核心功能、同源 agentrt 模块与关键能力：
+下表展示 agentrt-liunx 8 个子仓的核心功能、同源 agentrt 模块与关键能力：
 
 | 子仓 | 核心功能 | 同源 agentrt 模块 | 关键能力 |
 |---|---|---|---|
@@ -33,15 +33,15 @@
 | airymaxos-cognition | 认知循环、Wasm、LLM 调度 | coreloopthree + frameworks | CoreLoopThree kthread + Wasm 3.0 |
 | airymaxos-cloudnative | K8s、containerd、OCI | gateway + sdk | K8s CRD + containerd shim |
 | airymaxos-system | 包管理、配置、shell | commons | RPM + dnf + DevStation |
-| airymaxos-tests | 单元、集成、形式化 | 全模块测试 | AirymaxOS 集成测试框架 + seL4 风格验证 |
+| airymaxos-tests | 单元、集成、形式化 | 全模块测试 | agentrt-liunx 集成测试框架 + seL4 风格验证 |
 
 ---
 
 ## 3. 同源 agentrt 功能映射
 
-下表详细展示 agentrt 模块与 AirymaxOS 子仓的同源语义映射关系：
+下表详细展示 agentrt 模块与 agentrt-liunx 子仓的同源语义映射关系：
 
-| agentrt 模块 | AirymaxOS 子仓 | 同源语义 | 同源红利 |
+| agentrt 模块 | agentrt-liunx 子仓 | 同源语义 | 同源红利 |
 |---|---|---|---|
 | atoms/corekern (MicroCoreRT) | airymaxos-kernel | 微核心基础：IPC/Mem/Task/Time | 调度语义同源，无适配层 |
 | atoms/corekern IPC | airymaxos-kernel | IPC 子系统：128B 消息头同源 | 协议同源，低延迟 |
@@ -213,15 +213,15 @@ graph TB
     SECURITY --> CLOUD
     MEMORY --> COGNITION
     COGNITION --> CLOUD
-    SYSTEM --> SERVICES
-    SYSTEM --> SECURITY
-    TESTS --> KERNEL
-    TESTS --> SERVICES
-    TESTS --> SECURITY
-    TESTS --> MEMORY
-    TESTS --> COGNITION
-    TESTS --> CLOUD
-    TESTS --> SYSTEM
+    SERVICES --> SYSTEM
+    SECURITY --> SYSTEM
+    KERNEL --> TESTS
+    SERVICES --> TESTS
+    SECURITY --> TESTS
+    MEMORY --> TESTS
+    COGNITION --> TESTS
+    CLOUD --> TESTS
+    SYSTEM --> TESTS
 
     style KERNEL fill:#e1f5fe
     style SERVICES fill:#e8f5e9
@@ -319,7 +319,7 @@ flowchart TD
 | 契约测试 | 契约测试框架 | 契约 100% 强制 | airymaxos-tests |
 | 性能基准 | Locust + k6 + perf | SLA 达标率 > 99% | airymaxos-tests |
 | 形式化验证 | seL4 风格验证 | 关键路径 100% | airymaxos-tests |
-| 兼容性测试 | AirymaxOS 集成测试框架 | 兼容性矩阵 100% | airymaxos-tests + system |
+| 兼容性测试 | agentrt-liunx 集成测试框架 | 兼容性矩阵 100% | airymaxos-tests + system |
 
 ---
 
@@ -347,7 +347,7 @@ flowchart TD
 - [需求分析概览](README.md)：需求分层模型与追溯框架
 - [业务需求分析](01-business-requirements.md)：Agent 工作负载与生态对齐
 - [非功能需求分析](03-non-functional-requirements.md)：性能、安全、可靠性需求
-- [AirymaxOS 总览](../README.md)：AirymaxOS 整体设计与子仓清单
+- [agentrt-liunx 总览](../README.md)：agentrt-liunx 整体设计与子仓清单
 - [Airymax 架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
 
 ---

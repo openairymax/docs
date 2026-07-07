@@ -1,28 +1,28 @@
-# AirymaxOS 需求分析
+# agentrt-liunx（AirymaxOS）需求分析
 
-> **文档定位**: AirymaxOS（agentrt-linux）需求分析体系的总入口与纲领性文档，定义需求分层模型、需求来源、需求追溯关系，并向下展开为业务需求、功能需求、非功能需求三个子文档。
+> **文档定位**: agentrt-liunx（AirymaxOS）需求分析体系的总入口与纲领性文档，定义需求分层模型、需求来源、需求追溯关系，并向下展开为业务需求、功能需求、非功能需求三个子文档。
 > **正式全称**: AirymaxOS（极境智能体操作系统）
 > **仓库别名**: agentrt-linux（仓库名）
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 
 ---
 
 ## 1. 文档定位说明
 
-本文档（`00-requirements/README.md`）是 AirymaxOS 需求分析体系的**顶层纲领**，承担三项核心职责：
+本文档（`00-requirements/README.md`）是 agentrt-liunx 需求分析体系的**顶层纲领**，承担三项核心职责：
 
-1. **统一需求语言**：为 AirymaxOS 8 个子仓（airymaxos-kernel / services / security / memory / cognition / cloudnative / system / tests）提供一致的需求分类、编号与追溯框架。
-2. **定义需求分层**：将 AirymaxOS 的全部需求自顶向下分解为「业务需求 → 功能需求 → 非功能需求」三层，确保从用户场景到工程指标的可追溯性。
+1. **统一需求语言**：为 agentrt-liunx 8 个子仓（airymaxos-kernel / services / security / memory / cognition / cloudnative / system / tests）提供一致的需求分类、编号与追溯框架。
+2. **定义需求分层**：将 agentrt-liunx 的全部需求自顶向下分解为「业务需求 → 功能需求 → 非功能需求」三层，确保从用户场景到工程指标的可追溯性。
 3. **链接下游设计**：作为需求层与架构设计层、模块设计层、接口设计层、数据流程设计层之间的桥梁，建立"需求 → 设计 → 实现 → 验证"的完整闭环。
 
 本文档不重复具体需求的细节内容，具体需求分布于三个子文档：
 
 | 子文档 | 关注维度 | 编号前缀 | 核心问题 |
 |---|---|---|---|
-| [业务需求](01-business-requirements.md) | 用户与生态维度 | BR- | AirymaxOS 为谁解决什么问题？ |
-| [功能需求](02-functional-requirements.md) | 能力与行为维度 | FR- | AirymaxOS 提供哪些具体能力？ |
-| [非功能需求](03-non-functional-requirements.md) | 质量属性维度 | NFR- | AirymaxOS 的能力要做到多好？ |
+| [业务需求](01-business-requirements.md) | 用户与生态维度 | BR- | agentrt-liunx 为谁解决什么问题？ |
+| [功能需求](02-functional-requirements.md) | 能力与行为维度 | FR- | agentrt-liunx 提供哪些具体能力？ |
+| [非功能需求](03-non-functional-requirements.md) | 质量属性维度 | NFR- | agentrt-liunx 的能力要做到多好？ |
 
 ---
 
@@ -30,16 +30,16 @@
 
 | 项 | 内容 |
 |---|---|
-| 文档版本 | 0.1.1（占位草案）/ 1.0.1（开发基线） |
+| 文档版本 | 0.1.1（文档体系完成）/ 1.0.1（开发基线） |
 | 最后更新 | 2026-07-06 |
 | 文档状态 | 维护中 |
 | 文档路径 | `OpenAirymax/docs/AirymaxAgentOS/00-requirements/README.md` |
-| 适用范围 | AirymaxOS 全部 8 个子仓 |
+| 适用范围 | agentrt-liunx 全部 8 个子仓 |
 | 同源项目 | agentrt（AirymaxAgentRT） |
 
 **版本演进规划**：
 
-- **0.1.1（占位）**：仅仓库占位 + 设计草案 + Linux 内核基线参考声明，需求条目以"占位"形式列出，允许变更。
+- **0.1.1（文档体系完成）**：仅仓库占位 + 设计草案 + Linux 内核基线参考声明，需求条目以"占位"形式列出，允许变更。
 - **1.0.1（开发）**：需求条目冻结为基线，进入实际开发，需求变更需通过 ADR（架构决策记录）评审。
 - **2.0.0（演进）**：基于下一代内核基线（Linux 6.15+）与未来 Linux 内核特性进行需求扩展。
 
@@ -47,7 +47,7 @@
 
 ## 3. 需求分层模型
 
-AirymaxOS 采用经典的**三层需求分层模型**，该模型借鉴 IEEE 830 与 ISO/IEC 25010 的需求工程思想，并结合 Airymax 的「五维正交 24 原则」中的「S-2 层次分解原则」与「E-8 可测试性原则」进行适配。
+agentrt-liunx 采用经典的**三层需求分层模型**，该模型借鉴 IEEE 830 与 ISO/IEC 25010 的需求工程思想，并结合 Airymax 的「五维正交 24 原则」中的「S-2 层次分解原则」与「E-8 可测试性原则」进行适配。
 
 ### 3.1 三层需求定义
 
@@ -56,7 +56,7 @@ AirymaxOS 采用经典的**三层需求分层模型**，该模型借鉴 IEEE 830
 |                  第一层：业务需求（Business Requirements）            |
 |                                                                       |
 |   来源：Agent 工作负载 / AI 原生 / 云原生 / Linux 企业级生态           |
-|   关注：AirymaxOS 为谁解决什么问题，带来什么价值                       |
+|   关注：agentrt-liunx 为谁解决什么问题，带来什么价值                       |
 |   编号：BR-001 ~ BR-0XX                                              |
 |   验证：用户场景验收测试（UAT）                                       |
 +=====================================================================+
@@ -65,8 +65,8 @@ AirymaxOS 采用经典的**三层需求分层模型**，该模型借鉴 IEEE 830
 +=====================================================================+
 |                  第二层：功能需求（Functional Requirements）           |
 |                                                                       |
-|   来源：8 子仓职责 / agentrt 同源模块 / AirymaxOS 治理组模块对齐        |
-|   关注：AirymaxOS 提供哪些具体功能能力（输入 → 处理 → 输出）          |
+|   来源：8 子仓职责 / agentrt 同源模块 / agentrt-liunx 治理组模块对齐        |
+|   关注：agentrt-liunx 提供哪些具体功能能力（输入 → 处理 → 输出）          |
 |   编号：FR-001 ~ FR-0XX                                              |
 |   验证：单元测试 + 集成测试 + 契约测试                                |
 +=====================================================================+
@@ -185,11 +185,11 @@ NFR-O-001 Prometheus 指标   ──约束──>  全部功能需求
 
 ## 5. 需求来源
 
-AirymaxOS 的需求来源遵循**四源汇聚**原则，每个来源对应一项设计支柱：
+agentrt-liunx 的需求来源遵循**四源汇聚**原则，每个来源对应一项设计支柱：
 
 ### 5.1 来源一：agentrt 同源（设计同源性）
 
-| 同源维度 | agentrt 侧 | AirymaxOS 侧 | 同源红利 |
+| 同源维度 | agentrt 侧 | agentrt-liunx 侧 | 同源红利 |
 |---|---|---|---|
 | 调度语义 | MicroCoreRT 调度器 | SCHED_AGENT 调度类（sched_ext） | 架构同源，无适配层 |
 | IPC 协议 | AgentsIPC（128B 消息头） | IPC 子系统（io_uring 零拷贝） | 协议同源，低延迟 |
@@ -197,25 +197,25 @@ AirymaxOS 的需求来源遵循**四源汇聚**原则，每个来源对应一项
 | 记忆模型 | MemoryRovol 四层卷载 | 记忆子系统（L1~L4） | 记忆同源，知识复用 |
 | 认知循环 | CoreLoopThree 三层循环 | 认知 kthread（内核线程） | 循环同源，反馈闭环 |
 
-**同源带来的需求推导**：agentrt 的设计假设直接成为 AirymaxOS 的需求输入。例如，agentrt 的 MicroCoreRT 假设"任务调度延迟 < 100ms"，直接推导为 AirymaxOS 的 `NFR-P-001`。
+**同源带来的需求推导**：agentrt 的设计假设直接成为 agentrt-liunx 的需求输入。例如，agentrt 的 MicroCoreRT 假设"任务调度延迟 < 100ms"，直接推导为 agentrt-liunx 的 `NFR-P-001`。
 
 ### 5.2 来源二：Linux 企业级生态标准规范
 
-AirymaxOS 全面参考 Linux 企业级生态标准，对齐其模块设计与技术规格：
+agentrt-liunx 全面参考 Linux 企业级生态标准，对齐其模块设计与技术规格：
 
-| 内核版本基线 | 对齐领域 | 对应 AirymaxOS 子仓 |
+| 内核版本基线 | 对齐领域 | 对应 agentrt-liunx 子仓 |
 |---|---|---|
 | Linux 6.6 内核基线 | 内核基线（Linux 6.6）、RPM 包格式、dnf、systemd、SELinux | airymaxos-kernel / system |
 | Linux 6.6 内核基线（SP3 增强） | 认知中枢系统、AI 原生特性 | airymaxos-cognition |
 | 下一代内核基线（Linux 6.15+） | 具身智能 Claw、超节点 OS | airymaxos-cognition / cloudnative |
-| AirymaxOS Token 能效框架 | Token 能效优化 | airymaxos-cognition |
+| agentrt-liunx Token 能效框架 | Token 能效优化 | airymaxos-cognition |
 | Linux 企业级生态国密 | SM2/SM3/SM4 算法 | airymaxos-security |
 
 ### 5.3 来源三：微内核设计思想
 
 微内核设计思想来源于 seL4 / Zircon / Minix3，对应设计原则中的「K-1 内核极简」「K-3 服务隔离」：
 
-| 微内核机制 | 借鉴来源 | AirymaxOS 落地 |
+| 微内核机制 | 借鉴来源 | agentrt-liunx 落地 |
 |---|---|---|
 | capability 安全模型 | seL4 | airymaxos-security capability 子系统 |
 | 消息传递 IPC | seL4 / Zircon | airymaxos-kernel io_uring 消息传递 |
@@ -225,7 +225,7 @@ AirymaxOS 全面参考 Linux 企业级生态标准，对齐其模块设计与技
 
 ### 5.4 来源四：Agent 工作负载
 
-AirymaxOS 专为 Agent 工作负载优化，Agent 工作负载特性直接驱动需求：
+agentrt-liunx 专为 Agent 工作负载优化，Agent 工作负载特性直接驱动需求：
 
 | Agent 类型 | 工作负载特性 | 驱动的需求 |
 |---|---|---|
@@ -238,7 +238,7 @@ AirymaxOS 专为 Agent 工作负载优化，Agent 工作负载特性直接驱动
 
 ## 6. 与其他设计层次的链接
 
-需求层是整个 AirymaxOS 文档体系的起点，向下驱动四个设计层次：
+需求层是整个 agentrt-liunx 文档体系的起点，向下驱动四个设计层次：
 
 ```mermaid
 graph LR
@@ -286,7 +286,7 @@ graph LR
 
 ## 7. 需求编号规则
 
-AirymaxOS 需求采用统一的「前缀-序号」编号规则：
+agentrt-liunx 需求采用统一的「前缀-序号」编号规则：
 
 | 需求层次 | 编号前缀 | 编号示例 | 数量预估 |
 |---|---|---|---|
@@ -339,15 +339,15 @@ AirymaxOS 需求采用统一的「前缀-序号」编号规则：
 | 功能需求 | 单元测试 + 集成测试 + 契约测试 | CUnit + CMock + 自定义框架 | airymaxos-tests |
 | 非功能需求-性能 | 性能基准测试 | Locust + k6 + perf | airymaxos-tests |
 | 非功能需求-安全 | 渗透测试 + 形式化验证 | seL4 风格验证 + 静态分析 | airymaxos-tests + security |
-| 非功能需求-可靠性 | Soak Test + 混沌工程 | Chaos Mesh + AirymaxOS 系统级测试套件 | airymaxos-tests |
-| 非功能需求-兼容性 | 兼容性测试矩阵 | AirymaxOS 集成测试框架 | airymaxos-tests + system |
+| 非功能需求-可靠性 | Soak Test + 混沌工程 | Chaos Mesh + agentrt-liunx 系统级测试套件 | airymaxos-tests |
+| 非功能需求-兼容性 | 兼容性测试矩阵 | agentrt-liunx 集成测试框架 | airymaxos-tests + system |
 | 非功能需求-可观测性 | 可观测性覆盖检查 | Prometheus + OpenTelemetry | airymaxos-tests |
 
 ---
 
 ## 10. 与设计原则的映射
 
-AirymaxOS 的需求体系与「五维正交 24 原则」保持紧密映射，每条需求都应能追溯到至少一条设计原则：
+agentrt-liunx 的需求体系与「五维正交 24 原则」保持紧密映射，每条需求都应能追溯到至少一条设计原则：
 
 | 设计原则维度 | 对应需求层次 | 映射示例 |
 |---|---|---|
@@ -384,7 +384,7 @@ AirymaxOS 的需求体系与「五维正交 24 原则」保持紧密映射，每
 
 ### 11.2 上游参考文档
 
-- [AirymaxOS 总览](../README.md)：AirymaxOS 整体设计与子仓清单
+- [agentrt-liunx 总览](../README.md)：agentrt-liunx 整体设计与子仓清单
 - [Airymax 架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
 
 ### 11.3 下游设计文档

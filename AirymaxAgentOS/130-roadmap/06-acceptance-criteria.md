@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 验收标准与质量门禁
+# agentrt-liunx（AirymaxOS）验收标准与质量门禁
 
-> **文档定位**: AirymaxOS（agentrt-linux，极境智能体操作系统）开发详细方案（路线图）模块第 6 文档
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS，极境智能体操作系统）开发详细方案（路线图）模块第 6 文档
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `0.1.1工程标准规范手册.md`（v28.0，§38.10 ACC-OS04 + 149 项 ACC）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）
-> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 与 AirymaxOS 验收标准共享编号骨架，独立实施）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 与 agentrt-liunx 验收标准共享编号骨架，独立实施）
 
 ---
 
@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 验收标准定位
 
-AirymaxOS 验收标准（OS-ACC）是工程标准（OS-IRON / OS-STD / OS-BAN）的**可执行验证形态**。每条验收标准必须满足：
+agentrt-liunx 验收标准（OS-ACC）是工程标准（OS-IRON / OS-STD / OS-BAN）的**可执行验证形态**。每条验收标准必须满足：
 
 1. **可执行验证方法**——配 grep / wc / find / make 等命令，CI 可自动执行
 2. **明确通过标准**——量化阈值（如 ≥80% 覆盖率、≥400 行、0 结果）
@@ -24,7 +24,7 @@ AirymaxOS 验收标准（OS-ACC）是工程标准（OS-IRON / OS-STD / OS-BAN）
 
 ### 1.2 OS-ACC 总数
 
-AirymaxOS 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part：
+agentrt-liunx 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part：
 
 | 类别 | 数量 | 编号范围 |
 |------|------|---------|
@@ -417,10 +417,10 @@ graph LR
 ### 15.2 同源 Airymax 文档
 
 - `docs/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则
-- `docs-closed/0.1.1工程标准规范手册.md` — 17 类规则编号体系（v28.0，含 IRON-9 + ACC-OS04 + 149 项 ACC）
-- `docs-closed/0.1.1技术全面改进方案v3.0.md` — agentrt 三大支柱方案（v4.2）
+- IRON-9 v2 工程铁律（闭源内部参考） — 17 类规则编号体系（v28.0，含 IRON-9 + ACC-OS04 + 149 项 ACC）
+- 内部工程改进方案（闭源） — agentrt 三大支柱方案（v4.2）
 
-### 15.3 AirymaxOS 工程标准
+### 15.3 agentrt-liunx 工程标准
 
 - `50-engineering-standards/README.md` — 工程标准主框架（OS-IRON / OS-STD / OS-BAN 编号体系）
 - `50-engineering-standards/06-toolchain-and-automation.md` — 工具链与自动化（7 层验证 + 24 项提交检查清单）
@@ -431,7 +431,7 @@ graph LR
 ## 16. 文档版本与维护
 
 - **当前版本**: v1.0（2026-07-06）
-- **维护者**: AirymaxOS 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
+- **维护者**: agentrt-liunx 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何 OS-ACC 验收标准变更必须经过 RFC → 评审 → 委员会批准流程
 - **回顾周期**: 里程碑回顾（每 M 完成时验收）+ 季度验收标准回顾 + 年度大版本校准
 

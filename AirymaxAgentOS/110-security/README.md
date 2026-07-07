@@ -1,9 +1,9 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 安全加固设计
+# agentrt-liunx（AirymaxOS）安全加固设计
 
-> **文档定位**: AirymaxOS（agentrt-linux）安全工程体系主索引
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）安全工程体系主索引
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability
 > **理论根基**: Linux 内核安全机制 + Airymax E-1 安全内生 + K-3 服务隔离
@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 模块定位
 
-AirymaxOS 安全加固体系是系统可信运行的核心保障。它继承 Linux 内核 30+ 年沉淀的多层安全哲学（LSM 框架 + Landlock 用户态沙箱 + capability + 模块签名 + Lockdown + 4 层密钥环），并在其上扩展智能体操作系统专属的 Cupolas 安全穹顶、机密计算、国密算法等。
+agentrt-liunx 安全加固体系是系统可信运行的核心保障。它继承 Linux 内核 30+ 年沉淀的多层安全哲学（LSM 框架 + Landlock 用户态沙箱 + capability + 模块签名 + Lockdown + 4 层密钥环），并在其上扩展智能体操作系统专属的 Cupolas 安全穹顶、机密计算、国密算法等。
 
 ### 1.1 安全体系分层
 
@@ -24,11 +24,11 @@ AirymaxOS 安全加固体系是系统可信运行的核心保障。它继承 Lin
 | L4 | 模块签名 | eBPF 签名验证 + 模块签名 | 代码完整性 |
 | L5 | Lockdown | 内核 Lockdown 模式 | 限制 root |
 | L6 | 密钥环 | builtin/secondary/machine/platform 4 层 | 密钥管理 |
-| **L7** | **Cupolas 安全穹顶** | **AirymaxOS 专属** | **Agent 行为约束** |
+| **L7** | **Cupolas 安全穹顶** | **agentrt-liunx 专属** | **Agent 行为约束** |
 | **L8** | **机密计算** | **VirtCCA CVM** | **可信执行环境** |
 | **L9** | **国密算法** | **SM2/SM3/SM4** | **合规要求** |
 
-### 1.2 AirymaxOS 扩展
+### 1.2 agentrt-liunx 扩展
 
 - **Cupolas 安全穹顶**：从 agentrt 同源的 7 大子系统（Guards/Permission/Sanitizer/Audit/Workbench/Vault/Network）
 - **机密计算**：基于 VirtCCA 的 CVM（Confidential Virtual Machine）
@@ -77,7 +77,7 @@ Landlock 提供：
 
 ### 2.3 capability（seL4 风格）
 
-AirymaxOS 采用 seL4 风格的 capability 安全模型：
+agentrt-liunx 采用 seL4 风格的 capability 安全模型：
 - **能力传递**：通过 capability 传递权限，而非 ACL
 - **能力撤销**：支持运行时撤销已授予的 capability
 - **能力审计**：所有 capability 操作可审计
@@ -117,9 +117,9 @@ AirymaxOS 采用 seL4 风格的 capability 安全模型：
 ├── 04-module-signing.md            # 模块签名验证
 ├── 05-lockdown.md                  # 内核 Lockdown 模式
 ├── 06-keyrings.md                  # 4 层密钥环
-├── 07-cupolas-dome.md              # AirymaxOS 专属：Cupolas 安全穹顶
-├── 08-confidential-computing.md    # AirymaxOS 专属：机密计算（VirtCCA）
-└── 09-cryptography-compliance.md   # AirymaxOS 专属：国密算法合规
+├── 07-cupolas-dome.md              # agentrt-liunx 专属：Cupolas 安全穹顶
+├── 08-confidential-computing.md    # agentrt-liunx 专属：机密计算（VirtCCA）
+└── 09-cryptography-compliance.md   # agentrt-liunx 专属：国密算法合规
 ```
 
 ### 3.1 0.1.1 版本范围
@@ -132,12 +132,12 @@ AirymaxOS 采用 seL4 风格的 capability 安全模型：
 
 ---
 
-## 4. AirymaxOS 专属扩展
+## 4. agentrt-liunx 专属扩展
 
 ### 4.1 Cupolas 安全穹顶
 
 从 agentrt 同源的 7 大子系统：
-| 子系统 | 职责 | AirymaxOS 实现 |
+| 子系统 | 职责 | agentrt-liunx 实现 |
 |--------|------|----------------|
 | Guards 守卫 | 入口防护 | 内核态 + 用户态双层守卫 |
 | Permission 权限裁决 | 策略裁决 | capability + LSM 钩子 |
@@ -162,9 +162,9 @@ AirymaxOS 采用 seL4 风格的 capability 安全模型：
 
 ### 4.4 同源 agentrt 安全
 
-agentrt 的 `cupolas/` 模块与 AirymaxOS 安全体系同源：
+agentrt 的 `cupolas/` 模块与 agentrt-liunx 安全体系同源：
 - agentrt 用户态：`agentrt_cupolas_*` API
-- AirymaxOS 内核态：LSM 钩子 + capability
+- agentrt-liunx 内核态：LSM 钩子 + capability
 - 两端通过 AgentsIPC 协议传递安全策略
 
 ---
@@ -176,7 +176,7 @@ agentrt 的 `cupolas/` 模块与 AirymaxOS 安全体系同源：
 | **E-1 安全内生** | 安全机制内置于系统每一层 |
 | **K-3 服务隔离** | Landlock 沙箱 + 进程隔离 |
 | **K-4 可插拔策略** | LSM 钩子可插拔 |
-| **IRON-9 同源但独立** | Cupolas 与 agentrt 同源 |
+| **IRON-9 v2 同源且部分代码共享** | Cupolas 与 agentrt 同源 |
 | **A-4 完美主义** | 形式化验证 + 机密计算 |
 
 ---

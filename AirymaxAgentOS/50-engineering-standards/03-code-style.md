@@ -1,8 +1,8 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 代码风格标准
+# agentrt-liunx（AirymaxOS）代码风格标准
 
-> **文档定位**: AirymaxOS（agentrt-linux，极境智能体操作系统）工程标准规范第 3 卷——代码风格。本卷规定模块化设计、策略机制分离、函数分解、数据结构、抽象层次、防御性、性能、工具链使用等"该怎么思考"的工程风格决策。它承接 02 代码格式的机械规则，向 04 工程思想的双重稳定性哲学过渡。
+> **文档定位**: agentrt-liunx（AirymaxOS，极境智能体操作系统）工程标准规范第 3 卷——代码风格。本卷规定模块化设计、策略机制分离、函数分解、数据结构、抽象层次、防御性、性能、工具链使用等"该怎么思考"的工程风格决策。它承接 02 代码格式的机械规则，向 04 工程思想的双重稳定性哲学过渡。
 > **版本**: 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` §6~§22 + `stable-api-nonsense.rst`
@@ -19,7 +19,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **函数与数据结构的结构风格**——helper 抽取、引用计数强制（§3、§4）
 - **抽象层次的稳定性分级**——内核内部 API 不稳定、用户 ABI 稳定（§5）
 - **防御性与性能的工程权衡**——fault injection、cache 影响是头等大事（§6、§7）
-- **AirymaxOS 多语言协作的专属风格**——热/冷路径分层、FFI 边界（§8）
+- **agentrt-liunx 多语言协作的专属风格**——热/冷路径分层、FFI 边界（§8）
 - **工具链使用风格**——gcc -W、sparse、lockdep、checkpatch（§9）
 
 - **上游依赖**：04 工程思想定义"为什么"——双层稳定性、策略机制分离是设计哲学；本卷定义"如何落实"。
@@ -66,15 +66,15 @@ struct airymaxos_dispatcher_ops {
 
 ### 1.2 反对隐藏硬件访问的多 OS 抽象层（OS-KER-023）
 
-**OS-KER-023**：AirymaxOS 是 Linux 6.6 内核基线专属发行版，不维护"在 Linux / Windows / RTOS 之间切换"的硬件抽象层。若需跨平台一致性，由 agentrt 在用户空间承担（E-4 原则），AirymaxOS 内核态不背跨平台包袱。
+**OS-KER-023**：agentrt-liunx 是 Linux 6.6 内核基线专属发行版，不维护"在 Linux / Windows / RTOS 之间切换"的硬件抽象层。若需跨平台一致性，由 agentrt 在用户空间承担（E-4 原则），agentrt-liunx 内核态不背跨平台包袱。
 
 ### 1.3 代码重复应抽出到库（OS-STD-212）
 
 **OS-STD-212**：当代码在 3 处以上重复时，应抽出到 `lib/` 或 `commons/` 子模块；当代码在 2 处重复时，可暂保留，但需在 PR 描述中标注"已知重复，待第三处出现时抽出"。该规则避免"过早抽象"与"放任重复"两极。
 
-### 1.4 AirymaxOS 专属分层职责（OS-STD-213）
+### 1.4 agentrt-liunx 专属分层职责（OS-STD-213）
 
-**OS-STD-213**：AirymaxOS 按 C-1 双系统协同原则分层选择实现语言：
+**OS-STD-213**：agentrt-liunx 按 C-1 双系统协同原则分层选择实现语言：
 
 | 层 | 子仓 | 主语言 | 选择理由 |
 |----|------|--------|----------|
@@ -92,7 +92,7 @@ struct airymaxos_dispatcher_ops {
 
 ### 2.2 策略外移至用户空间或可插拔模块（OS-KER-025）
 
-**OS-KER-025**：策略必须可在不重新编译内核的情况下替换。AirymaxOS 通过两类机制实现：用户态守护进程（K-3 服务隔离）+ eBPF / sched_ext 可插拔内核扩展（K-4 可插拔策略）。
+**OS-KER-025**：策略必须可在不重新编译内核的情况下替换。agentrt-liunx 通过两类机制实现：用户态守护进程（K-3 服务隔离）+ eBPF / sched_ext 可插拔内核扩展（K-4 可插拔策略）。
 
 ```c
 /* 错误：策略硬编码进内核 */
@@ -114,7 +114,7 @@ struct sched_class airymaxos_agent_sched = {
 
 **OS-KER-026**：airymaxos-kernel 的 `SCHED_AGENT` 调度类必须基于 sched_ext 框架实现——这是策略机制分离的最纯粹形态。BPF 程序在用户态编写、动态加载、热替换，而无需内核重新编译或重启。任何把调度策略硬编码进 `kernel/sched/` 的 PR 直接拒绝。
 
-### 2.4 AirymaxOS 专属：K-4 可插拔策略原则映射
+### 2.4 agentrt-liunx 专属：K-4 可插拔策略原则映射
 
 K-4 可插拔策略是 Airymax 五维正交 24 原则在调度、IPC 路由、安全裁决、记忆检索等"算法选择"上的统一约束。所有算法维度必须暴露策略接口，可在运行时替换。详见 [10-architecture/02-five-dimensional-principles.md](../10-architecture/02-five-dimensional-principles.md) §3.4。
 
@@ -172,7 +172,7 @@ int airymaxos_init(void)
 
 ### 4.1 引用计数强制（OS-KER-031）
 
-**OS-KER-031**：多线程可见的数据结构必须有引用计数。AirymaxOS 内核无 GC（垃圾回收），任何可被另一线程找到的数据结构都必须维护"使用者数量"——归零方可释放。AirymaxOS 的 E-3 资源确定性原则在此处落地。
+**OS-KER-031**：多线程可见的数据结构必须有引用计数。agentrt-liunx 内核无 GC（垃圾回收），任何可被另一线程找到的数据结构都必须维护"使用者数量"——归零方可释放。agentrt-liunx 的 E-3 资源确定性原则在此处落地。
 
 ```c
 struct airymaxos_task_desc {
@@ -255,7 +255,7 @@ struct flags_good {
 
 ### 5.1 不维护稳定内核内部 API（OS-KER-035）
 
-**OS-KER-035**：AirymaxOS 内核子系统之间的内部 API **不保证稳定**，这是 deliberate design decision（深思熟虑的设计决策）。允许持续重构是降低主线维护成本的核心机制——若每次重构都需兼顾二进制兼容，代码会迅速被历史包袱压垮。配套规则：API 改动者必须同时修复所有受影响代码（"you broke it, you fix it"）。
+**OS-KER-035**：agentrt-liunx 内核子系统之间的内部 API **不保证稳定**，这是 deliberate design decision（深思熟虑的设计决策）。允许持续重构是降低主线维护成本的核心机制——若每次重构都需兼顾二进制兼容，代码会迅速被历史包袱压垮。配套规则：API 改动者必须同时修复所有受影响代码（"you broke it, you fix it"）。
 
 ### 5.2 用户空间 ABI 必须稳定（OS-KER-036）
 
@@ -265,9 +265,9 @@ struct flags_good {
 
 **OS-KER-037**：抽象是有成本的——一层间接调用、一份额外内存、一份认知负担。只有在"已经存在 3 处以上重复"或"已经能预见第二使用者"时才抽出抽象。空抽象比无抽象更糟——它会让后续维护者误以为存在多处使用者，不敢删除。
 
-### 5.4 AirymaxOS 4 层接口稳定性分级（OS-STD-214）
+### 5.4 agentrt-liunx 4 层接口稳定性分级（OS-STD-214）
 
-**OS-STD-214**：AirymaxOS 在双层稳定性（内核内部 / 用户 ABI）基础上扩展为 4 层：
+**OS-STD-214**：agentrt-liunx 在双层稳定性（内核内部 / 用户 ABI）基础上扩展为 4 层：
 
 | 层 | 接口类型 | 稳定性 | 变更流程 |
 |----|---------|--------|---------|
@@ -282,7 +282,7 @@ struct flags_good {
 
 ### 6.1 错误路径必须测试（OS-KER-038）
 
-**OS-KER-038**：所有错误路径必须有对应测试用例。AirymaxOS 通过 fault injection 框架强制执行——`make kmalloc-fail` / `should_fail_alloc_page` 等机制可在运行时注入分配失败，验证错误路径是否真正可达且不破坏状态。任何未测试错误路径等同于未实现。
+**OS-KER-038**：所有错误路径必须有对应测试用例。agentrt-liunx 通过 fault injection 框架强制执行——`make kmalloc-fail` / `should_fail_alloc_page` 等机制可在运行时注入分配失败，验证错误路径是否真正可达且不破坏状态。任何未测试错误路径等同于未实现。
 
 ### 6.2 溢出检查（OS-KER-039）
 
@@ -396,7 +396,7 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 ---
 
-## 8. AirymaxOS 专属风格
+## 8. agentrt-liunx 专属风格
 
 ### 8.1 热路径 vs 冷路径分层（OS-KER-047）
 
@@ -412,7 +412,7 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 ### 8.4 Agent 工作负载考量——Token 能效与记忆卷载（OS-STD-216）
 
-**OS-STD-216**：AirymaxOS 设计须考虑 Agent 工作负载特性——Token 能效（每 token 的 CPU/J 预算）、记忆卷载（C-3，L1-L4 分层卷载模式）。详见 [40-dataflows/01-cognition-flow.md](../40-dataflows/01-cognition-flow.md) 与 [40-dataflows/02-memory-flow.md](../40-dataflows/02-memory-flow.md)。Agent 任务在调度器中应作为 `SCHED_AGENT` 类，与普通进程隔离调度，避免被普通负载饿死或反噬。
+**OS-STD-216**：agentrt-liunx 设计须考虑 Agent 工作负载特性——Token 能效（每 token 的 CPU/J 预算）、记忆卷载（C-3，L1-L4 分层卷载模式）。详见 [40-dataflows/01-cognition-flow.md](../40-dataflows/01-cognition-flow.md) 与 [40-dataflows/02-memory-flow.md](../40-dataflows/02-memory-flow.md)。Agent 任务在调度器中应作为 `SCHED_AGENT` 类，与普通进程隔离调度，避免被普通负载饿死或反噬。
 
 ---
 
@@ -420,7 +420,7 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 ### 9.1 gcc -W（OS-KER-049）
 
-**OS-KER-049**：编译必须开启 `-Wall -Wextra -Werror`；新增警告项必须立即修复或显式 `// NOLINT: <reason>` 标注。零警告是 AirymaxOS 不可妥协的底线。
+**OS-KER-049**：编译必须开启 `-Wall -Wextra -Werror`；新增警告项必须立即修复或显式 `// NOLINT: <reason>` 标注。零警告是 agentrt-liunx 不可妥协的底线。
 
 ### 9.2 sparse——类型检查（OS-KER-050）
 
@@ -436,7 +436,7 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 ### 9.5 checkpatch.pl（OS-STD-217）
 
-**OS-STD-217**：每个 PR 提交前必须通过 `scripts/checkpatch.pl --strict`，无 ERROR / WARNING。checkpatch 检查 Linux 6.6 内核基线规则 + AirymaxOS 扩展规则（详见 06 卷 §3.2）。
+**OS-STD-217**：每个 PR 提交前必须通过 `scripts/checkpatch.pl --strict`，无 ERROR / WARNING。checkpatch 检查 Linux 6.6 内核基线规则 + agentrt-liunx 扩展规则（详见 06 卷 §3.2）。
 
 ### 9.6 多配置构建（OS-STD-218）
 
@@ -481,7 +481,7 @@ arr = kcalloc(n, sizeof(*arr), GFP_KERNEL);
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.1.1 | 2026-07-06 | 初始版本（含 §1-§10 全部规则 + 11 条五维映射 + AirymaxOS 专属风格） |
+| 0.1.1 | 2026-07-06 | 初始版本（含 §1-§10 全部规则 + 11 条五维映射 + agentrt-liunx 专属风格） |
 | 1.0.1 | TBD | 与代码实现同步验证；Agent 工作负载 Token 能效基准确立 |
 
 ---

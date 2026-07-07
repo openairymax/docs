@@ -1,4 +1,4 @@
-# AirymaxOS 服务设计文档（airymaxos-services，极境服务）
+# agentrt-liunx（AirymaxOS）服务设计文档（airymaxos-services，极境服务）
 
 > 子仓编号：02
 > 子仓代号：极境服务（Airymax Services）
@@ -10,7 +10,7 @@
 
 ## 1. 子仓职责
 
-`airymaxos-services` 是 AirymaxOS 的用户态系统服务子仓，承担以下核心职责：
+`airymaxos-services` 是 agentrt-liunx（AirymaxOS）的用户态系统服务子仓，承担以下核心职责：
 
 1. **用户态 VFS**：文件系统实现下放至用户态服务，内核仅保留虚拟文件系统层。
 2. **用户态网络栈**：基于 DPDK/AF_XDP 实现高性能用户态网络协议栈。
@@ -22,11 +22,11 @@
 
 ## 2. 同源关系
 
-| 维度 | agentrt（daemons） | AirymaxOS（airymaxos-services） |
+| 维度 | agentrt（daemons） | agentrt-liunx（airymaxos-services） |
 |------|-------------------|--------------------------------|
 | 服务数量 | 12 daemons | 12 daemons + VFS/Net/Drivers |
 | 通信方式 | 进程间消息队列 | io_uring 零拷贝 IPC |
-| 服务管理 | 自研 supervisor | systemd 集成（AirymaxOS 标准） |
+| 服务管理 | 自研 supervisor | systemd 集成（agentrt-liunx 标准） |
 | 部署形态 | 用户态进程 | systemd unit + capability |
 
 **12 daemons 清单**（与 agentrt 完全同源）：
@@ -65,7 +65,7 @@ airymaxos-services/
 │   ├── observe_d/
 │   ├── hook_d/
 │   └── plugin_d/
-├── systemd/               # systemd 集成（AirymaxOS 标准）
+├── systemd/               # systemd 集成（agentrt-liunx 标准）
 ├── ipc/                   # 消息传递通信（基于 io_uring）
 └── docs/
 ```
@@ -105,7 +105,7 @@ airymaxos-services/
 
 ### 3.5 systemd/（systemd 集成）
 
-遵循 **AirymaxOS 基础系统治理组** 标准：
+遵循 **agentrt-liunx 基础系统治理组** 标准：
 - `units/`：systemd unit 文件目录。
 - `targets/`：systemd target 定义（airymaxos.target 等）。
 - `generators/`：systemd generator（动态生成 unit）。
@@ -172,7 +172,7 @@ airymaxos-services/
 **systemd unit 示例**（gateway_d）：
 ```ini
 [Unit]
-Description=AirymaxOS Gateway Daemon
+Description=agentrt-liunx Gateway Daemon
 After=network.target airymaxos-ipc.target
 Requires=airymaxos-ipc.target
 
@@ -231,12 +231,12 @@ WantedBy=airymaxos.target
 
 ---
 
-## 6. AirymaxOS 工程基线
+## 6. agentrt-liunx 工程基线
 
-- **AirymaxOS 基础系统治理组**：systemd、基础系统服务最佳实践。
-- **AirymaxOS 网络子系统**：用户态网络栈基线。
-- **AirymaxOS 驱动框架**：用户态驱动框架基线。
-- **AirymaxOS 服务管理**：systemd unit 规范。
+- **agentrt-liunx 基础系统治理组**：systemd、基础系统服务最佳实践。
+- **agentrt-liunx 网络子系统**：用户态网络栈基线。
+- **agentrt-liunx 驱动框架**：用户态驱动框架基线。
+- **agentrt-liunx 服务管理**：systemd unit 规范。
 
 ---
 
@@ -290,6 +290,6 @@ WantedBy=airymaxos.target
 - DPDK 项目文档
 - AF_XDP 教程
 - VFIO/libvfio 项目文档
-- AirymaxOS 基础系统治理组文档
+- agentrt-liunx 基础系统治理组文档
 - systemd 官方文档
 - agentrt daemons 设计文档

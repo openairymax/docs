@@ -1,4 +1,4 @@
-# AirymaxOS 内核设计文档（airymaxos-kernel，极境内核）
+# agentrt-liunx（AirymaxOS）内核设计文档（airymaxos-kernel，极境内核）
 
 > 子仓编号：01
 > 子仓代号：极境内核（Airymax Kernel）
@@ -10,11 +10,11 @@
 
 ## 1. 子仓职责
 
-`airymaxos-kernel` 是 AirymaxOS 的内核子仓，承担以下核心职责：
+`airymaxos-kernel` 是 agentrt-liunx（AirymaxOS）的内核子仓，承担以下核心职责：
 
 1. **Linux 6.6 内核维护**：基于 Linux 6.6 内核基线，保持与上游社区同步演进。
 2. **微内核化改造**：在保留 Linux 6.6 完整能力的前提下，遵循 Liedtke minimality principle，将 VFS、网络栈、设备驱动等子系统逐步用户态化，最小化特权态代码体积。
-3. **Agent 感知调度**：通过 `sched_ext`（AirymaxOS 内核增强，主线 6.12+ 引入并持续演进）实现 `SCHED_AGENT` 调度类，允许 eBPF 程序在用户态定义调度策略。
+3. **Agent 感知调度**：通过 `sched_ext`（agentrt-liunx 内核增强，主线 6.12+ 引入并持续演进）实现 `SCHED_AGENT` 调度类，允许 eBPF 程序在用户态定义调度策略。
 4. **高性能 IPC 基础**：基于 `io_uring`（2026 已成为默认高性能 I/O 路径）构建零 syscall、零拷贝的消息传递基础设施。
 5. **Rust 安全驱动**：依托 Linux 6.6 中 Rust 实验性支持（持续演进中），构建安全驱动开发框架。
 6. **同源传承**：从 agentrt 的 `atoms/corekern`（MicroCoreRT）继承实时性与微内核化设计思想。
@@ -23,7 +23,7 @@
 
 ## 2. 同源关系
 
-| 维度 | agentrt（atoms/corekern） | AirymaxOS（airymaxos-kernel） |
+| 维度 | agentrt（atoms/corekern） | agentrt-liunx（airymaxos-kernel） |
 |------|--------------------------|------------------------------|
 | 设计目标 | RT 微内核 + Agent 调度 | Linux 6.6 + 微内核化 + Agent 调度 |
 | 调度模型 | MicroCoreRT 实时调度 | SCHED_AGENT（sched_ext + eBPF） |
@@ -43,7 +43,7 @@
 ```
 airymaxos-kernel/
 ├── linux/                 # Linux 6.6 内核源码（Linux 6.6 内核基线，git subtree）
-├── patches/               # AirymaxOS 内核补丁
+├── patches/               # agentrt-liunx 内核补丁
 │   ├── sched_ext-agent/   # SCHED_AGENT 调度类（eBPF 程序）
 │   ├── io_uring-ipc/      # 基于 io_uring 的 IPC 优化
 │   ├── rust-drivers/      # Rust 安全驱动
@@ -89,7 +89,7 @@ Rust 安全驱动框架：
 
 ## 4. 核心特性
 
-### 4.1 sched_ext（AirymaxOS 内核增强，主线 6.12+，2026 成熟）
+### 4.1 sched_ext（agentrt-liunx 内核增强，主线 6.12+，2026 成熟）
 
 **SCHED_AGENT 调度类**：
 - 通过 `sched_ext` 提供的 BPF 调度接口，在用户态实现完整调度器。
@@ -122,7 +122,7 @@ Rust 安全驱动框架：
 
 ### 4.4 Rust 实验性支持（Linux 6.6）
 
-- Linux 6.6 中 Rust 持续作为实验性支持语言演进（AirymaxOS 内核增强）。
+- Linux 6.6 中 Rust 持续作为实验性支持语言演进（agentrt-liunx 内核增强）。
 - 安全驱动开发：通过类型系统消除 UAF、Buffer Overflow、Data Race。
 - 与 `airymaxos-kernel/patches/rust-drivers` 配套。
 
@@ -167,12 +167,12 @@ Rust 安全驱动框架：
 
 ---
 
-## 6. AirymaxOS 工程基线
+## 6. agentrt-liunx 工程基线
 
-- **AirymaxOS 内核治理组**：内核社区贡献与最佳实践。
-- **AirymaxOS 多版本内核策略**：支持 LTS 内核与演进内核并存。
-- **AirymaxOS 内存管理**：MGLRU、CXL、THP 等特性贡献（详见 `04-memory.md`）。
-- **AirymaxOS 编译工具链**：GCC、Clang、Rust 工具链集成。
+- **agentrt-liunx 内核治理组**：内核社区贡献与最佳实践。
+- **agentrt-liunx 多版本内核策略**：支持 LTS 内核与演进内核并存。
+- **agentrt-liunx 内存管理**：MGLRU、CXL、THP 等特性贡献（详见 `04-memory.md`）。
+- **agentrt-liunx 编译工具链**：GCC、Clang、Rust 工具链集成。
 
 ---
 
@@ -182,7 +182,7 @@ Rust 安全驱动框架：
 |------|------|------|
 | Liedtke minimality principle | seL4 / L4 | 微内核化改造哲学 |
 | Capability-based security | seL4 / Zircon | 内核 capability 接口 |
-| sched_ext | AirymaxOS 内核增强（主线 6.12+） | SCHED_AGENT 调度类 |
+| sched_ext | agentrt-liunx 内核增强（主线 6.12+） | SCHED_AGENT 调度类 |
 | io_uring zero-copy | Linux 5.x+ | IPC 基础设施 |
 | eBPF programmable kernel | Linux 6.x+ | 观测/网络/安全/调度 |
 | Rust in kernel | Linux 6.6（实验性） | 安全驱动开发 |
@@ -224,5 +224,5 @@ Rust 安全驱动框架：
 - Liedtke, J. "On μ-Kernel Construction"（1995）
 - seL4 项目文档
 - Zircon 内核设计文档
-- AirymaxOS 内核治理组文档
+- agentrt-liunx 内核治理组文档
 - agentrt atoms/corekern 设计文档

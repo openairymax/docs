@@ -1,9 +1,9 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 驱动模型设计
+# agentrt-liunx（AirymaxOS）驱动模型设计
 
-> **文档定位**: AirymaxOS（agentrt-linux）驱动子系统工程设计主索引
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）驱动子系统工程设计主索引
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`
 > **理论根基**: Linux device/driver/bus 三元组解耦 + Airymax K-3 服务隔离
@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 模块定位
 
-AirymaxOS 驱动模型是连接内核能力与硬件/虚拟设备的核心抽象层。它继承 Linux 内核 30+ 年沉淀的 device/driver/bus 三元组解耦哲学，并在其上扩展智能体工作负载所需的"软驱动"概念——Agent 行为契约作为一类虚拟设备参与驱动模型。
+agentrt-liunx 驱动模型是连接内核能力与硬件/虚拟设备的核心抽象层。它继承 Linux 内核 30+ 年沉淀的 device/driver/bus 三元组解耦哲学，并在其上扩展智能体工作负载所需的"软驱动"概念——Agent 行为契约作为一类虚拟设备参与驱动模型。
 
 ### 1.1 核心抽象
 
@@ -23,7 +23,7 @@ AirymaxOS 驱动模型是连接内核能力与硬件/虚拟设备的核心抽象
 | **bus** | 总线类型（匹配 device 与 driver） | `include/linux/device/bus.h` |
 | **class** | 设备功能分类（电源/输入/网络等） | `include/linux/class.h` |
 
-### 1.2 AirymaxOS 扩展
+### 1.2 agentrt-liunx 扩展
 
 - **Agent 驱动**：将 Agent 行为契约作为虚拟设备，通过 `agent_driver_register()` 注册
 - **智能体总线**：新增 `agent_bus_type`，匹配 Agent SDK 接口与运行时实现
@@ -85,7 +85,7 @@ misc 框架为简单字符设备提供快速接入路径，无需完整 cdev 样
 ├── 02-platform-driver.md           # platform 总线与 SoC 设备
 ├── 03-devm-resource.md            # devm_ 资源管理与生命周期
 ├── 04-misc-framework.md           # misc 框架与轻量级字符设备
-├── 05-agent-driver.md             # AirymaxOS 专属：Agent 虚拟设备驱动
+├── 05-agent-driver.md             # agentrt-liunx 专属：Agent 虚拟设备驱动
 ├── 06-driver-samples.md           # 驱动示例集（含完整代码）
 └── 07-driver-testing.md           # 驱动测试方法（KUnit + kselftest）
 ```
@@ -100,11 +100,11 @@ misc 框架为简单字符设备提供快速接入路径，无需完整 cdev 样
 
 ---
 
-## 4. AirymaxOS 专属扩展
+## 4. agentrt-liunx 专属扩展
 
 ### 4.1 Agent 虚拟设备驱动
 
-AirymaxOS 将 Agent 行为契约建模为虚拟设备：
+agentrt-liunx 将 Agent 行为契约建模为虚拟设备：
 - **device**：Agent 实例（包含 SDK 句柄、运行时状态）
 - **driver**：Agent 实现模块（包含 probe = 加载、remove = 卸载）
 - **bus**：`agent_bus_type`（匹配 Agent SDK 接口与运行时实现）
@@ -118,7 +118,7 @@ AirymaxOS 将 Agent 行为契约建模为虚拟设备：
 
 ### 4.3 同源 agentrt 映射
 
-| AirymaxOS | agentrt 同源 |
+| agentrt-liunx | agentrt 同源 |
 |-----------|--------------|
 | `agent_bus_type` | daemons 适配器 |
 | `agent_driver_register()` | daemon 注册机制 |

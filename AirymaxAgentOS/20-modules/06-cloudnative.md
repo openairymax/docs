@@ -1,4 +1,4 @@
-# AirymaxOS 云原生设计文档（airymaxos-cloudnative，极境云原生）
+# agentrt-liunx（AirymaxOS）云原生设计文档（airymaxos-cloudnative，极境云原生）
 
 > 子仓编号：06
 > 子仓代号：极境云原生（Airymax Cloud Native）
@@ -10,7 +10,7 @@
 
 ## 1. 子仓职责
 
-`airymaxos-cloudnative` 是 AirymaxOS 的云原生基础设施子仓，承担以下核心职责：
+`airymaxos-cloudnative` 是 agentrt-liunx（AirymaxOS）的云原生基础设施子仓，承担以下核心职责：
 
 1. **Kubernetes 集成**：将 Agent 作为 Kubernetes CRD（Custom Resource Definition）原生集成。
 2. **containerd shim**：提供 containerd shim，实现 Agent 容器化运行。
@@ -19,13 +19,13 @@
 5. **agentctl**：对标 kubectl 的 Agent 管理命令行工具。
 6. **OpenTelemetry 可观测性**：集成 OpenTelemetry 提供统一可观测性。
 7. **DPU/IPU 卸载支持**：支持 DPU/IPU 硬件卸载。
-8. **超节点 OS**：基于 AirymaxOS 超节点 OS 实现云原生超节点。
+8. **超节点 OS**：基于 agentrt-liunx 超节点 OS 实现云原生超节点。
 
 ---
 
 ## 2. 同源关系
 
-| 维度 | agentrt（gateway + sdk） | AirymaxOS（airymaxos-cloudnative） |
+| 维度 | agentrt（gateway + sdk） | agentrt-liunx（airymaxos-cloudnative） |
 |------|------------------------|----------------------------------|
 | 网关 | gateway（应用层） | K8s Ingress + gateway_d（OS 级） |
 | SDK | sdk（应用层） | agentctl（对标 kubectl） |
@@ -51,7 +51,7 @@ airymaxos-cloudnative/
 ├── agentctl/              # agentctl（对标 kubectl）
 ├── observability/          # OpenTelemetry 可观测性
 ├── dpu-ipu/                # DPU/IPU 卸载支持
-├── super-node-os/          # 超节点 OS（AirymaxOS 自研）
+├── super-node-os/          # 超节点 OS（agentrt-liunx 自研）
 └── docs/
 ```
 
@@ -80,7 +80,7 @@ airymaxos-cloudnative/
 
 ### 3.4 cni/（CNI 插件）
 
-- `airymax-cni`：AirymaxOS CNI 插件。
+- `airymax-cni`：agentrt-liunx CNI 插件。
 - `service-mesh`：服务网格（基于 eBPF）。
 - `network-policy`：网络策略（与 `airymaxos-security` 协作）。
 - `multus`：Multus 多 CNI 支持。
@@ -110,7 +110,7 @@ airymaxos-cloudnative/
 
 ### 3.8 super-node-os/（超节点 OS）
 
-基于 **AirymaxOS 超节点 OS**：
+基于 **agentrt-liunx 超节点 OS**：
 - `topology`：超节点拓扑管理。
 - `scheduling`：超节点调度（NUMA 感知）。
 - `migration`：跨节点迁移（与 MemoryRovol 协作）。
@@ -234,9 +234,9 @@ agentctl snapshot my-agent --output snapshot.tar
 - 安全卸载：IPSec、TLS、防火墙。
 - 虚拟化卸载：virtio、SR-IOV。
 
-### 4.8 超节点 OS（AirymaxOS 自研）
+### 4.8 超节点 OS（agentrt-liunx 自研）
 
-基于 **AirymaxOS 超节点 OS**：
+基于 **agentrt-liunx 超节点 OS**：
 - 超节点拓扑：多 die/多 chip 统一管理。
 - NUMA 感知调度：优先本地 die 调度。
 - 跨 die 迁移：基于 MemoryRovol 跨 die 迁移。
@@ -268,12 +268,12 @@ agentctl snapshot my-agent --output snapshot.tar
 
 ---
 
-## 6. AirymaxOS 工程基线
+## 6. agentrt-liunx 工程基线
 
-- **AirymaxOS 云原生治理组**：云原生最佳实践。
-- **AirymaxOS 超节点 OS**：超节点 OS 设计基线。
-- **AirymaxOS K8s 发行版**：K8s 集成基线。
-- **AirymaxOS 容器运行时**：containerd 集成基线。
+- **agentrt-liunx 云原生治理组**：云原生最佳实践。
+- **agentrt-liunx 超节点 OS**：超节点 OS 设计基线。
+- **agentrt-liunx K8s 发行版**：K8s 集成基线。
+- **agentrt-liunx 容器运行时**：containerd 集成基线。
 
 ---
 
@@ -328,6 +328,6 @@ agentctl snapshot my-agent --output snapshot.tar
 - OpenTelemetry 官方文档
 - NVIDIA BlueField 文档
 - Intel IPU 文档
-- AirymaxOS 云原生治理组文档
-- AirymaxOS 超节点 OS 文档
+- agentrt-liunx 云原生治理组文档
+- agentrt-liunx 超节点 OS 文档
 - agentrt gateway + sdk 设计文档

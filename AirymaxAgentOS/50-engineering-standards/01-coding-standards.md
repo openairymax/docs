@@ -1,18 +1,18 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 代码规范
+# agentrt-liunx（AirymaxOS）代码规范
 
-> **文档定位**: AirymaxOS（agentrt-linux，极境智能体操作系统）工程标准规范 / 代码规范
+> **文档定位**: agentrt-liunx（AirymaxOS，极境智能体操作系统）工程标准规范 / 代码规范
 > **版本**: 0.1.1 ｜ **最后更新**: 2026-07-06
 > **同源映射**: `50-engineering-standards/README.md` §3；`ARCHITECTURAL_PRINCIPLES.md` 五维正交 24 原则
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
-> **适用范围**: AirymaxOS 内核态（C / 内联汇编）与同源用户态组件（C / Rust / Python / TypeScript）
+> **适用范围**: agentrt-liunx 内核态（C / 内联汇编）与同源用户态组件（C / Rust / Python / TypeScript）
 
 ---
 
 ## 0. 文档说明
 
-本文档是 AirymaxOS 工程标准规范第一份子文档，定义**语义层**代码规则。它不是 Linux `coding-style.rst` 的译本，而是基于 Linux 6.6 内核基线沉淀的工程思想，融合 Airymax 五维正交 24 原则后，针对智能体操作系统场景重新表述的工程契约。代码格式（缩进 / 行宽 / clang-format）见 `02-code-format.md`，代码风格（模块化 / 抽象层次）见 `03-code-style.md`。
+本文档是 agentrt-liunx 工程标准规范第一份子文档，定义**语义层**代码规则。它不是 Linux `coding-style.rst` 的译本，而是基于 Linux 6.6 内核基线沉淀的工程思想，融合 Airymax 五维正交 24 原则后，针对智能体操作系统场景重新表述的工程契约。代码格式（缩进 / 行宽 / clang-format）见 `02-code-format.md`，代码风格（模块化 / 抽象层次）见 `03-code-style.md`。
 
 **规则编号**：每条强制规则赋予唯一编号。`OS-KER-xxx` 为内核工程规则（强制，agentrt 不涉及内核态）；`OS-STD-xxx` 为标准规则；`OS-BAN-xxx` 为禁止规则；`OS-ACC-xxx` 为验收标准。多语言对照追求语义等价而非逐字翻译——同一规则在不同语言中以该语言最自然的方式落地。注册表汇总于 `07-maintainers-and-governance.md`。
 
@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 命名规范
 
-C 是朴素的语言，命名应与之相称。AirymaxOS 命名遵循两条核心准则：**全局可见者必语义完备，局部可见者宜短小精悍**。
+C 是朴素的语言，命名应与之相称。agentrt-liunx 命名遵循两条核心准则：**全局可见者必语义完备，局部可见者宜短小精悍**。
 
 ### 1.1 全局变量与全局函数
 
@@ -85,9 +85,9 @@ fn agentrt_task_submit(t: &mut Task) -> Result<(), ErrCode>;
 fn agentrt_task_is_pending(t: &Task) -> bool;
 ```
 
-### 1.6 AirymaxOS 专属前缀
+### 1.6 agentrt-liunx 专属前缀
 
-> **OS-STD-005**: `agentrt_*` 前缀保留给 agentrt 同源 API；`airymaxos_*` 前缀用于 AirymaxOS 内核 / 发行版专属 API。两者共享 Airymax 同源语义（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），但代码归属与 ABI 边界不同，前缀隔离确保无适配层互操作时不冲突。
+> **OS-STD-005**: `agentrt_*` 前缀保留给 agentrt 同源 API；`airymaxos_*` 前缀用于 agentrt-liunx 内核 / 发行版专属 API。两者共享 Airymax 同源语义（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），但代码归属与 ABI 边界不同，前缀隔离确保无适配层互操作时不冲突。
 
 ```c
 int agentrt_ipc_send(u32 ch, const void *msg, size_t len);     /* agentrt 同源 */
@@ -198,7 +198,7 @@ struct agentrt_task {
 };
 ```
 
-### 3.5 AirymaxOS 多语言注释规范
+### 3.5 agentrt-liunx 多语言注释规范
 
 > **OS-STD-014**: C 用 kernel-doc；Rust 用 rustdoc；Python 用 Google docstring；TypeScript 用 JSDoc。
 
@@ -358,7 +358,7 @@ bitflags::bitflags! { pub struct TaskFlags: u8 {
 
 ## 7. 错误处理规范（强制范式）
 
-错误处理是 AirymaxOS 工程观的核心。本章所有规则均为强制。
+错误处理是 agentrt-liunx 工程观的核心。本章所有规则均为强制。
 
 ### 7.1 goto 集中出口模式
 
@@ -445,7 +445,7 @@ pr_info("handler at %pS\n", task->handler);           /* 好 */
 pr_info("task at %p\n", task);                          /* 坏：已哈希，无意义 */
 ```
 
-### 7.7 AirymaxOS 多语言错误处理
+### 7.7 agentrt-liunx 多语言错误处理
 
 > **OS-STD-022**: C 用 goto 集中出口；Rust 用 `?` + `Result` + RAII；Python 用异常 + 上下文管理器；TypeScript 用 try-finally。
 
@@ -515,7 +515,7 @@ while (readl(base + AGENTRT_REG_STATUS) & AGENTRT_STATUS_BUSY)
 
 ### 8.5 Rust Send/Sync 强制要求
 
-> **OS-STD-023**: Rust 跨线程传递的类型必须实现 `Send`；跨线程共享的类型必须实现 `Sync`。AirymaxOS Rust 同源组件禁止 `unsafe impl Send/Sync`，除非有书面论证与 unsafe audit。
+> **OS-STD-023**: Rust 跨线程传递的类型必须实现 `Send`；跨线程共享的类型必须实现 `Sync`。agentrt-liunx Rust 同源组件禁止 `unsafe impl Send/Sync`，除非有书面论证与 unsafe audit。
 
 ```rust
 struct AgentrtChannel { inner: Mutex<ChannelInner> }  /* Mutex<T> 自动提供 Sync */
@@ -566,7 +566,7 @@ if (IS_ENABLED(CONFIG_AGENTRT_AUDIT)) { agentrt_audit_enable(); }  /* 好 */
 
 ### 9.4 magic number 必须注册
 
-> **OS-KER-010**: 受保护的数据结构应在结构体开头声明 `magic` 字段，并将该 magic number 注册到 AirymaxOS 维护的 `magic-numbers.md`。magic number 用于运行时检测结构体被覆盖或类型误传，在数组越界覆盖相邻结构的场景中尤其有效。
+> **OS-KER-010**: 受保护的数据结构应在结构体开头声明 `magic` 字段，并将该 magic number 注册到 agentrt-liunx 维护的 `magic-numbers.md`。magic number 用于运行时检测结构体被覆盖或类型误传，在数组越界覆盖相邻结构的场景中尤其有效。
 
 ```c
 #define AGENTRT_SESSION_MAGIC  0x41475331  /* 'AGS1' */
@@ -611,7 +611,7 @@ config AGENTRT_DEVMEM_RW
 | 8 并发 | K-2 接口契约 | E-1 / E-3 资源确定性 | A-2 细节关注 |
 | 9 条件编译 | K-2 接口契约 | E-1 / E-7 文档即代码 | A-3 人文关怀 |
 
-> **同源语义注**: 本章规则在 agentrt 用户态运行时侧有等价表述（agentrt `IRON-1`~`IRON-10` 同源铁律），两端通过 AgentsIPC 128B 消息头协议实现无适配层互操作——这是 AirymaxOS 与 agentrt "同源但独立"关系在代码规范层的体现。
+> **同源语义注**: 本章规则在 agentrt 用户态运行时侧有等价表述（agentrt `IRON-1`~`IRON-10` 同源铁律），两端通过 AgentsIPC 128B 消息头协议实现无适配层互操作——这是 agentrt-liunx 与 agentrt "同源且部分代码共享（IRON-9 v2）"关系在代码规范层的体现。
 
 ---
 
@@ -676,5 +676,5 @@ config AGENTRT_DEVMEM_RW
 - `50-engineering-standards/04-engineering-philosophy.md` — 工程思想（双层稳定性 / 策略机制分离）
 - `50-engineering-standards/07-maintainers-and-governance.md` — 维护者制度与规则编号注册表
 - `docs/ARCHITECTURAL_PRINCIPLES.md` — Airymax 五维正交 24 原则
-- `50-engineering-standards/magic-numbers.md` — AirymaxOS magic number 注册表（计划中）
+- `50-engineering-standards/magic-numbers.md` — agentrt-liunx magic number 注册表（计划中）
 - `30-interfaces/01-syscall-spec.md` — 系统调用规范（UABI 边界）

@@ -1,6 +1,6 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 安全设计文档（airymaxos-security，极境安全）
+# agentrt-liunx（AirymaxOS）安全设计文档（airymaxos-security，极境安全）
 
 > **子仓编号**：03
 > **子仓代号**：极境安全（Airymax Security）
@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [4. 核心特性](#4-核心特性)
 - [5. 微内核思想体现](#5-微内核思想体现)
 - [6. IRON-9 v2 三层共享模型落地](#6-iron-9-v2-三层共享模型落地)
-- [7. AirymaxOS 工程基线](#7-airymaxos-工程基线)
+- [7. agentrt-liunx 工程基线](#7-agentrt-liunx-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
 - [10. 里程碑（M0-M8）](#10-里程碑m0-m8)
@@ -32,19 +32,19 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 子仓职责
 
-`airymaxos-security` 是 AirymaxOS 的安全子仓，承担以下核心职责：
+`airymaxos-security` 是 agentrt-liunx（AirymaxOS）的安全子仓，承担以下核心职责：
 
 1. **capability 系统 [SC]**：基于 seL4 风格的不可伪造令牌实现最小权限访问控制，capability ID 枚举与派生模型与 agentrt 共享。
 2. **LSM Hook [SS]**：agent_lsm 提供 Linux Security Module 钩子，调度机制与 agentrt cupolas 语义同源。
 3. **沙箱隔离 [SS]**：Landlock + seccomp 构建用户态沙箱，三系统调用语义与 agentrt 同源。
 4. **机密计算 [IND]**：支持 TEE/SGX/SEV-SNP/TDX/CCA 等可信执行环境，Vault backend 抽象 [SC] 与 agentrt 共享。
-5. **国密算法 [IND]**：遵循 AirymaxOS 标准集成 SM2/SM3/SM4 国密算法。
+5. **国密算法 [IND]**：遵循 agentrt-liunx 标准集成 SM2/SM3/SM4 国密算法。
 6. **零信任网络 [IND]**：基于身份的零信任网络架构。
 7. **eBPF kfunc + dynamic pointer [SS]**：利用 Linux 6.6 原生特性对 eBPF 程序进行签名验证。
 
 ### 1.1 横切关注点声明
 
-安全**不是独立数据流**，而是横切关注点（cross-cutting concern），贯穿 AirymaxOS 全部 4 大数据流：
+安全**不是独立数据流**，而是横切关注点（cross-cutting concern），贯穿 agentrt-liunx 全部 4 大数据流：
 
 | 数据流 | 安全切入点 | 同源标注 |
 |--------|-----------|----------|
@@ -57,7 +57,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v2 三层共享模型）
 
-依据 IRON-9 v2 决策，agentrt（用户态 cupolas）与 AirymaxOS（内核态 airymaxos-security）通过三层共享模型协作：
+依据 IRON-9 v2 决策，agentrt（用户态 cupolas）与 agentrt-liunx（内核态 airymaxos-security）通过三层共享模型协作：
 
 | 层次 | 共享程度 | 安全子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
@@ -67,7 +67,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 维度对比
 
-| 维度 | agentrt（cupolas） | AirymaxOS（airymaxos-security） | 同源标注 |
+| 维度 | agentrt（cupolas） | agentrt-liunx（airymaxos-security） | 同源标注 |
 |------|-------------------|-------------------------------|----------|
 | LSM | Cupolas 用户态策略注入 | agent_lsm 内核态钩子注册 | [SS] |
 | 沙箱 | 进程沙箱（用户态） | Landlock + seccomp + capability（内核态强制） | [SS] |
@@ -95,7 +95,7 @@ airymaxos-security/
 ├── lsm/                    # agent_lsm（LSM hook）[SS]
 ├── sandbox/               # Landlock + seccomp [SS]
 ├── confidential-compute/   # 机密计算（TEE/SGX/SEV-SNP/TDX/CCA）[IND]
-├── crypto/                 # 国密算法（AirymaxOS 标准）[IND]
+├── crypto/                 # 国密算法（agentrt-liunx 标准）[IND]
 ├── zero-trust/             # 零信任网络 [IND]
 ├── ebpf-verify/            # eBPF kfunc + dynamic pointer（6.6 原生）[SS]
 └── docs/
@@ -140,7 +140,7 @@ airymaxos-security/
 
 ### 3.5 crypto/（国密算法）[IND]
 
-遵循 **AirymaxOS 安全治理组** 标准：
+遵循 **agentrt-liunx 安全治理组** 标准：
 
 - `sm2/`：SM2 椭圆曲线公钥密码算法。
 - `sm3/`：SM3 密码杂凑算法。
@@ -314,7 +314,7 @@ typedef struct agentrt_vault_backend {
 - `log`：记录未签名程序加载尝试。
 - `disable`：禁用签名验证（仅开发环境）。
 
-### 4.6 国密算法支持（AirymaxOS 标准）[IND]
+### 4.6 国密算法支持（agentrt-liunx 标准）[IND]
 
 遵循 **GB/T 32918、GB/T 32905、GB/T 32907** 等国密标准：
 - SM2：公钥密码（替代 RSA/ECDSA）。
@@ -352,7 +352,7 @@ typedef enum {
 
 ### 4.9 Cupolas 7 大子系统（与 agentrt 同源 [SS]）
 
-| 子系统 | 职责 | AirymaxOS 实现 | 同源标注 |
+| 子系统 | 职责 | agentrt-liunx 实现 | 同源标注 |
 |--------|------|----------------|----------|
 | Guards 守卫 | 入口防护 | 内核态 + 用户态双层守卫 | [SS] |
 | Permission 权限裁决 | 策略裁决 | capability + LSM 钩子 | [SS] |
@@ -400,7 +400,7 @@ typedef enum {
 
 ### 6.1 [SC] 共享契约层——`include/airymax/security_types.h`
 
-本头文件完全共享代码，agentrt 用户态与 AirymaxOS 内核态两端直接 include。内容清单：
+本头文件完全共享代码，agentrt 用户态与 agentrt-liunx 内核态两端直接 include。内容清单：
 
 | 内容 | 说明 |
 |------|------|
@@ -418,7 +418,7 @@ typedef enum {
 
 API 签名同源，实现独立：
 
-| 序号 | API | 语义 | agentrt 实现 | AirymaxOS 实现 |
+| 序号 | API | 语义 | agentrt 实现 | agentrt-liunx 实现 |
 |------|-----|------|-------------|---------------|
 | 1 | `security_add_hooks()` | 钩子注册 | 用户态策略表注册 | 内核 `hlist_add_tail_rcu` |
 | 2 | `call_int_hook` | first-deny 短路 | 用户态遍历 | 内核宏展开 |
@@ -442,14 +442,14 @@ API 签名同源，实现独立：
 
 | 序号 | 内容 | 不共享原因 |
 |------|------|-----------|
-| 1 | SELinux 完整实现 | AirymaxOS 不移植 SELinux（TE/RBAC/MLS 过重） |
-| 2 | AppArmor 完整实现 | AirymaxOS 不移植 AppArmor（路径基策略与 Cupolas 语义冲突） |
-| 3 | Smack | AirymaxOS 不移植 Smack |
-| 4 | TOMOYO | AirymaxOS 不移植 TOMOYO |
+| 1 | SELinux 完整实现 | agentrt-liunx 不移植 SELinux（TE/RBAC/MLS 过重） |
+| 2 | AppArmor 完整实现 | agentrt-liunx 不移植 AppArmor（路径基策略与 Cupolas 语义冲突） |
+| 3 | Smack | agentrt-liunx 不移植 Smack |
+| 4 | TOMOYO | agentrt-liunx 不移植 TOMOYO |
 | 5 | IMA digest list | 与完整性解耦冲突，用 Cupolas Vault 运行时签名替代 |
 | 6 | IMA VirtCCA | Huawei 硬件绑定，用 Cupolas 机密计算抽象层替代 |
-| 7 | IMA 策略 DB | AirymaxOS 用 Cupolas 声明式策略引擎替代 |
-| 8 | EVM xattr 签名 | AirymaxOS 用 Cupolas Vault seal/unseal 替代 |
+| 7 | IMA 策略 DB | agentrt-liunx 用 Cupolas 声明式策略引擎替代 |
+| 8 | EVM xattr 签名 | agentrt-liunx 用 Cupolas Vault seal/unseal 替代 |
 | 9 | KABI_RESERVE | 与 IRON-1 冲突（0.1.1 唯一奠基版本） |
 | 10 | 内核发行版特有增强 | 详见闭源安全技术规范参考文档 |
 
@@ -460,7 +460,7 @@ sequenceDiagram
     participant AGENT as Agent 进程
     participant CUP_U as agentrt Cupolas (用户态)
     participant IPC as AgentsIPC 总线
-    participant CUP_K as AirymaxOS Cupolas (内核态)
+    participant CUP_K as agentrt-liunx Cupolas (内核态)
     participant LSM as LSM 框架
     participant KRES as 内核资源
 
@@ -479,12 +479,12 @@ sequenceDiagram
 
 ---
 
-## 7. AirymaxOS 工程基线
+## 7. agentrt-liunx 工程基线
 
-- **AirymaxOS 安全治理组**：安全子系统最佳实践。
-- **AirymaxOS 国密**：SM2/SM3/SM4 国密算法实现。
-- **AirymaxOS LSM**：LSM hook 集成经验——254 钩子 + 扁平 blob + 三源排序。
-- **AirymaxOS 机密计算**：TEE 集成基线——Vault backend 抽象 [SC]。
+- **agentrt-liunx 安全治理组**：安全子系统最佳实践。
+- **agentrt-liunx 国密**：SM2/SM3/SM4 国密算法实现。
+- **agentrt-liunx LSM**：LSM hook 集成经验——254 钩子 + 扁平 blob + 三源排序。
+- **agentrt-liunx 机密计算**：TEE 集成基线——Vault backend 抽象 [SC]。
 - **Linux 6.6 内核基线**：LSM 框架 + Landlock + capability + Lockdown + 4 层密钥环。
 
 ### 7.1 五维正交 24 原则映射
@@ -558,7 +558,7 @@ sequenceDiagram
 
 对 agentrt cupolas 设计进行一致性检查，确认两端在 IRON-9 v2 三层共享模型下无冲突：
 
-| 序号 | 检查项 | agentrt 状态 | AirymaxOS 状态 | 结论 |
+| 序号 | 检查项 | agentrt 状态 | agentrt-liunx 状态 | 结论 |
 |------|--------|-------------|---------------|------|
 | 1 | capability ID 枚举一致性 | 38 个 POSIX caps | 38 个 POSIX caps | ✅ PASS [SC] |
 | 2 | LSM 钩子 ID 枚举一致性 | 254 个钩子 ID | 254 个钩子 ID | ✅ PASS [SC] |
@@ -595,7 +595,7 @@ sequenceDiagram
 
 以下文档为闭源内部参考，不公开：
 
-- 闭源源码映射文档（OLK-6.6 security/ 源码 → AirymaxOS Cupolas 映射）
+- 闭源源码映射文档（OLK-6.6 security/ 源码 → agentrt-liunx Cupolas 映射）
 - 闭源安全技术规范参考文档（内核发行版安全工程规范全面参考）
 
 ---
@@ -615,7 +615,7 @@ sequenceDiagram
 - CCC（Confidential Computing Consortium）白皮书
 - Landlock 官方文档
 - seccomp BPF 教程
-- AirymaxOS 安全治理组文档
+- agentrt-liunx 安全治理组文档
 - 国密标准文档（GB/T 32918 等）
 - agentrt cupolas 设计文档
 - Liedtke SOSP'95（微内核最小化原则）

@@ -1,4 +1,4 @@
-# AirymaxOS 测试设计文档（airymaxos-tests，极境测试）
+# agentrt-liunx（AirymaxOS）测试设计文档（airymaxos-tests，极境测试）
 
 > 子仓编号：08
 > 子仓代号：极境测试（Airymax Tests）
@@ -10,26 +10,26 @@
 
 ## 1. 子仓职责
 
-`airymaxos-tests` 是 AirymaxOS 的测试与验证子仓，承担以下核心职责：
+`airymaxos-tests` 是 agentrt-liunx（AirymaxOS）的测试与验证子仓，承担以下核心职责：
 
 1. **单元测试框架**：为各子仓提供单元测试框架。
-2. **集成测试框架**：基于 AirymaxOS 系统级测试套件，提供集成测试框架。
+2. **集成测试框架**：基于 agentrt-liunx 系统级测试套件，提供集成测试框架。
 3. **形式化验证**：参考 seL4 风格，对微内核关键部分进行形式化验证。
 4. **Soak Test**：72 小时持续运行的稳定性测试。
 5. **混沌工程**：参考 Chaos Mesh，提供故障注入测试。
 6. **性能基准测试**：性能基准与回归测试。
 7. **eBPF 可观测性验证**：验证 eBPF 可观测性正确性。
 
-测试覆盖全部 8 个子仓，确保 AirymaxOS 的可靠性、稳定性与安全性。
+测试覆盖全部 8 个子仓，确保 agentrt-liunx 的可靠性、稳定性与安全性。
 
 ---
 
 ## 2. 同源关系
 
-| 维度 | agentrt（全模块测试） | AirymaxOS（airymaxos-tests） |
+| 维度 | agentrt（全模块测试） | agentrt-liunx（airymaxos-tests） |
 |------|---------------------|------------------------------|
 | 单元测试 | 全模块单元测试 | 全子仓单元测试 |
-| 集成测试 | 模块间集成测试 | 子仓间集成测试（AirymaxOS 自研） |
+| 集成测试 | 模块间集成测试 | 子仓间集成测试（agentrt-liunx 自研） |
 | 形式化验证 | 无 | seL4 风格形式化验证 |
 | Soak Test | 长时间运行测试 | 72h Soak Test |
 | 混沌工程 | 无 | Chaos Mesh 类似混沌测试 |
@@ -38,7 +38,7 @@
 **同源传承要点**：
 - 保留 agentrt 的"全模块测试"覆盖度。
 - 升级为 OS 级测试，引入形式化验证与混沌工程。
-- 基于 AirymaxOS 系统级测试套件与 QA SIG 标准。
+- 基于 agentrt-liunx 系统级测试套件与 QA SIG 标准。
 
 ---
 
@@ -47,7 +47,7 @@
 ```
 airymaxos-tests/
 ├── unit/                   # 单元测试框架
-├── integration/            # 集成测试框架（AirymaxOS 自研）
+├── integration/            # 集成测试框架（agentrt-liunx 自研）
 ├── formal-verification/    # 形式化验证（seL4 风格）
 ├── soak/                   # Soak Test（72h 持续运行）
 ├── chaos/                  # 混沌工程（Chaos Mesh 类似）
@@ -69,10 +69,10 @@ airymaxos-tests/
   - `system/`：系统单元测试。
 - `coverage/`：代码覆盖率工具（llvm-cov、tarpaulin）。
 
-### 3.2 integration/（集成测试框架，AirymaxOS 自研）
+### 3.2 integration/（集成测试框架，agentrt-liunx 自研）
 
-基于 **AirymaxOS 集成测试框架**：
-- `airymaxos-itf/`：AirymaxOS 集成测试框架。
+基于 **agentrt-liunx 集成测试框架**：
+- `airymaxos-itf/`：agentrt-liunx 集成测试框架。
 - `testcases/`：测试用例。
   - `cross-subrepo/`：跨子仓集成测试。
   - `end-to-end/`：端到端测试。
@@ -153,9 +153,9 @@ airymaxos-tests/
 - 服务代码：≥ 80%
 - 工具代码：≥ 70%
 
-### 4.2 集成测试框架（AirymaxOS 集成测试标准）
+### 4.2 集成测试框架（agentrt-liunx 集成测试标准）
 
-基于 **AirymaxOS 集成测试框架**：
+基于 **agentrt-liunx 集成测试框架**：
 - 测试用例以 shell 脚本 + 配置文件描述。
 - 支持测试套件组织。
 - 支持依赖管理。
@@ -288,12 +288,12 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 
 ---
 
-## 6. AirymaxOS 工程基线
+## 6. agentrt-liunx 工程基线
 
-- **AirymaxOS 集成测试框架**：集成测试框架基线。
-- **AirymaxOS QA SIG**：质量保证最佳实践。
-- **AirymaxOS 性能测试**：性能基准基线。
-- **AirymaxOS 兼容性测试**：兼容性测试基线。
+- **agentrt-liunx 集成测试框架**：集成测试框架基线。
+- **agentrt-liunx QA SIG**：质量保证最佳实践。
+- **agentrt-liunx 性能测试**：性能基准基线。
+- **agentrt-liunx 兼容性测试**：兼容性测试基线。
 
 ---
 
@@ -304,7 +304,7 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 | seL4 形式化验证 | seL4 项目 | 微内核形式化验证 |
 | 混沌工程 | Netflix | Chaos Mesh 类似混沌测试 |
 | eBPF 可观测性 | Linux eBPF | 可观测性验证 |
-| AirymaxOS 集成测试框架 | AirymaxOS | 集成测试框架 |
+| agentrt-liunx 集成测试框架 | agentrt-liunx | 集成测试框架 |
 | Property-based testing | 学术研究 | 属性测试 |
 | Fuzzing | 学术研究 | 模糊测试 |
 
@@ -329,7 +329,7 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 | 阶段 | 目标 | 时间 |
 |------|------|------|
 | M1 | 单元测试框架 + 各子仓单元测试 | 2026 Q3 |
-| M2 | 集成测试框架（AirymaxOS 自研） | 2026 Q4 |
+| M2 | 集成测试框架（agentrt-liunx 自研） | 2026 Q4 |
 | M3 | Soak Test 框架 + 首次 72h 测试 | 2027 Q1 |
 | M4 | 混沌工程框架 | 2027 Q2 |
 | M5 | 性能基准测试 + 回归 | 2027 Q3 |
@@ -343,8 +343,8 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 - Isabelle/HOL 教程
 - Coq 教程
 - Chaos Mesh 项目文档
-- AirymaxOS 集成测试框架文档
-- AirymaxOS QA SIG 文档
+- agentrt-liunx 集成测试框架文档
+- agentrt-liunx QA SIG 文档
 - Linux 性能测试工具文档
 - eBPF 可观测性文档
 - agentrt 全模块测试设计文档

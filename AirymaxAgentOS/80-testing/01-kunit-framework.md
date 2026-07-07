@@ -1,19 +1,19 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS KUnit 单元测试框架详解
+# agentrt-liunx（AirymaxOS）KUnit 单元测试框架详解
 
-> **文档定位**: AirymaxOS（agentrt-linux）测试工程体系第 1 卷——KUnit 白盒单元测试框架详解。本卷规定 KUnit 架构、`kunit_suite`/`kunit_case` 结构、`KUNIT_EXPECT_*`/`KUNIT_ASSERT_*` 宏、参数化测试、套件注册、KUnit 运行器、Kconfig 集成（`CONFIG_KUNIT`）、TAP 输出格式与 in-tree 测试组织。
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）测试工程体系第 1 卷——KUnit 白盒单元测试框架详解。本卷规定 KUnit 架构、`kunit_suite`/`kunit_case` 结构、`KUNIT_EXPECT_*`/`KUNIT_ASSERT_*` 宏、参数化测试、套件注册、KUnit 运行器、Kconfig 集成（`CONFIG_KUNIT`）、TAP 输出格式与 in-tree 测试组织。
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 7 层验证 L1（白盒单元测试）+ Linux 6.6 内核基线 `lib/kunit/`、`include/kunit/test.h`
 > **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义）
-> **核心约束**: IRON-9 v2 同源且部分代码共享——KUnit 框架与 Linux 6.6 上游保持源码同源，AirymaxOS 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
+> **核心约束**: IRON-9 v2 同源且部分代码共享——KUnit 框架与 Linux 6.6 上游保持源码同源，agentrt-liunx 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
 
 ---
 
 ## 0. 章节定位
 
-本卷是 AirymaxOS 测试工程 10 主题文档中的第 1 卷，回答"内核白盒单元测试怎么写"。它在 README（测试体系主索引）与 02-kselftest（系统级测试）之间形成单元测试执行层：
+本卷是 agentrt-liunx 测试工程 10 主题文档中的第 1 卷，回答"内核白盒单元测试怎么写"。它在 README（测试体系主索引）与 02-kselftest（系统级测试）之间形成单元测试执行层：
 
 - **上游依赖**：README 定义 L1 白盒单元测试由本卷展开；50-engineering-standards/06-toolchain-and-automation 定义 7 层验证，本卷属第 7 层（单元测试层）。
 - **下游依赖**：02-kselftest 定义"系统级测试怎么跑"；03-kernel-selftests 定义"内核自检怎么启用"——本卷定义"模块内 KUnit 怎么注册"。
@@ -38,7 +38,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 KUnit 是 Linux 6.6 内核基线中的官方单元测试框架，由 Brendan Higgins（Google）于 2019 年合入主线。其设计目标有三：白盒可测（直接调内核内部函数）、毫秒级反馈（UML 编译即跑）、TAP 输出（CI 可解析）。
 
-AirymaxOS 完整继承 Linux 6.6 内核基线的 KUnit 框架（`lib/kunit/`、`include/kunit/`），不修改任何上游源文件。AirymaxOS 专属测试以独立 `*_airymax_test.c` 文件形式驻留于 `airymaxos/` 子仓内，遵循 IRON-9 v2 同源且部分代码共享原则。
+agentrt-liunx 完整继承 Linux 6.6 内核基线的 KUnit 框架（`lib/kunit/`、`include/kunit/`），不修改任何上游源文件。agentrt-liunx 专属测试以独立 `*_airymax_test.c` 文件形式驻留于 `airymaxos/` 子仓内，遵循 IRON-9 v2 同源且部分代码共享原则。
 
 ```mermaid
 flowchart TB
@@ -52,7 +52,7 @@ flowchart TB
     end
     A --> B --> C --> D --> E
     C --> F
-    subgraph "AirymaxOS 扩展层（独立套件）"
+    subgraph "agentrt-liunx 扩展层（独立套件）"
         H["agentrt_kunit_tests<br/>Agent 行为契约"]
         I["agentsipc_kunit_tests<br/>128B 协议校验"]
         J["microcorert_kunit_tests<br/>调度算法验证"]
@@ -71,7 +71,7 @@ flowchart TB
 | 真实硬件 | `kunit.enable=1` 启动参数 | 硬件依赖测试 |
 | 模块加载 | `modprobe my_kunit_test` | 运行时按需测试 |
 
-**OS-TEST-001**：所有 AirymaxOS 内核模块必须提供至少一个 KUnit 测试套件；无 KUnit 测试的模块禁止合入 `airymaxos-kernel` 主分支。
+**OS-TEST-001**：所有 agentrt-liunx 内核模块必须提供至少一个 KUnit 测试套件；无 KUnit 测试的模块禁止合入 `airymaxos-kernel` 主分支。
 
 **OS-TEST-002**：KUnit 测试默认在 UML 上运行；若测试依赖硬件特性，必须通过 `kunit_mark_skipped()` 在非 UML 平台显式跳过并标注原因。
 
@@ -209,7 +209,7 @@ MODULE_LICENSE("GPL v2");
 
 `kunit_kmalloc`/`kunit_kzalloc`/`kunit_kcalloc` 在用例上下文中分配内存，`kunit_kfree` 释放单块，`kunit_cleanup` 在用例结束时自动释放所有托管资源。托管资源无需在 `exit` 中手写释放代码。
 
-**OS-KER-002**：AirymaxOS 扩展套件必须以 `airymax_*` 前缀命名，与上游套件区分；上游套件禁止改名（保持 IRON-9 v2 同源且部分代码共享）。
+**OS-KER-002**：agentrt-liunx 扩展套件必须以 `airymax_*` 前缀命名，与上游套件区分；上游套件禁止改名（保持 IRON-9 v2 同源且部分代码共享）。
 
 **OS-TEST-007**：每个 `kunit_suite` 的 `name` 字段在编译单元内必须唯一；跨子仓的命名冲突由 CI 第 7 层（单元测试层）静态检查报告。
 
@@ -260,10 +260,10 @@ config AGENTSIPC_KUNIT_TEST
     depends on AGENTSIPC && KUNIT
     help
       KUnit tests for AgentsIPC 128B header & payload protocol.
-      Required by AirymaxOS 7-layer verification L7.
+      Required by agentrt-liunx 7-layer verification L7.
 ```
 
-**OS-STD-002**：所有 AirymaxOS 子仓的 KUnit 测试必须 `default KUNIT_ALL_TESTS`，与上游约定一致；CI 默认开 `CONFIG_KUNIT_ALL_TESTS=y`，开发者按需关闭。
+**OS-STD-002**：所有 agentrt-liunx 子仓的 KUnit 测试必须 `default KUNIT_ALL_TESTS`，与上游约定一致；CI 默认开 `CONFIG_KUNIT_ALL_TESTS=y`，开发者按需关闭。
 
 **OS-KER-003**：禁止在 `defconfig` 中默认开启 `CONFIG_KUNIT_EXAMPLE_TEST`（仅示例，无产品价值）；该开关仅供新开发者学习使用。
 
@@ -285,9 +285,9 @@ KUnit 遵循 Test Anything Protocol（http://testanything.org/）。每行形如
 
 上游 KUnit 框架本体位于 `lib/kunit/`（`test.c`/`assert.c`/`executor.c`/`try-catch.c`/`kunit-example-test.c`/`kunit-test.c`）；公共头位于 `include/kunit/`（`test.h`/`assert.h`/`resource.h`/`static_stub.h`）。各子系统测试与被测源码同目录：`drivers/foo/foo.c` 配套 `drivers/foo/foo_test.c`。
 
-### 9.1 AirymaxOS 子仓组织与 Makefile
+### 9.1 agentrt-liunx 子仓组织与 Makefile
 
-AirymaxOS 子仓遵循同目录原则：`airymaxos-kernel/airymaxos/agentsipc/agentsipc.c` 配套 `agentsipc_test.c`；`microcorert_sched.c` 配套 `microcorert_sched_test.c`（MicroCoreRT 调度算法）；`memoryrovol_l2.c` 配套 `memoryrovol_l2_test.c`（记忆演化 L1→L2）。
+agentrt-liunx 子仓遵循同目录原则：`airymaxos-kernel/airymaxos/agentsipc/agentsipc.c` 配套 `agentsipc_test.c`；`microcorert_sched.c` 配套 `microcorert_sched_test.c`（MicroCoreRT 调度算法）；`memoryrovol_l2.c` 配套 `memoryrovol_l2_test.c`（记忆演化 L1→L2）。
 
 ```makefile
 # airymaxos-kernel/airymaxos/agentsipc/Makefile
@@ -296,15 +296,15 @@ obj-$(CONFIG_AGENTSIPC_KUNIT_TEST) += agentsipc_test.o
 agentsipc_test-y := agentsipc_test.o agentsipc_header_test.o
 ```
 
-**OS-KER-004**：AirymaxOS KUnit 测试文件必须与被测源码同目录同名加 `_test` 后缀；禁止集中放于 `tests/` 目录（违反 in-tree 原则，导致测试与产品代码漂移）。
+**OS-KER-004**：agentrt-liunx KUnit 测试文件必须与被测源码同目录同名加 `_test` 后缀；禁止集中放于 `tests/` 目录（违反 in-tree 原则，导致测试与产品代码漂移）。
 
 **OS-STD-004**：测试目标 `obj-$(CONFIG_*_KUNIT_TEST)` 必须 `depends on` 对应产品模块 `CONFIG_*`，避免在模块未编译时测试独立报错。
 
 ---
 
-## 10. AirymaxOS 专属扩展：Agent 契约测试
+## 10. agentrt-liunx 专属扩展：Agent 契约测试
 
-AirymaxOS 在 Linux 6.6 内核基线 KUnit 之上扩展 Agent 契约测试（README 第 1.2 节 L8 层），但严格遵循 IRON-9 v2 同源且部分代码共享：所有扩展作为独立套件注入，不修改上游 KUnit 框架。
+agentrt-liunx 在 Linux 6.6 内核基线 KUnit 之上扩展 Agent 契约测试（README 第 1.2 节 L8 层），但严格遵循 IRON-9 v2 同源且部分代码共享：所有扩展作为独立套件注入，不修改上游 KUnit 框架。
 
 ```c
 /* airymaxos-cognition/cognition_test.c */
@@ -335,7 +335,7 @@ kunit_test_suite(airymax_cognition_suite);
 MODULE_LICENSE("GPL v2");
 ```
 
-**OS-TEST-011**：所有 AirymaxOS Agent SDK 接口必须有 KUnit 契约测试；契约测试覆盖正常路径 + 至少 1 个异常路径 + 至少 1 个边界路径。
+**OS-TEST-011**：所有 agentrt-liunx Agent SDK 接口必须有 KUnit 契约测试；契约测试覆盖正常路径 + 至少 1 个异常路径 + 至少 1 个边界路径。
 
 ### 10.1 五维原则映射
 
@@ -348,7 +348,7 @@ MODULE_LICENSE("GPL v2");
 | **S-1 反馈闭环** | UML 毫秒级反馈 + TAP CI 解析（OS-TEST-010） |
 | **K-1 内核优先** | KUnit 直接调内核函数，不经 syscall 边界 |
 | **K-3 协议优先** | AgentsIPC 128B 协议通过 KUnit 契约测试固化 |
-| **IRON-9 v2 同源且部分代码共享** | AirymaxOS 扩展套件独立注入，不改上游（OS-KER-002/004） |
+| **IRON-9 v2 同源且部分代码共享** | agentrt-liunx 扩展套件独立注入，不改上游（OS-KER-002/004） |
 
 > Airymax 五维正交 24 原则要求各维度的强制规则两两正交，避免一条规则同时承担多个原则的检查职责，从而保证评审清单可独立执行。
 
@@ -368,9 +368,9 @@ agentrt 7 层验证与本卷的对应关系：
 | L6 形式化 | 关键路径证明 | 10-formal-verification（非本卷） |
 | L7 模糊 | 输入边界 | 09-fuzz-testing（非本卷） |
 
-**OS-KER-005**：agentrt L1（白盒单元）的所有用例必须用 KUnit 实现；与上游 KUnit 共享同一 `.kunit_test_suites` ELF section，禁止 AirymaxOS 自建独立运行器。
+**OS-KER-005**：agentrt L1（白盒单元）的所有用例必须用 KUnit 实现；与上游 KUnit 共享同一 `.kunit_test_suites` ELF section，禁止 agentrt-liunx 自建独立运行器。
 
-**OS-KER-006**：agentrt 与 AirymaxOS 之间的 KUnit 套件命名空间必须正交（`airymax_*` vs `agentrt_*` 前缀），由 CI 静态检查器（第 7 层）执行命名冲突检测。
+**OS-KER-006**：agentrt 与 agentrt-liunx 之间的 KUnit 套件命名空间必须正交（`airymax_*` vs `agentrt_*` 前缀），由 CI 静态检查器（第 7 层）执行命名冲突检测。
 
 ### 11.1 CI 集成
 
@@ -383,9 +383,9 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 ./tools/testing/kunit/kunit.py parse < results.tap          # 解析 TAP 结果
 ```
 
-**OS-STD-005**：CI 第 7 层（单元测试层）必须运行 `make ARCH=um kunit.run` 全量套件，且 `kunit.filter_glob=airymax_*` 单独运行 AirymaxOS 套件以隔离命名空间。
+**OS-STD-005**：CI 第 7 层（单元测试层）必须运行 `make ARCH=um kunit.run` 全量套件，且 `kunit.filter_glob=airymax_*` 单独运行 agentrt-liunx 套件以隔离命名空间。
 
-**OS-TEST-012**：PR 引入新 KUnit 套件时，CI 必须对比 PR 前后的 TAP 用例数；新增套件必须使 AirymaxOS 总用例数单调递增（不可因重构而静默删除套件）。
+**OS-TEST-012**：PR 引入新 KUnit 套件时，CI 必须对比 PR 前后的 TAP 用例数；新增套件必须使 agentrt-liunx 总用例数单调递增（不可因重构而静默删除套件）。
 
 ---
 
@@ -396,7 +396,7 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 - `80-testing/03-kernel-selftests.md`（`lib/test_*` 内核自检）
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证体系，本卷属第 7 层）
 - `50-engineering-standards/01-coding-standards.md`（错误处理强制，KUnit 断言与之对齐）
-- `20-modules/08-tests.md`（tests 子仓设计，AirymaxOS 测试代码组织）
+- `20-modules/08-tests.md`（tests 子仓设计，agentrt-liunx 测试代码组织）
 - `110-security/README.md`（安全测试，复用 KUnit 框架）
 
 ### 12.1 上游参考
@@ -412,22 +412,22 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 
 | 版本 | 日期 | 维护者 | 变更 |
 |------|------|--------|------|
-| 0.1.1 | 2026-07-06 | AirymaxOS 工程组 | 初始占位版（仅 README + 01 + 02） |
-| 1.0.1 | 2026-07-06 | AirymaxOS 工程组 | 开发版：补全 AirymaxOS 扩展章节、CI 集成、五维原则映射 |
+| 0.1.1 | 2026-07-06 | agentrt-liunx 工程组 | 初始占位版（仅 README + 01 + 02） |
+| 1.0.1 | 2026-07-06 | agentrt-liunx 工程组 | 开发版：补全 agentrt-liunx 扩展章节、CI 集成、五维原则映射 |
 
 ### 13.1 维护规则
 
 - 本卷与 Linux 6.6 内核基线 KUnit 框架保持源码同源（IRON-9 v2 同源且部分代码共享）。
 - 上游 KUnit API 变更时，本卷必须在 1 个上游 LTS 周期内同步更新。
-- AirymaxOS 扩展套件的新增/删除必须同步更新本卷第 10 节与 `80-testing/README.md` 的 L8 章节。
+- agentrt-liunx 扩展套件的新增/删除必须同步更新本卷第 10 节与 `80-testing/README.md` 的 L8 章节。
 - 本卷所有规则编号（OS-KER-XXX/OS-STD-XXX/OS-TEST-XXX）注册于 07 维护者制度的"规则编号注册表"。
 
 ### 13.2 待办（1.0.1 版本）
 
-- [ ] 补充 KUnit 静态桩（`kunit_activate_static_stub`）与 AirymaxOS Agent 调用桩的集成示例
+- [ ] 补充 KUnit 静态桩（`kunit_activate_static_stub`）与 agentrt-liunx Agent 调用桩的集成示例
 - [ ] 补充 KUnit 与 KCOV 覆盖度联用（与 06-coverage-metrics 联动）
 - [ ] 补充 KUnit 套件速度属性（`KUNIT_SPEED_SLOW`/`KUNIT_SPEED_VERY_SLOW`）的 CI 调度策略
 
 ---
 
-> **文档结束** | AirymaxOS 测试工程第 1 卷（KUnit 框架详解）| 0.1.1 P0 优先完成 | 同源 Linux 6.6 内核基线 KUnit
+> **文档结束** | agentrt-liunx 测试工程第 1 卷（KUnit 框架详解）| 0.1.1 P0 优先完成 | 同源 Linux 6.6 内核基线 KUnit

@@ -1,7 +1,7 @@
-# 五维正交 24 原则与 AirymaxOS 落地映射
+# agentrt-liunx（AirymaxOS）五维正交 24 原则与落地映射
 
-> **文档定位**: AirymaxOS 架构设计原则的完整定义与落地映射
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）架构设计原则的完整定义与落地映射
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **父文档**: [架构设计](README.md)
 > **原则来源**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
@@ -10,13 +10,13 @@
 
 ## 1. 五维正交 24 原则概览
 
-AirymaxOS 架构设计基于体系并行论（Multibody Cybernetic Intelligent System），具体实例化为五维正交系统。每个维度对应一类核心设计原则，共 24 条原则覆盖 AirymaxOS 设计的所有关键方面。
+agentrt-liunx 架构设计基于体系并行论（Multibody Cybernetic Intelligent System），具体实例化为五维正交系统。每个维度对应一类核心设计原则，共 24 条原则覆盖 agentrt-liunx 设计的所有关键方面。
 
 ### 1.1 五维正交 24 原则概览表
 
 | 维度 | 核心问题 | 原则数量 | 核心思想 |
 |------|----------|----------|----------|
-| 系统观 (System) | AirymaxOS 作为复杂自适应系统，如何维持动态平衡？ | 4 项 (S-1~S-4) | 反馈闭环、层次分解、总体设计部、涌现性管理 |
+| 系统观 (System) | agentrt-liunx 作为复杂自适应系统，如何维持动态平衡？ | 4 项 (S-1~S-4) | 反馈闭环、层次分解、总体设计部、涌现性管理 |
 | 内核观 (Kernel) | 内核应该做什么，不应该做什么？ | 4 项 (K-1~K-4) | 内核极简、接口契约化、服务隔离、可插拔策略 |
 | 认知观 (Cognition) | 智能体如何高效、可靠地进行认知决策？ | 4 项 (C-1~C-4) | 认知层双思考功能、增量演化、记忆卷载、遗忘机制 |
 | 工程观 (Engineering) | 如何构建可维护、可测试、可演进的工程系统？ | 8 项 (E-1~E-8) | 安全内生、可观测性、资源确定性、跨平台一致性、命名语义化、错误可追溯、文档即代码、可测试性 |
@@ -43,9 +43,9 @@ AirymaxOS 架构设计基于体系并行论（Multibody Cybernetic Intelligent S
 
 ---
 
-## 2. 系统观 S-1~S-4 + AirymaxOS 落地映射
+## 2. 系统观 S-1~S-4 + agentrt-liunx 落地映射
 
-> 维度一回答：AirymaxOS 作为复杂自适应系统，如何维持动态平衡？
+> 维度一回答：agentrt-liunx 作为复杂自适应系统，如何维持动态平衡？
 
 ### 2.1 S-1 反馈闭环原则
 
@@ -58,7 +58,7 @@ AirymaxOS 架构设计基于体系并行论（Multibody Cybernetic Intelligent S
 - 安全反馈：审计日志 → 权限规则动态更新
 - 健康反馈：指标采集 → 自动伸缩
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 反馈类型 | 实现机制 |
 |---------------|----------|----------|
@@ -72,7 +72,7 @@ AirymaxOS 架构设计基于体系并行论（Multibody Cybernetic Intelligent S
 
 **核心要点**：复杂系统必须按层次分解，每层只依赖其直接下层的抽象接口，从不越级访问。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 层次 | 依赖关系 |
 |---------------|------|----------|
@@ -92,7 +92,7 @@ AirymaxOS 架构设计基于体系并行论（Multibody Cybernetic Intelligent S
 
 **核心要点**：存在一个只做协调、不做执行的全局决策层。它分解任务但不执行任务，选择策略但不实现策略。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 角色 | 职责边界 |
 |---------------|------|----------|
@@ -109,7 +109,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：通过良好的模块交互设计，使系统整体产生超越部分之和的涌现行为，同时抑制负面涌现（如级联故障、资源饥饿）。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 涌现类型 | 管理机制 |
 |---------------|----------|----------|
@@ -122,7 +122,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 ---
 
-## 3. 内核观 K-1~K-4 + AirymaxOS 落地映射
+## 3. 内核观 K-1~K-4 + agentrt-liunx 落地映射
 
 > 维度二回答：内核应该做什么，不应该做什么？
 
@@ -130,7 +130,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：内核只保留不可再分的原子机制。一切可以在用户态实现的功能，都必须在用户态实现。遵循 Liedtke minimality principle。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 极简边界 | 不负责 |
 |---------------|----------|--------|
@@ -149,7 +149,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：所有跨模块交互必须通过明确定义的接口进行。接口是模块间的法律契约：签名、语义、所有权、线程安全性、错误处理，缺一不可。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 契约载体 | 契约内容 |
 |---------------|----------|----------|
@@ -171,7 +171,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：所有用户态服务作为独立守护进程运行，通过系统调用与内核交互。服务之间不直接通信，必须经过内核路由。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 守护进程 | 隔离机制 |
 |---------------|----------|----------|
@@ -190,7 +190,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：所有算法选择（规划、协同、调度、遗忘、检索、净化）都设计为可运行时替换的策略接口。策略是系统的"可调参数"。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 策略维度 | 可选实现 |
 |---------------|----------|----------|
@@ -204,7 +204,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 ---
 
-## 4. 认知观 C-1~C-4 + AirymaxOS 落地映射
+## 4. 认知观 C-1~C-4 + agentrt-liunx 落地映射
 
 > 维度三回答：如何让智能体既高效又可靠？
 
@@ -212,7 +212,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：系统的每个认知环节都设计快慢两条路径。System 1 处理高频低复杂度任务，System 2 处理低频高复杂度任务。两者协同而非互斥。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | System 1（快） | System 2（慢） |
 |---------------|-----------------|-----------------|
@@ -234,7 +234,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：智能体不应一次性规划全部步骤，而应分阶段规划、根据执行反馈动态调整。这避免了长序列任务中的错误累积。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 增量演化机制 | 实现要点 |
 |---------------|--------------|----------|
@@ -247,7 +247,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：记忆不是简单的存储与检索，而是从原始经验中逐层提炼出可复用的知识模式。这一过程类比 CNN 的层级特征提取。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 层级 | 输入 | 输出 | 神经科学对应 |
 |---------------|------|------|------|--------------|
@@ -264,7 +264,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：遗忘不是缺陷，而是记忆系统的核心功能。它裁剪冗余、抑制噪声、保留精华。好的遗忘机制使系统保持高效和可维护。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 遗忘策略 | 公式 | 适用场景 |
 |---------------|----------|------|----------|
@@ -281,7 +281,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 ---
 
-## 5. 工程观 E-1~E-8 + AirymaxOS 落地映射
+## 5. 工程观 E-1~E-8 + agentrt-liunx 落地映射
 
 > 维度四回答：如何构建可维护、可测试、可演进的工程系统？
 
@@ -289,13 +289,13 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：安全不是附加层，而是内嵌于系统设计的每一个环节。从内核到服务层，从编译时到运行时，安全机制无处不在。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 安全机制 | 实现要点 |
 |---------------|----------|----------|
 | airymaxos-security capability（seL4 风格） | 不可伪造令牌 | capability 系统控制资源访问，无 capability 即无访问 |
 | airymaxos-security LSM | Linux Security Module | SELinux + capability 双重保护 |
-| airymaxos-security 国密算法 | SM2/SM3/SM4 | 兼容 AirymaxOS 国密规范 |
+| airymaxos-security 国密算法 | SM2/SM3/SM4 | 兼容 agentrt-liunx 国密规范 |
 | airymaxos-security 机密计算 | TEE / SGX | 敏感计算在可信执行环境 |
 | airymaxos-security 审计哈希链 | SHA-256 哈希链 | 不可篡改审计日志 |
 | airymaxos-security Seccomp + CFI | 运行时保护 | 系统调用过滤 + 控制流完整性 |
@@ -305,7 +305,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：系统必须提供完整的可观测性：指标（Metrics）、追踪（Traces）、日志（Logs）、健康检查（Health）。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 可观测性类型 | 实现机制 |
 |---------------|--------------|----------|
@@ -320,7 +320,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：每块内存的分配者必须明确其释放者。每个文件句柄的打开者必须明确其关闭者。每个线程的创建者必须明确其销毁者。资源的生命周期必须是确定性的。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 资源类型 | 确定性机制 |
 |---------------|----------|------------|
@@ -334,21 +334,21 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：核心业务逻辑与平台无关。平台差异通过抽象层屏蔽，业务代码永远不直接调用平台 API。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
-| 维度 | agentrt | AirymaxOS |
+| 维度 | agentrt | agentrt-liunx |
 |------|---------|-----------|
 | 平台支持 | Linux / macOS / Windows 跨平台 | 仅 Linux 6.6 内核基线 |
 | 一致性方向 | 跨平台用户态运行时 | Linux 专属优化 |
-| 关系 | AirymaxOS 是 agentrt 的最佳载体 | 同源天然适配，无适配层 |
+| 关系 | agentrt-liunx 是 agentrt 的最佳载体 | 同源天然适配，无适配层 |
 
-**说明**：agentrt 是跨平台用户态运行时，承担跨平台一致性责任；AirymaxOS 是 Linux 专属优化发行版，专注于 Linux 6.6 内核基线的极致性能。两者同源，agentrt 在 AirymaxOS 上运行天然契合。
+**说明**：agentrt 是跨平台用户态运行时，承担跨平台一致性责任；agentrt-liunx 是 Linux 专属优化发行版，专注于 Linux 6.6 内核基线的极致性能。两者同源，agentrt 在 agentrt-liunx 上运行天然契合。
 
 ### 5.5 E-5 命名语义化原则
 
 **核心要点**：名称即文档。函数名、类型名、变量名必须精确表达其语义。好的命名让代码自解释，减少对注释的依赖。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
@@ -362,7 +362,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：每个错误必须可追溯到其根源。错误码、错误消息、调用栈、上下文信息，缺一不可。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 错误追溯机制 | 实现要点 |
 |---------------|--------------|----------|
@@ -376,11 +376,11 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：文档与代码同步更新。过时的文档比没有文档更糟糕。文档必须作为代码的一部分进行版本控制和审查。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 文档体系 | 位置 | 内容 |
 |----------|------|------|
-| docs/AirymaxAgentOS/ | AirymaxOS 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
+| docs/AirymaxAgentOS/ | agentrt-liunx 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
 | docs/ARCHITECTURAL_PRINCIPLES.md | 架构原则 | 五维正交 24 原则 |
 | docs/Capital_Specifications/coding_standard/ | 编码规范 | 15 个规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
@@ -390,7 +390,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：测试不是事后补充，而是设计的首要考量。每个组件在设计时就必须考虑其可测试性，通过测试驱动设计确保代码的正确性和可维护性。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 测试类型 | 工具 | 覆盖率目标 |
 |---------------|----------|------|------------|
@@ -404,7 +404,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 ---
 
-## 6. 设计美学 A-1~A-4 + AirymaxOS 落地映射
+## 6. 设计美学 A-1~A-4 + agentrt-liunx 落地映射
 
 > 维度五回答：如何让工程本身成为艺术？
 
@@ -412,7 +412,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：用最少的接口提供最大的价值。复杂性不是能力的证明，而是设计的失败。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 简约维度 | 体现 |
 |---------------|----------|------|
@@ -426,7 +426,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：细节决定成败。错误消息、日志格式、API 命名，每个细节都反映工程品质。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 细节维度 | 体现 |
 |---------------|----------|------|
@@ -441,7 +441,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：技术服务于人。开发者体验与用户体验同等重要。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 人文维度 | 体现 |
 |---------------|----------|------|
@@ -455,7 +455,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 **核心要点**：不接受"足够好"。代码质量、测试覆盖、文档完整性，每个方面都追求完美。
 
-**AirymaxOS 落地映射**：
+**agentrt-liunx 落地映射**：
 
 | 落地子仓/模块 | 完美维度 | 体现 |
 |---------------|----------|------|
@@ -548,9 +548,9 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 ## 8. 相关文档
 
 - [架构设计 README](README.md)：架构设计层总览
-- [系统架构](01-system-architecture.md)：AirymaxOS 系统架构总览
+- [系统架构](01-system-architecture.md)：agentrt-liunx 系统架构总览
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
-- [工程基线](04-engineering-baseline.md)：AirymaxOS 工程基线
+- [工程基线](04-engineering-baseline.md)：agentrt-liunx 工程基线
 - [架构决策记录](05-adrs.md)：10 个核心 ADR
 - [架构原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
 
@@ -560,7 +560,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.1.1 | 2026-07-06 | 初始版本（含 24 原则 + AirymaxOS 落地映射） |
+| 0.1.1 | 2026-07-06 | 初始版本（含 24 原则 + agentrt-liunx 落地映射） |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步验证） |
 
 ---

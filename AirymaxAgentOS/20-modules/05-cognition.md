@@ -1,6 +1,6 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 认知设计文档（airymaxos-cognition，极境认知）
+# agentrt-liunx（AirymaxOS）认知设计文档（airymaxos-cognition，极境认知）
 
 > **子仓编号**：05
 > **子仓代号**：极境认知（Airymax Cognition）
@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [4. 核心特性](#4-核心特性)
 - [5. 微内核思想体现](#5-微内核思想体现)
 - [6. IRON-9 v2 三层共享模型落地](#6-iron-9-v2-三层共享模型落地)
-- [7. AirymaxOS 工程基线](#7-airymaxos-工程基线)
+- [7. agentrt-liunx 工程基线](#7-agentrt-liunx-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
 - [10. 里程碑（M0-M8）](#10-里程碑m0-m8)
@@ -32,20 +32,20 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 子仓职责
 
-`airymaxos-cognition` 是 AirymaxOS 的认知与 AI 推理子仓，承担以下核心职责：
+`airymaxos-cognition` 是 agentrt-liunx（AirymaxOS）的认知与 AI 推理子仓，承担以下核心职责：
 
 1. **CoreLoopThree kthread 实现 [SS]**：将 agentrt 的 CoreLoopThree（三层认知循环）升级为 OS 级 kthread 实现，提供 Agent 认知循环的内核态加速。阶段枚举与上下文结构 [SC] 与 agentrt 共享。
 2. **Thinkdual 双思考系统内核态加速 [SS]**：将 agentrt 的 Thinkdual（双思考系统）通过内核态加速提升响应速度。模式枚举 [SC] 与 agentrt 共享。
 3. **Wasm runtime 3.0 [IND]**：集成 Wasm 3.0 runtime，提供安全沙箱执行环境。
-4. **LLM 推理感知调度 [SS]**：基于 AirymaxOS 认知中枢，实现 LLM 推理任务的感知调度。推理阶段枚举 [SC] 与 agentrt 共享。
+4. **LLM 推理感知调度 [SS]**：基于 agentrt-liunx 认知中枢，实现 LLM 推理任务的感知调度。推理阶段枚举 [SC] 与 agentrt 共享。
 5. **GPU/NPU 调度与池化 [IND]**：统一调度 GPU/NPU 异构算力，基于 Linux 6.6 加速器框架（`drivers/accel/`）与 DRM 调度器（`drivers/gpu/drm/scheduler/`）。
 6. **Token 能效优化 [IND]**：参考 KVC-Gateway + LMCache + Bifrost 优化 Token 能效。能效指标结构 [SC] 与 agentrt 共享。
-7. **超节点沙箱 [IND]**：基于 AirymaxOS 超节点 OS，实现软硬协同优化镜像快照。
-8. **具身智能支持 [IND]**：基于 AirymaxOS Claw 提供具身智能运行时支持。
+7. **超节点沙箱 [IND]**：基于 agentrt-liunx 超节点 OS，实现软硬协同优化镜像快照。
+8. **具身智能支持 [IND]**：基于 agentrt-liunx Claw 提供具身智能运行时支持。
 
 ### 1.1 横切关注点声明
 
-认知循环贯穿 AirymaxOS 全部 4 大数据流：
+认知循环贯穿 agentrt-liunx 全部 4 大数据流：
 
 | 数据流 | 认知切入点 | 同源标注 |
 |--------|-----------|----------|
@@ -58,7 +58,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v2 三层共享模型）
 
-依据 IRON-9 v2 决策，agentrt（用户态 coreloopthree）与 AirymaxOS（内核态 airymaxos-cognition）通过三层共享模型协作：
+依据 IRON-9 v2 决策，agentrt（用户态 coreloopthree）与 agentrt-liunx（内核态 airymaxos-cognition）通过三层共享模型协作：
 
 | 层次 | 共享程度 | 认知子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
@@ -68,7 +68,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 维度对比
 
-| 维度 | agentrt（coreloopthree + frameworks） | AirymaxOS（airymaxos-cognition） | 同源标注 |
+| 维度 | agentrt（coreloopthree + frameworks） | agentrt-liunx（airymaxos-cognition） | 同源标注 |
 |------|--------------------------------------|-------------------------------|----------|
 | 认知循环 | CoreLoopThree（用户态） | CoreLoopThree kthread（内核态） | [SS] |
 | 双思考 | Thinkdual（用户态） | Thinkdual 内核态加速 | [SS] |
@@ -136,7 +136,7 @@ airymaxos-cognition/
 
 ### 3.4 llm-scheduler/（LLM 推理感知调度）[SS]
 
-基于 **AirymaxOS 认知中枢**，推理阶段枚举 [SC] 共享：
+基于 **agentrt-liunx 认知中枢**，推理阶段枚举 [SC] 共享：
 
 - `inference-aware`：推理感知调度器（识别 LLM 推理阶段）[SC] PREFILL/DECODE/SPECULATIVE。
 - `kv-cache-aware`：KV Cache 感知调度。
@@ -168,7 +168,7 @@ airymaxos-cognition/
 
 ### 3.7 super-node-sandbox/（超节点沙箱）[IND]
 
-基于 **AirymaxOS 超节点 OS**：
+基于 **agentrt-liunx 超节点 OS**：
 
 - `snapshot`：镜像快照（软硬协同优化，基于 userfaultfd）。
 - `restore`：快照恢复（基于 userfaultfd）。
@@ -178,7 +178,7 @@ airymaxos-cognition/
 
 ### 3.8 embodied-ai/（具身智能支持）[IND]
 
-基于 **AirymaxOS Claw**：
+基于 **agentrt-liunx Claw**：
 
 - `sensor-hub`：传感器数据汇聚。
 - `motor-control`：运动控制接口。
@@ -259,7 +259,7 @@ typedef enum {
 - 资源限制（fuel metering）。
 - 与 `airymaxos-security/sandbox` 协作。
 
-### 4.4 LLM 推理感知调度（基于 AirymaxOS 认知中枢）[SS]
+### 4.4 LLM 推理感知调度（基于 agentrt-liunx 认知中枢）[SS]
 
 **推理阶段枚举** [SC] 共享：
 
@@ -340,15 +340,15 @@ typedef struct agentrt_token_efficiency_metric {
 
 ### 4.7 超节点沙箱（软硬协同优化镜像快照）[IND]
 
-基于 **AirymaxOS 超节点 OS**：
+基于 **agentrt-liunx 超节点 OS**：
 - 镜像快照：基于 userfaultfd 与 CXL 实现快速快照。
 - 快速克隆：COW 共享内存，秒级克隆。
 - 跨节点迁移：基于 MemoryRovol 迁移。
 - NUMA 感知调度：优先本地节点调度。
 
-### 4.8 具身智能支持（基于 AirymaxOS Claw）[IND]
+### 4.8 具身智能支持（基于 agentrt-liunx Claw）[IND]
 
-基于 **AirymaxOS Claw** 具身智能框架：
+基于 **agentrt-liunx Claw** 具身智能框架：
 - 传感器数据汇聚：多模态传感器接入。
 - 运动控制接口：标准化的运动控制 API。
 - 实时控制循环：硬实时保证（与 sched_ext sub-scheduler 协作）。
@@ -390,7 +390,7 @@ typedef struct agentrt_token_efficiency_metric {
 
 ### 6.1 [SC] 共享契约层——`include/airymax/cognition_types.h`
 
-本头文件完全共享代码，agentrt 用户态与 AirymaxOS 内核态两端直接 include。内容清单：
+本头文件完全共享代码，agentrt 用户态与 agentrt-liunx 内核态两端直接 include。内容清单：
 
 | 内容 | 说明 |
 |------|------|
@@ -405,7 +405,7 @@ typedef struct agentrt_token_efficiency_metric {
 
 API 签名同源，实现独立：
 
-| 序号 | API | 语义 | agentrt 实现 | AirymaxOS 实现 |
+| 序号 | API | 语义 | agentrt 实现 | agentrt-liunx 实现 |
 |------|-----|------|-------------|---------------|
 | 1 | `coreloopthree_run()` | 运行一个认知循环 | 用户态循环 | 内核 kthread 循环 |
 | 2 | `coreloopthree_notify_phase()` | 阶段通知 | 用户态回调 | sched_ext 接口 |
@@ -422,10 +422,10 @@ API 签名同源，实现独立：
 |------|------|-----------|
 | 1 | Wasm runtime 完整实现 | wasmtime（用户态）vs WAMR（内核态），运行时差异大 |
 | 2 | GPU/NPU 驱动实现 | 厂商驱动各平台独立（habanalabs/ivpu/qaic） |
-| 3 | 超节点沙箱实现 | 依赖 userfaultfd + CXL，仅 AirymaxOS 内核态 |
-| 4 | 具身智能框架（Claw） | 依赖硬件传感器，仅 AirymaxOS |
-| 5 | KVC-Gateway/LMCache/Bifrost 集成 | 用户态库集成，agentrt 与 AirymaxOS 各自集成 |
-| 6 | CoreLoopThree kthread 内核态实现 | `kthread_run()` 机制仅 AirymaxOS 内核态 |
+| 3 | 超节点沙箱实现 | 依赖 userfaultfd + CXL，仅 agentrt-liunx 内核态 |
+| 4 | 具身智能框架（Claw） | 依赖硬件传感器，仅 agentrt-liunx |
+| 5 | KVC-Gateway/LMCache/Bifrost 集成 | 用户态库集成，agentrt 与 agentrt-liunx 各自集成 |
+| 6 | CoreLoopThree kthread 内核态实现 | `kthread_run()` 机制仅 agentrt-liunx 内核态 |
 
 ### 6.4 跨态协作流
 
@@ -434,7 +434,7 @@ sequenceDiagram
     participant AGENT as Agent 进程
     participant CLT_U as agentrt CoreLoopThree (用户态)
     participant IPC as io_uring / AgentsIPC
-    participant CLT_K as AirymaxOS CoreLoopThree kthread (内核态)
+    participant CLT_K as agentrt-liunx CoreLoopThree kthread (内核态)
     participant SCHED as sched_ext sub-scheduler
     participant GPU as GPU/NPU 设备
 
@@ -455,12 +455,12 @@ sequenceDiagram
 
 ---
 
-## 7. AirymaxOS 工程基线
+## 7. agentrt-liunx 工程基线
 
-- **AirymaxOS 认知中枢**：AI 原生调度框架基线。
-- **AirymaxOS 超节点 OS**：超节点沙箱基线。
-- **AirymaxOS 具身智能（Claw）**：具身智能运行时基线。
-- **AirymaxOS AI 原生**：AI 原生 OS 设计哲学基线。
+- **agentrt-liunx 认知中枢**：AI 原生调度框架基线。
+- **agentrt-liunx 超节点 OS**：超节点沙箱基线。
+- **agentrt-liunx 具身智能（Claw）**：具身智能运行时基线。
+- **agentrt-liunx AI 原生**：AI 原生 OS 设计哲学基线。
 - **Linux 6.6 kthread 机制**：`kernel/kthread.c`（1562 行）kthread 创建/停止/绑定。
 - **Linux 6.6 加速器框架**：`drivers/accel/`（含 habanalabs/ivpu/qaic）。
 - **Linux 6.6 DRM 调度器**：`drivers/gpu/drm/scheduler/`（`drm_sched` 通用 GPU 调度）。
@@ -538,7 +538,7 @@ sequenceDiagram
 
 对 agentrt coreloopthree + frameworks 设计进行一致性检查，确认两端在 IRON-9 v2 三层共享模型下无冲突：
 
-| 序号 | 检查项 | agentrt 状态 | AirymaxOS 状态 | 结论 |
+| 序号 | 检查项 | agentrt 状态 | agentrt-liunx 状态 | 结论 |
 |------|--------|-------------|---------------|------|
 | 1 | CoreLoopThree 阶段枚举一致性 | 3 阶段（PERCEPTION/THINKING/ACTION） | 3 阶段（同） | ✅ PASS [SC] |
 | 2 | Thinkdual 模式枚举一致性 | 2 模式（SYSTEM1_FAST/SYSTEM2_SLOW） | 2 模式（同） | ✅ PASS [SC] |
@@ -579,9 +579,9 @@ sequenceDiagram
 
 ## 13. 参考
 
-- AirymaxOS 认知中枢文档
-- AirymaxOS 超节点 OS 文档
-- AirymaxOS Claw 具身智能文档
+- agentrt-liunx 认知中枢文档
+- agentrt-liunx 超节点 OS 文档
+- agentrt-liunx Claw 具身智能文档
 - Linux 6.6 `kernel/kthread.c`（kthread 机制，1562 行）
 - Linux 6.6 `include/linux/kthread.h`（kthread API，227 行）
 - Linux 6.6 `drivers/accel/`（加速器框架，含 habanalabs/ivpu/qaic）

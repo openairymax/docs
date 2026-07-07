@@ -1,9 +1,9 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 测试体系设计
+# agentrt-liunx（AirymaxOS）测试体系设计
 
-> **文档定位**: AirymaxOS（agentrt-linux）测试工程体系主索引
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）测试工程体系主索引
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 7 层自动化验证 + Linux 6.6 测试框架（KUnit/kselftest/动态分析）
 > **理论根基**: Linux 内核测试体系 + Airymax E-8 可测试性 + A-4 完美主义
@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 模块定位
 
-AirymaxOS 测试体系是工程标准可执行性的核心保障。它继承 Linux 内核 30+ 年沉淀的多层测试哲学（KUnit 白盒 + kselftest 系统级 + 动态分析 + 静态分析 + 覆盖度量），并在其上扩展智能体操作系统专属的 Agent 行为契约测试、模糊测试、形式化验证等。
+agentrt-liunx 测试体系是工程标准可执行性的核心保障。它继承 Linux 内核 30+ 年沉淀的多层测试哲学（KUnit 白盒 + kselftest 系统级 + 动态分析 + 静态分析 + 覆盖度量），并在其上扩展智能体操作系统专属的 Agent 行为契约测试、模糊测试、形式化验证等。
 
 ### 1.1 测试体系分层
 
@@ -25,11 +25,11 @@ AirymaxOS 测试体系是工程标准可执行性的核心保障。它继承 Lin
 | L5 | 静态分析 | Sparse/Smatch/Coccinelle/clang-analyzer | 编译时 | 代码模式 |
 | L6 | 覆盖度量 | KCOV/gcov | 运行时 | 代码覆盖 |
 | L7 | ftrace 启动自检 | ftrace + ring buffer | 启动时 | 跟踪 |
-| **L8** | **Agent 契约测试** | **AirymaxOS 专属** | **秒级** | **Agent 行为** |
-| **L9** | **模糊测试** | **syzkaller + AirymaxOS 扩展** | **小时级** | **输入边界** |
+| **L8** | **Agent 契约测试** | **agentrt-liunx 专属** | **秒级** | **Agent 行为** |
+| **L9** | **模糊测试** | **syzkaller + agentrt-liunx 扩展** | **小时级** | **输入边界** |
 | **L10** | **形式化验证** | **seL4 风格 + TLA+** | **天级** | **关键路径** |
 
-### 1.2 AirymaxOS 扩展
+### 1.2 agentrt-liunx 扩展
 
 - **Agent 行为契约测试**：验证 Agent 通过 SDK 调用系统能力的契约（输入/输出/异常）
 - **Token 能效测试**：测量 Agent 工作负载的 Token 消耗与能效
@@ -130,7 +130,7 @@ int __init ftrace_startup(struct tracer *tracer, int command) {
 ├── 05-static-analysis.md           # 静态分析（Sparse/Smatch/Coccinelle）
 ├── 06-coverage-metrics.md          # 覆盖度量（KCOV/gcov）
 ├── 07-ftrace-selftest.md           # ftrace 启动自检
-├── 08-agent-contract-testing.md    # AirymaxOS 专属：Agent 行为契约测试
+├── 08-agent-contract-testing.md    # agentrt-liunx 专属：Agent 行为契约测试
 ├── 09-fuzz-testing.md              # 模糊测试（syzkaller + 扩展）
 └── 10-formal-verification.md       # 形式化验证（seL4 风格 + TLA+）
 ```
@@ -145,7 +145,7 @@ int __init ftrace_startup(struct tracer *tracer, int command) {
 
 ---
 
-## 4. AirymaxOS 专属扩展
+## 4. agentrt-liunx 专属扩展
 
 ### 4.1 Agent 行为契约测试
 
@@ -197,7 +197,7 @@ static void test_agent_cognition_contract(struct kunit *test) {
 | **A-4 完美主义** | 覆盖率门槛 + 形式化验证 |
 | **E-1 安全内生** | 动态分析强制 + 安全测试 |
 | **S-1 反馈闭环** | 测试失败即 CI 反馈 |
-| **IRON-9 同源但独立** | Agent 契约测试与 agentrt 互操作 |
+| **IRON-9 v2 同源且部分代码共享** | Agent 契约测试与 agentrt 互操作 |
 
 ---
 

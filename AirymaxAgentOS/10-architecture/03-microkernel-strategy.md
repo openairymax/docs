@@ -1,6 +1,6 @@
-# 微内核设计思想详解
+# agentrt-liunx（AirymaxOS）微内核设计思想详解
 
-> **文档定位**: AirymaxOS 微内核设计思想的深度解析
+> **文档定位**: agentrt-liunx（AirymaxOS）微内核设计思想的深度解析
 > **最后更新**: 2026-07-06
 > **理论基础**: seL4 / Zircon / Minix3 / L4
 
@@ -77,7 +77,7 @@ Process A 想访问 Process B 的服务:
 4. 没有 capability 就无法访问
 ```
 
-**AirymaxOS 落地**: airymaxos-security 实现 capability 系统，与 Cupolas 同源。
+**agentrt-liunx 落地**: airymaxos-security 实现 capability 系统，与 Cupolas 同源。
 
 ### 2.4 seL4 形式化验证
 
@@ -94,7 +94,7 @@ seL4 验证层次:
 - 具体规范 → 实现（C 代码验证）
 - 实现 → 二进制（编译器验证，包括 seL4 专用 SAML 编译器）
 
-**AirymaxOS 落地**: airymaxos-tests 实现形式化验证框架（seL4 风格）。
+**agentrt-liunx 落地**: airymaxos-tests 实现形式化验证框架（seL4 风格）。
 
 ## 3. Zircon 微内核参考
 
@@ -125,7 +125,7 @@ Process A → Channel → Process B
   └── message          └── message
 ```
 
-**AirymaxOS 落地**: airymaxos-services 实现消息传递通信（基于 io_uring）。
+**agentrt-liunx 落地**: airymaxos-services 实现消息传递通信（基于 io_uring）。
 
 ### 3.3 Zircon 用户态服务
 
@@ -136,7 +136,7 @@ Process A → Channel → Process B
 - 电源管理
 - 媒体服务
 
-**AirymaxOS 落地**: airymaxos-services 将 VFS、网络栈、驱动框架移到用户态。
+**agentrt-liunx 落地**: airymaxos-services 将 VFS、网络栈、驱动框架移到用户态。
 
 ## 4. Minix3 微内核参考
 
@@ -172,13 +172,13 @@ Process A → Channel → Process B
 └─────────────────────────────┘
 ```
 
-**AirymaxOS 落地**: airymaxos-services 参考此设计，将系统服务用户态化。
+**agentrt-liunx 落地**: airymaxos-services 参考此设计，将系统服务用户态化。
 
-## 5. AirymaxOS 微内核化改造策略
+## 5. agentrt-liunx 微内核化改造策略
 
 ### 5.1 不是从零开发微内核
 
-AirymaxOS **不是从零开发微内核**，而是基于 Linux 内核进行**微内核化改造**:
+agentrt-liunx **不是从零开发微内核**，而是基于 Linux 内核进行**微内核化改造**:
 
 | 策略 | 说明 | 理由 |
 |---|---|---|
@@ -208,7 +208,7 @@ AirymaxOS **不是从零开发微内核**，而是基于 Linux 内核进行**微
 
 ### 5.3 Linux 新特性的微内核化价值
 
-| Linux 特性 | 微内核化价值 | AirymaxOS 应用 |
+| Linux 特性 | 微内核化价值 | agentrt-liunx 应用 |
 |---|---|---|
 | **sched_ext**（6.12+）| 调度策略移到用户态（eBPF） | SCHED_AGENT |
 | **io_uring**（5.1+）| 高性能 IPC，减少 syscall | 消息传递通信 |
@@ -221,14 +221,14 @@ AirymaxOS **不是从零开发微内核**，而是基于 Linux 内核进行**微
 
 ### 5.4 微内核化改造的边界
 
-**AirymaxOS 不会移到用户态的部分**:
+**agentrt-liunx 不会移到用户态的部分**:
 - CPU 调度器核心（但策略通过 sched_ext 移到用户态）
 - 基本内存管理（页表、物理内存）
 - 中断处理核心
 - 基本同步机制（自旋锁、RCU）
 - 硬件抽象层（HAL）
 
-**AirymaxOS 会移到用户态的部分**:
+**agentrt-liunx 会移到用户态的部分**:
 - VFS（部分，参考 Fuchsia）
 - 网络栈（部分，DPDK/AF_XDP）
 - 驱动框架（部分，VFIO/libvfio）
@@ -245,12 +245,12 @@ AirymaxOS **不是从零开发微内核**，而是基于 Linux 内核进行**微
 | airymaxos-memory | 记忆作为独立服务 | Zircon VMO |
 | airymaxos-cognition | Agent 认知作为独立服务 | Airymax 原创 |
 | airymaxos-cloudnative | 云原生作为独立模块 | 现代 OS 趋势 |
-| airymaxos-system | 发行版必需工具 | AirymaxOS 发行规范 |
+| airymaxos-system | 发行版必需工具 | agentrt-liunx 发行规范 |
 | airymaxos-tests | 形式化验证 | seL4 |
 
 ## 7. 微内核 vs 宏内核对比
 
-| 维度 | 宏内核（Linux） | 微内核（seL4/Zircon） | AirymaxOS（微内核化 Linux）|
+| 维度 | 宏内核（Linux） | 微内核（seL4/Zircon） | agentrt-liunx（微内核化 Linux）|
 |---|---|---|---|
 | 内核大小 | ~30 M SLOC | ~10-12 kSLOC | Linux 内核 + 改造（中间态）|
 | IPC 性能 | 函数调用（最快） | 消息传递（seL4 接近原生）| io_uring 零拷贝（接近原生）|
@@ -259,12 +259,12 @@ AirymaxOS **不是从零开发微内核**，而是基于 Linux 内核进行**微
 | 硬件支持 | 广泛 | 有限 | Linux 硬件支持 |
 | 成熟度 | 30 年积累 | 研究为主 | 基于 Linux 成熟度 |
 
-**AirymaxOS 选择**: 微内核化 Linux，平衡微内核思想与 Linux 成熟度。
+**agentrt-liunx 选择**: 微内核化 Linux，平衡微内核思想与 Linux 成熟度。
 
 ## 8. 相关文档
 
-- [01-system-architecture.md](01-system-architecture.md): AirymaxOS 架构设计
-- [04-engineering-baseline.md](04-engineering-baseline.md): AirymaxOS 工程基线
+- [01-system-architecture.md](01-system-architecture.md): agentrt-liunx 架构设计
+- [04-engineering-baseline.md](04-engineering-baseline.md): agentrt-liunx 工程基线
 - [01-kernel.md](../20-modules/01-kernel.md): airymaxos-kernel 设计
 - [02-services.md](../20-modules/02-services.md): airymaxos-services 设计
 - [03-security.md](../20-modules/03-security.md): airymaxos-security 设计

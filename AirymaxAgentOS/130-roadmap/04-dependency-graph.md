@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 依赖关系图
+# agentrt-liunx（AirymaxOS）依赖关系图
 
-> **文档定位**: AirymaxOS（agentrt-linux，极境智能体操作系统）开发详细方案（路线图）模块第 4 文档
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS，极境智能体操作系统）开发详细方案（路线图）模块第 4 文档
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `0.1.1技术全面改进方案v3.0.md`（v4.2，§36 SP07-SP12 仓间依赖）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）
-> **核心约束**: IRON-9 同源但独立（agentrt 与 AirymaxOS 通过同源语义解耦，非代码耦合）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 与 agentrt-liunx 通过同源语义解耦，非代码耦合）
 
 ---
 
@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 依赖建模原则
 
-AirymaxOS 开发方案的依赖关系建模遵循以下原则：
+agentrt-liunx 开发方案的依赖关系建模遵循以下原则：
 
 1. **S-2 层次分解**——9 个 Part 按抽象层次组织，依赖必须自上而下，禁止循环依赖
 2. **C-2 增量演化**——每个 Part 内部必须可独立验证，依赖断裂不影响已完成 Part
@@ -155,7 +155,7 @@ graph LR
 | · 弱依赖 | 146 | 69.5% | 仅依赖接口契约，不依赖完整实施 |
 | **总计** | **210** | **100%** | — |
 
-> 注：强依赖占比仅 13.3%，说明 AirymaxOS 文档体系高度可并行化，符合 S-2 层次分解与 C-2 增量演化原则。
+> 注：强依赖占比仅 13.3%，说明 agentrt-liunx 文档体系高度可并行化，符合 S-2 层次分解与 C-2 增量演化原则。
 
 ---
 
@@ -163,7 +163,7 @@ graph LR
 
 ### 4.1 关键路径定义
 
-关键路径是依赖图中**最长**的路径，决定项目整体工期。AirymaxOS 1.0.1 的关键路径为：
+关键路径是依赖图中**最长**的路径，决定项目整体工期。agentrt-liunx 1.0.1 的关键路径为：
 
 ```
 M0（Part 1）→ M1（Part 2）→ M2/M3/M4/M5（Part 3/4/5 + 集成，并行）→ M6（Part 7）
@@ -227,7 +227,7 @@ graph LR
 
 ```mermaid
 gantt
-    title AirymaxOS 1.0.1 并行化甘特图
+    title agentrt-liunx 1.0.1 并行化甘特图
     dateFormat  YYYY-MM-DD
     axisFormat  %m-%d
     section 并行组 1
@@ -254,7 +254,7 @@ gantt
 | Part 8 + Part 9 | 5 周 | 3 周 | 40% |
 | **整体** | **~24 周** | **~14 周** | **42%** |
 
-并行化是缩短 AirymaxOS 1.0.1 工期的核心杠杆，但需注意：
+并行化是缩短 agentrt-liunx 1.0.1 工期的核心杠杆，但需注意：
 
 - 并行化要求核心团队 ≥4 人（见 03-resource-estimation.md §4.1）
 - 并行化增加跨 Part 集成调试成本（消耗 340h 缓冲中的 ~120h）
@@ -293,7 +293,7 @@ gantt
 
 - 60-驱动模型 → 多数下游：驱动模型通过 K-4 可插拔策略与下游解耦
 - 180-i18n / 190-分发：作为 P2 模块，几乎完全独立
-- 同源语义对齐：agentrt 与 AirymaxOS 通过 IRON-9 同源但独立原则解耦
+- 同源语义对齐：agentrt 与 agentrt-liunx 通过 IRON-9 v2 同源且部分代码共享原则解耦
 
 ---
 
@@ -365,7 +365,7 @@ graph TD
 | 上游 Part 延期 | Part 2 延期导致 Part 3/4/5 无法启动 | 关键路径延期 | 提前定义接口契约（README + 01 + 02） |
 | 接口契约漂移 | Part 1 工程标准变更影响下游全部 Part | 大规模返工 | OS-ACC 验收 + RFC 流程 |
 | 循环依赖引入 | Part 间出现循环依赖 | 无法并行 | 依赖图定期审查（季度） |
-| 同源 API 漂移 | agentrt API 变更影响 AirymaxOS 同源语义 | 同源对齐成本增加 | 季度同步评审 + 兼容性测试（R-005） |
+| 同源 API 漂移 | agentrt API 变更影响 agentrt-liunx 同源语义 | 同源对齐成本增加 | 季度同步评审 + 兼容性测试（R-005） |
 
 ### 8.2 依赖管理机制
 
@@ -388,7 +388,7 @@ graph TD
 | **K-2 接口契约化** | Part 间依赖通过 OS-ACC 验收标准约束，非隐式假设 | §7.2 里程碑验收 |
 | **E-3 资源确定性** | 每条依赖明确标注上游 Part 与下游影响范围 | §2.1 Part 依赖矩阵 |
 | **E-6 错误可追溯** | 依赖关系变更留 RFC 痕迹；季度审查 | §8.2 依赖管理机制 |
-| **IRON-9 同源但独立** | agentrt 与 AirymaxOS 通过同源语义解耦，非代码耦合 | §1.1 + §6.3 弱依赖 |
+| **IRON-9 v2 同源且部分代码共享** | agentrt 与 agentrt-liunx 通过同源语义解耦，非代码耦合 | §1.1 + §6.3 弱依赖 |
 
 ---
 
@@ -406,10 +406,10 @@ graph TD
 ### 10.2 同源 Airymax 文档
 
 - `docs/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则
-- `docs-closed/0.1.1工程标准规范手册.md` — 17 类规则编号体系（v28.0，含 IRON-9）
-- `docs-closed/0.1.1技术全面改进方案v3.0.md` — agentrt 三大支柱方案（v4.2，§36 SP07-SP12）
+- IRON-9 v2 工程铁律（闭源内部参考） — 17 类规则编号体系（v28.0，含 IRON-9）
+- 内部工程改进方案（闭源） — agentrt 三大支柱方案（v4.2，§36 SP07-SP12）
 
-### 10.3 AirymaxOS 工程标准
+### 10.3 agentrt-liunx 工程标准
 
 - `50-engineering-standards/README.md` — 工程标准主框架
 - `50-engineering-standards/04-engineering-philosophy.md` — 工程思想（双层稳定性 + 4 层接口分级）
@@ -420,10 +420,10 @@ graph TD
 ## 11. 文档版本与维护
 
 - **当前版本**: v1.0（2026-07-06）
-- **维护者**: AirymaxOS 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
+- **维护者**: agentrt-liunx 工程标准委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何依赖关系变更必须经过 RFC → 评审 → OS-ACC-087 验收流程
 - **回顾周期**: 里程碑回顾（每 M 完成时）+ 季度依赖图审查 + 年度大版本校准
 
 ---
 
-> **文档结束** | 共 11 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 同源但独立 | 9 Part 依赖图 + 19 模块依赖矩阵 + 关键路径
+> **文档结束** | 共 11 节 | Linux 6.6 内核基线 + 五维正交 24 原则 + IRON-9 v2 同源且部分代码共享 | 9 Part 依赖图 + 19 模块依赖矩阵 + 关键路径

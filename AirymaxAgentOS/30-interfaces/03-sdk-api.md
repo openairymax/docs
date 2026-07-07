@@ -1,7 +1,7 @@
 # SDK API
 
-> **文档定位**: AirymaxOS SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **父文档**: [接口设计](README.md)
 
@@ -9,7 +9,7 @@
 
 ## 1. SDK 4 语言矩阵
 
-AirymaxOS 提供 4 种语言的官方 SDK，统一封装 8 子仓能力，遵循同源 agentrt sdk 的"管理接口"语义，升级为 OS 级 SDK。
+agentrt-liunx 提供 4 种语言的官方 SDK，统一封装 8 子仓能力，遵循同源 agentrt sdk 的"管理接口"语义，升级为 OS 级 SDK。
 
 | 语言 | 包名 | 仓库 | 同源 agentrt | 目标用户 |
 |------|------|------|--------------|---------|
@@ -104,7 +104,7 @@ permission = safety.check_capability(
 tool = client.tool
 result = tool.execute(
     name="web_search",
-    args={"query": "AirymaxOS 认知中枢"}
+    args={"query": "agentrt-liunx 认知中枢"}
 )
 
 # ChatClient - 对话层
@@ -184,7 +184,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ToolClient - 工具层
     let tool = client.tool();
     let result = tool
-        .execute("web_search", &[("query", "AirymaxOS 认知中枢")])
+        .execute("web_search", &[("query", "agentrt-liunx 认知中枢")])
         .await?;
     println!("result={result:?}");
 
@@ -279,7 +279,7 @@ func main() {
     // ToolClient - 工具层
     tool := client.Tool()
     result, err := tool.Execute(ctx, "web_search", map[string]string{
-        "query": "AirymaxOS 认知中枢",
+        "query": "agentrt-liunx 认知中枢",
     })
     if err != nil {
         log.Fatalf("execute failed: %v", err)
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
     const tool = client.tool;
     const result = await tool.execute({
         name: "web_search",
-        args: { query: "AirymaxOS 认知中枢" },
+        args: { query: "agentrt-liunx 认知中枢" },
     });
     console.log(`result=${JSON.stringify(result)}`);
 

@@ -1,30 +1,30 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 驱动模型 — platform 总线与 SoC 设备
+# agentrt-liunx（AirymaxOS）驱动模型 — platform 总线与 SoC 设备
 
-> **文档定位**: AirymaxOS（agentrt-linux）驱动子系统 60 模块第二篇——platform 总线实例与 SoC 设备资源管理
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）驱动子系统 60 模块第二篇——platform 总线实例与 SoC 设备资源管理
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt `daemons`（用户态 SoC 适配器）+ Linux 6.6 `drivers/base/platform.c`（platform_bus_type 实现）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则
-> **核心约束**: IRON-9 同源但独立——platform 总线语义与上游一致，SoC 设备适配扩展在用户态
+> **核心约束**: IRON-9 v2 同源且部分代码共享——platform 总线语义与上游一致，SoC 设备适配扩展在用户态
 
 ---
 
 ## 1. 概述
 
-Linux 设备模型中 platform 总线是"伪总线"——它不是物理总线（如 PCI、USB），而是为 SoC 上无法被总线枚举的设备（内存映射寄存器、固定中断线）提供的"接入点"。AirymaxOS 选择 Linux 6.6 内核基线作为同源起点，platform 总线是 SoC 设备驱动的核心载体。
+Linux 设备模型中 platform 总线是"伪总线"——它不是物理总线（如 PCI、USB），而是为 SoC 上无法被总线枚举的设备（内存映射寄存器、固定中断线）提供的"接入点"。agentrt-liunx 选择 Linux 6.6 内核基线作为同源起点，platform 总线是 SoC 设备驱动的核心载体。
 
 MicroCoreRT 不在内核态处理 SoC 设备语义——这是 K-1 内核极简原则的体现。SoC 设备的"业务语义"（如哪个寄存器对应哪个 Agent 的 Token 预算计数器）由用户态 agentrt daemon 解释；内核态只提供 platform_bus 的标准匹配与资源管理。AgentsIPC 在用户态承载进程间通信，daemon 通过 sysfs 与内核 platform driver 交互。
 
-| 总线 | 设备发现方式 | 典型设备 | AirymaxOS 角色 |
+| 总线 | 设备发现方式 | 典型设备 | agentrt-liunx 角色 |
 |------|-------------|---------|----------------|
-| **platform** | DT/ACPI 静态声明 | SoC 上的 UART、I2C、GPIO | AirymaxOS SoC 适配 driver 主要载体 |
+| **platform** | DT/ACPI 静态声明 | SoC 上的 UART、I2C、GPIO | agentrt-liunx SoC 适配 driver 主要载体 |
 | PCI/USB | 总线枚举 | 网卡、显卡、NVMe | 留给通用 Linux 生态 |
 | I2C/SPI | platform driver 注册 adapter | I2C/SPI 子设备 | 传感器 driver 接入点 |
-| agent_bus | daemon 注册 | Agent 虚拟设备 | AirymaxOS 自研（用户态） |
+| agent_bus | daemon 注册 | Agent 虚拟设备 | agentrt-liunx 自研（用户态） |
 
-> **OS-DRV-020**: SoC 上 AirymaxOS 专属硬件必须通过 platform 总线接入内核，禁止新增独立总线类型。这是 K-1 内核极简原则的硬性约束——平台总线已足够承载。
+> **OS-DRV-020**: SoC 上 agentrt-liunx 专属硬件必须通过 platform 总线接入内核，禁止新增独立总线类型。这是 K-1 内核极简原则的硬性约束——平台总线已足够承载。
 
 > **OS-DRV-021**: PCI/USB 总线上发现的设备若需被 agentrt daemon 使用，必须通过 platform driver 提供"适配层"——daemon 通过 sysfs 访问，不直接调用 PCI/USB driver 内部 API。
 
@@ -73,7 +73,7 @@ graph TD
     style R3 fill:#e8f5e9
 ```
 
-| 级别 | 匹配源 | 适用场景 | AirymaxOS 推荐度 |
+| 级别 | 匹配源 | 适用场景 | agentrt-liunx 推荐度 |
 |------|--------|---------|------------------|
 | 1 | driver_override | 调试时强制绑定 | 仅调试 |
 | 2 | OF（Device Tree） | ARM/ARM64/RISC-V SoC | **首选** |
@@ -123,7 +123,7 @@ struct platform_driver {
 
 `platform_driver_register` 内部调用 `driver_register`，并设置 `driver.bus = &platform_bus_type`，处理 `device*` 到 `platform_device*` 的适配。
 
-> **OS-DRV-024**: AirymaxOS 内核态 driver 必须使用 `platform_driver_register`（或 `module_platform_driver` 宏）注册，禁止直接调用 `driver_register` 并手动设置 `bus` 字段。
+> **OS-DRV-024**: agentrt-liunx 内核态 driver 必须使用 `platform_driver_register`（或 `module_platform_driver` 宏）注册，禁止直接调用 `driver_register` 并手动设置 `bus` 字段。
 
 ---
 
@@ -169,14 +169,14 @@ static struct platform_driver my_driver = {
     .driver = { .name = "my-soc-driver", .of_match_table = my_match, .pm = &my_pm_ops },
 };
 module_platform_driver(my_driver);
-MODULE_AUTHOR("AirymaxOS Driver Team");
+MODULE_AUTHOR("agentrt-liunx Driver Team");
 MODULE_DESCRIPTION("SoC device driver for my-soc");
 MODULE_LICENSE("GPL v2");
 ```
 
 > **OS-DRV-025**: OF 匹配表的 `.data` 字段必须指向静态 const 数据（`static const`），禁止指向栈变量或动态分配内存——`of_device_id` 表在模块加载后长期存在。
 
-> **OS-STD-020**: `compatible` 字符串的 vendor 前缀必须与设备树中一致。AirymaxOS 自研设备使用 `spharx,` 前缀；通用设备沿用上游 vendor 前缀（如 `ti,`、`nxp,`）。
+> **OS-STD-020**: `compatible` 字符串的 vendor 前缀必须与设备树中一致。agentrt-liunx 自研设备使用 `spharx,` 前缀；通用设备沿用上游 vendor 前缀（如 `ti,`、`nxp,`）。
 
 ### 4.2 ACPI 匹配
 
@@ -222,7 +222,7 @@ module_exit(__driver##_exit);
 
 ### 5.2 三种变体对比
 
-| 宏 | 用途 | 限制 | AirymaxOS 推荐 |
+| 宏 | 用途 | 限制 | agentrt-liunx 推荐 |
 |----|------|------|----------------|
 | `module_platform_driver` | 标准模块驱动，可加载/卸载 | 模块可加载时使用 | **首选** |
 | `builtin_platform_driver` | 内置驱动，不可卸载 | 仅 `device_initcall`，无 exit | 内核内置时使用 |
@@ -242,7 +242,7 @@ module_exit(__driver##_exit);
 
 ### 6.1 双源场景
 
-AirymaxOS 的 SoC 设备可能部署在两类硬件上：ARM/ARM64/RISC-V SoC 使用 Device Tree 描述设备拓扑；x86 SoC（如 Intel/AMD 嵌入式）使用 ACPI 描述设备。同一 driver 若声明了 OF 与 ACPI 两个匹配表，`platform_match` 会先尝试 OF，再尝试 ACPI：
+agentrt-liunx 的 SoC 设备可能部署在两类硬件上：ARM/ARM64/RISC-V SoC 使用 Device Tree 描述设备拓扑；x86 SoC（如 Intel/AMD 嵌入式）使用 ACPI 描述设备。同一 driver 若声明了 OF 与 ACPI 两个匹配表，`platform_match` 会先尝试 OF，再尝试 ACPI：
 
 ```mermaid
 graph LR
@@ -373,7 +373,7 @@ static struct platform_driver my_driver = {
 
 ## 8. 五维原则映射
 
-platform 总线在 AirymaxOS 五维正交 24 原则上的映射：
+platform 总线在 agentrt-liunx 五维正交 24 原则上的映射：
 
 | 原则 | 在本模块的体现 |
 |------|---------------|
@@ -410,7 +410,7 @@ platform 总线在 AirymaxOS 五维正交 24 原则上的映射：
 
 ## 9. 同源 agentrt 映射
 
-platform 总线在 AirymaxOS 用户态（agentrt）中的同源映射：
+platform 总线在 agentrt-liunx 用户态（agentrt）中的同源映射：
 
 | 内核态 platform 抽象 | 用户态 agentrt 同源 | 映射说明 |
 |---------------------|---------------------|---------|
@@ -424,11 +424,11 @@ platform 总线在 AirymaxOS 用户态（agentrt）中的同源映射：
 | `module_platform_driver` | `agentrt_module_agent_driver` | 消除 daemon 注册样板 |
 | sysfs `/sys/bus/platform/` | `agentrt-fs` `/agents/` | 用户态枚举 Agent 拓扑 |
 
-### 9.1 IRON-9 同源但独立的实践
+### 9.1 IRON-9 v2 同源且部分代码共享的实践
 
 - **同源**：用户态 `agentrt_bus_type` 的匹配逻辑与内核 `platform_match` 在语义上一致——都先尝试精确匹配（OF/SDK 接口），再回退到名称匹配
 - **独立**：AgentsIPC 是用户态 IPC，不依赖内核 uevent；内核态 platform driver 不依赖 daemon 存在
-- **解耦验证**：删除 `agentos/daemon/` 后内核 platform driver 仍可正常 probe 硬件；删除内核 platform driver 后 daemon 仍可运行（但失去硬件加速）——这是 IRON-9 同源但独立的可验证标准
+- **解耦验证**：删除 `agentos/daemon/` 后内核 platform driver 仍可正常 probe 硬件；删除内核 platform driver 后 daemon 仍可运行（但失去硬件加速）——这是 IRON-9 v2 同源且部分代码共享的可验证标准
 
 ### 9.2 跨边界资源托管链
 
@@ -483,8 +483,8 @@ SoC 设备的完整资源托管链跨越内核/用户态：内核 `devm_` 资源
 
 | 版本 | 日期 | 维护者 | 变更摘要 |
 |------|------|--------|---------|
-| 0.1.1 | 2026-07-06 | AirymaxOS 驱动子系统组 | 占位版本，建立文档骨架与规则编号体系 |
-| 1.0.1 | 2026-07-06 | AirymaxOS 驱动子系统组 | 开发版本，完成 platform 总线、device/driver 结构、OF/ACPI 匹配、宏、双源回退、资源管理六章正文 |
+| 0.1.1 | 2026-07-06 | agentrt-liunx 驱动子系统组 | 占位版本，建立文档骨架与规则编号体系 |
+| 1.0.1 | 2026-07-06 | agentrt-liunx 驱动子系统组 | 开发版本，完成 platform 总线、device/driver 结构、OF/ACPI 匹配、宏、双源回退、资源管理六章正文 |
 
 ### 12.1 维护规则
 
@@ -497,4 +497,4 @@ SoC 设备的完整资源托管链跨越内核/用户态：内核 `devm_` 资源
 
 发布前验证：`platform_bus_type` 字段与 Linux 6.6 第 1454 行一致；`struct platform_device`/`platform_driver` 字段与头文件一致；`platform_match` 五级回退与源码一致；`module_platform_driver` 宏展开与第 299 行一致；OF/ACPI 示例可编译；五维映射覆盖全部 24 条原则；同源映射与 `20-modules/02-services.md` 一致。
 
-> **文档结束** | AirymaxOS 驱动模型 60 模块第二篇 | IRON-9 同源但独立 | Linux 6.6 内核基线
+> **文档结束** | agentrt-liunx 驱动模型 60 模块第二篇 | IRON-9 v2 同源且部分代码共享 | Linux 6.6 内核基线

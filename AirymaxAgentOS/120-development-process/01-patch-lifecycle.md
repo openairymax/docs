@@ -1,19 +1,19 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# AirymaxOS 补丁生命周期 6 阶段详解
+# agentrt-liunx（AirymaxOS）补丁生命周期 6 阶段详解
 
-> **文档定位**: AirymaxOS（agentrt-linux）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。
-> **版本**: 0.1.1（占位）/ 1.0.1（开发）
+> **文档定位**: agentrt-liunx（AirymaxOS）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。
+> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **同源映射**: agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）
 > **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化
-> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 AirymaxOS 内核发行版规范并行演进，通过同源 API 保持互操作）
+> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 agentrt-liunx 内核发行版规范并行演进，通过同源 API 保持互操作）
 
 ---
 
 ## 1. 模块定位与范围
 
-本文档是 120-development-process 模块的第 1 卷，回答"一个补丁从立项到归档的完整路径是什么"。它继承 Linux 6.6 内核基线的 6 阶段补丁生命周期模型，并将其适配到 AirymaxOS 的 GitHub PR 工作流。
+本文档是 120-development-process 模块的第 1 卷，回答"一个补丁从立项到归档的完整路径是什么"。它继承 Linux 6.6 内核基线的 6 阶段补丁生命周期模型，并将其适配到 agentrt-liunx 的 GitHub PR 工作流。
 
 ### 1.1 与工程标准层的关系
 
@@ -24,7 +24,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.2 适用范围
 
-本文档适用于 AirymaxOS 全部 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
+本文档适用于 agentrt-liunx 全部 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
 
 ### 1.3 关键术语
 
@@ -33,14 +33,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 补丁 | 一个 git commit，对应一个逻辑变更 |
 | 补丁序列 | 一个 PR 内多个相互关联、按依赖顺序排列的补丁 |
 | 子系统树 | 子系统维护者维护的分支，补丁进入主线的中间站 |
-| `develop` 分支 | AirymaxOS 预览集成分支，等价 linux-next 树 |
-| `release/*` 分支 | AirymaxOS 稳定版分支，等价 Linux -stable 树 |
+| `develop` 分支 | agentrt-liunx 预览集成分支，等价 linux-next 树 |
+| `release/*` 分支 | agentrt-liunx 稳定版分支，等价 Linux -stable 树 |
 
 ---
 
 ## 2. 6 阶段生命周期总览
 
-AirymaxOS 继承 Linux 6.6 内核基线的 6 阶段模型：Design → Early Review → Wider Review → Mainline → Stable Release → Long-term Maintenance。每个阶段有明确的输入、输出、责任人、SLA 与工具关卡。
+agentrt-liunx 继承 Linux 6.6 内核基线的 6 阶段模型：Design → Early Review → Wider Review → Mainline → Stable Release → Long-term Maintenance。每个阶段有明确的输入、输出、责任人、SLA 与工具关卡。
 
 ```mermaid
 flowchart LR
@@ -179,9 +179,9 @@ gh pr create --base develop --title "security/cupolas: add agent capability hook
 
 ### 5.4 develop 分支等价 linux-next
 
-`develop` 分支是 AirymaxOS 对 Linux linux-next 树的等价物：
+`develop` 分支是 agentrt-liunx 对 Linux linux-next 树的等价物：
 
-| Linux 概念 | AirymaxOS 等价物 | 同源语义 |
+| Linux 概念 | agentrt-liunx 等价物 | 同源语义 |
 |-----------|-----------------|---------|
 | linux-next 树 | `develop` 分支 | 下一 Merge Window 候选补丁汇聚 |
 | -mm 树 | `airymax-mm` 分支 | 无明确子系统归属的补丁归宿 |
@@ -196,12 +196,12 @@ gh pr create --base develop --title "security/cupolas: add agent capability hook
 
 ### 6.1 Merge Window 与 RC 周期
 
-AirymaxOS 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge Window 接受新特性补丁；RC1 发布后仅接受修复补丁，新特性必须等待下一个 Merge Window。
+agentrt-liunx 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge Window 接受新特性补丁；RC1 发布后仅接受修复补丁，新特性必须等待下一个 Merge Window。
 
 ### 6.2 规则编号
 
 - **OS-DEV-131**：合并入 `main` 的补丁必须包含至少 1 个 `Reviewed-by:` 标签（来自非作者维护者）。
-- **OS-DEV-132**：合并入 `main` 的补丁若修改 AgentsIPC 128B 消息头布局，必须由 AirymaxOS 协议委员会额外签字。
+- **OS-DEV-132**：合并入 `main` 的补丁若修改 AgentsIPC 128B 消息头布局，必须由 agentrt-liunx 协议委员会额外签字。
 - **OS-DEV-133**：合并入 `main` 的补丁若修改 MicroCoreRT 同源语义，必须通过 agentrt 兼容性测试。
 - **OS-DEV-134**：合并入 `main` 必须通过 GitHub Actions 全部检查；任一检查失败禁止合并。
 
@@ -252,13 +252,13 @@ AirymaxOS 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge Win
 
 ### 7.4 安全补丁例外
 
-安全补丁不走常规稳定版审查流程，由 AirymaxOS 安全团队直接处理。严重安全漏洞可能进入短期 embargo；embargo 期间补丁禁止进入任何公开分支或 PR。
+安全补丁不走常规稳定版审查流程，由 agentrt-liunx 安全团队直接处理。严重安全漏洞可能进入短期 embargo；embargo 期间补丁禁止进入任何公开分支或 PR。
 
 ---
 
 ## 8. 阶段六：Long-term Maintenance（长期维护）
 
-补丁作者需持续负责其合并入主线的代码。"the development community remembers developers who lose interest in their code after it's merged"——这是 Linux 内核社区的明确警告，AirymaxOS 完全继承。
+补丁作者需持续负责其合并入主线的代码。"the development community remembers developers who lose interest in their code after it's merged"——这是 Linux 内核社区的明确警告，agentrt-liunx 完全继承。
 
 ### 8.1 LTS 版本维护
 
@@ -277,7 +277,7 @@ AirymaxOS 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge Win
 Fixes: 54a4f0239f2e ("KVM: MMU: make kvm_mmu_zap_page() return the number of pages it actually freed")
 ```
 
-溯源必须使用引入 bug 的原始 commit 的 12 字符 SHA + 单行摘要，不要跨行拆分标签。AirymaxOS 仓库对象众多，6-8 字符 SHA 有碰撞风险。
+溯源必须使用引入 bug 的原始 commit 的 12 字符 SHA + 单行摘要，不要跨行拆分标签。agentrt-liunx 仓库对象众多，6-8 字符 SHA 有碰撞风险。
 
 ---
 
@@ -325,9 +325,9 @@ sequenceDiagram
 
 ---
 
-## 10. AirymaxOS 8 子仓跨仓 PR 流程
+## 10. agentrt-liunx 8 子仓跨仓 PR 流程
 
-AirymaxOS 的 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
+agentrt-liunx 的 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
 
 ### 10.1 8 子仓依赖关系
 
@@ -398,11 +398,11 @@ gh pr create --base develop --title "kernel: consume agentsipc agent_priority fi
 
 ## 11. GitHub PR 工作流适配邮件补丁
 
-AirymaxOS 将 Linux 内核的邮件 + `git send-email` 流程适配为 GitHub PR 流程，但保留同源语义。
+agentrt-liunx 将 Linux 内核的邮件 + `git send-email` 流程适配为 GitHub PR 流程，但保留同源语义。
 
 ### 11.1 适配映射表
 
-| Linux 内核概念 | AirymaxOS 等价物 | 同源语义 |
+| Linux 内核概念 | agentrt-liunx 等价物 | 同源语义 |
 |---------------|-----------------|---------|
 | 邮件列表 | GitHub PR + 子仓 issue tracker | 公开讨论存档 |
 | `git send-email` | GitHub PR 内联提交 | 补丁可被引用、逐行评论 |
@@ -421,7 +421,7 @@ AirymaxOS 将 Linux 内核的邮件 + `git send-email` 流程适配为 GitHub PR
 
 Fixes: 54a4f0239f2e ("original commit summary")
 Closes: #123
-Link: https://github.com/AirymaxOS/airymaxos-kernel/pull/456#discussion_r789
+Link: https://github.com/agentrt-liunx/airymaxos-kernel/pull/456#discussion_r789
 
 Signed-off-by: Author Name <author@example.com>
 Reviewed-by: Reviewer Name <reviewer@example.com>
@@ -459,7 +459,7 @@ Reviewed-by: Reviewer Name <reviewer@example.com>
 
 本文档的开发流程与 agentrt 用户态运行时规范同源且部分代码共享（IRON-9 v2 同源且部分代码共享）：
 
-| 维度 | agentrt（用户态） | AirymaxOS（内核发行版） |
+| 维度 | agentrt（用户态） | agentrt-liunx（内核发行版） |
 |------|------------------|----------------------|
 | SCM | GitHub PR | GitHub PR（同源） |
 | 预览分支 | develop | develop（同源语义） |
@@ -470,7 +470,7 @@ Reviewed-by: Reviewer Name <reviewer@example.com>
 
 ### 13.1 同源 API 变更流程
 
-MicroCoreRT 与 AgentsIPC 同源 API 的变更必须遵循双向同步：agentrt 端 RFC 必须同步到 AirymaxOS 端，反之亦然；变更必须通过两端兼容性测试；季度评审同源 API 漂移。
+MicroCoreRT 与 AgentsIPC 同源 API 的变更必须遵循双向同步：agentrt 端 RFC 必须同步到 agentrt-liunx 端，反之亦然；变更必须通过两端兼容性测试；季度评审同源 API 漂移。
 
 ---
 
@@ -496,4 +496,4 @@ MicroCoreRT 与 AgentsIPC 同源 API 的变更必须遵循双向同步：agentrt
 
 ---
 
-> **文档结束** | 120-development-process/01-patch-lifecycle.md | 版本 0.1.1（占位）
+> **文档结束** | 120-development-process/01-patch-lifecycle.md | 版本 0.1.1（文档体系完成）
