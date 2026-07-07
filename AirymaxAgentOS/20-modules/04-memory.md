@@ -167,6 +167,41 @@ PMEM 持久化接口 [SC] 与 agentrt 共享：
 - `madvise`：madvise 策略（MADV_HUGEPAGE）。
 - `shmem`：shmem 大页支持。
 
+#### 3.8 组件架构图
+
+```mermaid
+graph TD
+    subgraph SC["[SC] 共享契约层 include/airymax/memory_types.h"]
+        L1[L1 Record 数据结构]
+        L2[L2 Record 数据结构]
+        L3[L3 Record 数据结构]
+        L4[L4 Record 数据结构]
+        GFP[GFP 掩码语义]
+        PMEMIF[PMEM 持久化接口]
+    end
+    subgraph SS["[SS] 语义同源层"]
+        MEMROVOL[MemoryRovol 内核态实现]
+        MGLRU[MGLRU aging / eviction]
+        RECLAIM[memory.reclaim 主动回收]
+        UFFD[userfaultfd 记忆迁移]
+    end
+    subgraph IND["[IND] 独立层"]
+        CXL[CXL 内存分层与池化]
+        PMEM[PMEM nvdimm 驱动]
+        VFSPERSIST[VFS 持久化层]
+        THP[透明巨页优化]
+    end
+    L1 --> MEMROVOL
+    L2 --> MEMROVOL
+    L3 --> CXL
+    L4 --> PMEM
+    GFP --> MGLRU
+    PMEMIF --> VFSPERSIST
+    MEMROVOL --> RECLAIM
+    MEMROVOL --> UFFD
+    CXL --> THP
+```
+
 ---
 
 ## 4. 核心特性

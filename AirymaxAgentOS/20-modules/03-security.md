@@ -166,6 +166,41 @@ airymaxos-security/
 - `keyring`：签名密钥环管理。
 - `policy`：仅允许已签名 eBPF 程序加载的策略。
 
+#### 3.8 组件架构图
+
+```mermaid
+graph TD
+    subgraph SC["[SC] 共享契约层 include/airymax/security_types.h"]
+        CAP[capability 38 ID 枚举]
+        LSM[LSM 钩子 254 ID 枚举]
+        BLOB[Cupolas blob 布局<br/>cred / inode / file / task]
+        DERIVE[capability 派生模型<br/>mint / mintcopy / derive / revoke]
+        VAULT[Vault backend 抽象]
+        VERDICT[策略裁决 4 值枚举]
+    end
+    subgraph SS["[SS] 语义同源层"]
+        SECHOOKS[security_add_hooks]
+        LANDLOCK[Landlock 三系统调用]
+        EBPFSIGN[eBPF 签名验证]
+        CAPCHECK[cap_capable 检查]
+    end
+    subgraph IND["[IND] 独立层"]
+        SELINUX[SELinux 完整实现]
+        APPARMOR[AppArmor 完整实现]
+        CRYPTO[国密算法 SM2/3/4]
+        CONFCOMP[机密计算 VirtCCA]
+        ZEROTRUST[零信任网络]
+    end
+    CAP --> CAPCHECK
+    LSM --> SECHOOKS
+    BLOB --> SELINUX
+    BLOB --> APPARMOR
+    VAULT --> CONFCOMP
+    VERDICT --> SECHOOKS
+    SECHOOKS --> LANDLOCK
+    SECHOOKS --> EBPFSIGN
+```
+
 ---
 
 ## 4. 核心特性

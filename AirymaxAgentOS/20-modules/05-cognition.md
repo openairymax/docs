@@ -186,6 +186,42 @@ airymaxos-cognition/
 - `perception-fusion`：多模态感知融合。
 - `safety-monitor`：安全监控（紧急停止）。
 
+#### 3.9 组件架构图
+
+```mermaid
+graph TD
+    subgraph SC["[SC] 共享契约层 include/airymax/cognition_types.h"]
+        CLT[CoreLoopThree 阶段枚举<br/>PERCEPTION / THINKING / ACTION]
+        TD2[Thinkdual 模式枚举<br/>SYSTEM1_FAST / SYSTEM2_SLOW]
+        LLM[LLM 推理阶段枚举<br/>PREFILL / DECODE / SPECULATIVE]
+        CTX[CoreLoopThree 上下文结构]
+        ENERGY[Token 能效指标结构]
+        GPUDESC[GPU/NPU 能力描述符]
+    end
+    subgraph SS["[SS] 语义同源层"]
+        KTHREAD[CoreLoopThree kthread 内核态]
+        THINKACC[Thinkdual 内核态加速]
+        SCHED[LLM 推理感知调度]
+    end
+    subgraph IND["[IND] 独立层"]
+        WASM[Wasm 3.0 沙箱]
+        GPUPOOL[GPU/NPU 调度池化]
+        TOKENEFF[Token 能效优化]
+        HYPER[超节点沙箱]
+        CLAW[具身智能 Claw]
+    end
+    CLT --> KTHREAD
+    TD2 --> THINKACC
+    LLM --> SCHED
+    CTX --> KTHREAD
+    KTHREAD --> WASM
+    KTHREAD --> HYPER
+    SCHED --> GPUPOOL
+    ENERGY --> TOKENEFF
+    GPUDESC --> GPUPOOL
+    KTHREAD --> CLAW
+```
+
 ---
 
 ## 4. 核心特性
