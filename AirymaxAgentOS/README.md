@@ -36,6 +36,7 @@ AirymaxOS 是基于 Linux 内核的**操作系统发行版**，与 agentrt（Air
 | 3 | [security](20-modules/03-security.md) | 极境安全 | capability 安全 + LSM + 机密计算 + 国密 | cupolas |
 | 4 | [memory](20-modules/04-memory.md) | 极境记忆 | 记忆持久化 + CXL + PMEM + MGLRU 2.0 | heapstore + memoryrovol |
 | 5 | [cognition](20-modules/05-cognition.md) | 极境认知 | CoreLoopThree kthread + Wasm + LLM 调度 + 超节点沙箱 | coreloopthree + frameworks |
+| 6 | [cloudnative](20-modules/06-cloudnative.md) | 极境云原生 | K8s + containerd + OCI + agentctl + 超节点 OS | gateway + sdk |
 | 6 | [clouds](20-modules/06-cloudnative.md) | 极境云原生 | K8s + containerd + OCI + agentctl + 超节点 OS | gateway + sdk |
 | 7 | [system](20-modules/07-system.md) | 极境系统 | 包管理 + 配置 + shell + 基础库 + DevStation | commons |
 | 8 | [airymaxos-tests](20-modules/08-tests.md) | 极境测试 | 单元测试 + 集成测试 + 形式化验证 + Soak + 混沌 | 全模块测试 |
@@ -63,7 +64,7 @@ docs/AirymaxAgentOS/
 ├── 130-roadmap/                     # 开发路线图（7 文档）✅ 0.1.1 完成
 │
 ├── 140-application-development/     # Agent 应用开发（README 占位）1.0.1
-├── 150-cloud-native/                # 云原生部署（README 占位）1.0.1
+├── 150-cloudnative/                # 云原生部署（README 占位）1.0.1
 ├── 160-compatibility/               # 兼容性（README 占位）1.0.1
 ├── 170-performance/                 # 性能工程（README 占位）1.0.1
 ├── 180-i18n/                        # 国际化（README 占位）1.0.1
@@ -134,7 +135,7 @@ docs/AirymaxAgentOS/
 | 子仓 3 | `git@atomgit.com:openairymax/security.git` |
 | 子仓 4 | `git@atomgit.com:openairymax/memory.git` |
 | 子仓 5 | `git@atomgit.com:openairymax/cognition.git` |
-| 子仓 6 | `git@atomgit.com:openairymax/cloud.git` |
+| 子仓 6 | `git@atomgit.com:openairymax/cloudnative.git` |
 | 子仓 7 | `git@atomgit.com:openairymax/system.git` |
 | 子仓 8 | `git@atomgit.com:openairymax/airymaxos-tests.git` |
 
