@@ -63,7 +63,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|---------|---------------|---------|
 | **[SC] 共享契约层** | 完全共享代码 | POSIX capability 38 个 ID 枚举、LSM 钩子 254 个 ID 枚举、Cupolas blob 结构布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 | `include/airymax/security_types.h` |
 | **[SS] 语义同源层** | API 签名同源，实现独立 | `security_add_hooks()`、`call_int_hook` 短路、`DEFINE_LSM(cupolas)`、Landlock 三系统调用、`cap_capable()`、`security_file_open()` 等 17 项 | 各自独立实现 |
-| **[IND] 完全独立层** | 完全独立 | SELinux 完整实现、AppArmor 完整实现、Smack、TOMOYO、IMA digest list、IMA VirtCCA、IMA 策略 DB、EVM xattr 签名、KABI_RESERVE | 各自独立仓库 |
+| **[IND] 完全独立层** | 完全独立 | SELinux 完整实现、AppArmor 完整实现、Smack、TOMOYO、IMA digest list、IMA VirtCCA、IMA 策略 DB、EVM xattr 签名、内核 ABI 预留机制 | 各自独立仓库 |
 
 ### 2.1 维度对比
 
@@ -450,7 +450,7 @@ API 签名同源，实现独立：
 | 6 | IMA VirtCCA | Huawei 硬件绑定，用 Cupolas 机密计算抽象层替代 |
 | 7 | IMA 策略 DB | agentrt-liunx 用 Cupolas 声明式策略引擎替代 |
 | 8 | EVM xattr 签名 | agentrt-liunx 用 Cupolas Vault seal/unseal 替代 |
-| 9 | KABI_RESERVE | 与 IRON-1 冲突（0.1.1 唯一奠基版本） |
+| 9 | 内核 ABI 预留机制 | 与 IRON-1 冲突（0.1.1 唯一奠基版本） |
 | 10 | 内核发行版特有增强 | 详见闭源安全技术规范参考文档 |
 
 ### 6.4 跨态协作流

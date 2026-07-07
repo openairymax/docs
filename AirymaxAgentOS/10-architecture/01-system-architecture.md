@@ -36,7 +36,7 @@ agentrt-liunx 采用三大设计支柱:
 | 系统服务 | systemd | airymaxos-services 集成 systemd |
 | 安全 | SELinux + 国密算法 | airymaxos-security 实现国密支持 |
 | 测试 | agentrt-liunx 系统级测试套件 | airymaxos-tests 实现集成测试框架 |
-| AI 原生 | 认知中枢系统、超节点 OS | airymaxos-cognition + airymaxos-cloudnative |
+| AI 原生 | 认知循环系统、超节点 OS | airymaxos-cognition + airymaxos-cloudnative |
 | 架构支持 | x86, ARM, RISC-V, 鲲鹏, 飞腾 | airymaxos-kernel 多架构支持 |
 | 社区治理 | SIG（Special Interest Group）| agentrt-liunx 按子仓划分 SIG |
 
@@ -196,7 +196,7 @@ agentrt-liunx 的 IPC 子系统 (airymaxos-kernel + airymaxos-services):
 
 | 特性 | 来源 | 应用 |
 |---|---|---|
-| 认知中枢系统 | Linux 6.6 内核基线（SP3 增强） | airymaxos-cognition |
+| 认知循环系统 | Linux 6.6 内核基线（SP3 增强） | airymaxos-cognition |
 | 超节点 OS | Linux 6.6 内核基线（SP3 增强） | airymaxos-cloudnative |
 | 超节点沙箱 | Linux 6.15+ 内核 | airymaxos-cognition |
 | Token 能效优化 | agentrt-liunx Token 能效框架 2026 | airymaxos-cognition |

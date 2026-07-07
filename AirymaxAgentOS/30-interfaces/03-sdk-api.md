@@ -104,7 +104,7 @@ permission = safety.check_capability(
 tool = client.tool
 result = tool.execute(
     name="web_search",
-    args={"query": "agentrt-liunx 认知中枢"}
+    args={"query": "agentrt-liunx 认知循环"}
 )
 
 # ChatClient - 对话层
@@ -184,7 +184,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ToolClient - 工具层
     let tool = client.tool();
     let result = tool
-        .execute("web_search", &[("query", "agentrt-liunx 认知中枢")])
+        .execute("web_search", &[("query", "agentrt-liunx 认知循环")])
         .await?;
     println!("result={result:?}");
 
@@ -279,7 +279,7 @@ func main() {
     // ToolClient - 工具层
     tool := client.Tool()
     result, err := tool.Execute(ctx, "web_search", map[string]string{
-        "query": "agentrt-liunx 认知中枢",
+        "query": "agentrt-liunx 认知循环",
     })
     if err != nil {
         log.Fatalf("execute failed: %v", err)
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
     const tool = client.tool;
     const result = await tool.execute({
         name: "web_search",
-        args: { query: "agentrt-liunx 认知中枢" },
+        args: { query: "agentrt-liunx 认知循环" },
     });
     console.log(`result=${JSON.stringify(result)}`);
 

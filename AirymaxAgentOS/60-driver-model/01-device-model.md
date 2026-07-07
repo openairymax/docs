@@ -23,7 +23,7 @@ Linux 设备模型核心可一句话概括："**device 描述有什么，driver 
 | `struct kref` / `struct kobject` | Linux 6.6 `include/linux/kref.h` | 跟随上游 |
 | `agent_bus_type` / `devm_agentrt_*` | agentrt-liunx 自研 | 独立演进，不回传上游 |
 
-> **OS-DRV-001**: 内核态设备模型结构体（`device`/`device_driver`/`bus_type`/`class`/`kref`/`kobject`）的字段、签名、生命周期语义必须与 Linux 6.6 内核基线保持二进制兼容。任何扩展通过 `KABI_RESERVE` 槽位或包装结构实现。
+> **OS-DRV-001**: 内核态设备模型结构体（`device`/`device_driver`/`bus_type`/`class`/`kref`/`kobject`）的字段、签名、生命周期语义必须与 Linux 6.6 内核基线保持二进制兼容。任何扩展通过包装结构实现（不使用内核 ABI 预留槽位，与 IRON-1 一致）。
 
 > **OS-DRV-002**: agentrt-liunx 用户态扩展不得在内核态引入新的总线类型；它们必须作为用户态 daemon 实现，通过 `syscalls.h` 与 MicroCoreRT 通信。
 

@@ -37,7 +37,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 1. **CoreLoopThree kthread 实现 [SS]**：将 agentrt 的 CoreLoopThree（三层认知循环）升级为 OS 级 kthread 实现，提供 Agent 认知循环的内核态加速。阶段枚举与上下文结构 [SC] 与 agentrt 共享。
 2. **Thinkdual 双思考系统内核态加速 [SS]**：将 agentrt 的 Thinkdual（双思考系统）通过内核态加速提升响应速度。模式枚举 [SC] 与 agentrt 共享。
 3. **Wasm runtime 3.0 [IND]**：集成 Wasm 3.0 runtime，提供安全沙箱执行环境。
-4. **LLM 推理感知调度 [SS]**：基于 agentrt-liunx 认知中枢，实现 LLM 推理任务的感知调度。推理阶段枚举 [SC] 与 agentrt 共享。
+4. **LLM 推理感知调度 [SS]**：基于 agentrt-liunx 认知循环，实现 LLM 推理任务的感知调度。推理阶段枚举 [SC] 与 agentrt 共享。
 5. **GPU/NPU 调度与池化 [IND]**：统一调度 GPU/NPU 异构算力，基于 Linux 6.6 加速器框架（`drivers/accel/`）与 DRM 调度器（`drivers/gpu/drm/scheduler/`）。
 6. **Token 能效优化 [IND]**：参考 KVC-Gateway + LMCache + Bifrost 优化 Token 能效。能效指标结构 [SC] 与 agentrt 共享。
 7. **超节点沙箱 [IND]**：基于 agentrt-liunx 超节点 OS，实现软硬协同优化镜像快照。
@@ -72,7 +72,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|--------------------------------------|-------------------------------|----------|
 | 认知循环 | CoreLoopThree（用户态） | CoreLoopThree kthread（内核态） | [SS] |
 | 双思考 | Thinkdual（用户态） | Thinkdual 内核态加速 | [SS] |
-| 推理调度 | 用户态调度器 | LLM 推理感知调度（基于认知中枢） | [SS] |
+| 推理调度 | 用户态调度器 | LLM 推理感知调度（基于认知循环） | [SS] |
 | 算力调度 | 应用层调度 | GPU/NPU 调度与池化（OS 级） | [IND] |
 | 沙箱 | 进程沙箱 | Wasm 3.0 + 超节点沙箱 | [IND] |
 | 阶段定义 | 阶段枚举 | 阶段枚举 | [SC] |
@@ -136,7 +136,7 @@ airymaxos-cognition/
 
 ### 3.4 llm-scheduler/（LLM 推理感知调度）[SS]
 
-基于 **agentrt-liunx 认知中枢**，推理阶段枚举 [SC] 共享：
+基于 **agentrt-liunx 认知循环**，推理阶段枚举 [SC] 共享：
 
 - `inference-aware`：推理感知调度器（识别 LLM 推理阶段）[SC] PREFILL/DECODE/SPECULATIVE。
 - `kv-cache-aware`：KV Cache 感知调度。
@@ -259,7 +259,7 @@ typedef enum {
 - 资源限制（fuel metering）。
 - 与 `airymaxos-security/sandbox` 协作。
 
-### 4.4 LLM 推理感知调度（基于 agentrt-liunx 认知中枢）[SS]
+### 4.4 LLM 推理感知调度（基于 agentrt-liunx 认知循环）[SS]
 
 **推理阶段枚举** [SC] 共享：
 
@@ -457,7 +457,7 @@ sequenceDiagram
 
 ## 7. agentrt-liunx 工程基线
 
-- **agentrt-liunx 认知中枢**：AI 原生调度框架基线。
+- **agentrt-liunx 认知循环**：AI 原生调度框架基线。
 - **agentrt-liunx 超节点 OS**：超节点沙箱基线。
 - **agentrt-liunx 具身智能（Claw）**：具身智能运行时基线。
 - **agentrt-liunx AI 原生**：AI 原生 OS 设计哲学基线。
@@ -579,7 +579,7 @@ sequenceDiagram
 
 ## 13. 参考
 
-- agentrt-liunx 认知中枢文档
+- agentrt-liunx 认知循环文档
 - agentrt-liunx 超节点 OS 文档
 - agentrt-liunx Claw 具身智能文档
 - Linux 6.6 `kernel/kthread.c`（kthread 机制，1562 行）
