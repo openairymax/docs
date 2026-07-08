@@ -1,3 +1,5 @@
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
 # agentrt-liunx（AirymaxOS）工程基线
 
 > **文档定位**: agentrt-liunx（AirymaxOS）工程基线（Engineering Baseline）的完整定义与落地规范
@@ -268,7 +270,7 @@ agentrt-liunx 对标 Agentic OS 三阶段演进路线：
 
 ### 7.1 编码规范
 
-agentrt-liunx 工程基线要求所有代码遵循 `docs/Capital_Specifications/coding_standard/` 中的 15 个规范文件，覆盖 C / Rust / Python / Go / TypeScript 等语言。
+agentrt-liunx 工程基线要求所有代码遵循 `50-engineering-standards/10-coding-style/` 中的编码规范文件，覆盖 C / Rust / Python / Go / TypeScript 等语言。
 
 ### 7.2 接口契约规范
 

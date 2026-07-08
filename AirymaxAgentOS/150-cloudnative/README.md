@@ -94,7 +94,7 @@ spec:
 ## 3. 文档索引
 
 ```
-150-cloud-native/
+150-cloudnative/
 ├── README.md                       # 本文件
 ├── 01-container-runtime.md        # containerd 集成
 ├── 02-agent-image-spec.md         # Agent 容器镜像规范

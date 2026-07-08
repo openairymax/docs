@@ -1,3 +1,5 @@
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
 # agentrt-liunx（AirymaxOS）需求分析
 
 > **文档定位**: agentrt-liunx（AirymaxOS）需求分析体系的总入口与纲领性文档，定义需求分层模型、需求来源、需求追溯关系，并向下展开为业务需求、功能需求、非功能需求三个子文档。

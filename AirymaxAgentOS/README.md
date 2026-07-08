@@ -116,7 +116,7 @@ docs/AirymaxAgentOS/
 | 模块                                                                   | 描述                                     | 0.1.1 状态  |
 | -------------------------------------------------------------------- | -------------------------------------- | --------- |
 | [140-application-development](140-application-development/README.md) | Agent 应用开发（4 语言 16 嵌套客户端 + Token 预算契约） | README 占位 |
-| [150-cloud-native](150-cloud-native/README.md)                       | 云原生部署（containerd + K8s CRD + 超节点 OS）   | README 占位 |
+| [150-cloudnative](150-cloudnative/README.md)                       | 云原生部署（containerd + K8s CRD + 超节点 OS）   | README 占位 |
 | [160-compatibility](160-compatibility/README.md)                     | 兼容性（4 层接口稳定性 + KABI + 跨发行版）            | README 占位 |
 | [170-performance](170-performance/README.md)                         | 性能工程（Token 能效 + Agent 延迟 SLO）          | README 占位 |
 | [180-i18n](180-i18n/README.md)                                       | 国际化（多语言 + 国密合规）                        | README 占位 |

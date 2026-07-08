@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-07
 > **父文档**: [agentrt-liunx 总览](../README.md)
-> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 4 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
 
 ---
 
@@ -130,7 +130,7 @@ agentrt-liunx 数据流设计与 agentrt 数据流保持「同源且部分代码
 
 **演进约束**：
 
-1. **协议稳定性**：128B IPC 消息头、L1→L4 记忆层模型、SCHED_AGENT 调度类编号在主版本内保持稳定，跨版本变更需 ADR 评审。
+1. **协议稳定性**：128B IPC 消息头、L1→L4 记忆层模型、SCHED_EXT 调度类编号（复用内核 SCHED_EXT=7，禁止 SCHED_AGENT 宏）在主版本内保持稳定，跨版本变更需 ADR 评审。
 2. **向后兼容**：新版本数据流必须兼容旧版本的消息格式与调度语义，保证滚动升级不影响运行任务。
 3. **可观测性兼容**：Metrics 名称与 OpenTelemetry span 属性命名遵循向后兼容原则，新增字段不破坏旧消费者。
 4. **安全不变性**：capability 检查点、LSM hook 位置、审计哈希链结构在所有版本中保持不变（NFR-S 系列）。

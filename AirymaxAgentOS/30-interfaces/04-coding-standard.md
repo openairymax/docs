@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 编码规范遵循声明
 
-agentrt-liunx 8 子仓的全部源代码严格遵循 `docs/Capital_Specifications/coding_standard/` 下的 15 个规范文件。本文件给出 agentrt-liunx 专属的命名空间与补充约定，作为 15 个规范文件的前置索引。
+agentrt-liunx 8 子仓的全部源代码严格遵循 `50-engineering-standards/10-coding-style/` 下的编码规范文件。本文件给出 agentrt-liunx 专属的命名空间与补充约定，作为编码规范的前置索引。
 
 | # | 规范文件 | 适用范围 | agentrt-liunx 遵循要点 |
 |---|---------|---------|-------------------|
@@ -479,7 +479,7 @@ AGENTRT_API int agentrt_sys_task_submit(const agentrt_task_desc_t *task_desc,
 - [SDK API](03-sdk-api.md)
 - [内核设计](../20-modules/01-kernel.md)
 - [安全设计](../20-modules/03-security.md)
-- 编码规范目录: `docs/Capital_Specifications/coding_standard/`（15 个规范文件）
+- 编码规范目录: `50-engineering-standards/10-coding-style/`（编码规范文件）
 
 ---
 

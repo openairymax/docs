@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-07
 > **父文档**: [agentrt-liunx 总览](../README.md)
-> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 4 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h）落地于 include/airymax/
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/
 
 ---
 
@@ -286,7 +286,7 @@ agentrt-liunx 1.0.1 采用 M0-M8 共 9 个里程碑，与 [130-roadmap/02-milest
 | M4 | 安全加固体系 | Part 5 | 3 周（21 天） | `110-security/` 完成 + capability + LSM + 机密计算就位 |
 | M5 | 开发流程与治理 | Part 6 | 2 周（14 天） | `120-development-process/` + `50/07` 完成 + 维护者制度落地 |
 | M6 | 路线图与里程碑 | Part 7 | 1 周（7 天） | `130-roadmap/` 7 文档完成（本模块） |
-| M7 | 应用生态与云原生 | Part 8 | 3 周（21 天） | `140-application-development/` + `150-cloud-native/` 完成 |
+| M7 | 应用生态与云原生 | Part 8 | 3 周（21 天） | `140-application-development/` + `150-cloudnative/` 完成 |
 | M8 | 兼容性与性能工程 | Part 9 | 2 周（14 天） | `160-compatibility/` + `170-performance/` 完成 |
 
 **关键路径**: M0 → M1 → M2 → M6 → M7 → M8，总工期 126 天。详细 Gantt 图、依赖关系、风险分析见 [130-roadmap/02-milestones-and-timeline.md](../130-roadmap/02-milestones-and-timeline.md)。

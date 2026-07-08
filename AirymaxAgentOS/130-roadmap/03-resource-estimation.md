@@ -112,7 +112,7 @@ pie showData
 | 120-development-process/ | 9 | 120 | P0 | PR 流程 + 维护者 + 成熟度模型 |
 | 130-roadmap/ | 7 | 80 | P0 | 本模块（路线图与里程碑） |
 | 140-application-development/ | 9 | 100 | P1 | Agent SDK + 应用模型 + 包管理 |
-| 150-cloud-native/ | 8 | 100 | P1 | K8s + containerd + OCI + 超节点 OS |
+| 150-cloudnative/ | 8 | 100 | P1 | K8s + containerd + OCI + 超节点 OS |
 | 160-compatibility/ | 8 | 80 | P1 | 硬件 + 软件 + ABI 兼容矩阵 |
 | 170-performance/ | 8 | 70 | P1 | 基准 + 调优 + Token 能效 |
 | 180-i18n/ | 6 | 40 | P2 | 多语言 + 错误码本地化 |

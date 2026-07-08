@@ -61,7 +61,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 共享程度 | 内核子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
-| **[SC] 共享契约层** | 完全共享代码 | SCHED_AGENT 调度类编号、任务描述符（magic 0x41475453 'AGTS'）、vtime 类型与衰减公式、优先级范围、AIRYMAX_SLICE_DFL；IPC magic（0x41524531 'ARE1'）、128B 消息头、SQE/CQE 操作码与标志位；struct_ops 状态机 4 状态枚举、common_value 16B 布局 | `include/airymax/sched.h` + `include/airymax/ipc.h` + `include/airymax/bpf_struct_ops.h` |
+| **[SC] 共享契约层** | 完全共享代码 | SCHED_EXT 调度类编号约束（复用内核 SCHED_EXT=7，禁止 SCHED_AGENT 宏）、任务描述符（magic 0x41475453 'AGTS'）、vtime 类型与衰减公式、优先级范围、AIRYMAX_SLICE_DFL；IPC magic（0x41524531 'ARE1'）、128B 消息头、SQE/CQE 操作码与标志位；struct_ops 状态机 4 状态枚举、common_value 16B 布局 | `include/airymax/sched.h` + `include/airymax/ipc.h` + `include/airymax/bpf_struct_ops.h` |
 | **[SS] 语义同源层** | API 签名同源，实现独立 | sched_ext 25+ BPF 回调（select_cpu/enqueue/dispatch/runnable/running/stopping/quiescent/init/exit 等）、io_uring ring 创建/提交/完成/注册、MSG_RING 跨环消息、SQPOLL 状态机、DEFER_TASKRUN、eBPF struct_ops 注册、bpf_prog 生命周期（load→attach→run→detach→unload）、bpf_link 生命周期、bpf_map_ops 回调表、ringbuf reserve/submit、kfunc 注册模式 等 30+ 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | ext_sched_class 注册、scx_ops_enable/disable、kf_mask 上下文追踪、fallback_dsq 回退、cgroup 集成、core-sched 集成、debug dump；io-wq 工作队列、NO_MMAP、REGISTERED_FD_ONLY、URING_CMD；JIT 后端、trampoline 本机码生成、verifier 实现、BPF_SCHED CFS 钩子（不移植）、cfi_stubs、KABI_RESERVE（不采用）；VFS/网络/驱动用户态化改造；Rust 驱动框架 | 各自独立仓库 |
 
@@ -221,11 +221,11 @@ airymax_vtime_decay(airymax_vtime_t vtime, u64 consumed_slice, u32 weight) {
 
 ### 4.7 不移植特性声明 [IND]
 
-遵循 IRON-1（禁止新特性）与 IRON-9 v2（同源且部分代码共享）原则，以下 Euler 特有特性不移植到 AirymaxOS：
+遵循 IRON-1（禁止新特性）与 IRON-9 v2（同源且部分代码共享）原则，以下 上游 Linux 6.6 不含特性不移植到 AirymaxOS：
 
 | 特性 | 不移植原因 | 替代方案 |
 |------|-----------|---------|
-| BPF_SCHED（CFS 钩子） | Euler 特有，与 struct_ops 重复 | 通过 struct_ops 提供等价能力 [SS] |
+| BPF_SCHED（CFS 钩子） | 上游 Linux 6.6 不含，与 struct_ops 重复 | 通过 struct_ops 提供等价能力 [SS] |
 | KABI_RESERVE | 与 IRON-1 冲突（禁止新特性） | 通过包装结构实现 ABI 扩展 [IND] |
 | KMSAN | 开销过大 | 不启用（开销过大） |
 
@@ -355,9 +355,9 @@ API 签名同源，实现独立。三大子系统的同源 API：
 | 8 | JIT 后端 | x86_64/arm64 JIT 仅 agentrt-liunx 内核态 |
 | 9 | trampoline 本机码生成 | arch_prepare_bpf_trampoline() 仅 agentrt-liunx |
 | 10 | verifier 实现 | 内核 verifier.c（21091 行）仅 agentrt-liunx |
-| 11 | BPF_SCHED CFS 钩子 | Euler 特有，不移植到 AirymaxOS |
+| 11 | BPF_SCHED CFS 钩子 | 上游 Linux 6.6 不含，不移植到 AirymaxOS |
 | 12 | cfi_stubs | kCFI 桩函数表仅 agentrt-liunx |
-| 13 | KABI_RESERVE | Euler kABI 兼容机制，AirymaxOS 不采用 |
+| 13 | KABI_RESERVE | kABI 兼容机制，AirymaxOS 不采用 |
 | 14 | VFS/网络/驱动用户态化改造 | 微内核化改造仅 agentrt-liunx |
 | 15 | Rust 驱动框架 | 内核 Rust 绑定仅 agentrt-liunx |
 
@@ -532,7 +532,7 @@ graph TD
 
 | 特性 | IRON 合规 | 处理 |
 |------|-----------|------|
-| BPF_SCHED | IRON-9 v2（不与 Euler 共享代码） | 不移植，struct_ops 替代 |
+| BPF_SCHED | IRON-9 v2（不与上游 Linux 共享代码） | 不移植，struct_ops 替代 |
 | KABI_RESERVE | IRON-1（禁止新特性） | 不采用，包装结构替代 |
 | KMSAN | 开销过大 | 不启用 |
 

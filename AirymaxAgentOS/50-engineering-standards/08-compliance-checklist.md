@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）
 > **最后更新**: 2026-07-07
 > **父文档**: [工程标准规范 README](README.md)
-> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 4 个头文件落地于 `include/airymax/`
+> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件落地于 `include/airymax/`
 
 ---
 
@@ -128,9 +128,9 @@ done
 
 ### 2.4 [SC] 头文件清单一致性检查
 
-**规则 STD-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 4 个头文件清单一致。
+**规则 STD-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 6 个头文件清单一致。
 
-**4 个 [SC] 头文件清单**（权威清单，维护于 `project_memory.md`）：
+**6 个 [SC] 头文件清单**（权威清单，维护于 `project_memory.md`，详见 [00-engineering-standards-handbook.md §4.2](./00-engineering-standards-handbook.md)）：
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
@@ -138,8 +138,10 @@ done
 | 2 | `include/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
 | 3 | `include/airymax/security_types.h` | 安全 | capability 38 ID + LSM 254 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
 | 4 | `include/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
+| 5 | `include/airymax/sched.h` | 调度 | SCHED_EXT 约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
+| 6 | `include/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |
 
-**检查方法**：grep `include/airymax/` 引用，核对是否与上述 4 个头文件一致。
+**检查方法**：grep `include/airymax/` 引用，核对是否与上述 6 个头文件一致。
 
 ### 2.5 链接完整性检查
 
@@ -339,7 +341,7 @@ out_free_a:
 
 ### 4.1 [SC] 共享契约层一致性检查
 
-**规则 STD-IRON-01**：[SC] 共享契约层的 4 个头文件必须 agentrt 与 agentrt-liunx 完全一致。
+**规则 STD-IRON-01**：[SC] 共享契约层的 6 个头文件必须 agentrt 与 agentrt-liunx 完全一致。
 
 **检查方法**：
 ```bash
@@ -350,6 +352,8 @@ SC_HEADERS="
     include/airymax/memory_types.h
     include/airymax/security_types.h
     include/airymax/cognition_types.h
+    include/airymax/sched.h
+    include/airymax/ipc.h
 "
 
 for h in $SC_HEADERS; do
@@ -361,7 +365,7 @@ for h in $SC_HEADERS; do
 done
 ```
 
-**合格标准**：4 个头文件 MD5 哈希完全一致。
+**合格标准**：6 个头文件 MD5 哈希完全一致。
 
 ### 4.2 [SS] 语义同源层 API 签名检查
 
@@ -385,9 +389,9 @@ grep -rn "#include.*airymaxos/" agentrt/ 2>/dev/null
 
 **合格标准**：0 处违规。
 
-### 4.4 Euler 兼容性检查
+### 4.4 主流发行版兼容性检查
 
-**规则 STD-IRON-04**：agentrt-liunx 工程思想与 Euler 保持一致性。
+**规则 STD-IRON-04**：agentrt-liunx 工程思想与上游 Linux 保持一致性。
 
 **检查项**：
 
@@ -428,7 +432,7 @@ stages:
     steps:
       - run: scripts/check-sc-consistency.sh
       - run: scripts/check-ind-isolation.sh
-      - run: scripts/check-euler-compat.sh
+      - run: scripts/check-distro-compat.sh
 ```
 
 ### 5.2 检查脚本目录结构
@@ -450,7 +454,7 @@ scripts/
 ├── check-cmake.sh               # STD-CODE-05 CMake 构建系统检查
 ├── check-sc-consistency.sh      # STD-IRON-01 [SC] 一致性检查
 ├── check-ind-isolation.sh       # STD-IRON-03 [IND] 隔离检查
-└── check-euler-compat.sh        # STD-IRON-04 Euler 兼容性检查
+└── check-distro-compat.sh        # STD-IRON-04 主流发行版兼容性检查
 ```
 
 ### 5.3 检查报告格式
@@ -507,7 +511,7 @@ scripts/
 | STD-IRON-01 | [SC] 共享契约层一致性 | check-sc-consistency.sh | P0 |
 | STD-IRON-02 | [SS] 语义同源层 API 签名 | — | P1 |
 | STD-IRON-03 | [IND] 独立层隔离 | check-ind-isolation.sh | P0 |
-| STD-IRON-04 | Euler 兼容性 | check-euler-compat.sh | P1 |
+| STD-IRON-04 | 主流发行版兼容性 | check-distro-compat.sh | P1 |
 
 ---
 
@@ -537,7 +541,7 @@ scripts/
 | IRON-9 v2 标注检查 | 每次提交 | CI |
 | 链接完整性检查 | 每日 | 定时任务 + CI |
 | [SC] 一致性检查 | 每次提交 | CI（双向：agentrt + agentrt-liunx） |
-| Euler 兼容性检查 | 每次内核基线升级 | 手动 + CI |
+| 主流发行版兼容性检查 | 每次内核基线升级 | 手动 + CI |
 | 全量检查 | 每日 | 定时任务 |
 
 ---

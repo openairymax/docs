@@ -63,7 +63,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 共享程度 | 系统子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
-| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/INUSE/TOBEFREE/READY）+ common_value；SCHED_AGENT 调度类编号 + task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 38 ID 枚举（安全配置工具引用）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用） | `include/airymax/` 6 个头文件（与 airymaxos-kernel/services/security/memory/cognition 共享） |
+| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/INUSE/TOBEFREE/READY）+ common_value；SCHED_EXT 调度类编号约束（复用内核 SCHED_EXT=7，禁止 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 38 ID 枚举（安全配置工具引用）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用） | `include/airymax/` 6 个头文件（与 airymaxos-kernel/services/security/memory/cognition 共享） |
 | **[SS] 语义同源层** | API 签名同源，实现独立 | commons 公共工具语义（agentrt commons → airymaxos-system 工具）、监控 API（agentrt monitoring → top/htop/perf/airymaxmon）、配置管理语义（agentrt config → sysctl/systemd-config）、AI 助手语义（agentrt assistant → DevStation）、日志语义（agentrt log_write → journald/syslog）等 8+ 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | RPM + dnf 包管理实现、glibc + musl 基础库实现、bash/fish/zsh shell 实现、sysctl/systemd-config 实现细节、top/htop/perf/bpftrace/sysstat 工具实现、DevStation OS 级实现（auto-fix/code-gen/knowledge-base） | 各自独立仓库 |
 
@@ -344,7 +344,7 @@ airymaxmon 通过 [SC] 共享契约层读取内核子系统状态，确保监控
 | 头文件 | 共享内容 | 系统使用场景 |
 |--------|---------|-------------|
 | `include/airymax/bpf_struct_ops.h` | struct_ops 状态机（INIT/INUSE/TOBEFREE/READY）+ common_value 16B | airymaxmon 监控 struct_ops 状态 |
-| `include/airymax/sched.h` | SCHED_AGENT 调度类编号 + task_desc（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 | airymaxmon 监控调度统计 |
+| `include/airymax/sched.h` | SCHED_EXT 调度类编号约束（复用内核 SCHED_EXT=7，禁止 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 | airymaxmon 监控调度统计 |
 | `include/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | airymaxmon 监控分级内存 |
 | `include/airymax/security_types.h` | capability 38 ID 枚举 + LSM 钩子 254 ID + Cupolas blob 布局 | airymaxmon 安全监控 + 安全配置工具 |
 | `include/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 | DevStation 调用 LLM + airymaxmon 认知监控 |

@@ -23,7 +23,7 @@ agentrt-liunx 开发方案拆分为 9 个里程碑（M0-M8），对应 9 个 Par
 | M4 | 安全加固体系 | Part 5 | 3 周（21 天） | `110-security/` 完成 + capability + LSM + 机密计算就位 |
 | M5 | 开发流程与治理 | Part 6 | 2 周（14 天） | `120-development-process/` + `50/07` 完成 + 维护者制度落地 |
 | M6 | 路线图与里程碑 | Part 7 | 1 周（7 天） | `130-roadmap/` 7 文档完成（本模块） |
-| M7 | 应用生态与云原生 | Part 8 | 3 周（21 天） | `140-application-development/` + `150-cloud-native/` 完成 |
+| M7 | 应用生态与云原生 | Part 8 | 3 周（21 天） | `140-application-development/` + `150-cloudnative/` 完成 |
 | M8 | 兼容性与性能工程 | Part 9 | 2 周（14 天） | `160-compatibility/` + `170-performance/` 完成 |
 
 ### 1.1 里程碑分类
@@ -209,7 +209,7 @@ P1 阶段覆盖 M7-M8，净工期 35 天（5 周），在 P0 完成后启动。
 
 | 维度 | 内容 |
 |------|------|
-| **范围** | `140-application-development/` 9 文档 + `150-cloud-native/` 8 文档 |
+| **范围** | `140-application-development/` 9 文档 + `150-cloudnative/` 8 文档 |
 | **依赖** | M2（测试）+ M3（可观测）+ M4（安全）+ M5（治理） |
 | **工时** | 200h |
 | **并行** | 与 M8 部分并行（M8 Day 113 起） |
@@ -217,7 +217,7 @@ P1 阶段覆盖 M7-M8，净工期 35 天（5 周），在 P0 完成后启动。
 
 **子任务**:
 - Day 92-98: `140-application-development/` 应用开发 SDK（与 agentrt SDK 同源，4 语言）
-- Day 99-105: `150-cloud-native/` K8s + containerd + OCI 集成
+- Day 99-105: `150-cloudnative/` K8s + containerd + OCI 集成
 - Day 106-112: agentctl 命令行工具 + 超节点 OS 集成
 
 **验收标准**: 17 文档完成 + 应用开发 SDK 4 语言（Python/Rust/Go/TS）+ 与 agentrt SDK 同源映射 + 云原生部署方案就位。

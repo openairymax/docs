@@ -225,14 +225,14 @@ agentrt-liunx 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
 | OS-ACC-091 | 140-application-development/ 9 文档完成 | `find docs/AirymaxAgentOS/140-application-development/ -name "*.md" \| wc -l` | ≥9 | P1 | M7 |
-| OS-ACC-092 | 150-cloud-native/ 8 文档完成 | `find docs/AirymaxAgentOS/150-cloud-native/ -name "*.md" \| wc -l` | ≥8 | P1 | M7 |
+| OS-ACC-092 | 150-cloudnative/ 8 文档完成 | `find docs/AirymaxAgentOS/150-cloudnative/ -name "*.md" \| wc -l` | ≥8 | P1 | M7 |
 | OS-ACC-093 | Agent SDK 定义 | `grep -rE "Agent SDK\|agent sdk" docs/AirymaxAgentOS/140-application-development/` | ≥3 处 | P1 | M7 |
 | OS-ACC-094 | 应用模型定义 | `grep -rE "应用模型\|application model" docs/AirymaxAgentOS/140-application-development/` | ≥2 处 | P1 | M7 |
-| OS-ACC-095 | K8s 集成 | `grep -rE "K8s\|Kubernetes" docs/AirymaxAgentOS/150-cloud-native/` | ≥3 处 | P1 | M7 |
-| OS-ACC-096 | containerd 集成 | `grep -rE "containerd" docs/AirymaxAgentOS/150-cloud-native/` | ≥2 处 | P1 | M7 |
-| OS-ACC-097 | OCI 镜像标准 | `grep -rE "OCI" docs/AirymaxAgentOS/150-cloud-native/` | ≥2 处 | P1 | M7 |
-| OS-ACC-098 | agentctl 工具 | `grep -rE "agentctl" docs/AirymaxAgentOS/150-cloud-native/` | ≥2 处 | P1 | M7 |
-| OS-ACC-099 | 超节点 OS | `grep -rE "超节点" docs/AirymaxAgentOS/150-cloud-native/` | ≥2 处 | P1 | M7 |
+| OS-ACC-095 | K8s 集成 | `grep -rE "K8s\|Kubernetes" docs/AirymaxAgentOS/150-cloudnative/` | ≥3 处 | P1 | M7 |
+| OS-ACC-096 | containerd 集成 | `grep -rE "containerd" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-097 | OCI 镜像标准 | `grep -rE "OCI" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-098 | agentctl 工具 | `grep -rE "agentctl" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-099 | 超节点 OS | `grep -rE "超节点" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
 | OS-ACC-100 | 包管理定义 | `grep -rE "包管理\|package" docs/AirymaxAgentOS/140-application-development/` | ≥2 处 | P1 | M7 |
 
 ---
