@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **最新**: 2026-07-07
 **状态**: 草案（文档体系完成）
-**路径**: OpenAirymax/docs/AirymaxOS/TERMINOLOGY.md
+**路径**: OpenAirymax/docs/AirymaxOS/10-terminology.md
 
 ---
 
@@ -808,17 +808,17 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 参考文献
 
-[1] 体系并行论 — `Basic_Theories/CN_01_体系并行.md`
-[2] 认知层理论 — `Basic_Theories/CN_02_认知层设计.md`
-[3] 记忆层理论 — `Basic_Theories/CN_03_记忆层设计.md`
-[4] 设计原则 — `Basic_Theories/CN_04_系统设计原则.md`
+[1] 体系并行论 — `00-basic-theories/01-mcis-cn.md`
+[2] 认知层理论 — `00-basic-theories/02-cognition-design-cn.md`
+[3] 记忆层理论 — `00-basic-theories/03-memory-design-cn.md`
+[4] 设计原则 — `00-basic-theories/04-design-principles-cn.md`
 [5] 五维正交24原则与 agentrt-linux（AirymaxOS）落地映射 — `docs/AirymaxOS/10-architecture/02-five-dimensional-principles.md`
 [6] agentrt-linux 架构设计 — `docs/AirymaxOS/10-architecture/01-system-architecture.md`
 [7] 微内核设计思想详解 — `docs/AirymaxOS/10-architecture/03-microkernel-strategy.md`
 [8] agentrt-linux（AirymaxOS）工程基线 — `docs/AirymaxOS/10-architecture/04-engineering-baseline.md`
 [9] agentrt-linux 工程标准规范 — `docs/AirymaxOS/50-engineering-standards/README.md`
-[10] agentrt 统一术语表 — `docs/AirymaxRT/Capital_Specifications/TERMINOLOGY.md`
-[11] agentrt 技术规范 — `docs/AirymaxRT/Capital_Specifications/README.md`
+[10] agentrt 统一术语表 — `docs/AirymaxRT/50-specifications/10-terminology.md`
+[11] agentrt 技术规范 — `docs/AirymaxRT/50-specifications/README.md`
 
 ---
 

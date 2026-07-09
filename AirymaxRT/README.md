@@ -31,12 +31,12 @@ Welcome to the Airymax Agent Operating System documentation center. This documen
 
 The foundational design pillars of Airymax and required reading for understanding the design philosophy:
 
-- [**MCIS (Multi-body Control Intelligence System)**](Basic_Theories/EN_01_MCIS.md) — Multi-body Control Intelligence System ([中文](Basic_Theories/CN_01_体系并行.md))
-- [**Cognition Layer Design**](Basic_Theories/EN_02_Cognition_Theory.md) — Dual thinking system and three-layer architecture ([中文](Basic_Theories/CN_02_认知层设计.md))
-- [**Memory Layer Design**](Basic_Theories/EN_03_Memory_Theory.md) — Four-layer memory rovol model ([中文](Basic_Theories/CN_03_记忆层设计.md))
-- [**Design Principles**](Basic_Theories/EN_04_Design_Principles.md) — Introduction to the five-dimensional orthogonal design principles ([中文](Basic_Theories/CN_04_系统设计原则.md))
-- [**Design Philosophy**](Capital_Architecture/philosophy/design_philosophy.md) — Detailed exposition of MCIS and the five-dimensional orthogonal design system
-- [**Architectural Principles (Complete)**](ARCHITECTURAL_PRINCIPLES.md) — Detailed exposition of the 24 S/K/C/E/A principles
+- [**MCIS (Multi-body Control Intelligence System)**](00-basic-theories/01-mcis.md) — Multi-body Control Intelligence System ([中文](00-basic-theories/01-mcis-cn.md))
+- [**Cognition Layer Design**](00-basic-theories/02-cognition-design.md) — Dual thinking system and three-layer architecture ([中文](00-basic-theories/02-cognition-design-cn.md))
+- [**Memory Layer Design**](00-basic-theories/03-memory-design.md) — Four-layer memory rovol model ([中文](00-basic-theories/03-memory-design-cn.md))
+- [**Design Principles**](00-basic-theories/04-design-principles.md) — Introduction to the five-dimensional orthogonal design principles ([中文](00-basic-theories/04-design-principles-cn.md))
+- [**Design Philosophy**](10-architecture/40-philosophy/01-design-philosophy.md) — Detailed exposition of MCIS and the five-dimensional orthogonal design system
+- [**Architectural Principles (Complete)**](00-architectural-principles.md) — Detailed exposition of the 24 S/K/C/E/A principles
 
 ---
 
@@ -44,18 +44,18 @@ The foundational design pillars of Airymax and required reading for understandin
 
 Guided tutorials for new users to get started quickly:
 
-- [**Quick Start**](Capital_Guides/getting_started.md) — From zero to Hello World in 5 minutes
-- [**Configuration Guide**](Capital_Guides/configuration_guide.md) — Complete description of configuration options
-- [**Deployment Guide**](Capital_Guides/deployment_guide.md) — Production deployment best practices (Docker/K8s/Monitoring/Security)
-- [**Create Agent**](Capital_Guides/create_agent.md) — Complete Agent development workflow
-- [**Create Skill**](Capital_Guides/create_skill.md) — Complete Skill development workflow
-- [**Plugin SDK Tutorial**](Capital_Guides/plugin_sdk_tutorial.md) — Complete Plugin SDK development guide
-- [**Prompt Engineering Guide**](Capital_Guides/prompt_engineering.md) — Full lifecycle of prompt templates/injection/tuning
-- [**Migration Guide**](Capital_Guides/migration_guide.md) — Version upgrades and data migration
-- [**Build Guide**](Capital_Guides/build_guide.md) — Build system and compilation options
-- [**Testing Standards**](Capital_Guides/testing_standards.md) — Test layering and coverage standards
-- [**Performance Tuning**](Capital_Guides/performance_tuning.md) — Kernel parameters and performance optimization
-- [**Protocol Integration**](Capital_Guides/protocol_integration.md) — Multi-protocol adaptation and routing
+- [**Quick Start**](60-guides/01-getting-started.md) — From zero to Hello World in 5 minutes
+- [**Configuration Guide**](60-guides/04-configuration-guide.md) — Complete description of configuration options
+- [**Deployment Guide**](60-guides/03-deployment-guide.md) — Production deployment best practices (Docker/K8s/Monitoring/Security)
+- [**Create Agent**](60-guides/24-create-agent.md) — Complete Agent development workflow
+- [**Create Skill**](60-guides/25-create-skill.md) — Complete Skill development workflow
+- [**Plugin SDK Tutorial**](60-guides/17-plugin-sdk-tutorial.md) — Complete Plugin SDK development guide
+- [**Prompt Engineering Guide**](60-guides/19-prompt-engineering.md) — Full lifecycle of prompt templates/injection/tuning
+- [**Migration Guide**](60-guides/10-migration-guide.md) — Version upgrades and data migration
+- [**Build Guide**](60-guides/02-build-guide.md) — Build system and compilation options
+- [**Testing Standards**](60-guides/15-testing-standards.md) — Test layering and coverage standards
+- [**Performance Tuning**](60-guides/09-performance-tuning.md) — Kernel parameters and performance optimization
+- [**Protocol Integration**](60-guides/18-protocol-integration.md) — Multi-protocol adaptation and routing
 
 ---
 
@@ -63,14 +63,14 @@ Guided tutorials for new users to get started quickly:
 
 In-depth understanding of Airymax's design philosophy and technical implementation:
 
-- [**MicroCore Architecture**](Capital_Architecture/microcorert.md) — Implementation of K-1~K-4 principles
-- [**CoreLoopThree**](Capital_Architecture/coreloopthree.md) — Cognition→Execution→Memory
-- [**Memory Rovol System**](Capital_Architecture/memoryrovol.md) — L1→L2→L3→L4 four-layer memory
-- [**IPC Communication**](Capital_Architecture/kernel/ipc.md) — Binder/Channel/Buffer inter-process communication
-- [**Syscall Architecture**](Capital_Architecture/syscall.md) — Unified interface between user space and kernel space
-- [**Logging System Architecture**](Capital_Architecture/services/logging.md) — Cross-language observability and dynamic feedback regulation
-- [**Architecture Overview**](Capital_Architecture/architecture.md) — System overview and layered architecture diagram
-- [**C Language Boundary**](Capital_Architecture/kernel/c_language_boundary.md) — C core responsibility scope and FFI boundary
+- [**MicroCore Architecture**](10-architecture/04-microcorert.md) — Implementation of K-1~K-4 principles
+- [**CoreLoopThree**](10-architecture/02-coreloopthree.md) — Cognition→Execution→Memory
+- [**Memory Rovol System**](10-architecture/03-memoryrovol.md) — L1→L2→L3→L4 four-layer memory
+- [**IPC Communication**](10-architecture/30-kernel/01-ipc.md) — Binder/Channel/Buffer inter-process communication
+- [**Syscall Architecture**](10-architecture/05-syscall.md) — Unified interface between user space and kernel space
+- [**Logging System Architecture**](10-architecture/50-services/02-logging.md) — Cross-language observability and dynamic feedback regulation
+- [**Architecture Overview**](10-architecture/01-system-architecture.md) — System overview and layered architecture diagram
+- [**C Language Boundary**](10-architecture/30-kernel/02-c-language-boundary.md) — C core responsibility scope and FFI boundary
 
 ---
 
@@ -80,25 +80,25 @@ Complete interface documentation, including request examples and response format
 
 **Syscall API**:
 
-- [**API Overview**](Capital_API/README.md) — API hierarchy and design philosophy
-- [**Gateway API Reference**](Capital_API/api-reference.md) — HTTP/WebSocket endpoint API reference
-- [**CLI Command Reference**](Capital_API/cli-reference.md) — Complete commands for the unified CLI tool
-- [**Task Management API**](Capital_API/syscalls/task.md) — submit/query/wait/cancel full task lifecycle
-- [**Memory Management API**](Capital_API/syscalls/memory.md) — write/query/evolve/forget four-layer memory operations
-- [**Session Management API**](Capital_API/syscalls/session.md) — create/get/close/list session management
-- [**Observability API**](Capital_API/syscalls/telemetry.md) — metrics/traces telemetry interface
-- [**Agent Management API**](Capital_API/syscalls/agent.md) — spawn/terminate/invoke Agent management
+- [**API Overview**](30-api/README.md) — API hierarchy and design philosophy
+- [**Gateway API Reference**](30-api/02-api-reference.md) — HTTP/WebSocket endpoint API reference
+- [**CLI Command Reference**](30-api/03-cli-reference.md) — Complete commands for the unified CLI tool
+- [**Task Management API**](30-api/60-syscalls/05-task.md) — submit/query/wait/cancel full task lifecycle
+- [**Memory Management API**](30-api/60-syscalls/02-memory.md) — write/query/evolve/forget four-layer memory operations
+- [**Session Management API**](30-api/60-syscalls/03-session.md) — create/get/close/list session management
+- [**Observability API**](30-api/60-syscalls/06-telemetry.md) — metrics/traces telemetry interface
+- [**Agent Management API**](30-api/60-syscalls/01-agent.md) — spawn/terminate/invoke Agent management
 
 **Multi-language SDK**:
 
-- [**Python SDK**](Capital_API/toolkit/python/README.md) — Python language binding API
-- [**Go SDK**](Capital_API/toolkit/go/README.md) — Go language binding API
-- [**Rust SDK**](Capital_API/toolkit/rust/README.md) — Rust language binding API
-- [**TypeScript SDK**](Capital_API/toolkit/typescript/README.md) — TypeScript language binding API
+- [**Python SDK**](30-api/70-toolkit/20-python/README.md) — Python language binding API
+- [**Go SDK**](30-api/70-toolkit/10-go/README.md) — Go language binding API
+- [**Rust SDK**](30-api/70-toolkit/30-rust/README.md) — Rust language binding API
+- [**TypeScript SDK**](30-api/70-toolkit/40-typescript/README.md) — TypeScript language binding API
 
 **Core Algorithms**:
 
-- [**Algorithm Implementation Docs**](Capital_API/algorithms/README.md) — Document processing/search index/quality validation/performance optimization core algorithms
+- [**Algorithm Implementation Docs**](30-api/10-algorithms/README.md) — Document processing/search index/quality validation/performance optimization core algorithms
 
 ---
 
@@ -109,23 +109,23 @@ Essential knowledge for contributing to Airymax development:
 **Contribution & Testing**:
 
 - [**Contribution Guide**](../agentrt/CONTRIBUTING.md) — Complete PR submission workflow
-- [**Testing Guide**](Capital_Guides/testing_guide.md) — Unit tests, integration tests, E2E tests
+- [**Testing Guide**](60-guides/14-testing-guide.md) — Unit tests, integration tests, E2E tests
 
 **Coding Standards**:
 
-- [**C Coding Style Standard**](Capital_Specifications/coding_standard/C_coding_style_standard.md) — C naming/functions/error handling/concurrency/security standards
-- [**C++ Coding Style Standard**](Capital_Specifications/coding_standard/Cpp_coding_style_standard.md) — C++ coding standards
-- [**Python Coding Style Standard**](Capital_Specifications/coding_standard/Python_coding_style_standard.md) — Python type design/async/error handling standards
-- [**JavaScript Coding Style Standard**](Capital_Specifications/coding_standard/JavaScript_coding_style_standard.md) — JavaScript/TypeScript coding standards
-- [**Naming Conventions**](Capital_Specifications/coding_standard/NAMING_CONVENTIONS.md) — Component/file/function/type/constant naming conventions
-- [**Code Comment Template**](Capital_Specifications/coding_standard/Code_comment_template.md) — Doxygen/docstring comment standards
-- [**Logging Standard**](Capital_Specifications/coding_standard/Log_standard.md) — Log level/content/format/quality standards
+- [**C Coding Style Standard**](50-specifications/30-coding-standard/01-c-coding-style.md) — C naming/functions/error handling/concurrency/security standards
+- [**C++ Coding Style Standard**](50-specifications/30-coding-standard/05-cpp-coding-style.md) — C++ coding standards
+- [**Python Coding Style Standard**](50-specifications/30-coding-standard/12-python-coding-style.md) — Python type design/async/error handling standards
+- [**JavaScript Coding Style Standard**](50-specifications/30-coding-standard/08-javascript-coding-style.md) — JavaScript/TypeScript coding standards
+- [**Naming Conventions**](50-specifications/30-coding-standard/11-naming-conventions.md) — Component/file/function/type/constant naming conventions
+- [**Code Comment Template**](50-specifications/30-coding-standard/03-code-comment-template.md) — Doxygen/docstring comment standards
+- [**Logging Standard**](50-specifications/30-coding-standard/10-log-standard.md) — Log level/content/format/quality standards
 
 **Secure Coding**:
 
-- [**Security Design Standard**](Capital_Specifications/coding_standard/Security_design_standard.md) — D1~D4 four-layer protection/encryption/authentication/privacy protection
-- [**C/C++ Secure Coding Standard**](Capital_Specifications/coding_standard/C_Cpp_secure_coding_standard.md) — C/C++ secure coding practices
-- [**Java Secure Coding Standard**](Capital_Specifications/coding_standard/Java_secure_coding_standard.md) — Java secure coding practices
+- [**Security Design Standard**](50-specifications/30-coding-standard/15-security-design.md) — D1~D4 four-layer protection/encryption/authentication/privacy protection
+- [**C/C++ Secure Coding Standard**](50-specifications/30-coding-standard/02-c-cpp-secure-coding.md) — C/C++ secure coding practices
+- [**Java Secure Coding Standard**](50-specifications/30-coding-standard/09-java-secure-coding.md) — Java secure coding practices
 
 ---
 
@@ -134,9 +134,9 @@ Essential knowledge for contributing to Airymax development:
 Operational assurance for production environments:
 
 - [**Docker Deployment**](../Docker/README.md) — Complete containerized deployment solution
-- [**Monitoring & Ops**](Capital_Guides/monitoring_guide.md) — Prometheus+Grafana monitoring stack
-- [**Backup & Recovery**](Capital_Guides/backup_recovery.md) — Data backup and disaster recovery
-- [**Kernel Tuning**](Capital_Guides/performance_tuning.md) — Kernel parameter tuning and performance optimization
+- [**Monitoring & Ops**](60-guides/07-monitoring-guide.md) — Prometheus+Grafana monitoring stack
+- [**Backup & Recovery**](60-guides/11-backup-recovery.md) — Data backup and disaster recovery
+- [**Kernel Tuning**](60-guides/09-performance-tuning.md) — Kernel parameter tuning and performance optimization
 
 ---
 
@@ -144,9 +144,9 @@ Operational assurance for production environments:
 
 Common issues and solutions:
 
-- [**FAQ**](Capital_Guides/troubleshooting_faq.md) — Troubleshooting and high-frequency issues
-- [**Error Diagnosis**](Capital_Guides/diagnosis_guide.md) — Log analysis and problem localization
-- [**Known Issues**](Capital_Guides/known_issues.md) — Known bugs and temporary workarounds
+- [**FAQ**](60-guides/23-troubleshooting-faq.md) — Troubleshooting and high-frequency issues
+- [**Error Diagnosis**](60-guides/08-diagnosis-guide.md) — Log analysis and problem localization
+- [**Known Issues**](60-guides/22-known-issues.md) — Known bugs and temporary workarounds
 
 ---
 
@@ -156,37 +156,37 @@ The standardized specification system for the Airymax project:
 
 **Contract Specifications**:
 
-- [**Contract Overview**](Capital_Specifications/agentrt_contract/glossary_index.md) — Glossary and quick index
-- [**Agent Contract**](Capital_Specifications/agentrt_contract/agent_contract.md) — Agent capability description specification ([Schema](Capital_Specifications/agentrt_contract/agent_contract_schema.json))
-- [**Skill Contract**](Capital_Specifications/agentrt_contract/skill_contract.md) — Skill capability description specification ([Schema](Capital_Specifications/agentrt_contract/skill_contract_schema.json))
-- [**Protocol Specification**](Capital_Specifications/agentrt_contract/protocol_contract.md) — HTTP/WS/Stdio gateway + JSON-RPC 2.0
-- [**Syscall API Specification**](Capital_Specifications/agentrt_contract/syscall_api_contract.md) — Syscall interface contract
-- [**Logging Format Specification**](Capital_Specifications/agentrt_contract/logging_format.md) — Structured JSON log format
+- [**Contract Overview**](50-specifications/10-contracts/06-glossary-index.md) — Glossary and quick index
+- [**Agent Contract**](50-specifications/10-contracts/01-agent-contract.md) — Agent capability description specification ([Schema](50-specifications/10-contracts/01-agent-contract-schema.json))
+- [**Skill Contract**](50-specifications/10-contracts/02-skill-contract.md) — Skill capability description specification ([Schema](50-specifications/10-contracts/02-skill-contract-schema.json))
+- [**Protocol Specification**](50-specifications/10-contracts/03-protocol-contract.md) — HTTP/WS/Stdio gateway + JSON-RPC 2.0
+- [**Syscall API Specification**](50-specifications/10-contracts/04-syscall-api-contract.md) — Syscall interface contract
+- [**Logging Format Specification**](50-specifications/10-contracts/05-logging-format.md) — Structured JSON log format
 
 **Integration Standards**:
 
-- [**Integration Standards Overview**](Capital_Specifications/integration_standards/README.md) — Index of inter-module integration standards
-- [**Manager Configuration Integration Standard**](Capital_Specifications/integration_standards/INTEGRATION_STANDARD.md) — Manager module integration with the unified configuration library
+- [**Integration Standards Overview**](50-specifications/50-integration/README.md) — Index of inter-module integration standards
+- [**Manager Configuration Integration Standard**](50-specifications/50-integration/01-integration-standard.md) — Manager module integration with the unified configuration library
 
 **Project Management**:
 
-- [**Error Code Reference**](Capital_Specifications/project_erp/error_code_reference.md) — Complete error code definitions and handling recommendations
-- [**Resource Management Table**](Capital_Specifications/project_erp/resource_management_table.md) — Resource creation/release/ownership specifications
-- [**Software Bill of Materials (SBOM)**](Capital_Specifications/project_erp/SBOM.md) — Component/dependency/license/security information
-- [**Module Requirements**](Capital_Specifications/project_erp/manuals_module_requirements.md) — manuals module requirements and technical specifications
+- [**Error Code Reference**](50-specifications/70-project-erp/02-error-code-reference.md) — Complete error code definitions and handling recommendations
+- [**Resource Management Table**](50-specifications/70-project-erp/04-resource-management-table.md) — Resource creation/release/ownership specifications
+- [**Software Bill of Materials (SBOM)**](50-specifications/70-project-erp/01-sbom.md) — Component/dependency/license/security information
+- [**Module Requirements**](50-specifications/70-project-erp/03-manuals-module-requirements.md) — manuals module requirements and technical specifications
 
 **Terminology**:
 
-- [**Unified Terminology**](Capital_Specifications/TERMINOLOGY.md) — Unified Airymax terminology definitions
+- [**Unified Terminology**](50-specifications/10-terminology.md) — Unified Airymax terminology definitions
 
 ---
 
 ### 9️⃣ White Paper & Templates
 
-- [**Technical White Paper**](White_Paper/README.md) — Official Airymax technical white paper (CN/EN)
-- [**Document Template**](Quote_Templates/_template.md) — General document template
-- [**API Document Template**](Quote_Templates/_template_api.md) — API document authoring template
-- [**Guide Document Template**](Quote_Templates/_template_guide.md) — Guide document authoring template
+- [**Technical White Paper**](90-references/01-white-paper.md) — Official Airymax technical white paper (CN/EN)
+- [**Document Template**](90-references/02-template.md) — General document template
+- [**API Document Template**](90-references/03-template-api.md) — API document authoring template
+- [**Guide Document Template**](90-references/04-template-guide.md) — Guide document authoring template
 
 ---
 
@@ -194,7 +194,7 @@ The standardized specification system for the Airymax project:
 
 Supplementary materials and external links:
 
-- [**Unified Terminology**](Capital_Specifications/TERMINOLOGY.md) — Unified terminology definitions
+- [**Unified Terminology**](50-specifications/10-terminology.md) — Unified terminology definitions
 - [**Changelog**](../CHANGELOG.md) — Version update history
 - [**License**](../agentrt/LICENSE) — Full text of AGPL v3 + Apache 2.0 dual license
 
@@ -255,119 +255,151 @@ git checkout v1.0.0 -- docs/
 
 ```
 docs/
-├── ARCHITECTURAL_PRINCIPLES.md    # Complete five-dimensional orthogonal design principles
-├── README.md                      # English documentation entry (this file)
-├── README_zh.md                   # Chinese documentation entry
-├── TERMINOLOGY.md                 # Unified terminology
-├── Basic_Theories/                # Basic theories (CN/EN bilingual)
-│   ├── CN_01_体系并行.md
-│   ├── CN_02_认知层设计.md
-│   ├── CN_03_记忆层设计.md
-│   ├── CN_04_系统设计原则.md
-│   ├── EN_01_MCIS.md
-│   ├── EN_02_Cognition_Theory.md
-│   ├── EN_03_Memory_Theory.md
-│   └── EN_04_Design_Principles.md
-├── Capital_Architecture/          # Architecture design
-│   ├── architecture.md            # System overview and layered architecture diagram
-│   ├── microcorert.md             # MicroCore (MicroCoreRT) architecture details
-│   ├── coreloopthree.md           # Three-layer cognition loop
-│   ├── memoryrovol.md             # Memory rovol system
-│   ├── syscall.md                 # Syscall architecture
-│   ├── kernel/                    # Kernel subsystem
-│   │   ├── ipc.md                 # IPC communication mechanism
-│   │   └── c_language_boundary.md # C language boundary definition
-│   ├── services/                  # Service subsystem
-│   │   ├── daemon.md              # Daemon user-space service
-│   │   └── logging.md             # Logging system architecture
-│   ├── engineering/               # Engineering practices
-│   │   ├── testing.md             # Testing architecture
-│   │   └── toolkit.md             # Toolchain design
-│   ├── philosophy/                # Design philosophy
-│   │   └── design_philosophy.md   # MCIS and five-dimensional orthogonal design system
-│   └── diagrams/                  # Architecture diagrams (drawio)
-├── Capital_API/                   # API reference
+├── 00-architectural-principles.md   # Five-dimensional orthogonal design principles
+├── 00-basic-theories/               # Basic theories (CN/EN bilingual)
+│   ├── 01-mcis.md                   # Multibody Cybernetic Intelligent System (EN)
+│   ├── 01-mcis-cn.md                # 体系并行论 (CN)
+│   ├── 02-cognition-design.md       # Cognition layer design (EN)
+│   ├── 02-cognition-design-cn.md    # 认知层设计 (CN)
+│   ├── 03-memory-design.md          # Memory layer design (EN)
+│   ├── 03-memory-design-cn.md       # 记忆层设计 (CN)
+│   ├── 04-design-principles.md      # System design principles (EN)
+│   └── 04-design-principles-cn.md   # 系统设计原则 (CN)
+├── 10-architecture/                 # Architecture design
+│   ├── 01-system-architecture.md    # System overview and layered architecture
+│   ├── 02-coreloopthree.md          # Three-layer cognition loop
+│   ├── 03-memoryrovol.md            # Memory rovol system
+│   ├── 04-microcorert.md            # MicroCore (MicroCoreRT) architecture
+│   ├── 05-syscall.md                # Syscall architecture
+│   ├── 20-engineering/              # Engineering practices
+│   │   ├── 01-testing.md            # Testing architecture
+│   │   └── 02-toolkit.md            # Toolchain design
+│   ├── 30-kernel/                   # Kernel subsystem
+│   │   ├── 01-ipc.md                # IPC communication mechanism
+│   │   └── 02-c-language-boundary.md # C language boundary
+│   ├── 40-philosophy/               # Design philosophy
+│   │   └── 01-design-philosophy.md  # MCIS and five-dimensional design
+│   ├── 50-services/                 # Service subsystem
+│   │   ├── 01-daemon.md             # Daemon user-space service
+│   │   └── 02-logging.md            # Logging system architecture
+│   └── 60-diagrams/                 # Architecture diagrams (drawio)
+│       ├── 01-coreloopthree-flow.drawio
+│       ├── 02-memoryrovol-layers.drawio
+│       └── 03-overall-architecture.drawio
+├── 10-terminology.md                # Unified terminology
+├── 30-api/                          # API reference
 │   ├── README.md
-│   ├── api-reference.md           # Gateway API reference manual
-│   ├── cli-reference.md           # CLI command reference manual
-│   ├── syscalls/                  # Syscall API
-│   │   ├── task.md
-│   │   ├── memory.md
-│   │   ├── session.md
-│   │   ├── telemetry.md
-│   │   └── agent.md
-│   ├── toolkit/                   # Multi-language SDK
-│   │   ├── python/README.md
-│   │   ├── go/README.md
-│   │   ├── rust/README.md
-│   │   └── typescript/README.md
-│   └── algorithms/                # Core algorithms
-│       └── README.md
-├── Capital_Guides/                # Getting started and ops guides
-│   ├── backup_recovery.md
-│   ├── best_practices.md
-│   ├── build_guide.md
-│   ├── ci_cd_pipelines.md
-│   ├── config_change_process.md
-│   ├── config_drift_detector.md
-│   ├── configuration_guide.md
-│   ├── create_agent.md
-│   ├── create_skill.md
-│   ├── deployment_guide.md
-│   ├── diagnosis_guide.md
-│   ├── getting_started.md
-│   ├── known_issues.md
-│   ├── manager_development.md
-│   ├── migration_guide.md
-│   ├── monitoring_guide.md
-│   ├── performance_tuning.md
-│   ├── plugin_sdk_tutorial.md
-│   ├── prompt_engineering.md
-│   ├── protocol_integration.md
-│   ├── security_gateway.md
-│   ├── security_hardening.md
-│   ├── testing_guide.md
-│   ├── testing_standards.md
-│   └── troubleshooting_faq.md
-├── Capital_Specifications/         # Specifications and contracts
+│   ├── 01-doxygen-guide.md          # Doxygen documentation guide
+│   ├── 02-api-reference.md          # Gateway API reference
+│   ├── 03-cli-reference.md          # CLI command reference
+│   ├── 10-algorithms/               # Core algorithms
+│   │   └── README.md
+│   ├── 20-core/                     # Core API
+│   │   └── 01-coreloop-api.md       # CoreLoop API
+│   ├── 30-daemon/                   # Daemon API
+│   │   ├── 01-api-documentation.md  # Daemon API documentation
+│   │   └── 02-gateway-api.md        # Gateway API
+│   ├── 40-docker/                   # Docker integration
+│   │   └── README.md
+│   ├── 50-examples/                 # Examples
+│   │   └── 01-quickstart.md         # Quick start guide
+│   ├── 60-syscalls/                 # Syscall API
+│   │   ├── 01-agent.md
+│   │   ├── 02-memory.md
+│   │   ├── 03-session.md
+│   │   ├── 04-skill.md
+│   │   ├── 05-task.md
+│   │   └── 06-telemetry.md
+│   └── 70-toolkit/                  # Multi-language SDK
+│       ├── 01-protocol-guide.md     # Protocol guide
+│       ├── 02-protocol-quickstart.md # Protocol quickstart
+│       ├── 10-go/README.md
+│       ├── 20-python/README.md
+│       ├── 30-rust/README.md
+│       └── 40-typescript/README.md
+├── 50-specifications/               # Specifications and contracts
 │   ├── README.md
-│   ├── agentrt_contract/          # Contract specifications
-│   │   ├── agent_contract.md
-│   │   ├── agent_contract_schema.json
-│   │   ├── skill_contract.md
-│   │   ├── skill_contract_schema.json
-│   │   ├── protocol_contract.md
-│   │   ├── syscall_api_contract.md
-│   │   ├── logging_format.md
-│   │   └── glossary_index.md
-│   ├── coding_standard/           # Coding standards
-│   │   ├── NAMING_CONVENTIONS.md  # Naming conventions
-│   │   ├── C_coding_style_standard.md
-│   │   ├── Cpp_coding_style_standard.md
-│   │   ├── Python_coding_style_standard.md
-│   │   ├── JavaScript_coding_style_standard.md
-│   │   ├── C_Cpp_secure_coding_standard.md
-│   │   ├── Java_secure_coding_standard.md
-│   │   ├── Security_design_standard.md
-│   │   ├── Log_standard.md
-│   │   └── Code_comment_template.md
-│   ├── integration_standards/     # Integration standards
+│   ├── 10-contracts/                # Contract specifications
+│   │   ├── 01-agent-contract.md
+│   │   ├── 02-skill-contract.md
+│   │   ├── 03-protocol-contract.md
+│   │   ├── 04-syscall-api-contract.md
+│   │   ├── 05-logging-format.md
+│   │   ├── 06-glossary-index.md
+│   │   ├── 01-agent-contract-schema.json
+│   │   └── 02-skill-contract-schema.json
+│   ├── 20-are-standards/            # ARE Standards (L1-L3)
 │   │   ├── README.md
-│   │   └── INTEGRATION_STANDARD.md
-│   └── project_erp/              # Project management
-│       ├── SBOM.md
-│       ├── error_code_reference.md
-│       ├── manuals_module_requirements.md
-│       └── resource_management_table.md
-├── Source_Other/                  # Other resources
-│   └── Airymax-desktop-preview.gif
-├── White_Paper/                   # White paper
-│   ├── README.md
-│   └── history/
-└── Quote_Templates/               # Document templates
-    ├── _template.md
-    ├── _template_api.md
-    └── _template_guide.md
+│   │   ├── 01-l1-runtime-interface.md
+│   │   ├── 02-l2-service-protocol.md
+│   │   └── 03-l3-security-governance.md
+│   ├── 30-coding-standard/          # Coding standards
+│   │   ├── 01-c-coding-style.md
+│   │   ├── 02-c-cpp-secure-coding.md
+│   │   ├── 03-code-comment-template.md
+│   │   ├── 04-config-audit-log.md
+│   │   ├── 05-cpp-coding-style.md
+│   │   ├── 06-go-coding-style.md
+│   │   ├── 07-go-secure-coding.md
+│   │   ├── 08-javascript-coding-style.md
+│   │   ├── 09-java-secure-coding.md
+│   │   ├── 10-log-standard.md
+│   │   ├── 11-naming-conventions.md
+│   │   ├── 12-python-coding-style.md
+│   │   ├── 13-rust-coding-style.md
+│   │   ├── 14-rust-secure-coding.md
+│   │   └── 15-security-design.md
+│   ├── 40-error-code/               # Error code standard
+│   │   └── README.md
+│   ├── 50-integration/              # Integration standards
+│   │   ├── README.md
+│   │   ├── 01-integration-standard.md
+│   │   ├── 02-ecosystem-partnership.md
+│   │   └── 03-standards-contribution.md
+│   ├── 60-ipc/                      # IPC standard
+│   │   └── README.md
+│   ├── 70-project-erp/              # Project management
+│   │   ├── 01-sbom.md
+│   │   ├── 02-error-code-reference.md
+│   │   ├── 03-manuals-module-requirements.md
+│   │   └── 04-resource-management-table.md
+│   ├── 80-rpc-api/                  # RPC API standard
+│   │   └── README.md
+│   ├── 90-sdk/                      # SDK standard
+│   │   └── README.md
+│   └── 95-service-discovery/        # Service discovery standard
+│       └── README.md
+├── 60-guides/                       # Getting started and ops guides
+│   ├── 01-getting-started.md
+│   ├── 02-build-guide.md
+│   ├── 03-deployment-guide.md
+│   ├── 04-configuration-guide.md
+│   ├── 05-config-change-process.md
+│   ├── 06-config-drift-detector.md
+│   ├── 07-monitoring-guide.md
+│   ├── 08-diagnosis-guide.md
+│   ├── 09-performance-tuning.md
+│   ├── 10-migration-guide.md
+│   ├── 11-backup-recovery.md
+│   ├── 12-security-gateway.md
+│   ├── 13-security-hardening.md
+│   ├── 14-testing-guide.md
+│   ├── 15-testing-standards.md
+│   ├── 16-ci-cd-pipelines.md
+│   ├── 17-plugin-sdk-tutorial.md
+│   ├── 18-protocol-integration.md
+│   ├── 19-prompt-engineering.md
+│   ├── 20-manager-development.md
+│   ├── 21-best-practices.md
+│   ├── 22-known-issues.md
+│   ├── 23-troubleshooting-faq.md
+│   ├── 24-create-agent.md
+│   ├── 25-create-skill.md
+│   └── 26-coreloopthree-dag-integration.md
+├── 90-references/                   # Other resources
+│   └── README.md
+├── README.md                        # English documentation entry (this file)
+└── README_zh.md                     # Chinese documentation entry
 ```
 
 ---

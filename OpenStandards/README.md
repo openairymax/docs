@@ -226,7 +226,7 @@ Airymax 项目包含两个核心产品：
 
 ## 十、参考文献
 
-- agentrt-linux（AirymaxOS）统一术语表：`docs/AirymaxAgentOS/TERMINOLOGY.md`
+- agentrt-linux（AirymaxOS）统一术语表：`docs/AirymaxAgentOS/10-terminology.md`
 - agentrt-linux 工程标准规范手册：`docs/AirymaxAgentOS/50-engineering-standards/00-engineering-standards-handbook.md`
 - 五维正交 24 原则：`docs/AirymaxAgentOS/10-architecture/02-five-dimensional-principles.md`
 - IPC 协议契约：`docs/AirymaxAgentOS/50-engineering-standards/20-contracts/ipc_protocol_contract.md`

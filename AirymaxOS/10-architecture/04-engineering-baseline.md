@@ -511,7 +511,7 @@ agentrt-linux 工程基线声明以下兼容性：
 - [五维正交原则](02-five-dimensional-principles.md)：五维正交 24 原则落地映射
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [架构决策记录](05-adrs.md)：14 个核心 ADR（含 ADR-011~014：架构模型论证 / 微内核路线 / 版本基线锁定 / 微内核来源单一化）
-- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
 
 ---
 

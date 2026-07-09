@@ -22,18 +22,18 @@ docs/
 ├── AirymaxRT/                             # 极境智能体运行底座平台工程文档
 │   ├── README.md                          # AirymaxRT 文档总览
 │   ├── README_zh.md                       # AirymaxRT 中文文档总览
-│   ├── TERMINOLOGY.md                     # 术语表
-│   ├── ARCHITECTURAL_PRINCIPLES.md        # 24 条 S/K/C/E/A 五维正交设计原则
-│   ├── Basic_Theories/                    # 基础理论（MCIS/认知层/记忆层/设计原则）
-│   ├── Capital_Architecture/              # 核心架构（MicroCoreRT/CoreLoopThree/MemoryRovol/Syscall）
-│   ├── Capital_API/                       # API 参考（syscall/daemon/toolkit/algorithms）
-│   ├── Capital_Guides/                    # 开发指南（快速入门/构建/部署/创建Agent/排错）
-│   ├── Capital_Specifications/            # 规范标准（编码规范/契约/ARE标准/集成标准）
-│   └── Source_Other/                      # 其他资源
+│   ├── 10-terminology.md                     # 术语表
+│   ├── 00-architectural-principles.md        # 24 条 S/K/C/E/A 五维正交设计原则
+│   ├── 00-basic-theories/                    # 基础理论（MCIS/认知层/记忆层/设计原则）
+│   ├── 10-architecture/              # 核心架构（MicroCoreRT/CoreLoopThree/MemoryRovol/Syscall）
+│   ├── 30-api/                       # API 参考（syscall/daemon/toolkit/algorithms）
+│   ├── 60-guides/                    # 开发指南（快速入门/构建/部署/创建Agent/排错）
+│   ├── 50-specifications/            # 规范标准（编码规范/契约/ARE标准/集成标准）
+│   └── 90-references/                      # 其他资源
 │
 ├── AirymaxOS/                             # 极境智能体操作系统文档
 │   ├── README.md                          # AirymaxOS 文档总览（8 子仓 + 19 模块）
-│   ├── TERMINOLOGY.md                     # 术语表
+│   ├── 10-terminology.md                     # 术语表
 │   ├── 00-requirements/                   # 需求分析（业务需求/功能需求/非功能需求）
 │   ├── 10-architecture/                   # 架构设计（系统架构/五维原则/微内核策略/工程基线/ADR）
 │   ├── 20-modules/                        # 子仓设计（kernel/services/security/memory/cognition/cloudnative/system/tests）
@@ -89,10 +89,10 @@ OpenStandards 定义了 AirymaxRT 与 AirymaxOS 之间的共享契约层，Publi
 
 | 角色 | 推荐阅读路径 |
 |------|-------------|
-| **新手入门** | AirymaxRT → Capital_Guides/getting_started.md → configuration_guide.md |
-| **开发者** | AirymaxRT → Capital_API/ → Capital_Specifications/coding_standard/ |
-| **架构师** | AirymaxRT → Basic_Theories/ → Capital_Architecture/ → ARCHITECTURAL_PRINCIPLES.md |
-| **运维工程师** | AirymaxRT → Capital_Guides/deployment_guide.md → monitoring_guide.md |
+| **新手入门** | AirymaxRT → 60-guides/01-getting-started.md → configuration_guide.md |
+| **开发者** | AirymaxRT → 30-api/ → 50-specifications/30-coding-standard/ |
+| **架构师** | AirymaxRT → 00-basic-theories/ → 10-architecture/ → 00-architectural-principles.md |
+| **运维工程师** | AirymaxRT → 60-guides/03-deployment-guide.md → monitoring_guide.md |
 | **OS 开发者** | AirymaxOS → 10-architecture/ → 20-modules/ → 50-engineering-standards/ |
 | **标准制定者** | OpenStandards/ → 01-airymax-agent-runtime-standard.md |
 | **研究人员** | Publications/ → Journals/ / Conferences/ / Preprints/ |

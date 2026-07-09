@@ -223,7 +223,7 @@ done
 /* Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
 ```
 
-> **适用范围说明**：`Apache-2.0` 适用于检查脚本（CI/格式校验/禁词扫描等 `.sh`/`.py` 脚本）。内核态代码使用 `GPL-2.0-only WITH Linux-syscall-note`，用户态代码与文档使用 `AGPL-3.0-or-later OR Apache-2.0`，构建脚本使用 `GPL-2.0`。完整 5 类文件许可证策略矩阵见 [09-license-strategy.md](./09-license-strategy.md)。
+> **适用范围说明**：`Apache-2.0` 适用于检查脚本（CI/格式校验/禁词扫描等 `.sh`/`.py` 脚本）。内核态代码使用 `GPL-2.0-only WITH Linux-syscall-note`，用户态代码与文档使用 `AGPL-3.0-or-later OR Apache-2.0`，构建脚本使用 `GPL-2.0`。完整 5 类文件许可证策略矩阵见 [110-spdx-license-compliance.md](./110-spdx-license-compliance.md)（原 09-license-strategy.md 已合并至此）。
 
 **检查脚本**：
 ```bash

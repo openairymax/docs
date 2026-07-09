@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
-> **同源映射**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）
+> **同源映射**: `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）
 
 ---
 
@@ -41,7 +41,7 @@ agentrt-linux 工程思想建立在三大支柱之上，缺一不可：
 | 支柱 | 来源 | 在本文档中的体现 |
 |------|------|------------------|
 | **Linux 6.6 内核基线工程思想** | Linux 6.6 内核源代码（OLK-6.6）深度研究提炼 | 双层稳定性、渐进式开发、regression 不可接受、审查优先、不破坏用户空间 |
-| **Airymax 五维正交 24 原则** | `ARCHITECTURAL_PRINCIPLES.md`（S/K/C/E/A 五维） | 每条工程思想必须映射到至少一条五维原则 |
+| **Airymax 五维正交 24 原则** | `00-architectural-principles.md`（S/K/C/E/A 五维） | 每条工程思想必须映射到至少一条五维原则 |
 | **agentrt 17 类规则编号体系** | `0.1.1工程标准规范手册.md`（IRON/BAN/STD/ACC 等） | 核心铁律赋予 OS-IRON / OS-KER 编号 |
 
 Linux 内核工程思想提供严肃性基底，五维正交 24 原则提供 Airymax 自身的设计语言，17 类规则编号体系提供可执行性骨架。三者并非简单叠加，而是**正交耦合**：Linux 工程思想回答"内核工程的普遍规律"，五维原则回答"Airymax 在这些规律上的立场"，规则编号回答"这些立场如何被强制执行"。
@@ -584,5 +584,5 @@ agentrt-linux 作为一个新建的智能体操作系统发行版，其工程组
 ---
 
 > **文档结束** | agentrt-linux 工程标准 50-engineering-standards/04-engineering-philosophy.md
-> **同源文档**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）| IRON-9 v2 工程铁律（内部工程标准规范，17 类规则编号体系）
+> **同源文档**: `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）| IRON-9 v2 工程铁律（内部工程标准规范，17 类规则编号体系）
 > **下游文档**: `05-development-process.md`（开发流程）| `07-maintainers-and-governance.md`（维护者制度与治理）

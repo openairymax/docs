@@ -735,7 +735,7 @@ agentrt-linux 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9
 1. **同源定义**：同源 = 共享设计理念 + 共享契约层代码（IRON-9 v2）。agentrt 和 agentrt-linux 共享 MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 的语义，并共享契约层代码（IPC 消息头结构、syscall 编号、capability 令牌格式、MemoryRovol L1-L4 数据结构、CoreLoopThree 接口定义、错误码、规则编号体系，统一存放于 `include/airymax/` 头文件库），实现层各自独立
 2. **天然契合**：因为设计假设和实现假设一致，agentrt 在 agentrt-linux 上运行**无适配层**，天然更稳健
 3. **独立性**：agentrt 是跨平台用户态运行时，必须独立于任何特定 OS；agentrt-linux 是 Linux 发行版，专注于 Linux 6.6 优化
-4. **演进协同**：两者通过共享设计理念（ARCHITECTURAL_PRINCIPLES.md）与共享契约层代码（`include/airymax/`）协同演进，契约层变更须经 agentrt + agentrt-linux 两端 CI 双向校验
+4. **演进协同**：两者通过共享设计理念（00-architectural-principles.md）与共享契约层代码（`include/airymax/`）协同演进，契约层变更须经 agentrt + agentrt-linux 两端 CI 双向校验
 5. **IRON-9 v2 约束**：工程标准规范手册 IRON-9 v2（2026-07-07 决策变更）明确规定"agentrt 和 agentrt-linux 同源且部分代码共享"——共享契约层代码完全共享（`include/airymax/`），语义同源层 API 签名同源实现独立，完全独立层各自独立
 6. **边界清晰**：agentrt 是用户态库 + 守护进程，agentrt-linux 是 Linux 内核 + 用户态服务，边界清晰
 
@@ -744,7 +744,7 @@ agentrt-linux 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9
 | 影响范围 | 描述 |
 |----------|------|
 | 工程规范 | IRON-9 工程铁律约束同源且部分代码共享关系 |
-| 演进协同 | 通过 ARCHITECTURAL_PRINCIPLES.md 共享设计理念 |
+| 演进协同 | 通过 00-architectural-principles.md 共享设计理念 |
 | 测试验证 | airymaxos-tests-linux 需验证 agentrt 在 agentrt-linux 上的天然契合性 |
 | 文档规范 | 所有文档明确标注"同源 agentrt"对应关系 |
 | 部署模式 | agentrt 可独立运行，但在 agentrt-linux 上运行获得同源红利 |
@@ -1070,7 +1070,7 @@ graph LR
 - [五维正交原则](02-five-dimensional-principles.md)：五维正交 24 原则落地映射
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [工程基线](04-engineering-baseline.md)：agentrt-linux 工程基线
-- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
 - 工程标准规范手册（闭源内部参考）：IRON-9 / IRON-10 / BAN-361 等工程铁律
 
 ---

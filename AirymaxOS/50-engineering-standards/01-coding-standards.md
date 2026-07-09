@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范 / 代码规范
 > **版本**: 0.1.1 ｜ **最后更新**: 2026-07-06
-> **同源映射**: `50-engineering-standards/README.md` §3；`ARCHITECTURAL_PRINCIPLES.md` 五维正交 24 原则
+> **同源映射**: `50-engineering-standards/README.md` §3；`00-architectural-principles.md` 五维正交 24 原则
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
 > **适用范围**: agentrt-linux 内核态（C / 内联汇编）与同源用户态组件（C / Rust / Python / TypeScript）
 
@@ -677,6 +677,6 @@ config AGENTRT_DEVMEM_RW
 - `50-engineering-standards/03-code-style.md` — 代码风格（模块化 / 抽象层次 / 防御性）
 - `50-engineering-standards/04-engineering-philosophy.md` — 工程思想（双层稳定性 / 策略机制分离）
 - `50-engineering-standards/07-maintainers-and-governance.md` — 维护者制度与规则编号注册表
-- `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md` — Airymax 五维正交 24 原则
+- `docs/AirymaxRT/00-architectural-principles.md` — Airymax 五维正交 24 原则
 - `50-engineering-standards/magic-numbers.md` — agentrt-linux magic number 注册表（计划中）
 - `30-interfaces/01-syscall-spec.md` — 系统调用规范（UABI 边界）

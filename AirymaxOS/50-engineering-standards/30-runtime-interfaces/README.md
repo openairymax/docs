@@ -500,8 +500,8 @@ ARE Standards 的设计全程遵循五维正交24原则，关键映射如下：
 
 1. [工程标准规范手册](../00-engineering-standards-handbook.md)
 2. [agentrt-linux（AirymaxOS）工程思想](../../50-engineering-standards/04-engineering-philosophy.md)
-3. [体系并行论](../../AirymaxRT/Basic_Theories/CN_01_体系并行.md)
-4. [系统设计原则](../../AirymaxRT/Basic_Theories/CN_04_系统设计原则.md)
+3. [体系并行论](../../AirymaxRT/00-basic-theories/01-mcis-cn.md)
+4. [系统设计原则](../../AirymaxRT/00-basic-theories/04-design-principles-cn.md)
 5. IRON-9 v2 工程铁律（闭源内部参考）
 6. seL4 微内核项目文档：https://sel4.systems/
 

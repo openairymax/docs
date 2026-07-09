@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **父文档**: [架构设计](README.md)
-> **原则来源**: [ARCHITECTURAL_PRINCIPLES.md](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)
+> **原则来源**: [00-architectural-principles.md](../../AirymaxRT/00-architectural-principles.md)
 
 ---
 
@@ -383,7 +383,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 文档体系 | 位置 | 内容 |
 |----------|------|------|
 | docs/AirymaxOS/ | agentrt-linux 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
-| docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md | 架构原则 | 五维正交 24 原则 |
+| docs/AirymaxRT/00-architectural-principles.md | 架构原则 | 五维正交 24 原则 |
 | 50-engineering-standards/10-coding-style/ | 编码规范 | C / Rust / 安全编码规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
 | ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（14 个 ADR） |
@@ -541,7 +541,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 1. **提案**：社区或团队成员提出新原则或修改建议
 2. **讨论**：架构委员会组织讨论，评估影响
 3. **投票**：架构委员会投票决定是否采纳
-4. **文档化**：更新 ARCHITECTURAL_PRINCIPLES.md 和本文档
+4. **文档化**：更新 00-architectural-principles.md 和本文档
 5. **公告**：向社区公告原则变更
 6. **实施**：在代码库中实施新原则
 
@@ -554,7 +554,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [工程基线](04-engineering-baseline.md)：agentrt-linux 工程基线
 - [架构决策记录](05-adrs.md)：14 个核心 ADR
-- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
 
 ---
 

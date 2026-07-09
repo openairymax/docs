@@ -242,7 +242,7 @@ agentrt-linux 架构设计层包含 5 个核心文档，覆盖系统架构、五
 
 ## 6. 设计原则引用
 
-agentrt-linux 架构设计严格遵循 `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md` 中的五维正交 24 原则，详细落地映射请参见 [02-five-dimensional-principles.md](02-five-dimensional-principles.md)。
+agentrt-linux 架构设计严格遵循 `docs/AirymaxRT/00-architectural-principles.md` 中的五维正交 24 原则，详细落地映射请参见 [02-five-dimensional-principles.md](02-five-dimensional-principles.md)。
 
 ### 6.1 五维原则概览
 
@@ -273,7 +273,7 @@ agentrt-linux 架构设计严格遵循 `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.
 - [模块设计层](../20-modules/)：8 子仓详细设计
 - [接口设计层](../30-interfaces/)：syscall + IPC + SDK + 编码规范
 - [数据流程设计层](../40-dataflows/)：认知 + 记忆 + IPC + 调度数据流
-- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
 
 ---
 

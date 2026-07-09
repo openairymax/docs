@@ -549,7 +549,7 @@ graph LR
 - [功能需求分析](02-functional-requirements.md)：8 子仓功能矩阵与能力清单
 - [非功能需求分析](03-non-functional-requirements.md)：性能、安全、可靠性需求
 - [agentrt-linux 总览](../README.md)：agentrt-linux 整体设计
-- [Airymax 架构设计原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
+- [Airymax 架构设计原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则
 
 ---
 
