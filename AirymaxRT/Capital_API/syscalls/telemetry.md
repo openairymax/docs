@@ -96,7 +96,7 @@ if (err == AGENTOS_OK) {
 
 1. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentos_sys_free()` 释放。
 2. **错误码**：返回值使用 [error.h](../../AgentRT/agentos/commons/utils/error/include/error.h) 定义的负整数错误码（`AGENTOS_OK=0`, `AGENTOS_ERR_INVALID_PARAM=-2` 等）。
-3. **可观测性后端**：指标和追踪的实际采集、存储、导出一由 [observe_d](../../AgentRT/agentos/daemon/observe_d/) 负责，具体日志格式见 [日志格式规范](../../Capital_Specifications/agentos_contract/logging_format.md)。
+3. **可观测性后端**：指标和追踪的实际采集、存储、导出一由 [observe_d](../../AgentRT/agentos/daemon/observe_d/) 负责，具体日志格式见 [日志格式规范](../../Capital_Specifications/agentrt_contract/logging_format.md)。
 
 ---
 
@@ -104,7 +104,7 @@ if (err == AGENTOS_OK) {
 
 - [系统调用总览](../README.md)
 - [错误码体系](../../AgentRT/agentos/commons/utils/error/include/error.h)
-- [日志格式规范](../../Capital_Specifications/agentos_contract/logging_format.md)
+- [日志格式规范](../../Capital_Specifications/agentrt_contract/logging_format.md)
 
 ---
 

@@ -417,7 +417,7 @@ graph LR
 
 ### 11.2 同源 Airymax 文档
 
-- `docs/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则（S-4 / E-6 / A-4）
+- `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则（S-4 / E-6 / A-4）
 - 内部工程改进方案（闭源） — agentrt 36 天路线图（v4.2，对照参考）
 
 ### 11.3 agentrt-linux 设计文档

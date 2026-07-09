@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 7 篇——治理层规范
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
-> **同源映射**: agentrt `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `MAINTAINERS`（734KB）维护者制度范本
+> **同源映射**: agentrt `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `MAINTAINERS`（734KB）维护者制度范本
 > **理论根基**: Linux 内核 30+ 年沉淀的 Lieutenant System（副官系统）+ Airymax 体系并行论
 > **替代关系**: 本文档替代 Linux `Documentation/process/management-style.rst`、`submitting-patches.rst`（DCO 章节）、`contribution-maturity-model.rst`、`6.Followthrough.rst` 在 agentrt-linux 场景下的适用
 
@@ -696,11 +696,16 @@ agentrt-linux 总维护者承担 BDFL（Benevolent Dictator For Life）角色。
 > | 安全 | Landlock/capability/审计等安全规则 | 101-116、121-124 |
 > | 运维 | 配置/密钥/日志/监控等运维规则 | 141-158、206（运维侧） |
 >
-> **已知跨文档冲突编号**（需后续单独消解，不在本次注册范围）：
+> **已知跨文档冲突编号**（本文档为 SSoT，冲突消解计划在 1.0.1 开发阶段执行，不在本次 0.1.1 文档体系范围）：
 > - `OS-STD-206`：在 02-code-format.md:348 定义为"连续空行最多保留 1 行"（格式类），在 100-operations/02-configuration.md:184 定义为"配置文件密钥必须引用形式"（运维类）——同编号两套语义，待消解。
-> - `OS-KER-009`~`OS-KER-017` 及更高编号（`OS-KER-001`~`OS-KER-052` 连续被使用，外加 101/102/201-203/211/221 共 61 个不同编号）：多个编号在不同文档指代不同规则（如 `OS-KER-009` 在 4 份文档有 4 种定义、`OS-KER-010` 在 3 份文档有 3 种定义）。全量注册需先逐个消解跨文档冲突，属后续工程，非本次 TS-P0-16 范围。
->
-> 本次（2026-07-09）仅注册语义无冲突的编号：OS-STD-047/048/049（任务 1 新增）、OS-STD-233（单一干净定义）。其余 plain `OS-STD-NNN` 与 `OS-KER-009+` 的全量注册需在跨文档冲突消解后逐步推进。
+> - `OS-KER-001`~`OS-KER-052`（连续使用）+ 特殊编号（101/102/201-203/211/221）总计 61 个编号：多个编号在不同文档指代不同规则（如 `OS-KER-009` 在 4 份文档有 4 种定义、`OS-KER-010` 在 3 份文档有 3 种定义）。
+> - **冲突消解方案**（1.0.1 执行）：
+>   1. `02-code-format.md` 的所有 OS-KER 编号重新编号为 `OS-KER-FMT-001~012`（格式专属前缀）
+>   2. `01-coding-standards.md` 保留 OS-KER-xxx 编号，作为语义规则的权威来源
+>   3. `10-coding-style/C_coding_style_standard.md` 中的重复编号改为引用 `01`/`02` 的编号
+>   4. `10-coding-style/C_coding_style_standard_supplement.md` 中的重复编号改为引用 SSoT
+>   5. 所有重新编号完成后，更新本注册表完成全量注册
+> 本次（2026-07-09）仅注册语义无冲突的编号：OS-STD-047/048/049（任务 1 新增）、OS-STD-233（单一干净定义）。其余冲突编号需按上述方案在 1.0.1 开发阶段消解后再注册。
 
 ### 10.3 OS-KER 编号汇总（内核工程规则）
 
@@ -792,7 +797,7 @@ agentrt-linux 总维护者承担 BDFL（Benevolent Dictator For Life）角色。
 
 ### 12.1 同源 Airymax 文档
 
-- `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）
+- `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）
 - IRON-9 v2 工程铁律（闭源内部参考，17 类规则编号体系，v28.0）
 
 ### 12.2 agentrt-linux 工程标准

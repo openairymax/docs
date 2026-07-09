@@ -139,7 +139,7 @@ This directory contains integration standards and best practices between Airymax
 ## 📚 相关文档 / Related Documents
 
 - [ARCHITECTURAL_PRINCIPLES.md](../ARCHITECTURAL_PRINCIPLES.md) - 架构设计原则
-- [agentos_contract/](../agentos_contract/) - 接口合同规范
+- [agentrt_contract/](../agentrt_contract/) - 接口合同规范
 - [coding_standard/](../coding_standard/) - 编码标准
 - [project_erp/](../project_erp/) - 项目企业资源规划
 

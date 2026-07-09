@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 6 卷——工具链与自动化。本卷规定 7 层自动化验证体系、编译期/静态/动态分析工具链、格式化与风格检查、测试框架、覆盖率门槛、CI/CD 流水线与 24 项提交检查清单。
 > **版本**: 1.0.1（开发）
 > **最后更新**: 2026-07-06
-> **同源映射**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/dev-tools/testing-overview.rst`
+> **同源映射**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/dev-tools/testing-overview.rst`
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
 
 ---

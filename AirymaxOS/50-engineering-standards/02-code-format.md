@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 2 卷——代码格式。本卷规定缩进、行宽、大括号、空格、switch/case、空行与多语句等机械格式规则，并以"配置即代码"形式由 `.clang-format` / `.rustfmt.toml` / `.pyproject.toml` / `.prettierrc` 强制执行。
 > **版本**: 1.0.1（开发）
 > **最后更新**: 2026-07-06
-> **同源映射**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` + `.clang-format`（689 行 + 560 ForEachMacros）
+> **同源映射**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` + `.clang-format`（689 行 + 560 ForEachMacros）
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
 
 ---
@@ -16,6 +16,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **配置即代码（OS-STD-201）**：每一条格式规则必须有对应的格式化工具配置项；规则若无法被工具强制，等同于不存在。
 
+- **权威声明**：本卷是 agentrt-linux 代码格式规则的**唯一权威来源（SSoT）**。`10-coding-style/C_coding_style_standard.md` 和 `10-coding-style/C_coding_style_standard_supplement.md` 中的格式规则（缩进/行宽/大括号/空格）均引用本卷，不得重新定义。若发现不一致，以本卷为准。
 - **上游依赖**：04 工程思想定义"为什么"——双层稳定性、可读性优先、cache 影响是头等大事；本卷定义"长什么样"。
 - **下游依赖**：06 工具链与自动化定义"格式检查在哪一层执行"——预提交钩子（Layer 3）+ CI 门禁（Layer 4）必须运行 `make format-check`；本卷定义"被检查的内容"。
 

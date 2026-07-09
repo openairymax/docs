@@ -70,8 +70,8 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [agent_contract.md](agentos_contract/agent_contract.md) | v1.3.0 | ✅ 生产就绪 | Agent 接口定义、生命周期、能力描述 |
-| [agent_contract_schema.json](agentos_contract/agent_contract_schema.json) | v1.3.0 | ✅ 生产就绪 | Agent 契约 JSON Schema 验证文件 |
+| [agent_contract.md](agentrt_contract/agent_contract.md) | v1.3.0 | ✅ 生产就绪 | Agent 接口定义、生命周期、能力描述 |
+| [agent_contract_schema.json](agentrt_contract/agent_contract_schema.json) | v1.3.0 | ✅ 生产就绪 | Agent 契约 JSON Schema 验证文件 |
 
 **核心要求**:
 - 所有 Agent 必须实现契约定义的接口
@@ -82,8 +82,8 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [skill_contract.md](agentos_contract/skill_contract.md) | v1.3.0 | ✅ 生产就绪 | Skill 接口定义、输入输出、错误处理 |
-| [skill_contract_schema.json](agentos_contract/skill_contract_schema.json) | v1.3.0 | ✅ 生产就绪 | Skill 契约 JSON Schema 验证文件 |
+| [skill_contract.md](agentrt_contract/skill_contract.md) | v1.3.0 | ✅ 生产就绪 | Skill 接口定义、输入输出、错误处理 |
+| [skill_contract_schema.json](agentrt_contract/skill_contract_schema.json) | v1.3.0 | ✅ 生产就绪 | Skill 契约 JSON Schema 验证文件 |
 
 **核心要求**:
 - Skill 必须声明输入输出格式
@@ -94,7 +94,7 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [protocol_contract.md](agentos_contract/protocol_contract.md) | v1.3.0 | ✅ 生产就绪 | 组件间通信协议、消息格式、序列化 |
+| [protocol_contract.md](agentrt_contract/protocol_contract.md) | v1.3.0 | ✅ 生产就绪 | 组件间通信协议、消息格式、序列化 |
 
 **核心要求**:
 - 支持 JSON-RPC 2.0 协议
@@ -105,7 +105,7 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [syscall_api_contract.md](agentos_contract/syscall_api_contract.md) | v1.3.0 | ✅ 生产就绪 | 系统调用接口定义、参数、返回值 |
+| [syscall_api_contract.md](agentrt_contract/syscall_api_contract.md) | v1.3.0 | ✅ 生产就绪 | 系统调用接口定义、参数、返回值 |
 
 **核心要求**:
 - 所有系统调用必须文档化
@@ -116,7 +116,7 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [logging_format.md](agentos_contract/logging_format.md) | v1.3.0 | ✅ 生产就绪 | 结构化日志格式、字段定义、级别控制 |
+| [logging_format.md](agentrt_contract/logging_format.md) | v1.3.0 | ✅ 生产就绪 | 结构化日志格式、字段定义、级别控制 |
 
 **核心要求**:
 - 日志必须结构化 (JSON)
@@ -362,7 +362,7 @@ Airymax 采用双错误码体系：
 
 | 文档 | 版本 | 状态 | 描述 |
 |------|------|------|------|
-| [glossary_index.md](agentos_contract/glossary_index.md) | v1.3.0 | ✅ 生产就绪 | 契约术语索引、快速查找 |
+| [glossary_index.md](agentrt_contract/glossary_index.md) | v1.3.0 | ✅ 生产就绪 | 契约术语索引、快速查找 |
 
 **核心要求**:
 - 索引必须按字母顺序

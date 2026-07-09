@@ -95,7 +95,7 @@ Agent 的创建过程实际上是 MCIS 系统的构建过程：
 
 - 熟悉 C11 语言标准
 - 了解 Airymax 微核心架构（参见 [ARCHITECTURAL_PRINCIPLES.md](../architecture/ARCHITECTURAL_PRINCIPLES.md)）
-- 理解 Agent Contract 契约（参见 [agent_contract.md](../specifications/agentos_contract/agent/agent_contract.md)）
+- 理解 Agent Contract 契约（参见 [agent_contract.md](../specifications/agentrt_contract/agent/agent_contract.md)）
 
 ---
 
@@ -698,7 +698,7 @@ if (ret != 0) {
 
 ## 9. 相关文档
 
-- [Agent 契约规范](../specifications/agentos_contract/agent/agent_contract.md)
+- [Agent 契约规范](../specifications/agentrt_contract/agent/agent_contract.md)
 - [架构设计原则](../architecture/ARCHITECTURAL_PRINCIPLES.md)
 - [Skill 创建指南](create_skill.md)
 - [编码规范](../Capital_Specifications/coding_standard/C_coding_style_standard.md)

@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **最新**: 2026-06-09
 **状态**: 维护中
-**路径**: OpenAirymax/Docs/Capital_Specifications/agentos_contract/skill_contract.md
+**路径**: OpenAirymax/Docs/Capital_Specifications/agentrt_contract/skill_contract.md
 ---
 
 ## 编制说明

@@ -14,6 +14,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 本文档是 agentrt-linux 工程标准规范第一份子文档，定义**语义层**代码规则。它不是 Linux `coding-style.rst` 的译本，而是基于 Linux 6.6 内核基线沉淀的工程思想，融合 Airymax 五维正交 24 原则后，针对智能体操作系统场景重新表述的工程契约。代码格式（缩进 / 行宽 / clang-format）见 `02-code-format.md`，代码风格（模块化 / 抽象层次）见 `03-code-style.md`。
 
+**权威声明**：本卷是 agentrt-linux **语义层代码规则**（命名/函数/注释/类型/错误处理/内存/锁）的唯一权威来源（SSoT）。`10-coding-style/C_coding_style_standard.md` 中的命名约定（§3）、函数定义（§4）、错误处理（§7）、类型（§6）、内存管理（§8）、锁与并发（§9）均引用本卷，不得重新定义。若发现不一致，以本卷为准。
+
 **规则编号**：每条强制规则赋予唯一编号。`OS-KER-xxx` 为内核工程规则（强制，agentrt 不涉及内核态）；`OS-STD-xxx` 为标准规则；`OS-BAN-xxx` 为禁止规则；`OS-ACC-xxx` 为验收标准。多语言对照追求语义等价而非逐字翻译——同一规则在不同语言中以该语言最自然的方式落地。注册表汇总于 `07-maintainers-and-governance.md`。
 
 ---
@@ -675,6 +677,6 @@ config AGENTRT_DEVMEM_RW
 - `50-engineering-standards/03-code-style.md` — 代码风格（模块化 / 抽象层次 / 防御性）
 - `50-engineering-standards/04-engineering-philosophy.md` — 工程思想（双层稳定性 / 策略机制分离）
 - `50-engineering-standards/07-maintainers-and-governance.md` — 维护者制度与规则编号注册表
-- `docs/ARCHITECTURAL_PRINCIPLES.md` — Airymax 五维正交 24 原则
+- `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md` — Airymax 五维正交 24 原则
 - `50-engineering-standards/magic-numbers.md` — agentrt-linux magic number 注册表（计划中）
 - `30-interfaces/01-syscall-spec.md` — 系统调用规范（UABI 边界）

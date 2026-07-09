@@ -383,7 +383,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 文档体系 | 位置 | 内容 |
 |----------|------|------|
 | docs/AirymaxOS/ | agentrt-linux 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
-| docs/ARCHITECTURAL_PRINCIPLES.md | 架构原则 | 五维正交 24 原则 |
+| docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md | 架构原则 | 五维正交 24 原则 |
 | 50-engineering-standards/10-coding-style/ | 编码规范 | C / Rust / 安全编码规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
 | ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（14 个 ADR） |

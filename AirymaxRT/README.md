@@ -156,12 +156,12 @@ The standardized specification system for the Airymax project:
 
 **Contract Specifications**:
 
-- [**Contract Overview**](Capital_Specifications/agentos_contract/glossary_index.md) — Glossary and quick index
-- [**Agent Contract**](Capital_Specifications/agentos_contract/agent_contract.md) — Agent capability description specification ([Schema](Capital_Specifications/agentos_contract/agent_contract_schema.json))
-- [**Skill Contract**](Capital_Specifications/agentos_contract/skill_contract.md) — Skill capability description specification ([Schema](Capital_Specifications/agentos_contract/skill_contract_schema.json))
-- [**Protocol Specification**](Capital_Specifications/agentos_contract/protocol_contract.md) — HTTP/WS/Stdio gateway + JSON-RPC 2.0
-- [**Syscall API Specification**](Capital_Specifications/agentos_contract/syscall_api_contract.md) — Syscall interface contract
-- [**Logging Format Specification**](Capital_Specifications/agentos_contract/logging_format.md) — Structured JSON log format
+- [**Contract Overview**](Capital_Specifications/agentrt_contract/glossary_index.md) — Glossary and quick index
+- [**Agent Contract**](Capital_Specifications/agentrt_contract/agent_contract.md) — Agent capability description specification ([Schema](Capital_Specifications/agentrt_contract/agent_contract_schema.json))
+- [**Skill Contract**](Capital_Specifications/agentrt_contract/skill_contract.md) — Skill capability description specification ([Schema](Capital_Specifications/agentrt_contract/skill_contract_schema.json))
+- [**Protocol Specification**](Capital_Specifications/agentrt_contract/protocol_contract.md) — HTTP/WS/Stdio gateway + JSON-RPC 2.0
+- [**Syscall API Specification**](Capital_Specifications/agentrt_contract/syscall_api_contract.md) — Syscall interface contract
+- [**Logging Format Specification**](Capital_Specifications/agentrt_contract/logging_format.md) — Structured JSON log format
 
 **Integration Standards**:
 
@@ -331,7 +331,7 @@ docs/
 │   └── troubleshooting_faq.md
 ├── Capital_Specifications/         # Specifications and contracts
 │   ├── README.md
-│   ├── agentos_contract/          # Contract specifications
+│   ├── agentrt_contract/          # Contract specifications
 │   │   ├── agent_contract.md
 │   │   ├── agent_contract_schema.json
 │   │   ├── skill_contract.md

@@ -90,7 +90,7 @@ SPDX-License-Identifier: GPL-3.0-only
 - 格式: `YYYY-MM-DDTHH:MM:SS.ffffffZ`
 
 > **📝 与运行时日志的时间戳格式差异说明**  
-> 本规范（审计日志）使用 ISO 8601 字符串格式（如 `"2026-04-05T10:30:00.123456Z"`），而 [logging_format.md](../agentos_contract/logging_format.md) 中的运行时日志使用 Unix 时间戳数值格式（如 `1701234567.890`）。两者格式不同的原因：
+> 本规范（审计日志）使用 ISO 8601 字符串格式（如 `"2026-04-05T10:30:00.123456Z"`），而 [logging_format.md](../agentrt_contract/logging_format.md) 中的运行时日志使用 Unix 时间戳数值格式（如 `1701234567.890`）。两者格式不同的原因：
 > - **审计日志**面向合规审查，ISO 8601 格式人类可读，便于安全审计人员直接阅读和比对时间线
 > - **运行时日志**面向机器解析和性能监控，Unix 时间戳数值格式解析效率高、存储紧凑、便于计算时间差
 > - 两种格式可通过标准库函数互相转换，不存在信息丢失
@@ -109,7 +109,7 @@ SPDX-License-Identifier: GPL-3.0-only
 | `AUDIT` | 审计检查 | 安全审计、合规检查 |
 
 > **📝 与 logging_format.md 的 AUDIT 级别对齐**  
-> 本规范新增 `AUDIT` 动作类型，与 [logging_format.md](../agentos_contract/logging_format.md) 中定义的 `AUDIT` 日志级别（级别 5）对齐。`AUDIT` 动作用于记录安全审计和合规检查操作，其对应的运行时日志应使用 `audit` 级别输出。
+> 本规范新增 `AUDIT` 动作类型，与 [logging_format.md](../agentrt_contract/logging_format.md) 中定义的 `AUDIT` 日志级别（级别 5）对齐。`AUDIT` 动作用于记录安全审计和合规检查操作，其对应的运行时日志应使用 `audit` 级别输出。
 
 ### 3.3 config_file（配置文件路径）
 

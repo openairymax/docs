@@ -393,7 +393,7 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 
 - `80-testing/README.md`（测试体系主索引，定义 L1-L10 分层）
 - `80-testing/02-kselftest.md`（kselftest 系统级测试，与本卷互补）
-- `80-testing/03-kernel-selftests.md`（`lib/test_*` 内核自检）
+- `80-testing/03-kernel-selftests.md`（`lib/test_*` 内核自检，待创建）
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证体系，本卷属第 7 层）
 - `50-engineering-standards/01-coding-standards.md`（错误处理强制，KUnit 断言与之对齐）
 - `20-modules/08-tests.md`（tests-linux 子仓设计，agentrt-linux 测试代码组织）

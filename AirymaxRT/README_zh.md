@@ -156,12 +156,12 @@ Airymax项目的标准化规范体系：
 
 **契约规范**：
 
-- [**契约规范总览**](Capital_Specifications/agentos_contract/glossary_index.md) — 术语表与快速索引
-- [**Agent契约**](Capital_Specifications/agentos_contract/agent_contract.md) — Agent能力描述规范（[Schema](Capital_Specifications/agentos_contract/agent_contract_schema.json)）
-- [**Skill契约**](Capital_Specifications/agentos_contract/skill_contract.md) — Skill技能描述规范（[Schema](Capital_Specifications/agentos_contract/skill_contract_schema.json)）
-- [**通信协议规范**](Capital_Specifications/agentos_contract/protocol_contract.md) — HTTP/WS/Stdio网关+JSON-RPC 2.0
-- [**系统调用API规范**](Capital_Specifications/agentos_contract/syscall_api_contract.md) — 系统调用接口契约
-- [**日志格式规范**](Capital_Specifications/agentos_contract/logging_format.md) — 结构化JSON日志格式
+- [**契约规范总览**](Capital_Specifications/agentrt_contract/glossary_index.md) — 术语表与快速索引
+- [**Agent契约**](Capital_Specifications/agentrt_contract/agent_contract.md) — Agent能力描述规范（[Schema](Capital_Specifications/agentrt_contract/agent_contract_schema.json)）
+- [**Skill契约**](Capital_Specifications/agentrt_contract/skill_contract.md) — Skill技能描述规范（[Schema](Capital_Specifications/agentrt_contract/skill_contract_schema.json)）
+- [**通信协议规范**](Capital_Specifications/agentrt_contract/protocol_contract.md) — HTTP/WS/Stdio网关+JSON-RPC 2.0
+- [**系统调用API规范**](Capital_Specifications/agentrt_contract/syscall_api_contract.md) — 系统调用接口契约
+- [**日志格式规范**](Capital_Specifications/agentrt_contract/logging_format.md) — 结构化JSON日志格式
 
 **集成标准**：
 
@@ -331,7 +331,7 @@ docs/
 │   └── troubleshooting_faq.md
 ├── Capital_Specifications/         # 规范与契约
 │   ├── README.md
-│   ├── agentos_contract/          # 契约规范
+│   ├── agentrt_contract/          # 契约规范
 │   │   ├── agent_contract.md
 │   │   ├── agent_contract_schema.json
 │   │   ├── skill_contract.md

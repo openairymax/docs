@@ -551,10 +551,11 @@ scripts/
 ## 8. 相关文档
 
 - [工程标准规范 README](README.md)——主索引与总纲
-- [01-coding-standards.md](01-coding-standards.md)——代码规范
-- [02-code-format.md](02-code-format.md)——代码格式
+- [01-coding-standards.md](01-coding-standards.md)——代码规范（语义规则 SSoT）
+- [02-code-format.md](02-code-format.md)——代码格式（格式规则 SSoT）
 - [06-toolchain-and-automation.md](06-toolchain-and-automation.md)——工具链与自动化（7 层验证）
 - [07-maintainers-and-governance.md](07-maintainers-and-governance.md)——维护者制度与治理
+- [10-coding-style/](10-coding-style/)——编码规范子目录（C/Rust 编码风格与安全编码，引用 01/02 SSoT）
 
 ---
 

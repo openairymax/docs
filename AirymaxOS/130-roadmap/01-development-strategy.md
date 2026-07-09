@@ -451,7 +451,7 @@ agentrt-linux 开发策略以三大支柱（工程标准 + 架构设计 + 开发
 
 ### 8.2 同源 Airymax 文档
 
-- `docs/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则
+- `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md` — 五维正交 24 原则
 - IRON-9 v2 工程铁律（闭源内部参考） — 17 类规则编号体系（v28.0，含 IRON-9 v2 同源且部分代码共享）
 - 内部工程改进方案（闭源） — agentrt 三大支柱方案（v4.2）
 

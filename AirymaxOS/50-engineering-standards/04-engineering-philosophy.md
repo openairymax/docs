@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
-> **同源映射**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）
+> **同源映射**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）
 
 ---
 
@@ -584,5 +584,5 @@ agentrt-linux 作为一个新建的智能体操作系统发行版，其工程组
 ---
 
 > **文档结束** | agentrt-linux 工程标准 50-engineering-standards/04-engineering-philosophy.md
-> **同源文档**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）| IRON-9 v2 工程铁律（内部工程标准规范，17 类规则编号体系）
+> **同源文档**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）| IRON-9 v2 工程铁律（内部工程标准规范，17 类规则编号体系）
 > **下游文档**: `05-development-process.md`（开发流程）| `07-maintainers-and-governance.md`（维护者制度与治理）

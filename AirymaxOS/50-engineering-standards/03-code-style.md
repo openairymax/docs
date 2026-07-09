@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 3 卷——代码风格。本卷规定模块化设计、策略机制分离、函数分解、数据结构、抽象层次、防御性、性能、工具链使用等"该怎么思考"的工程风格决策。它承接 02 代码格式的机械规则，向 04 工程思想的双重稳定性哲学过渡。
 > **版本**: 1.0.1（开发）
 > **最后更新**: 2026-07-06
-> **同源映射**: `docs/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` §6~§22 + `stable-api-nonsense.rst`
+> **同源映射**: `docs/AirymaxRT/ARCHITECTURAL_PRINCIPLES.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` §6~§22 + `stable-api-nonsense.rst`
 > **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
 
 ---
