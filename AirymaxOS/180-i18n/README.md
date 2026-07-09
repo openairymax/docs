@@ -74,7 +74,7 @@ int main() {
 每个文档必须包含英文（README.md）和中文（README_zh.md）两个版本：
 
 ```
-docs/AirymaxAgentOS/50-engineering-standards/
+docs/AirymaxOS/50-engineering-standards/
 ├── README.md          # 英文版
 ├── README_zh.md       # 中文版
 ├── 01-coding-standards.md

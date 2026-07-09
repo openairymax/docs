@@ -206,7 +206,7 @@ static void test_agent_cognition_contract(struct kunit *test) {
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证）
 - `50-engineering-standards/01-coding-standards.md`（错误处理强制）
 - `110-security/README.md`（安全测试）
-- `20-modules/08-tests.md`（tests 子仓设计）
+- `20-modules/08-tests.md`（tests-linux 子仓设计）
 
 ---
 

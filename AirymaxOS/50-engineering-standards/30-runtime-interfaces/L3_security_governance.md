@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-07-07  
 **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）  
 **状态**: 草案  
-**路径**: OpenAirymax/docs/AirymaxAgentOS/50-engineering-standards/30-runtime-interfaces/L3_security_governance.md  
+**路径**: OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/L3_security_governance.md  
 **父文档**: [ARE Standards 总览](./README.md)  
 **理论根基**: 体系并行论、五维正交24原则、Cupolas 安全穹顶模型、seL4 capability 安全模型  
 

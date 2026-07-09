@@ -503,7 +503,7 @@ graph TD
 | `airymaxos-memory` | 提供容器快照、迁移（MemoryRovol L1-L4） | [SC] |
 | `airymaxos-cognition` | Agent 容器化运行、CRD cognition 字段引用 | [SC] |
 | `airymaxos-system` | 提供云原生管理工具 | [IND] |
-| `airymaxos-tests` | 云原生测试、混沌工程 | [IND] |
+| `airymaxos-tests-linux` | 云原生测试、混沌工程 | [IND] |
 
 ---
 

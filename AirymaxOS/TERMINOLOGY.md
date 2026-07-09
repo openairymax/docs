@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **最新**: 2026-07-07
 **状态**: 草案（文档体系完成）
-**路径**: OpenAirymax/docs/AirymaxAgentOS/TERMINOLOGY.md
+**路径**: OpenAirymax/docs/AirymaxOS/TERMINOLOGY.md
 
 ---
 
@@ -73,6 +73,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **业界定义**: 操作系统的最小核心，只提供最基本的服务（调度、IPC、地址空间管理、基本内存管理）。文件系统、网络栈、设备驱动等服务运行在用户态。代表实现：seL4、Zircon、Minix3、QNX、L4。
 
+> **ADR-014 约束**: agentrt-linux 微内核设计思想**唯一来源为 seL4**，不引入 Zircon / Minix3 / 其他微内核架构。业界定义中列出其他实现仅作术语参考，不代表 agentrt-linux 采纳其设计思想。
+
 **agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）基于 Linux 6.6 内核进行**微内核化改造**（非从零开发），演进目标为真正的微内核——利用 sched_ext + eBPF + io_uring 实现微内核化，将 VFS、网络栈、部分驱动移到用户态，同时保留 Linux 内核的稳定性和硬件兼容性。遵循 Liedtke minimality principle。
 
 **参见**: Liedtke Minimality Principle、seL4、MicroCoreRT（微核心运行时）
@@ -92,6 +94,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ### capability（操作系统安全）
 
 **业界定义**: 一种访问控制机制，使用不可伪造的令牌（capability）代表对资源的访问权限。进程必须持有指向目标资源的 capability 才能进行访问。capability 可以被委托、复制、限制。代表实现：seL4、Zircon。
+
+> **ADR-014 约束**: agentrt-linux capability 模型**唯一来源为 seL4**，不引入 Zircon handle 模型。
 
 **agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）安全子系统（airymaxos-security）实现 capability 系统（seL4 风格），与 Cupolas 同源。capability 令牌格式定义于 `include/airymax/security_types.h`（IRON-9 v2 [SC] 共享契约层），结合 LSM 钩子（SELinux）实现纵深防御。
 
@@ -253,7 +257,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `agentrt_*` 前缀（IRON-9 v2 [SC] 共享契约层）
 
-**代码目录**: `airymaxos-kernel/` / `airymaxos-services/` / `airymaxos-cognition/` / `airymaxos-memory/` / `airymaxos-security/` / `airymaxos-cloudnative/` / `airymaxos-system/` / `airymaxos-tests/`（8 子仓）
+**代码目录**: `airymaxos-kernel/` / `airymaxos-services/` / `airymaxos-cognition/` / `airymaxos-memory/` / `airymaxos-security/` / `airymaxos-cloudnative/` / `airymaxos-system/` / `tests-linux/`（8 子仓）
 
 **参见**: agentrt（AirymaxAgentRT）、IRON-9 v2、MicroCoreRT（微核心运行时）、五维正交24原则
 
@@ -454,7 +458,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **参见**: 五维正交性、体系并行论、IRON-9 v2
 
-**关联文档**: `docs/AirymaxAgentOS/10-architecture/02-five-dimensional-principles.md`（完整落地映射）
+**关联文档**: `docs/AirymaxOS/10-architecture/02-five-dimensional-principles.md`（完整落地映射）
 
 ---
 
@@ -644,7 +648,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | airymaxos-security | 安全穹顶 | `airymaxos-security/` |
 | airymaxos-cloudnative | 云原生 | `airymaxos-cloudnative/` |
 | airymaxos-system | 系统编排 | `airymaxos-system/` |
-| airymaxos-tests | 测试框架 | `airymaxos-tests/` |
+| airymaxos-tests-linux | 测试框架 | `tests-linux/` |
 
 **参见**: agentrt-linux（AirymaxOS）、IRON-9 v2
 
@@ -808,13 +812,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 [2] 认知层理论 — `Basic_Theories/CN_02_认知层设计.md`
 [3] 记忆层理论 — `Basic_Theories/CN_03_记忆层设计.md`
 [4] 设计原则 — `Basic_Theories/CN_04_系统设计原则.md`
-[5] 五维正交24原则与 agentrt-linux（AirymaxOS）落地映射 — `docs/AirymaxAgentOS/10-architecture/02-five-dimensional-principles.md`
-[6] agentrt-linux 架构设计 — `docs/AirymaxAgentOS/10-architecture/01-system-architecture.md`
-[7] 微内核设计思想详解 — `docs/AirymaxAgentOS/10-architecture/03-microkernel-strategy.md`
-[8] agentrt-linux（AirymaxOS）工程基线 — `docs/AirymaxAgentOS/10-architecture/04-engineering-baseline.md`
-[9] agentrt-linux 工程标准规范 — `docs/AirymaxAgentOS/50-engineering-standards/README.md`
-[10] agentrt 统一术语表 — `docs/AirymaxAgentRT/Capital_Specifications/TERMINOLOGY.md`
-[11] agentrt 技术规范 — `docs/AirymaxAgentRT/Capital_Specifications/README.md`
+[5] 五维正交24原则与 agentrt-linux（AirymaxOS）落地映射 — `docs/AirymaxOS/10-architecture/02-five-dimensional-principles.md`
+[6] agentrt-linux 架构设计 — `docs/AirymaxOS/10-architecture/01-system-architecture.md`
+[7] 微内核设计思想详解 — `docs/AirymaxOS/10-architecture/03-microkernel-strategy.md`
+[8] agentrt-linux（AirymaxOS）工程基线 — `docs/AirymaxOS/10-architecture/04-engineering-baseline.md`
+[9] agentrt-linux 工程标准规范 — `docs/AirymaxOS/50-engineering-standards/README.md`
+[10] agentrt 统一术语表 — `docs/AirymaxRT/Capital_Specifications/TERMINOLOGY.md`
+[11] agentrt 技术规范 — `docs/AirymaxRT/Capital_Specifications/README.md`
 
 ---
 

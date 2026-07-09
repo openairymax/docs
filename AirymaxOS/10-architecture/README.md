@@ -17,8 +17,8 @@ agentrt-linux 架构设计建立在三大支柱之上，三大支柱相辅相成
 
 | 支柱 | 核心思想 | 参考来源 | 落地子仓 |
 |------|----------|----------|----------|
-| **微内核设计思想** | 最小化特权态代码（Liedtke minimality）、服务用户态化、消息传递通信、capability 安全 | seL4 / Zircon / Minix3 | airymaxos-kernel / airymaxos-services / airymaxos-security |
-| **agentrt-linux 工程基线** | 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范，兼容企业级 Linux 生态 | Linux 6.6 内核基线 / 下一代内核基线 | airymaxos-system / airymaxos-tests / airymaxos-cloudnative |
+| **微内核设计思想** | 最小化特权态代码（Liedtke minimality）、服务用户态化、消息传递通信、capability 安全 | seL4（ADR-014，唯一来源） | airymaxos-kernel / airymaxos-services / airymaxos-security |
+| **agentrt-linux 工程基线** | 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范，兼容企业级 Linux 生态 | Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-013） | airymaxos-system / airymaxos-tests-linux / airymaxos-cloudnative |
 | **Airymax 同源性** | 与 agentrt 共享 MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree 设计理念，天然适配无适配层 | agentrt atoms/cupolas/coreloopthree | 全部 8 子仓 |
 
 ### 1.2 支柱之间的关系
@@ -59,7 +59,7 @@ graph TB
         COGNITION["airymaxos-cognition<br/>极境认知<br/>CoreLoopThree kthread + Wasm<br/>同源: coreloopthree + frameworks"]
         CLOUDNATIVE["airymaxos-cloudnative<br/>极境云原生<br/>K8s + containerd + 超节点 OS<br/>同源: gateway + sdk"]
         SYSTEM["airymaxos-system<br/>极境系统<br/>包管理 + 配置 + DevStation<br/>同源: commons"]
-        TESTS["airymaxos-tests<br/>极境测试<br/>单元 + 集成 + 形式化验证 + Soak<br/>同源: 全模块测试"]
+        TESTS["airymaxos-tests-linux<br/>极境测试<br/>单元 + 集成 + 形式化验证 + Soak<br/>同源: 全模块测试"]
 
         KERNEL --> SERVICES
         KERNEL --> SECURITY
@@ -108,7 +108,7 @@ graph TB
 | 5 | airymaxos-cognition | 极境认知 | CoreLoopThree kthread + Wasm 3.0 沙箱 + LLM 调度 + 超节点沙箱 + 双系统协同 | coreloopthree + frameworks |
 | 6 | airymaxos-cloudnative | 极境云原生 | K8s + containerd shim + OCI + CNI + agentctl + 超节点 OS | gateway + sdk |
 | 7 | airymaxos-system | 极境系统 | RPM + dnf + 配置 + shell + 基础库 + DevStation 开发环境 | commons |
-| 8 | airymaxos-tests | 极境测试 | 单元测试 + 集成测试 + 形式化验证 + Soak 长时测试 + 混沌工程 | 全模块测试 |
+| 8 | airymaxos-tests-linux | 极境测试 | 单元测试 + 集成测试 + 形式化验证 + Soak 长时测试 + 混沌工程 | 全模块测试 |
 
 ---
 
@@ -122,7 +122,7 @@ agentrt-linux 采用 7 层架构模型，自底向上分别为硬件层、内核
 graph TB
     subgraph "agentrt-linux 7 层架构模型"
         direction TB
-        L7["L7 测试层 (airymaxos-tests)<br/>单元测试 + 集成测试 + 形式化验证 + Soak + 混沌"]
+        L7["L7 测试层 (airymaxos-tests-linux)<br/>单元测试 + 集成测试 + 形式化验证 + Soak + 混沌"]
         L6["L6 系统层 (airymaxos-system)<br/>包管理 + 配置 + shell + 基础库 + DevStation"]
         L5["L5 云原生层 (airymaxos-cloudnative)<br/>K8s CRD + containerd shim + OCI + 超节点 OS"]
         L4["L4 认知层 (airymaxos-cognition)<br/>CoreLoopThree kthread + Wasm 3.0 + LLM 调度"]
@@ -165,7 +165,7 @@ graph TB
 | L4 认知层 | airymaxos-cognition | CoreLoopThree kthread + Wasm 3.0 沙箱 + LLM 调度 + 双系统协同（System 1 + System 2）+ 增量规划器 | L3 |
 | L5 云原生层 | airymaxos-cloudnative | K8s CRD + containerd shim + OCI + CNI + 超节点 OS + agentctl | L4 |
 | L6 系统层 | airymaxos-system | RPM + dnf + systemd + 配置 + shell + 基础库 + DevStation | L5 |
-| L7 测试层 | airymaxos-tests | 单元测试 + 集成测试 + 形式化验证 + Soak 长时测试 + 混沌工程 | L2-L6 全部 |
+| L7 测试层 | airymaxos-tests-linux | 单元测试 + 集成测试 + 形式化验证 + Soak 长时测试 + 混沌工程 | L2-L6 全部 |
 
 ### 3.3 层次纪律
 
@@ -225,9 +225,9 @@ agentrt-linux 架构设计层包含 5 个核心文档，覆盖系统架构、五
 |---|------|------|------|
 | 1 | [01-system-architecture.md](01-system-architecture.md) | 系统架构总览（三大支柱 + 整体架构 + 同源关系 + 前沿理论） | 已存在 |
 | 2 | [02-five-dimensional-principles.md](02-five-dimensional-principles.md) | 五维正交 24 原则与 agentrt-linux 落地映射（S/K/C/E/A 全维度） | 新增 |
-| 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4/Zircon/Minix3 参考 + 改造路径） | 已存在 |
+| 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | 已存在 |
 | 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | 已存在 |
-| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~010（10 个核心决策） | 新增 |
+| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~014（14 个核心决策） | 新增 |
 
 ### 5.1 文档阅读顺序建议
 
@@ -273,7 +273,7 @@ agentrt-linux 架构设计严格遵循 `docs/ARCHITECTURAL_PRINCIPLES.md` 中的
 - [模块设计层](../20-modules/)：8 子仓详细设计
 - [接口设计层](../30-interfaces/)：syscall + IPC + SDK + 编码规范
 - [数据流程设计层](../40-dataflows/)：认知 + 记忆 + IPC + 调度数据流
-- [架构原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
 
 ---
 

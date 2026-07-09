@@ -18,7 +18,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 本文档估算 agentrt-linux 1.0.1 版本（M0-M8 全部里程碑）所需的人力资源、工时投入与工期分布。0.1.1 版本（文档体系完成）已在 `README.md` 单独说明，不计入本文档估算。估算对象包括：
 
 - **文档工时**——19 个文档模块共约 122 篇文档的撰写、审查与定稿工时
-- **实施工时**——8 个子仓（kernel / services / security / memory / cognition / clouds / system / airymaxos-tests）的编码、调试与集成工时
+- **实施工时**——8 个子仓（kernel / services / security / memory / cognition / cloudnative / system / airymaxos-tests-linux）的编码、调试与集成工时
 - **管理工时**——跨 Part 协调、里程碑验收、维护者治理、与 agentrt 同源语义对齐等管理性工时
 
 ### 1.2 总工时汇总
@@ -124,7 +124,7 @@ pie showData
 | 类别 | 工时(h) | 占比 | 说明 |
 |------|---------|------|------|
 | 文档撰写与审查 | 1,890 | 68.7% | 见 §3.1 明细 |
-| 8 子仓实施编码 | 580 | 21.1% | kernel / services / security / memory / cognition / clouds / system / airymaxos-tests |
+| 8 子仓实施编码 | 580 | 21.1% | kernel / services / security / memory / cognition / cloudnative / system / airymaxos-tests-linux |
 | 调试与集成 | 180 | 6.5% | 跨子仓集成、性能回归调试 |
 | 文档完善与同步 | 100 | 3.6% | 文档与代码不同步的修复（R-007） |
 | **总计** | **2,750** | **100%** | — |
@@ -156,7 +156,7 @@ pie showData
 | 内核工程师 | 1 | airymaxos-kernel 微内核化改造、SCHED_AGENT、Rust 模块 | 100%（M1-M5） |
 | 系统服务工程师 | 1 | services / system 子仓、12 daemons 集成 | 100%（M2-M6） |
 | 安全工程师 | 1 | security 子仓、capability + LSM、机密计算 | 80%（M2-M5） |
-| 测试工程师 | 1 | airymaxos-tests、KUnit / kselftest / 形式化 | 80%（M3-M6） |
+| 测试工程师 | 1 | airymaxos-tests-linux、KUnit / kselftest / 形式化 | 80%（M3-M6） |
 
 ### 4.2 协作团队（2-3 人）
 
@@ -223,9 +223,9 @@ pie showData
 | security | 90 | 15.5% | capability + LSM + 国密 |
 | memory | 60 | 10.3% | CXL + PMEM + MGLRU |
 | cognition | 70 | 12.1% | CoreLoopThree kthread + Wasm |
-| clouds | 50 | 8.6% | K8s + containerd + OCI |
+| cloudnative | 50 | 8.6% | K8s + containerd + OCI |
 | system | 30 | 5.2% | 包管理 + 配置 + shell |
-| airymaxos-tests | 20 | 3.4% | 测试基础设施 |
+| airymaxos-tests-linux | 20 | 3.4% | 测试基础设施 |
 | **总计** | **580** | **100%** | — |
 
 ---

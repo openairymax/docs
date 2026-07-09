@@ -465,7 +465,7 @@ relationships:
 
 - [项目管理规范总览](README.md)：项目管理规范顶层入口
 - [统一错误码参考](error_code_reference.md)：统一错误码体系
-- [集成标准总览](../integration_standards/README.md)：集成标准
+- [集成标准总览](../40-integration/README.md)：集成标准
 - [安全加固规范](../../110-security/README.md)：安全加固体系
 - [工程基线](../../10-architecture/04-engineering-baseline.md)：工程基线定义
 - [五维正交原则](../../10-architecture/02-five-dimensional-principles.md)：五维正交 24 原则

@@ -418,9 +418,13 @@ c = 3;
 
 **OS-STD-211**：CI 流水线第 4 层（CI 门禁，详见 06 卷 §4）必须执行 `make format-check`；任何格式违规直接拒绝 PR 合并，无人工豁免通道。修复方式唯一：本地运行 `make format` 自动修复后再提交。
 
+> **交叉引用**：`make format-check` 的完整 CI 门禁流程（Makefile `format-check` / `format-diff` / `format-apply` 目标定义、Git pre-commit 钩子脚本、GitHub Actions / GitLab CI 流水线集成配置、以及与 `checkpatch.pl` 的协作流水线顺序）详见 [80-clang-format-enforcement.md](80-clang-format-enforcement.md) §3（CI 门禁：make format-check）与 §5（与 checkpatch 的协作）。
+
 ---
 
 ## 9. clang-format 关键配置项
+
+> **交叉引用**：本节是规则到配置项的速查映射表。完整 `.clang-format` YAML 文件、每个配置项的 OLK-6.6 源码行号标注与详细理由，详见 [80-clang-format-enforcement.md](80-clang-format-enforcement.md) §1（关键配置项详解）与 §2（完整配置文件）。
 
 agentrt-linux `.clang-format` 在 Linux 6.6 内核基线 689 行配置基础上扩展。下表列出关键项及其与第 1-7 章规则的对应关系：
 

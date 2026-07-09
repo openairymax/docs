@@ -772,11 +772,11 @@ airymaxos_active_sessions 1500
 
 | NFR 系列 | 验收方法 | 验收工具 | 责任子仓 |
 |---|---|---|---|
-| NFR-P 性能 | 性能基准测试 | Locust + k6 + perf + ftrace | airymaxos-tests |
-| NFR-S 安全 | 渗透测试 + 形式化验证 | seL4 风格验证 + 静态分析 | airymaxos-tests + security |
-| NFR-R 可靠性 | Soak Test + 混沌工程 | Chaos Mesh + agentrt-linux 系统级测试套件 + ASan/TSan | airymaxos-tests |
-| NFR-C 兼容性 | 兼容性测试矩阵 | agentrt-linux 集成测试框架 + K8s conformance | airymaxos-tests + system |
-| NFR-O 可观测性 | 可观测性覆盖检查 | Prometheus + OpenTelemetry + 日志检查 | airymaxos-tests |
+| NFR-P 性能 | 性能基准测试 | Locust + k6 + perf + ftrace | airymaxos-tests-linux |
+| NFR-S 安全 | 渗透测试 + 形式化验证 | seL4 风格验证 + 静态分析 | airymaxos-tests-linux + security |
+| NFR-R 可靠性 | Soak Test + 混沌工程 | Chaos Mesh + agentrt-linux 系统级测试套件 + ASan/TSan | airymaxos-tests-linux |
+| NFR-C 兼容性 | 兼容性测试矩阵 | agentrt-linux 集成测试框架 + K8s conformance | airymaxos-tests-linux + system |
+| NFR-O 可观测性 | 可观测性覆盖检查 | Prometheus + OpenTelemetry + 日志检查 | airymaxos-tests-linux |
 
 ---
 
@@ -819,7 +819,7 @@ airymaxos_active_sessions 1500
 - [业务需求分析](01-business-requirements.md)：Agent 工作负载与生态对齐
 - [功能需求分析](02-functional-requirements.md)：8 子仓功能矩阵与能力清单
 - [agentrt-linux 总览](../README.md)：agentrt-linux 整体设计
-- [Airymax 架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
+- [Airymax 架构设计原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
 
 ---
 

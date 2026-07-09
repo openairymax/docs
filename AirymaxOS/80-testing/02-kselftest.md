@@ -459,7 +459,7 @@ kselftest 输出 TAP（version 13），形如 `ok <num> <suite>:<case>` / `not o
 - `80-testing/08-agent-contract-testing.md`（agentrt-linux 专属：Agent 行为契约测试）
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证体系，本卷属第 8 层）
 - `50-engineering-standards/01-coding-standards.md`（错误处理强制，与 kselftest 退出码对齐）
-- `20-modules/08-tests.md`（tests 子仓设计）
+- `20-modules/08-tests.md`（tests-linux 子仓设计）
 - `110-security/README.md`（安全测试，复用 kselftest 框架）
 
 ### 12.1 上游参考

@@ -145,7 +145,7 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 - [架构设计层](../10-architecture/README.md)：三大支柱与五维原则
 - [功能需求分析](../00-requirements/02-functional-requirements.md)：FR-001 ~ FR-080
 - [非功能需求分析](../00-requirements/03-non-functional-requirements.md)：NFR-P/S/R/C/O 系列
-- [Airymax 架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
+- [Airymax 架构设计原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
 
 ---
 

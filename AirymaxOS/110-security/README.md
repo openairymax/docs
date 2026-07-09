@@ -87,7 +87,7 @@ agentrt-linux 采用 seL4 风格的 capability 安全模型：
 内核模块与 eBPF 程序必须签名验证：
 - `CONFIG_MODULE_SIG=y`：内核模块签名
 - `CONFIG_BPF_JIT_ALWAYS_ON=y`：eBPF JIT 始终启用
-- Linux 6.15+：eBPF 程序签名验证
+- Linux 7.1（2.x.x 基线，ADR-013）：eBPF 程序签名验证
 
 ### 2.5 Lockdown
 

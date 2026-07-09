@@ -16,6 +16,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 本文件研究 OLK-6.6 `.clang-format`（689 行配置），提取关键格式化选项，制定 agentrt-linux 定制版 `.clang-format`，并定义 CI 中的 `make format-check` 门禁流程。所有 agentrt-linux 内核态 C 文件必须通过 `clang-format` 校验。
 
+> **交叉引用**：本文件是 `.clang-format` 的工具配置层（完整 YAML + OLK-6.6 源码行号 + CI 门禁流程）。`.clang-format` 在 7 层验证体系中的框架定位（第 3 层预提交 + 第 4 层 CI 门禁）、7 层验证流水线全图、CI/CD 矩阵配置与其他工具链（sparse / Smatch / Coccinelle / KUnit / kselftest）的协同关系，详见 [06-toolchain-and-automation.md](06-toolchain-and-automation.md) §5（格式化与风格检查）与 §1（7 层自动化验证体系）。格式规则定义（OS-KER-004~021）与规则到配置项的速查映射表，详见 [02-code-format.md](02-code-format.md) §1-§7（格式规则）与 §9（clang-format 关键配置项表）。checkpatch 规则到 agentrt-linux 规则编号的逐条映射表，详见 [60-checkpatch-rule-map.md](60-checkpatch-rule-map.md) §1-§8（55 条规则映射）。
+
 ### 0.2 OLK-6.6 源码路径
 
 - `.clang-format`（689 行，文件首行 `# SPDX-License-Identifier: GPL-2.0`）
@@ -37,6 +39,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ---
 
 ## 1. 关键配置项详解
+
+> **交叉引用**：本节是每个配置项的 OLK-6.6 源码行号与详细理由。格式规则定义（OS-KER-004~021）与规则到配置项的速查映射表，详见 [02-code-format.md](02-code-format.md) §1-§7（格式规则）与 §9（clang-format 关键配置项表）。
 
 ### 1.1 缩进配置（OS-KER-011 强制）
 

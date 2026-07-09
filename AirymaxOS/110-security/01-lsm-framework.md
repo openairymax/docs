@@ -20,7 +20,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [第 5 章 LSM 初始化流程](#第-5-章-lsm-初始化流程)
 - [第 6 章 LSM 钩子类型](#第-6-章-lsm-钩子类型)
 - [第 7 章 LSM 与 capability 共存](#第-7-章-lsm-与-capability-共存)
-- [第 8 章 agentrt-linux Cupolas 作为 LSM 模块集成](#第-8-章-airymaxos-cupolas-作为-lsm-模块集成)
+- [第 8 章 agentrt-linux Cupolas 作为 LSM 模块集成](#第-8-章-agentrt-linux-cupolas-作为-lsm-模块集成)
 - [第 9 章 LSM 钩子注册示例](#第-9-章-lsm-钩子注册示例)
 - [第 10 章 五维原则映射](#第-10-章-五维原则映射)
 - [第 11 章 同源 agentrt 映射](#第-11-章-同源-agentrt-映射)

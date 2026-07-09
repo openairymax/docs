@@ -10,9 +10,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 agentrt-linux 采用三大设计支柱:
 
-### 1.1 微内核设计思想（参考 seL4 / Zircon / Minix3）
+### 1.1 微内核设计思想（参考 seL4，ADR-014）
 
 **核心原则**: 最小化特权态代码（Liedtke minimality principle）
+
+> **ADR-014 约束**: 微内核设计思想唯一来源为 seL4，不引入 Zircon / Minix3 / 其他微内核架构，以避免工程思想在哲学和逻辑学层面的多元化冲突。
 
 | 原则 | 含义 | agentrt-linux 落地 |
 |---|---|---|
@@ -23,11 +25,9 @@ agentrt-linux 采用三大设计支柱:
 | 隔离与模块化 | 每个服务独立运行，故障隔离 | 每个 Agent 独立地址空间 |
 
 **参考来源**:
-- seL4: 形式化验证的微内核，~10-12 kSLOC，capability-based
-- Zircon: Google Fuchsia 的微内核，对象导向 + 消息传递
-- Minix3: Tanenbaum 的用户态服务设计
+- seL4: 形式化验证的微内核，~10-12 kSLOC，capability-based + MCS（Mixed Criticality System）+ 消息传递 IPC（Endpoint/Notification）
 
-### 1.2 agentrt-linux 工程基线（Linux 6.6 内核基线 / 下一代内核基线）
+### 1.2 agentrt-linux 工程基线（Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-013））
 
 **核心原则**: 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范
 
@@ -37,7 +37,7 @@ agentrt-linux 采用三大设计支柱:
 | 包管理 | RPM + dnf | airymaxos-system 采用 RPM + dnf |
 | 系统服务 | systemd | airymaxos-services 集成 systemd |
 | 安全 | SELinux + 国密算法 | airymaxos-security 实现国密支持 |
-| 测试 | agentrt-linux 系统级测试套件 | airymaxos-tests 实现集成测试框架 |
+| 测试 | agentrt-linux 系统级测试套件 | airymaxos-tests-linux 实现集成测试框架 |
 | AI 原生 | 认知循环系统、超节点 OS | airymaxos-cognition + airymaxos-cloudnative |
 | 架构支持 | x86, ARM, RISC-V, 鲲鹏, 飞腾 | airymaxos-kernel 多架构支持 |
 | 社区治理 | SIG（Special Interest Group）| agentrt-linux 按子仓划分 SIG |
@@ -171,15 +171,17 @@ agentrt-linux 的 IPC 子系统 (airymaxos-kernel + airymaxos-services):
 
 ## 4. 前沿理论应用
 
-### 4.1 微内核理论（seL4 / Zircon）
+### 4.1 微内核理论（seL4，ADR-014）
+
+> **ADR-014 约束**: 微内核设计思想唯一来源为 seL4。
 
 | 理论 | 来源 | 应用 |
 |---|---|---|
 | Liedtke minimality principle | seL4 | airymaxos-kernel 最小化 |
-| capability-based security | seL4 / Zircon | airymaxos-security |
-| 形式化验证 | seL4 | airymaxos-tests |
-| 消息传递 IPC | Zircon | airymaxos-services |
-| 对象导向资源管理 | Zircon | airymaxos-kernel |
+| capability-based security | seL4 | airymaxos-security |
+| 形式化验证 | seL4 | airymaxos-tests-linux |
+| 消息传递 IPC | seL4（Endpoint/Notification） | airymaxos-services |
+| 对象导向资源管理 | seL4（capability 对象模型） | airymaxos-kernel |
 
 ### 4.2 Linux 2026 最新特性
 
@@ -200,21 +202,31 @@ agentrt-linux 的 IPC 子系统 (airymaxos-kernel + airymaxos-services):
 |---|---|---|
 | 认知循环系统 | Linux 6.6 内核基线（SP3 增强） | airymaxos-cognition |
 | 超节点 OS | Linux 6.6 内核基线（SP3 增强） | airymaxos-cloudnative |
-| 超节点沙箱 | Linux 6.15+ 内核 | airymaxos-cognition |
+| 超节点沙箱 | Linux 7.1（2.x.x 基线，ADR-013） | airymaxos-cognition |
 | Token 能效优化 | agentrt-linux Token 能效框架 2026 | airymaxos-cognition |
-| 具身智能 Claw | Linux 6.15+ 内核 | airymaxos-cognition |
+| 具身智能 Claw | Linux 7.1（2.x.x 基线，ADR-013） | airymaxos-cognition |
 | DevStation | agentrt-linux 工程基线 | airymaxos-system |
 
 ## 5. 架构决策记录
 
+> 以下为 14 个核心 ADR 的摘要，权威定义见 [05-adrs.md](05-adrs.md)。
+
 | 决策 | 内容 | 日期 |
 |---|---|---|
-| ADR-001 | agentrt-linux 基于 Linux 内核，不从零开发微内核 | 2026-07-06 |
-| ADR-002 | 采用微内核化改造策略（基于 Linux 6.6 演进，非从零开发），最终演进为真正的微内核 | 2026-07-06 |
-| ADR-003 | 全面采用 agentrt-linux 工程基线 | 2026-07-06 |
-| ADR-004 | agentrt 和 agentrt-linux 同源且部分代码共享 | 2026-07-06 |
-| ADR-005 | 8 子仓按能力域划分 | 2026-07-06 |
-| ADR-006 | OS 文档与 RT 文档物理分开 | 2026-07-06 |
+| ADR-001 | 采用 Linux 6.6 内核基线（同步 SP3 增强） | 2026-07-06 |
+| ADR-002 | 微内核化改造策略（基于 Linux + sched_ext + eBPF kfunc + io_uring） | 2026-07-06 |
+| ADR-003 | 8 子仓划分（基于微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源） | 2026-07-06 |
+| ADR-004 | capability 安全模型（seL4 风格，airymaxos-security） | 2026-07-06 |
+| ADR-005 | io_uring IPC 子系统（同源 AgentsIPC 128B 消息头） | 2026-07-06 |
+| ADR-006 | CoreLoopThree kthread 认知循环（airymaxos-cognition） | 2026-07-06 |
+| ADR-007 | MemoryRovol 内核态实现（airymaxos-memory，L1-L4 四层递进） | 2026-07-06 |
+| ADR-008 | Wasm 3.0 沙箱运行时（airymaxos-cognition frameworks） | 2026-07-06 |
+| ADR-009 | K8s CRD + containerd shim 云原生（airymaxos-cloudnative） | 2026-07-06 |
+| ADR-010 | 与 agentrt 同源且部分代码共享（IRON-9 v2，无适配层天然契合） | 2026-07-06 |
+| ADR-011 | 7 层架构模型范围界定与 agentrt 用户态关系论证 | 2026-07-09 |
+| ADR-012 | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发） | 2026-07-09 |
+| ADR-013 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1） | 2026-07-09 |
+| ADR-014 | 微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3） | 2026-07-09 |
 
 ---
 

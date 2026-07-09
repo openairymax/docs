@@ -514,7 +514,7 @@ sequenceDiagram
 | `airymaxos-cognition` | 提供 Agent 记忆管理、CoreLoopThree 协作 | [SS] |
 | `airymaxos-cloudnative` | 提供容器记忆卷载、迁移 | [IND] |
 | `airymaxos-system` | 提供内存监控工具 | [SS] |
-| `airymaxos-tests` | 内存测试、Soak Test | [SS] |
+| `airymaxos-tests-linux` | 内存测试、Soak Test | [SS] |
 
 ---
 

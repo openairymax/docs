@@ -25,6 +25,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **agentrt-linux 规则编号**：OS-STD-CODE-NNN
 - **示例**：触发该规则的代码片段
 
+> **交叉引用**：本文件是 checkpatch 规则到 agentrt-linux 规则编号的逐条映射表（规则映射层）。checkpatch 在 7 层验证体系中的框架定位（第 2 层静态分析 + 第 3 层预提交 + 第 4 层 CI 门禁）、三级报告策略、CI 调用方式与退出码处理，详见 [06-toolchain-and-automation.md](06-toolchain-and-automation.md) §5.1（checkpatch.pl）与 §1.2-§1.4（7 层验证体系第 2-4 层）。.clang-format 配置项与格式规则定义，详见 [02-code-format.md](02-code-format.md) 与 [80-clang-format-enforcement.md](80-clang-format-enforcement.md)（clang-format 与 checkpatch 的协作流水线顺序见 80 §5）。
+
 ### 0.2 checkpatch 规则分级约定
 
 agentrt-linux 对 checkpatch 规则的分级处理：

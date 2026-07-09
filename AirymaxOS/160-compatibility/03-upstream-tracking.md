@@ -380,7 +380,7 @@ echo "After resolving, run: git cherry-pick --continue"
 ### 5.2 CVE 复现测试
 
 ```c
-/* airymaxos-tests/security/test_cve_2024_xxxx.c
+/* tests-linux/security/test_cve_2024_xxxx.c
  * CVE-2024-XXXX 复现与验证测试 */
 #include <stdio.h>
 #include <sys/socket.h>

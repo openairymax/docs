@@ -470,9 +470,9 @@ graph TD
 ## 9. 相关文档
 
 - [agentrt 集成规范](agentrt_integration.md)：与 agentrt 的详细集成规范
-- [项目管理规范总览](../project_erp/README.md)：项目管理规范
-- [统一错误码参考](../project_erp/error_code_reference.md)：统一错误码体系
-- [SBOM 规范](../project_erp/SBOM.md)：软件物料清单规范
+- [项目管理规范总览](../50-project-erp/README.md)：项目管理规范
+- [统一错误码参考](../50-project-erp/error_code_reference.md)：统一错误码体系
+- [SBOM 规范](../50-project-erp/SBOM.md)：软件物料清单规范
 - [架构设计](../../10-architecture/README.md)：系统架构总览
 - [五维正交原则](../../10-architecture/02-five-dimensional-principles.md)：五维正交 24 原则
 - [工程基线](../../10-architecture/04-engineering-baseline.md)：工程基线定义

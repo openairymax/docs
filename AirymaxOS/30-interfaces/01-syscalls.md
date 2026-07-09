@@ -273,7 +273,7 @@ AGENTRT_API int agentrt_sys_ipc_recv(agentrt_ipc_msg_hdr_t *hdr,
 
 ### 5.3 性能回归保护
 
-- 每次提交运行 `airymaxos-tests/benchmark/sched-latency` 微基准。
+- 每次提交运行 `tests-linux/benchmark/sched-latency` 微基准。
 - 与基线对比，调度延迟退化 > 5% 自动打回（详见 [20-modules/08-tests.md](../20-modules/08-tests.md) 第 4.6 节）。
 
 ### 5.4 性能剖析方法

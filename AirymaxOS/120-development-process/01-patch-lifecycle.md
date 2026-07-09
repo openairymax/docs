@@ -24,7 +24,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.2 适用范围
 
-本文档适用于 agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
+本文档适用于 agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
 
 ### 1.3 关键术语
 
@@ -327,7 +327,7 @@ sequenceDiagram
 
 ## 10. agentrt-linux 8 子仓跨仓 PR 流程
 
-agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
+agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
 
 ### 10.1 8 子仓依赖关系
 
@@ -338,9 +338,9 @@ flowchart TD
     SE[security 子仓<br/>Cupolas 安全穹顶]
     M[memory 子仓<br/>MemoryRovol 四层记忆]
     CO[cognition 子仓<br/>CoreLoopThree]
-    CL[clouds 子仓<br/>云原生 Agent]
+    CL[cloudnative 子仓<br/>云原生 Agent]
     SY[system 子仓<br/>AgentsIPC 128B 协议]
-    T[tests 子仓<br/>KUnit/kselftest]
+    T[tests-linux 子仓<br/>KUnit/kselftest]
 
     SY --> K
     K --> S

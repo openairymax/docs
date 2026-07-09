@@ -74,7 +74,7 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 |------|------|------|
 | 编号 | OS-ACC-XXX | OS-ACC-001 |
 | 验收项 | 简短描述 | 50-engineering-standards/ 8 文档完成 |
-| 验证方法 | 可执行命令 | `find docs/AirymaxAgentOS/50-engineering-standards/ -name "*.md" \| wc -l` |
+| 验证方法 | 可执行命令 | `find docs/AirymaxOS/50-engineering-standards/ -name "*.md" \| wc -l` |
 | 通过标准 | 量化阈值 | 8 |
 | 优先级 | P0 / P1 / P2 | P0 |
 | 适用里程碑 | M0-M8 | M0 |
@@ -85,25 +85,25 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-001 ★ | 50-engineering-standards/ 8 文档完成 | `find docs/AirymaxAgentOS/50-engineering-standards/ -name "*.md" \| wc -l` | ≥8 | P0 | M0 |
-| OS-ACC-002 ★ | 文档行数 | `wc -l docs/AirymaxAgentOS/50-engineering-standards/*.md` | 每个文档 ≥400 行 | P0 | M0 |
-| OS-ACC-003 ★ | 文档版权声明 | `grep -L "Copyright (c) 2025-2026 SPHARX" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 0 结果（全部包含） | P0 | M0 |
-| OS-ACC-004 ★ | 无禁用关键词（其他 OS 发行版名 / 测试框架名 / 智能体框架名等，详见 50-engineering-standards 黑名单） | `grep -rEf docs/AirymaxAgentOS/50-engineering-standards/forbidden-keywords.txt docs/AirymaxAgentOS/50-engineering-standards/` | 0 结果 | P0 | M0 |
-| OS-ACC-005 ★ | OS-IRON 规则编号定义 | `grep -rE "OS-IRON-[0-9]+" docs/AirymaxAgentOS/50-engineering-standards/ \| wc -l` | ≥10 项 | P0 | M0 |
-| OS-ACC-006 ★ | OS-STD 规则编号定义 | `grep -rE "OS-STD-[0-9]+" docs/AirymaxAgentOS/50-engineering-standards/ \| wc -l` | ≥20 项 | P0 | M0 |
-| OS-ACC-007 ★ | OS-BAN 规则编号定义 | `grep -rE "OS-BAN-[0-9]+" docs/AirymaxAgentOS/50-engineering-standards/ \| wc -l` | ≥30 项 | P0 | M0 |
-| OS-ACC-008 ★ | 五维原则映射 | `grep -rE "S-1\|S-2\|S-3\|S-4\|K-1\|K-2\|K-3\|K-4\|C-1\|C-2\|C-3\|C-4\|E-1\|E-2\|E-3\|E-4\|E-5\|E-6\|E-7\|E-8\|A-1\|A-2\|A-3\|A-4" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 每个文档包含映射 | P0 | M0 |
-| OS-ACC-009 | 代码示例 | `grep -rE "\`\`\`(c\|rust\|python\|ts\|bash)" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 每个文档 ≥5 个代码示例 | P0 | M0 |
-| OS-ACC-010 ★ | Mermaid 图表 | `grep -rE "\`\`\`mermaid" docs/AirymaxAgentOS/50-engineering-standards/*.md` | 关键文档包含图表 | P0 | M0 |
-| OS-ACC-011 | Linux 6.6 内核基线声明 | `grep -rE "Linux 6.6 内核基线\|Linux 6.6（OLK-6.6）" docs/AirymaxAgentOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
-| OS-ACC-012 ★ | IRON-9 v2 同源且部分代码共享声明 | `grep -rE "IRON-9 v2 同源且部分代码共享" docs/AirymaxAgentOS/50-engineering-standards/` | ≥3 处声明 | P0 | M0 |
-| OS-ACC-013 | 五维正交 24 原则声明 | `grep -rE "五维正交 24 原则\|五维正交" docs/AirymaxAgentOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
+| OS-ACC-001 ★ | 50-engineering-standards/ 8 文档完成 | `find docs/AirymaxOS/50-engineering-standards/ -name "*.md" \| wc -l` | ≥8 | P0 | M0 |
+| OS-ACC-002 ★ | 文档行数 | `wc -l docs/AirymaxOS/50-engineering-standards/*.md` | 每个文档 ≥400 行 | P0 | M0 |
+| OS-ACC-003 ★ | 文档版权声明 | `grep -L "Copyright (c) 2025-2026 SPHARX" docs/AirymaxOS/50-engineering-standards/*.md` | 0 结果（全部包含） | P0 | M0 |
+| OS-ACC-004 ★ | 无禁用关键词（其他 OS 发行版名 / 测试框架名 / 智能体框架名等，详见 50-engineering-standards 黑名单） | `grep -rEf docs/AirymaxOS/50-engineering-standards/forbidden-keywords.txt docs/AirymaxOS/50-engineering-standards/` | 0 结果 | P0 | M0 |
+| OS-ACC-005 ★ | OS-IRON 规则编号定义 | `grep -rE "OS-IRON-[0-9]+" docs/AirymaxOS/50-engineering-standards/ \| wc -l` | ≥10 项 | P0 | M0 |
+| OS-ACC-006 ★ | OS-STD 规则编号定义 | `grep -rE "OS-STD-[0-9]+" docs/AirymaxOS/50-engineering-standards/ \| wc -l` | ≥20 项 | P0 | M0 |
+| OS-ACC-007 ★ | OS-BAN 规则编号定义 | `grep -rE "OS-BAN-[0-9]+" docs/AirymaxOS/50-engineering-standards/ \| wc -l` | ≥30 项 | P0 | M0 |
+| OS-ACC-008 ★ | 五维原则映射 | `grep -rE "S-1\|S-2\|S-3\|S-4\|K-1\|K-2\|K-3\|K-4\|C-1\|C-2\|C-3\|C-4\|E-1\|E-2\|E-3\|E-4\|E-5\|E-6\|E-7\|E-8\|A-1\|A-2\|A-3\|A-4" docs/AirymaxOS/50-engineering-standards/*.md` | 每个文档包含映射 | P0 | M0 |
+| OS-ACC-009 | 代码示例 | `grep -rE "\`\`\`(c\|rust\|python\|ts\|bash)" docs/AirymaxOS/50-engineering-standards/*.md` | 每个文档 ≥5 个代码示例 | P0 | M0 |
+| OS-ACC-010 ★ | Mermaid 图表 | `grep -rE "\`\`\`mermaid" docs/AirymaxOS/50-engineering-standards/*.md` | 关键文档包含图表 | P0 | M0 |
+| OS-ACC-011 | Linux 6.6 内核基线声明 | `grep -rE "Linux 6.6 内核基线\|Linux 6.6（OLK-6.6）" docs/AirymaxOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
+| OS-ACC-012 ★ | IRON-9 v2 同源且部分代码共享声明 | `grep -rE "IRON-9 v2 同源且部分代码共享" docs/AirymaxOS/50-engineering-standards/` | ≥3 处声明 | P0 | M0 |
+| OS-ACC-013 | 五维正交 24 原则声明 | `grep -rE "五维正交 24 原则\|五维正交" docs/AirymaxOS/50-engineering-standards/` | 全部文档包含 | P0 | M0 |
 | OS-ACC-014 | .clang-format 配置 | `find . -name ".clang-format" \| wc -l` | ≥1 个 | P0 | M0 |
 | OS-ACC-015 | .rustfmt.toml 配置 | `find . -name ".rustfmt.toml" \| wc -l` | ≥1 个 | P0 | M0 |
 | OS-ACC-016 | MAINTAINERS 文件 | `find . -name "MAINTAINERS" \| wc -l` | ≥1 个 | P0 | M0 |
 | OS-ACC-017 | checkpatch 集成 | `grep -rE "checkpatch" .github/workflows/` | ≥1 处引用 | P0 | M0 |
-| OS-ACC-018 | 7 层验证流水线 | `grep -rE "7 层\|seven-layer" docs/AirymaxAgentOS/50-engineering-standards/` | ≥1 处定义 | P0 | M0 |
-| OS-ACC-019 | 6 级成熟度模型 | `grep -rE "6 级成熟度\|Level 0\|Level 1\|Level 2\|Level 3\|Level 4\|Level 5" docs/AirymaxAgentOS/50-engineering-standards/` | ≥1 处定义 | P0 | M0 |
+| OS-ACC-018 | 7 层验证流水线 | `grep -rE "7 层\|seven-layer" docs/AirymaxOS/50-engineering-standards/` | ≥1 处定义 | P0 | M0 |
+| OS-ACC-019 | 6 级成熟度模型 | `grep -rE "6 级成熟度\|Level 0\|Level 1\|Level 2\|Level 3\|Level 4\|Level 5" docs/AirymaxOS/50-engineering-standards/` | ≥1 处定义 | P0 | M0 |
 | OS-ACC-020 | DCO 验证 | `grep -rE "DCO\|Signed-off-by" .github/workflows/` | ≥1 处引用 | P0 | M0 |
 
 ---
@@ -112,26 +112,26 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-021 ★ | 60-driver-model/ 7 文档完成 | `find docs/AirymaxAgentOS/60-driver-model/ -name "*.md" \| wc -l` | ≥7 | P0 | M1 |
-| OS-ACC-022 ★ | 70-build-system/ 8 文档完成 | `find docs/AirymaxAgentOS/70-build-system/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
-| OS-ACC-023 | 微内核设计文档 | `find docs/AirymaxAgentOS/ -name "*microkernel*" -o -name "*10-architecture*" \| wc -l` | ≥1 个 | P0 | M1 |
-| OS-ACC-024 ★ | 8 子仓设计文档 | `find docs/AirymaxAgentOS/20-modules/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
-| OS-ACC-025 | SCHED_AGENT 策略定义 | `grep -rE "SCHED_AGENT\|sched_ext" docs/AirymaxAgentOS/` | ≥5 处 | P0 | M1 |
-| OS-ACC-026 | AgentsIPC 128B 消息头定义 | `grep -rE "AgentsIPC\|128B 消息头" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-027 | capability 安全模型定义 | `grep -rE "capability" docs/AirymaxAgentOS/110-security/` | ≥10 处 | P0 | M1 |
-| OS-ACC-028 ★ | 4 层接口稳定性分级 | `grep -rE "L1\|L2\|L3\|L4" docs/AirymaxAgentOS/50-engineering-standards/04-engineering-philosophy.md` | ≥4 层定义 | P0 | M1 |
-| OS-ACC-029 | MGLRU 多代 LRU 定义 | `grep -rE "MGLRU" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-030 | CXL 内存分层定义 | `grep -rE "CXL" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-031 | CoreLoopThree kthread 定义 | `grep -rE "CoreLoopThree\|认知 kthread" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-032 | Wasm 沙箱定义 | `grep -rE "Wasm" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-033 ★ | io_uring 集成定义 | `grep -rE "io_uring" docs/AirymaxAgentOS/` | ≥3 处 | P0 | M1 |
-| OS-ACC-034 | eBPF 子系统定义 | `grep -rE "eBPF" docs/AirymaxAgentOS/` | ≥5 处 | P0 | M1 |
-| OS-ACC-035 | Bazel 构建系统定义 | `grep -rE "Bazel" docs/AirymaxAgentOS/70-build-system/` | ≥5 处 | P0 | M1 |
-| OS-ACC-036 | 交叉编译支持 | `grep -rE "交叉编译\|cross-compile" docs/AirymaxAgentOS/70-build-system/` | ≥2 处 | P0 | M1 |
-| OS-ACC-037 ★ | ABI 检查工具集成 | `grep -rE "abi-check\|libabigail" docs/AirymaxAgentOS/70-build-system/` | ≥1 处 | P0 | M1 |
-| OS-ACC-038 | 12 daemons 集成定义 | `grep -rE "12 daemons\|daemons 集成" docs/AirymaxAgentOS/` | ≥2 处 | P0 | M1 |
-| OS-ACC-039 | 同源 API 映射表 | `grep -rE "同源 API\|MicroCoreRT\|Cupolas\|MemoryRovol\|CoreLoopThree" docs/AirymaxAgentOS/` | ≥5 处 | P0 | M1 |
-| OS-ACC-040 | airymaxos- 子仓前缀 | `grep -rE "airymaxos-" docs/AirymaxAgentOS/` | ≥8 处（8 子仓） | P0 | M1 |
+| OS-ACC-021 ★ | 60-driver-model/ 7 文档完成 | `find docs/AirymaxOS/60-driver-model/ -name "*.md" \| wc -l` | ≥7 | P0 | M1 |
+| OS-ACC-022 ★ | 70-build-system/ 8 文档完成 | `find docs/AirymaxOS/70-build-system/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
+| OS-ACC-023 | 微内核设计文档 | `find docs/AirymaxOS/ -name "*microkernel*" -o -name "*10-architecture*" \| wc -l` | ≥1 个 | P0 | M1 |
+| OS-ACC-024 ★ | 8 子仓设计文档 | `find docs/AirymaxOS/20-modules/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
+| OS-ACC-025 | SCHED_AGENT 策略定义 | `grep -rE "SCHED_AGENT\|sched_ext" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
+| OS-ACC-026 | AgentsIPC 128B 消息头定义 | `grep -rE "AgentsIPC\|128B 消息头" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-027 | capability 安全模型定义 | `grep -rE "capability" docs/AirymaxOS/110-security/` | ≥10 处 | P0 | M1 |
+| OS-ACC-028 ★ | 4 层接口稳定性分级 | `grep -rE "L1\|L2\|L3\|L4" docs/AirymaxOS/50-engineering-standards/04-engineering-philosophy.md` | ≥4 层定义 | P0 | M1 |
+| OS-ACC-029 | MGLRU 多代 LRU 定义 | `grep -rE "MGLRU" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-030 | CXL 内存分层定义 | `grep -rE "CXL" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-031 | CoreLoopThree kthread 定义 | `grep -rE "CoreLoopThree\|认知 kthread" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-032 | Wasm 沙箱定义 | `grep -rE "Wasm" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-033 ★ | io_uring 集成定义 | `grep -rE "io_uring" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
+| OS-ACC-034 | eBPF 子系统定义 | `grep -rE "eBPF" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
+| OS-ACC-035 | Bazel 构建系统定义 | `grep -rE "Bazel" docs/AirymaxOS/70-build-system/` | ≥5 处 | P0 | M1 |
+| OS-ACC-036 | 交叉编译支持 | `grep -rE "交叉编译\|cross-compile" docs/AirymaxOS/70-build-system/` | ≥2 处 | P0 | M1 |
+| OS-ACC-037 ★ | ABI 检查工具集成 | `grep -rE "abi-check\|libabigail" docs/AirymaxOS/70-build-system/` | ≥1 处 | P0 | M1 |
+| OS-ACC-038 | 12 daemons 集成定义 | `grep -rE "12 daemons\|daemons 集成" docs/AirymaxOS/` | ≥2 处 | P0 | M1 |
+| OS-ACC-039 | 同源 API 映射表 | `grep -rE "同源 API\|MicroCoreRT\|Cupolas\|MemoryRovol\|CoreLoopThree" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
+| OS-ACC-040 | airymaxos- 子仓前缀 | `grep -rE "airymaxos-" docs/AirymaxOS/` | ≥8 处（8 子仓） | P0 | M1 |
 
 ---
 
@@ -139,16 +139,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-041 ★ | 80-testing/ 10 文档完成 | `find docs/AirymaxAgentOS/80-testing/ -name "*.md" \| wc -l` | ≥10 | P0 | M2 |
+| OS-ACC-041 ★ | 80-testing/ 10 文档完成 | `find docs/AirymaxOS/80-testing/ -name "*.md" \| wc -l` | ≥10 | P0 | M2 |
 | OS-ACC-042 ★ | 测试覆盖率 ≥80% | `make coverage \| grep -E "coverage"` | ≥80% | P0 | M2 |
-| OS-ACC-043 ★ | KUnit 集成 | `grep -rE "KUnit" docs/AirymaxAgentOS/80-testing/` | ≥5 处 | P0 | M2 |
-| OS-ACC-044 | kselftest 集成 | `grep -rE "kselftest" docs/AirymaxAgentOS/80-testing/` | ≥3 处 | P0 | M2 |
-| OS-ACC-045 ★ | fault injection 覆盖 | `grep -rE "fault injection\|FAIL_FUNCTION\|FAIL_MAKE_REQUEST" docs/AirymaxAgentOS/80-testing/` | ≥3 处 | P0 | M2 |
-| OS-ACC-046 | 形式化验证 | `grep -rE "形式化验证\|formal verification" docs/AirymaxAgentOS/80-testing/` | ≥2 处 | P0 | M2 |
-| OS-ACC-047 | Soak 测试定义 | `grep -rE "Soak" docs/AirymaxAgentOS/80-testing/` | ≥2 处 | P0 | M2 |
-| OS-ACC-048 | 混沌测试定义 | `grep -rE "混沌\|chaos" docs/AirymaxAgentOS/80-testing/` | ≥2 处 | P0 | M2 |
+| OS-ACC-043 ★ | KUnit 集成 | `grep -rE "KUnit" docs/AirymaxOS/80-testing/` | ≥5 处 | P0 | M2 |
+| OS-ACC-044 | kselftest 集成 | `grep -rE "kselftest" docs/AirymaxOS/80-testing/` | ≥3 处 | P0 | M2 |
+| OS-ACC-045 ★ | fault injection 覆盖 | `grep -rE "fault injection\|FAIL_FUNCTION\|FAIL_MAKE_REQUEST" docs/AirymaxOS/80-testing/` | ≥3 处 | P0 | M2 |
+| OS-ACC-046 | 形式化验证 | `grep -rE "形式化验证\|formal verification" docs/AirymaxOS/80-testing/` | ≥2 处 | P0 | M2 |
+| OS-ACC-047 | Soak 测试定义 | `grep -rE "Soak" docs/AirymaxOS/80-testing/` | ≥2 处 | P0 | M2 |
+| OS-ACC-048 | 混沌测试定义 | `grep -rE "混沌\|chaos" docs/AirymaxOS/80-testing/` | ≥2 处 | P0 | M2 |
 | OS-ACC-049 ★ | CI 测试流水线 | `find .github/workflows/ -name "*test*" \| wc -l` | ≥3 个工作流 | P0 | M2 |
-| OS-ACC-050 | 测试结果报告 | `grep -rE "测试结果报告\|test report" docs/AirymaxAgentOS/80-testing/` | ≥1 处定义 | P0 | M2 |
+| OS-ACC-050 | 测试结果报告 | `grep -rE "测试结果报告\|test report" docs/AirymaxOS/80-testing/` | ≥1 处定义 | P0 | M2 |
 
 ---
 
@@ -156,16 +156,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-051 ★ | 90-observability/ 9 文档完成 | `find docs/AirymaxAgentOS/90-observability/ -name "*.md" \| wc -l` | ≥9 | P0 | M3 |
-| OS-ACC-052 ★ | 100-operations/ 10 文档完成 | `find docs/AirymaxAgentOS/100-operations/ -name "*.md" \| wc -l` | ≥10 | P0 | M3 |
-| OS-ACC-053 ★ | ftrace 集成 | `grep -rE "ftrace" docs/AirymaxAgentOS/90-observability/` | ≥5 处 | P0 | M3 |
-| OS-ACC-054 | perf 集成 | `grep -rE "perf " docs/AirymaxAgentOS/90-observability/` | ≥3 处 | P0 | M3 |
-| OS-ACC-055 ★ | eBPF 可观测性 | `grep -rE "eBPF" docs/AirymaxAgentOS/90-observability/` | ≥5 处 | P0 | M3 |
-| OS-ACC-056 | 4 层文件系统接口 | `grep -rE "4 层文件系统\|tracefs\|debugfs\|procfs\|sysfs" docs/AirymaxAgentOS/90-observability/` | ≥4 层定义 | P0 | M3 |
-| OS-ACC-057 | DevStation 定义 | `grep -rE "DevStation" docs/AirymaxAgentOS/100-operations/` | ≥3 处 | P0 | M3 |
-| OS-ACC-058 | 告警机制定义 | `grep -rE "告警\|alert" docs/AirymaxAgentOS/100-operations/` | ≥3 处 | P0 | M3 |
-| OS-ACC-059 | 升级流程定义 | `grep -rE "升级\|upgrade" docs/AirymaxAgentOS/100-operations/` | ≥2 处 | P0 | M3 |
-| OS-ACC-060 | Token 能效监控 | `grep -rE "Token 能效\|Token efficiency" docs/AirymaxAgentOS/90-observability/` | ≥2 处 | P0 | M3 |
+| OS-ACC-051 ★ | 90-observability/ 9 文档完成 | `find docs/AirymaxOS/90-observability/ -name "*.md" \| wc -l` | ≥9 | P0 | M3 |
+| OS-ACC-052 ★ | 100-operations/ 10 文档完成 | `find docs/AirymaxOS/100-operations/ -name "*.md" \| wc -l` | ≥10 | P0 | M3 |
+| OS-ACC-053 ★ | ftrace 集成 | `grep -rE "ftrace" docs/AirymaxOS/90-observability/` | ≥5 处 | P0 | M3 |
+| OS-ACC-054 | perf 集成 | `grep -rE "perf " docs/AirymaxOS/90-observability/` | ≥3 处 | P0 | M3 |
+| OS-ACC-055 ★ | eBPF 可观测性 | `grep -rE "eBPF" docs/AirymaxOS/90-observability/` | ≥5 处 | P0 | M3 |
+| OS-ACC-056 | 4 层文件系统接口 | `grep -rE "4 层文件系统\|tracefs\|debugfs\|procfs\|sysfs" docs/AirymaxOS/90-observability/` | ≥4 层定义 | P0 | M3 |
+| OS-ACC-057 | DevStation 定义 | `grep -rE "DevStation" docs/AirymaxOS/100-operations/` | ≥3 处 | P0 | M3 |
+| OS-ACC-058 | 告警机制定义 | `grep -rE "告警\|alert" docs/AirymaxOS/100-operations/` | ≥3 处 | P0 | M3 |
+| OS-ACC-059 | 升级流程定义 | `grep -rE "升级\|upgrade" docs/AirymaxOS/100-operations/` | ≥2 处 | P0 | M3 |
+| OS-ACC-060 | Token 能效监控 | `grep -rE "Token 能效\|Token efficiency" docs/AirymaxOS/90-observability/` | ≥2 处 | P0 | M3 |
 
 ---
 
@@ -173,16 +173,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-061 ★ | 110-security/ 9 文档完成 | `find docs/AirymaxAgentOS/110-security/ -name "*.md" \| wc -l` | ≥9 | P0 | M4 |
-| OS-ACC-062 ★ | capability 模型定义 | `grep -rE "capability" docs/AirymaxAgentOS/110-security/` | ≥10 处 | P0 | M4 |
-| OS-ACC-063 ★ | LSM 集成 | `grep -rE "LSM\|Linux Security Module" docs/AirymaxAgentOS/110-security/` | ≥5 处 | P0 | M4 |
-| OS-ACC-064 | 机密计算定义 | `grep -rE "机密计算\|confidential computing" docs/AirymaxAgentOS/110-security/` | ≥3 处 | P0 | M4 |
-| OS-ACC-065 | 国密支持 | `grep -rE "国密\|SM2\|SM3\|SM4" docs/AirymaxAgentOS/110-security/` | ≥3 处 | P0 | M4 |
-| OS-ACC-066 | eBPF 签名验证 | `grep -rE "eBPF.*签名\|eBPF.*signature" docs/AirymaxAgentOS/110-security/` | ≥2 处 | P0 | M4 |
-| OS-ACC-067 | 模块签名 | `grep -rE "模块签名\|module signature" docs/AirymaxAgentOS/110-security/` | ≥2 处 | P0 | M4 |
-| OS-ACC-068 ★ | 安全审计流程 | `grep -rE "安全审计\|security audit" docs/AirymaxAgentOS/110-security/` | ≥2 处 | P0 | M4 |
-| OS-ACC-069 | 漏洞响应预案 | `grep -rE "漏洞响应\|vulnerability response" docs/AirymaxAgentOS/110-security/` | ≥1 处定义 | P0 | M4 |
-| OS-ACC-070 | Cupolas 安全穹顶映射 | `grep -rE "Cupolas\|安全穹顶" docs/AirymaxAgentOS/110-security/` | ≥3 处 | P0 | M4 |
+| OS-ACC-061 ★ | 110-security/ 9 文档完成 | `find docs/AirymaxOS/110-security/ -name "*.md" \| wc -l` | ≥9 | P0 | M4 |
+| OS-ACC-062 ★ | capability 模型定义 | `grep -rE "capability" docs/AirymaxOS/110-security/` | ≥10 处 | P0 | M4 |
+| OS-ACC-063 ★ | LSM 集成 | `grep -rE "LSM\|Linux Security Module" docs/AirymaxOS/110-security/` | ≥5 处 | P0 | M4 |
+| OS-ACC-064 | 机密计算定义 | `grep -rE "机密计算\|confidential computing" docs/AirymaxOS/110-security/` | ≥3 处 | P0 | M4 |
+| OS-ACC-065 | 国密支持 | `grep -rE "国密\|SM2\|SM3\|SM4" docs/AirymaxOS/110-security/` | ≥3 处 | P0 | M4 |
+| OS-ACC-066 | eBPF 签名验证 | `grep -rE "eBPF.*签名\|eBPF.*signature" docs/AirymaxOS/110-security/` | ≥2 处 | P0 | M4 |
+| OS-ACC-067 | 模块签名 | `grep -rE "模块签名\|module signature" docs/AirymaxOS/110-security/` | ≥2 处 | P0 | M4 |
+| OS-ACC-068 ★ | 安全审计流程 | `grep -rE "安全审计\|security audit" docs/AirymaxOS/110-security/` | ≥2 处 | P0 | M4 |
+| OS-ACC-069 | 漏洞响应预案 | `grep -rE "漏洞响应\|vulnerability response" docs/AirymaxOS/110-security/` | ≥1 处定义 | P0 | M4 |
+| OS-ACC-070 | Cupolas 安全穹顶映射 | `grep -rE "Cupolas\|安全穹顶" docs/AirymaxOS/110-security/` | ≥3 处 | P0 | M4 |
 
 ---
 
@@ -190,16 +190,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-071 ★ | 120-development-process/ 9 文档完成 | `find docs/AirymaxAgentOS/120-development-process/ -name "*.md" \| wc -l` | ≥9 | P0 | M5 |
+| OS-ACC-071 ★ | 120-development-process/ 9 文档完成 | `find docs/AirymaxOS/120-development-process/ -name "*.md" \| wc -l` | ≥9 | P0 | M5 |
 | OS-ACC-072 ★ | PR 模板定义 | `find .github/ -name "*PULL_REQUEST*" -o -name "*pull_request*"` | ≥1 个 | P0 | M5 |
 | OS-ACC-073 | CODEOWNERS 定义 | `find . -name "CODEOWNERS" \| wc -l` | ≥1 个 | P0 | M5 |
 | OS-ACC-074 ★ | DCO bot 集成 | `grep -rE "DCO\|dco" .github/workflows/` | ≥1 处 | P0 | M5 |
-| OS-ACC-075 | Fixes/Closes/Link 标签 | `grep -rE "Fixes:\|Closes:\|Link:" docs/AirymaxAgentOS/120-development-process/` | ≥3 处定义 | P0 | M5 |
-| OS-ACC-076 | Reviewed-by 流程 | `grep -rE "Reviewed-by\|Acked-by\|Tested-by" docs/AirymaxAgentOS/120-development-process/` | ≥3 处定义 | P0 | M5 |
-| OS-ACC-077 | develop 集成分支 | `grep -rE "develop\|linux-next" docs/AirymaxAgentOS/120-development-process/` | ≥2 处 | P0 | M5 |
-| OS-ACC-078 | release 稳定分支 | `grep -rE "release/\|stable" docs/AirymaxAgentOS/120-development-process/` | ≥2 处 | P0 | M5 |
-| OS-ACC-079 | git bisect 友好 | `grep -rE "git bisect\|bisect" docs/AirymaxAgentOS/120-development-process/` | ≥2 处 | P0 | M5 |
-| OS-ACC-080 | 审查响应 SLA | `grep -rE "SLA\|响应" docs/AirymaxAgentOS/120-development-process/` | ≥1 处定义 | P0 | M5 |
+| OS-ACC-075 | Fixes/Closes/Link 标签 | `grep -rE "Fixes:\|Closes:\|Link:" docs/AirymaxOS/120-development-process/` | ≥3 处定义 | P0 | M5 |
+| OS-ACC-076 | Reviewed-by 流程 | `grep -rE "Reviewed-by\|Acked-by\|Tested-by" docs/AirymaxOS/120-development-process/` | ≥3 处定义 | P0 | M5 |
+| OS-ACC-077 | develop 集成分支 | `grep -rE "develop\|linux-next" docs/AirymaxOS/120-development-process/` | ≥2 处 | P0 | M5 |
+| OS-ACC-078 | release 稳定分支 | `grep -rE "release/\|stable" docs/AirymaxOS/120-development-process/` | ≥2 处 | P0 | M5 |
+| OS-ACC-079 | git bisect 友好 | `grep -rE "git bisect\|bisect" docs/AirymaxOS/120-development-process/` | ≥2 处 | P0 | M5 |
+| OS-ACC-080 | 审查响应 SLA | `grep -rE "SLA\|响应" docs/AirymaxOS/120-development-process/` | ≥1 处定义 | P0 | M5 |
 
 ---
 
@@ -207,16 +207,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-081 ★ | 130-roadmap/ 7 文档完成 | `find docs/AirymaxAgentOS/130-roadmap/ -name "*.md" \| wc -l` | ≥7 | P0 | M6 |
-| OS-ACC-082 ★ | README.md 路线图总纲 | `test -f docs/AirymaxAgentOS/130-roadmap/README.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-083 | 开发策略文档 | `test -f docs/AirymaxAgentOS/130-roadmap/01-development-strategy.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-084 | 里程碑与时间线文档 | `test -f docs/AirymaxAgentOS/130-roadmap/02-milestones-and-timeline.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-085 ★ | 资源估算文档 | `test -f docs/AirymaxAgentOS/130-roadmap/03-resource-estimation.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-086 ★ | 依赖关系图文档 | `test -f docs/AirymaxAgentOS/130-roadmap/04-dependency-graph.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-087 ★ | 风险识别与缓解文档 | `test -f docs/AirymaxAgentOS/130-roadmap/05-risk-mitigation.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-088 ★ | 验收标准与质量门禁文档 | `test -f docs/AirymaxAgentOS/130-roadmap/06-acceptance-criteria.md && echo OK` | OK | P0 | M6 |
-| OS-ACC-089 | Mermaid Gantt 图 | `grep -rE "\`\`\`mermaid" docs/AirymaxAgentOS/130-roadmap/02-milestones-and-timeline.md` | ≥1 处 | P0 | M6 |
-| OS-ACC-090 | 关键路径定义 | `grep -rE "关键路径\|critical path" docs/AirymaxAgentOS/130-roadmap/` | ≥3 处 | P0 | M6 |
+| OS-ACC-081 ★ | 130-roadmap/ 7 文档完成 | `find docs/AirymaxOS/130-roadmap/ -name "*.md" \| wc -l` | ≥7 | P0 | M6 |
+| OS-ACC-082 ★ | README.md 路线图总纲 | `test -f docs/AirymaxOS/130-roadmap/README.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-083 | 开发策略文档 | `test -f docs/AirymaxOS/130-roadmap/01-development-strategy.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-084 | 里程碑与时间线文档 | `test -f docs/AirymaxOS/130-roadmap/02-milestones-and-timeline.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-085 ★ | 资源估算文档 | `test -f docs/AirymaxOS/130-roadmap/03-resource-estimation.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-086 ★ | 依赖关系图文档 | `test -f docs/AirymaxOS/130-roadmap/04-dependency-graph.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-087 ★ | 风险识别与缓解文档 | `test -f docs/AirymaxOS/130-roadmap/05-risk-mitigation.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-088 ★ | 验收标准与质量门禁文档 | `test -f docs/AirymaxOS/130-roadmap/06-acceptance-criteria.md && echo OK` | OK | P0 | M6 |
+| OS-ACC-089 | Mermaid Gantt 图 | `grep -rE "\`\`\`mermaid" docs/AirymaxOS/130-roadmap/02-milestones-and-timeline.md` | ≥1 处 | P0 | M6 |
+| OS-ACC-090 | 关键路径定义 | `grep -rE "关键路径\|critical path" docs/AirymaxOS/130-roadmap/` | ≥3 处 | P0 | M6 |
 
 ---
 
@@ -224,16 +224,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-091 | 140-application-development/ 9 文档完成 | `find docs/AirymaxAgentOS/140-application-development/ -name "*.md" \| wc -l` | ≥9 | P1 | M7 |
-| OS-ACC-092 | 150-cloudnative/ 8 文档完成 | `find docs/AirymaxAgentOS/150-cloudnative/ -name "*.md" \| wc -l` | ≥8 | P1 | M7 |
-| OS-ACC-093 | Agent SDK 定义 | `grep -rE "Agent SDK\|agent sdk" docs/AirymaxAgentOS/140-application-development/` | ≥3 处 | P1 | M7 |
-| OS-ACC-094 | 应用模型定义 | `grep -rE "应用模型\|application model" docs/AirymaxAgentOS/140-application-development/` | ≥2 处 | P1 | M7 |
-| OS-ACC-095 | K8s 集成 | `grep -rE "K8s\|Kubernetes" docs/AirymaxAgentOS/150-cloudnative/` | ≥3 处 | P1 | M7 |
-| OS-ACC-096 | containerd 集成 | `grep -rE "containerd" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
-| OS-ACC-097 | OCI 镜像标准 | `grep -rE "OCI" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
-| OS-ACC-098 | agentctl 工具 | `grep -rE "agentctl" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
-| OS-ACC-099 | 超节点 OS | `grep -rE "超节点" docs/AirymaxAgentOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
-| OS-ACC-100 | 包管理定义 | `grep -rE "包管理\|package" docs/AirymaxAgentOS/140-application-development/` | ≥2 处 | P1 | M7 |
+| OS-ACC-091 | 140-application-development/ 9 文档完成 | `find docs/AirymaxOS/140-application-development/ -name "*.md" \| wc -l` | ≥9 | P1 | M7 |
+| OS-ACC-092 | 150-cloudnative/ 8 文档完成 | `find docs/AirymaxOS/150-cloudnative/ -name "*.md" \| wc -l` | ≥8 | P1 | M7 |
+| OS-ACC-093 | Agent SDK 定义 | `grep -rE "Agent SDK\|agent sdk" docs/AirymaxOS/140-application-development/` | ≥3 处 | P1 | M7 |
+| OS-ACC-094 | 应用模型定义 | `grep -rE "应用模型\|application model" docs/AirymaxOS/140-application-development/` | ≥2 处 | P1 | M7 |
+| OS-ACC-095 | K8s 集成 | `grep -rE "K8s\|Kubernetes" docs/AirymaxOS/150-cloudnative/` | ≥3 处 | P1 | M7 |
+| OS-ACC-096 | containerd 集成 | `grep -rE "containerd" docs/AirymaxOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-097 | OCI 镜像标准 | `grep -rE "OCI" docs/AirymaxOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-098 | agentctl 工具 | `grep -rE "agentctl" docs/AirymaxOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-099 | 超节点 OS | `grep -rE "超节点" docs/AirymaxOS/150-cloudnative/` | ≥2 处 | P1 | M7 |
+| OS-ACC-100 | 包管理定义 | `grep -rE "包管理\|package" docs/AirymaxOS/140-application-development/` | ≥2 处 | P1 | M7 |
 
 ---
 
@@ -241,16 +241,16 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 
 | 编号 | 验收项 | 验证方法 | 通过标准 | 优先级 | 里程碑 |
 |------|--------|---------|---------|--------|--------|
-| OS-ACC-101 | 160-compatibility/ 8 文档完成 | `find docs/AirymaxAgentOS/160-compatibility/ -name "*.md" \| wc -l` | ≥8 | P1 | M8 |
-| OS-ACC-102 | 170-performance/ 8 文档完成 | `find docs/AirymaxAgentOS/170-performance/ -name "*.md" \| wc -l` | ≥8 | P1 | M8 |
-| OS-ACC-103 ★ | 性能基线定义 | `grep -rE "性能基线\|performance baseline" docs/AirymaxAgentOS/170-performance/` | ≥2 处 | P1 | M8 |
-| OS-ACC-104 | 硬件兼容矩阵 | `grep -rE "硬件兼容\|hardware compatibility" docs/AirymaxAgentOS/160-compatibility/` | ≥2 处 | P1 | M8 |
-| OS-ACC-105 | 软件兼容矩阵 | `grep -rE "软件兼容\|software compatibility" docs/AirymaxAgentOS/160-compatibility/` | ≥2 处 | P1 | M8 |
-| OS-ACC-106 ★ | ABI 兼容性测试 | `grep -rE "ABI 兼容\|ABI compatibility" docs/AirymaxAgentOS/160-compatibility/` | ≥2 处 | P1 | M8 |
-| OS-ACC-107 | 调优指南 | `grep -rE "调优\|tuning" docs/AirymaxAgentOS/170-performance/` | ≥2 处 | P1 | M8 |
-| OS-ACC-108 | Token 能效基准 | `grep -rE "Token 能效\|Token efficiency" docs/AirymaxAgentOS/170-performance/` | ≥2 处 | P1 | M8 |
-| OS-ACC-109 | 基准测试套件 | `grep -rE "基准测试\|benchmark" docs/AirymaxAgentOS/170-performance/` | ≥3 处 | P1 | M8 |
-| OS-ACC-110 ★ | Linux 6.6 兼容性验证 | `grep -rE "Linux 7\.0\|PREEMPT_LAZY\|Rust 正式转正\|XFS 自修复\|MGLRU 2\.0" docs/AirymaxAgentOS/ \| grep -v "06-acceptance-criteria"` | 0 结果（同 ACC-OS04，排除本文件自身） | P1 | M8 |
+| OS-ACC-101 | 160-compatibility/ 8 文档完成 | `find docs/AirymaxOS/160-compatibility/ -name "*.md" \| wc -l` | ≥8 | P1 | M8 |
+| OS-ACC-102 | 170-performance/ 8 文档完成 | `find docs/AirymaxOS/170-performance/ -name "*.md" \| wc -l` | ≥8 | P1 | M8 |
+| OS-ACC-103 ★ | 性能基线定义 | `grep -rE "性能基线\|performance baseline" docs/AirymaxOS/170-performance/` | ≥2 处 | P1 | M8 |
+| OS-ACC-104 | 硬件兼容矩阵 | `grep -rE "硬件兼容\|hardware compatibility" docs/AirymaxOS/160-compatibility/` | ≥2 处 | P1 | M8 |
+| OS-ACC-105 | 软件兼容矩阵 | `grep -rE "软件兼容\|software compatibility" docs/AirymaxOS/160-compatibility/` | ≥2 处 | P1 | M8 |
+| OS-ACC-106 ★ | ABI 兼容性测试 | `grep -rE "ABI 兼容\|ABI compatibility" docs/AirymaxOS/160-compatibility/` | ≥2 处 | P1 | M8 |
+| OS-ACC-107 | 调优指南 | `grep -rE "调优\|tuning" docs/AirymaxOS/170-performance/` | ≥2 处 | P1 | M8 |
+| OS-ACC-108 | Token 能效基准 | `grep -rE "Token 能效\|Token efficiency" docs/AirymaxOS/170-performance/` | ≥2 处 | P1 | M8 |
+| OS-ACC-109 | 基准测试套件 | `grep -rE "基准测试\|benchmark" docs/AirymaxOS/170-performance/` | ≥3 处 | P1 | M8 |
+| OS-ACC-110 ★ | Linux 6.6 兼容性验证 | `grep -rE "Linux 7\.0\|PREEMPT_LAZY\|Rust 正式转正\|XFS 自修复\|MGLRU 2\.0" docs/AirymaxOS/ \| grep -v "06-acceptance-criteria"` | 0 结果（同 ACC-OS04，排除本文件自身） | P1 | M8 |
 
 ---
 

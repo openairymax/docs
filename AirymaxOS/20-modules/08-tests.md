@@ -1,6 +1,6 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux（AirymaxOS）测试设计文档（airymaxos-tests，极境测试）
+# agentrt-linux（AirymaxOS）测试设计文档（airymaxos-tests-linux，极境测试）
 
 > **子仓编号**：08
 > **子仓代号**：极境测试（Airymax Tests）
@@ -32,7 +32,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 子仓职责
 
-`airymaxos-tests` 是 agentrt-linux（AirymaxOS）的测试与验证子仓，承担以下核心职责：
+`airymaxos-tests-linux` 是 agentrt-linux（AirymaxOS）的测试与验证子仓，承担以下核心职责：
 
 1. **单元测试框架 [SS]**：为各子仓提供单元测试框架（Rust cargo test + Go testing + C googletest），与 agentrt 全模块测试语义同源。
 2. **集成测试框架 [IND]**：基于 agentrt-linux 系统级测试套件，提供集成测试框架（agentrt-linux 自研）。
@@ -59,7 +59,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v2 三层共享模型）
 
-依据 IRON-9 v2 决策，agentrt（用户态全模块测试）与 agentrt-linux（airymaxos-tests）通过三层共享模型协作：
+依据 IRON-9 v2 决策，agentrt（用户态全模块测试）与 agentrt-linux（airymaxos-tests-linux）通过三层共享模型协作：
 
 | 层次 | 共享程度 | 测试子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
@@ -69,7 +69,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 维度对比
 
-| 维度 | agentrt（全模块测试） | agentrt-linux（airymaxos-tests） | 同源标注 |
+| 维度 | agentrt（全模块测试） | agentrt-linux（airymaxos-tests-linux） | 同源标注 |
 |------|---------------------|------------------------------|----------|
 | 单元测试框架 | cargo test + go test + googletest | cargo test + go test + googletest | [SS] |
 | 集成测试 | 模块间集成测试 | 子仓间集成测试（agentrt-linux 自研） | [IND] |
@@ -97,7 +97,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ## 3. 目录结构
 
 ```
-airymaxos-tests/
+tests-linux/
 ├── unit/                   # 单元测试框架 [SS]
 ├── integration/            # 集成测试框架（agentrt-linux 自研）[IND]
 ├── formal-verification/    # 形式化验证（seL4 风格，验证 [SC] 类型）[IND]

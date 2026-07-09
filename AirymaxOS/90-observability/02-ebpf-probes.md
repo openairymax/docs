@@ -23,7 +23,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [第 8 章 BPF map 类型](#第-8-章-bpf-map-类型)
 - [第 9 章 eBPF 程序加载流程](#第-9-章-ebpf-程序加载流程)
 - [第 10 章 struct_ops 注册机制与 SCHED_AGENT 集成](#第-10-章-struct_ops-注册机制与-sched_agent-集成)
-- [第 11 章 agentrt-linux Token 能效监控与 Agent 行为追踪](#第-11-章-airymaxos-token-能效监控与-agent-行为追踪)
+- [第 11 章 agentrt-linux Token 能效监控与 Agent 行为追踪](#第-11-章-agentrt-linux-token-能效监控与-agent-行为追踪)
 - [第 12 章 五维原则映射](#第-12-章-五维原则映射)
 - [第 13 章 IRON-9 v2 三层共享模型落地](#第-13-章-iron-9-v2-三层共享模型落地)
 - [第 14 章 相关文档与版本维护](#第-14-章-相关文档与版本维护)

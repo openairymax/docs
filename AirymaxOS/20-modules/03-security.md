@@ -539,7 +539,7 @@ sequenceDiagram
 | 理论 | 来源 | 应用 | 同源标注 |
 |------|------|------|----------|
 | seL4 capability | seL4 项目 | capability 系统设计 | [SC] |
-| Zircon handle | Google Zircon | capability 句柄传递 | [SS] |
+| seL4 CNode/MDB 派生 | seL4 项目 | capability 句柄传递与撤销 | [SS] |
 | Liedtke minimality principle | Liedtke SOSP'95 | 微内核最小化原则 | [SS] |
 | eBPF kfunc + dynamic pointer | Linux 6.6 | eBPF 程序签名验证 | [SS] |
 | 机密计算 | CCC | TEE 集成 | [IND] |
@@ -561,7 +561,7 @@ sequenceDiagram
 | `airymaxos-cognition` | 提供 Wasm 沙箱、LLM 推理 TEE 保护 | [IND] |
 | `airymaxos-cloudnative` | 提供容器沙箱、零信任网络 | [IND] |
 | `airymaxos-system` | 提供安全配置工具 | [SS] |
-| `airymaxos-tests` | 安全测试、形式化验证 | [SS] |
+| `airymaxos-tests-linux` | 安全测试、形式化验证 | [SS] |
 
 ---
 
@@ -637,8 +637,7 @@ sequenceDiagram
 
 ## 13. 参考
 
-- seL4 项目文档（capability 系统）
-- Zircon 内核设计文档（handle 传递）
+- seL4 项目文档（capability 系统、CNode/MDB 派生，ADR-014）
 - Linux 6.6 `security/security.c`（LSM 框架核心）
 - Linux 6.6 `security/landlock/`（Landlock 实现）
 - Linux 6.6 `security/keys/`（密钥环实现）

@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 **最新**: 2026-07-07  
 **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）  
 **状态**: 草案  
-**路径**: OpenAirymax/docs/AirymaxAgentOS/50-engineering-standards/30-runtime-interfaces/README.md  
+**路径**: OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/README.md  
 **父文档**: [工程标准规范手册](../00-engineering-standards-handbook.md)  
 **理论根基**: 体系并行论、五维正交24原则、IRON-9 v2 同源且部分代码共享  
 
@@ -271,7 +271,7 @@ ARE Standards 采用语义版本命名：
 
 ### 5.3 当前结论
 
-在 v0.1.1 草案阶段，ARE Standards 保留在 agentrt-linux 仓库的 `docs/AirymaxAgentOS/50-engineering-standards/30-runtime-interfaces/` 目录下，不独立仓库。原因：
+在 v0.1.1 草案阶段，ARE Standards 保留在 agentrt-linux 仓库的 `docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/` 目录下，不独立仓库。原因：
 - 标准尚未稳定，独立会增加变更成本
 - 当前共享模型（IRON-9 v2）已经解决大部分一致性问题
 - 等标准进入候选阶段（v0.3.0）后，再重新评估独立仓库的必要性
@@ -500,8 +500,8 @@ ARE Standards 的设计全程遵循五维正交24原则，关键映射如下：
 
 1. [工程标准规范手册](../00-engineering-standards-handbook.md)
 2. [agentrt-linux（AirymaxOS）工程思想](../../50-engineering-standards/04-engineering-philosophy.md)
-3. [体系并行论](../../AirymaxAgentRT/Basic_Theories/CN_01_体系并行.md)
-4. [系统设计原则](../../AirymaxAgentRT/Basic_Theories/CN_04_系统设计原则.md)
+3. [体系并行论](../../AirymaxRT/Basic_Theories/CN_01_体系并行.md)
+4. [系统设计原则](../../AirymaxRT/Basic_Theories/CN_04_系统设计原则.md)
 5. IRON-9 v2 工程铁律（闭源内部参考）
 6. seL4 微内核项目文档：https://sel4.systems/
 

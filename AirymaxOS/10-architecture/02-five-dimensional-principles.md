@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-06
 > **父文档**: [架构设计](README.md)
-> **原则来源**: [ARCHITECTURAL_PRINCIPLES.md](../../ARCHITECTURAL_PRINCIPLES.md)
+> **原则来源**: [ARCHITECTURAL_PRINCIPLES.md](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)
 
 ---
 
@@ -83,7 +83,7 @@ agentrt-linux 架构设计基于体系并行论（Multibody Cybernetic Intellige
 | airymaxos-cognition | L4 认知层 | 仅依赖 L3 服务层接口 |
 | airymaxos-cloudnative | L5 云原生层 | 仅依赖 L4 认知层 + L3 服务层 |
 | airymaxos-system | L6 系统层 | 仅依赖 L5 + L3 |
-| airymaxos-tests | L7 测试层 | 覆盖 L2-L6 全部 |
+| airymaxos-tests-linux | L7 测试层 | 覆盖 L2-L6 全部 |
 
 **实施规则**：
 1. 新模块的头文件只能 `#include` 同层或下层的接口
@@ -119,8 +119,8 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | airymaxos-cognition 双系统协同 | 正面涌现 | 主辅模型交叉验证涌现更高推理可靠性 |
 | airymaxos-security 补偿事务 | 负面涌现抑制 | 防止任务链单点失败演变为级联崩溃 |
 | airymaxos-security 权限缓存热更新 | 负面涌现抑制 | 防止安全规则变更时短暂不可用 |
-| airymaxos-tests Soak 长时测试 | 负面涌现检测 | 长时间运行检测内存泄漏、资源饥饿等涌现问题 |
-| airymaxos-tests 混沌工程 | 负面涌现检测 | 故障注入验证级联故障隔离机制 |
+| airymaxos-tests-linux Soak 长时测试 | 负面涌现检测 | 长时间运行检测内存泄漏、资源饥饿等涌现问题 |
+| airymaxos-tests-linux 混沌工程 | 负面涌现检测 | 故障注入验证级联故障隔离机制 |
 
 ---
 
@@ -178,7 +178,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 落地子仓/模块 | 守护进程 | 隔离机制 |
 |---------------|----------|----------|
 | airymaxos-services 12 daemons | llm_d / market_d / monit_d / tool_d / sched_d / gateway_d 等 | 独立地址空间 + systemd 单元 + capability 限制 |
-| airymaxos-services VFS 用户态化 | vfs_d | 用户态文件系统（参考 Fuchsia） |
+| airymaxos-services VFS 用户态化 | vfs_d | 用户态文件系统（参考 seL4 服务用户态化，ADR-014） |
 | airymaxos-services 网络栈用户态化 | net_d | DPDK / AF_XDP 用户态网络 |
 | airymaxos-services 驱动框架用户态化 | drv_d | VFIO / libvfio 用户态驱动 |
 
@@ -372,7 +372,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | airymaxos-services 结构化错误码 | 错误码体系 | agentrt_errno.h 对齐 errno |
 | airymaxos-services 错误链 | 错误上下文传递 | agentrt_error_wrap 添加模块名/函数名/行号 |
 | airymaxos-services OpenTelemetry | 调用栈追溯 | 分布式追踪 + 完整调用链 |
-| airymaxos-tests 错误注入测试 | 错误恢复验证 | 故障注入 + 错误恢复测试 |
+| airymaxos-tests-linux 错误注入测试 | 错误恢复验证 | 故障注入 + 错误恢复测试 |
 
 ### 5.7 E-7 文档即代码原则
 
@@ -382,11 +382,11 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 | 文档体系 | 位置 | 内容 |
 |----------|------|------|
-| docs/AirymaxAgentOS/ | agentrt-linux 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
+| docs/AirymaxOS/ | agentrt-linux 设计文档 | 19 模块三层体系（核心设计层 + 工程标准与实施层 + 延伸层，~64 文档） |
 | docs/ARCHITECTURAL_PRINCIPLES.md | 架构原则 | 五维正交 24 原则 |
 | 50-engineering-standards/10-coding-style/ | 编码规范 | C / Rust / 安全编码规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
-| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（10 个 ADR） |
+| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（14 个 ADR） |
 
 ### 5.8 E-8 可测试性原则
 
@@ -396,13 +396,13 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 | 落地子仓/模块 | 测试类型 | 工具 | 覆盖率目标 |
 |---------------|----------|------|------------|
-| airymaxos-tests 单元测试 | 函数/模块级别 | CUnit + CMock | ≥90% 行覆盖率 |
-| airymaxos-tests 集成测试 | 模块间交互 | 自定义测试框架 | ≥80% 接口覆盖率 |
-| airymaxos-tests 系统测试 | 端到端流程 | Python + pytest | 核心流程 100% |
-| airymaxos-tests 性能测试 | 负载与压力 | Locust + k6 | 关键路径 SLA |
-| airymaxos-tests 形式化验证 | 数学证明 | seL4 风格验证 | 关键模块 100% |
-| airymaxos-tests Soak 长时测试 | 长时运行 | 持续运行 7 天+ | 内存泄漏检测 |
-| airymaxos-tests 混沌工程 | 故障注入 | Chaos Mesh | 故障隔离验证 |
+| airymaxos-tests-linux 单元测试 | 函数/模块级别 | CUnit + CMock | ≥90% 行覆盖率 |
+| airymaxos-tests-linux 集成测试 | 模块间交互 | 自定义测试框架 | ≥80% 接口覆盖率 |
+| airymaxos-tests-linux 系统测试 | 端到端流程 | Python + pytest | 核心流程 100% |
+| airymaxos-tests-linux 性能测试 | 负载与压力 | Locust + k6 | 关键路径 SLA |
+| airymaxos-tests-linux 形式化验证 | 数学证明 | seL4 风格验证 | 关键模块 100% |
+| airymaxos-tests-linux Soak 长时测试 | 长时运行 | 持续运行 7 天+ | 内存泄漏检测 |
+| airymaxos-tests-linux 混沌工程 | 故障注入 | Chaos Mesh | 故障隔离验证 |
 
 ---
 
@@ -437,7 +437,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | airymaxos-services 日志格式 | 结构化日志 | JSON 格式 + trace_id + 完整上下文 |
 | airymaxos-services journald | 日志颜色 | ANSI 颜色：INFO=蓝/WARN=黄/ERROR=红/FATAL=品红/DEBUG=灰 |
 | airymaxos-system Doxygen | 代码注释 | 每个公共 API 的完整契约注释 |
-| airymaxos-tests 测试用例 | 测试命名 | test_<module>_<scenario>_<expected_result> |
+| airymaxos-tests-linux 测试用例 | 测试命名 | test_<module>_<scenario>_<expected_result> |
 
 ### 6.3 A-3 人文关怀原则
 
@@ -462,11 +462,11 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 落地子仓/模块 | 完美维度 | 体现 |
 |---------------|----------|------|
 | IRON-1~10 工程铁律 | 工程纪律 | 10 条不可违反的工程铁律（详见工程标准规范手册） |
-| airymaxos-tests 零警告编译 | 编译质量 | -Wall -Wextra -Werror 下无警告 |
-| airymaxos-tests 静态分析 | 代码质量 | Clang-Tidy + Coverity 定期扫描 |
-| airymaxos-tests 动态检查 | 运行时质量 | ASan + TSan + UBSan 在 CI 中运行 |
-| airymaxos-tests 测试覆盖 | 测试完美 | 单元测试 ≥90%，关键模块 ≥95% |
-| airymaxos-tests 形式化验证 | 数学证明 | seL4 风格的关键模块形式化验证 |
+| airymaxos-tests-linux 零警告编译 | 编译质量 | -Wall -Wextra -Werror 下无警告 |
+| airymaxos-tests-linux 静态分析 | 代码质量 | Clang-Tidy + Coverity 定期扫描 |
+| airymaxos-tests-linux 动态检查 | 运行时质量 | ASan + TSan + UBSan 在 CI 中运行 |
+| airymaxos-tests-linux 测试覆盖 | 测试完美 | 单元测试 ≥90%，关键模块 ≥95% |
+| airymaxos-tests-linux 形式化验证 | 数学证明 | seL4 风格的关键模块形式化验证 |
 
 ---
 
@@ -553,8 +553,8 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 - [系统架构](01-system-architecture.md)：agentrt-linux 系统架构总览
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [工程基线](04-engineering-baseline.md)：agentrt-linux 工程基线
-- [架构决策记录](05-adrs.md)：10 个核心 ADR
-- [架构原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
+- [架构决策记录](05-adrs.md)：14 个核心 ADR
+- [架构原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则的完整定义
 
 ---
 

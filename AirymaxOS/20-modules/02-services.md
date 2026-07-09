@@ -61,7 +61,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|---------|---------------|---------|
 | **[SC] 共享契约层** | 完全共享代码 | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`agentrt_ipc_msg_hdr_t`）、SQE/CQE 操作码与标志位、ring 创建/注册参数 | `include/airymax/ipc.h`（与 airymaxos-kernel 共享） |
 | **[SS] 语义同源层** | API 签名同源，实现独立 | 12 daemons 语义（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/channel_d/info_d/notify_d/observe_d/hook_d/plugin_d）、io_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 15+ 项 | 各自独立实现 |
-| **[IND] 完全独立层** | 完全独立 | 用户态 VFS 实现（Fuchsia fservices 参考）、用户态网络栈（DPDK/AF_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs） | 各自独立仓库 |
+| **[IND] 完全独立层** | 完全独立 | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs） | 各自独立仓库 |
 
 ### 2.1 维度对比
 
@@ -114,17 +114,17 @@ airymaxos-services/
 
 ### 3.1 vfs/（用户态 VFS）[IND]
 
-参考 **Fuchsia fservices** 架构：
+参考 **seL4 服务用户态化模型**（ADR-014）：
 - `vfs-service`：虚拟文件系统服务，处理路径解析、挂载管理 [IND]。
 - `fs-providers/`：具体文件系统实现（ext4、xfs、tmpfs、btrfs 等）作为独立服务 [IND]。
-- `fuchsia-channel`：基于 zxio channel 的文件操作协议 [IND]。
+- `io-channel`：基于 io_uring channel 的文件操作协议 [IND]。
 - `vnode`：虚拟节点抽象，跨服务引用 [IND]。
 
 ### 3.2 net/（用户态网络栈）[IND]
 
 - `dpdk/`：基于 DPDK 的高性能用户态网络栈 [IND]。
 - `af_xdp/`：基于 AF_XDP 的零拷贝网络路径 [IND]。
-- `tcp-stack/`：用户态 TCP/IP 协议栈（参考 Fuchsia netstack3）[IND]。
+- `tcp-stack/`：用户态 TCP/IP 协议栈 [IND]。
 - `dns/`：用户态 DNS 解析器 [IND]。
 - `dhcp/`：用户态 DHCP 客户端 [IND]。
 
@@ -174,16 +174,16 @@ airymaxos-services/
 
 基于 **io_uring** 零拷贝 IPC，IPC 消息头 [SC] 与 agentrt 共享：
 - `io-uring-ipc`：核心 IPC 库 [SS]。
-- `channel`：双向通道抽象（参考 Zircon channel）[SS]。
-- `socket`：面向连接的 socket 抽象（参考 Zircon socket）[SS]。
-- `fifo`：单向 FIFO 抽象（参考 Zircon fifo）[SS]。
-- `eventpair`：事件同步原语（参考 Zircon eventpair）[SS]。
+- `channel`：双向通道抽象（参考 seL4 Endpoint）[SS]。
+- `socket`：面向连接的 socket 抽象（参考 seL4 Endpoint）[SS]。
+- `fifo`：单向 FIFO 抽象（参考 seL4 Notification）[SS]。
+- `eventpair`：事件同步原语（参考 seL4 Notification）[SS]。
 
 ---
 
 ## 4. 核心特性
 
-### 4.1 VFS 用户态化（参考 Fuchsia fservices）[IND]
+### 4.1 VFS 用户态化（参考 seL4 服务用户态化，ADR-014）[IND]
 
 **架构**：
 - 内核保留虚拟文件系统层（VFS layer），仅负责路径解析、inode 缓存 [IND]。
@@ -200,7 +200,7 @@ airymaxos-services/
 **架构**：
 - DPDK 模式：完全绕过内核，直接在用户态轮询网卡 [IND]。
 - AF_XDP 模式：通过 XDP 程序将数据包重定向至用户态 socket [IND]。
-- 用户态 TCP/IP 协议栈（参考 Fuchsia netstack3）[IND]。
+- 用户态 TCP/IP 协议栈 [IND]。
 
 **优势**：
 - 高性能：单核可处理 100+ Gbps 流量 [IND]。
@@ -250,7 +250,7 @@ WantedBy=airymaxos.target
 
 ### 4.5 消息传递通信（基于 io_uring 零拷贝）[SS]
 
-**通信原语**（参考 Zircon，语义 [SS] 同源 agentrt）：
+**通信原语**（参考 seL4 Endpoint/Notification，ADR-014，语义 [SS] 同源 agentrt）：
 
 | 原语 | 语义 | 用途 | 同源标注 |
 |------|------|------|----------|
@@ -288,14 +288,14 @@ typedef struct __attribute__((aligned(64))) agentrt_ipc_msg_hdr {
 
 ### 5.1 服务用户态化 [IND]
 
-遵循 **Minix3** 哲学：
+遵循 **seL4** 服务用户态化原则（ADR-014）：
 - 所有系统服务（VFS、网络、驱动）均运行在用户态 [IND]。
 - 服务通过消息传递通信 [SS]。
 - 服务崩溃可被监督进程重启 [IND]。
 
 ### 5.2 消息传递通信 [SS]
 
-遵循 **Zircon message passing** 模型：
+遵循 **seL4 消息传递** 模型（Endpoint/Notification，ADR-014）：
 - 进程间通信通过内核仲裁的消息传递 [SS]。
 - 消息携带 capability 令牌 [SS]。
 - 零拷贝通过 page flipping 实现 [SS]。
@@ -364,7 +364,7 @@ API 签名同源，实现独立。服务模块的同源 API：
 
 | 序号 | 内容 | 不共享原因 |
 |------|------|-----------|
-| 1 | 用户态 VFS 实现 | Fuchsia fservices 参考，AirymaxOS 专属 |
+| 1 | 用户态 VFS 实现 | seL4 服务用户态化参考（ADR-014），AirymaxOS 专属 |
 | 2 | 用户态网络栈（DPDK/AF_XDP） | 内核旁路网络仅 agentrt-linux |
 | 3 | 用户态驱动框架（VFIO/libvfio） | 设备驱动用户态化仅 agentrt-linux |
 | 4 | systemd 集成 | OS 级服务管理仅 agentrt-linux |
@@ -412,7 +412,7 @@ graph TD
         ZERO_COPY[零拷贝 page flipping]
     end
     subgraph IND["[IND] 独立层"]
-        VFS[用户态 VFS<br/>Fuchsia fservices 参考]
+        VFS[用户态 VFS<br/>seL4 服务用户态化参考]
         NET[用户态网络栈<br/>DPDK / AF_XDP]
         DRV[用户态驱动<br/>VFIO / libvfio]
         SYSTEMD[systemd 集成<br/>units / targets / generators]
@@ -456,16 +456,14 @@ graph TD
 
 | 理论 | 来源 | 应用 | 同源标注 |
 |------|------|------|----------|
-| Zircon message passing | Google Zircon | io_uring IPC 通信原语 | [SS] |
-| Minix3 user-mode services | Minix3 | 服务用户态化哲学 | [IND] |
-| Fuchsia fservices | Google Fuchsia | 用户态 VFS 架构 | [IND] |
-| Fuchsia netstack3 | Google Fuchsia | 用户态网络栈 | [IND] |
+| seL4 Endpoint/Notification | seL4 | io_uring IPC 通信原语 | [SS] |
+| seL4 服务用户态化 | seL4 | 服务用户态化原则 | [IND] |
 | DPDK | Intel | 用户态网络数据路径 | [IND] |
 | AF_XDP | Linux | 零拷贝网络 | [IND] |
 | VFIO/libvfio | Linux | 用户态驱动框架 | [IND] |
 | io_uring zero-copy | Linux 5.x+ | 零拷贝 IPC | [SS] |
 | systemd | freedesktop | OS 级服务管理 | [IND] |
-| capability-based security | seL4 / Zircon | 服务权限控制 | [SS] |
+| capability-based security | seL4 | 服务权限控制（ADR-014） | [SS] |
 
 ---
 
@@ -479,7 +477,7 @@ graph TD
 | `airymaxos-cognition` | llm_d/sched_d 与认知循环协作 | [SS] |
 | `airymaxos-cloudnative` | gateway_d/sdk 与 K8s 集成 | [IND] |
 | `airymaxos-system` | systemd unit 管理、配置工具 | [IND] |
-| `airymaxos-tests` | 服务集成测试、Soak Test | [SS] |
+| `airymaxos-tests-linux` | 服务集成测试、Soak Test | [SS] |
 
 ---
 
@@ -553,9 +551,7 @@ graph TD
 
 ## 13. 参考
 
-- Fuchsia fservices 设计文档
-- Zircon 内核 IPC 设计
-- Minix3 用户态服务架构
+- seL4 内核设计文档（Endpoint/Notification IPC、服务用户态化，ADR-014）
 - DPDK 项目文档
 - AF_XDP 教程
 - VFIO/libvfio 项目文档

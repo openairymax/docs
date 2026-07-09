@@ -6,9 +6,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **正式全称**: agentrt-linux（极境智能体操作系统，正式英文名：AirymaxAgentOS，简称 AirymaxOS）
 > **仓库别名**: agentrt-linux（仓库名）
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
+> **最后更新**: 2026-07-07  
 
-## 1. agentrt-linux 是什么
+## 1. agentrt-linux 是什么  
 
 **agentrt-linux**（正式英文名：AirymaxAgentOS，简称 AirymaxOS，中文：极境智能体操作系统）是基于 Linux 内核的**操作系统发行版**，与 agentrt（AirymaxAgentRT / 极境智能体运行底座平台工程）**同源**。
 
@@ -23,7 +23,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 支柱                 | 思想                                                          | 理论根基                                  |
 | ------------------ | ----------------------------------------------------------- | ------------------------------------- |
-| **微内核设计思想**        | 最小化特权态代码、服务用户态化、消息传递通信、capability 安全                        | seL4（核心参考）                      |
+| **微内核设计思想**        | 最小化特权态代码、服务用户态化、消息传递通信、capability 安全                        | seL4（核心参考）                            |
 | **Linux 6.6 内核基线** | 基于 Linux 6.6 内核，sched\_ext + eBPF + io\_uring + Rust 微内核化改造 | Linux 内核工程基线                          |
 | **Airymax 同源性**    | 与 agentrt 共享设计理念，天然适配                                       | agentrt atoms/cupolas/coreloopthree 等 |
 
@@ -38,12 +38,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 5 | [cognition](20-modules/05-cognition.md)             | 极境认知  | CoreLoopThree kthread + Wasm + LLM 调度 + 超节点沙箱           | coreloopthree + frameworks   |
 | 6 | [cloudnative](20-modules/06-cloudnative.md)         | 极境云原生 | K8s + containerd + OCI + agentctl + 超节点 OS              | gateway + sdk                |
 | 7 | [system](20-modules/07-system.md)                   | 极境系统  | 包管理 + 配置 + shell + 基础库 + DevStation                     | commons                      |
-| 8 | [airymaxos-tests](20-modules/08-tests.md)           | 极境测试  | 单元测试 + 集成测试 + 形式化验证 + Soak + 混沌                         | 全模块测试                        |
+| 8 | [airymaxos-tests-linux](20-modules/08-tests.md)           | 极境测试  | 单元测试 + 集成测试 + 形式化验证 + Soak + 混沌                         | 全模块测试                        |
 
 ## 4. 文档体系结构（19 模块）
 
 ```
-docs/AirymaxAgentOS/
+docs/AirymaxOS/
 ├── README.md                        # 总览（本文件）
 │
 ├── 00-requirements/                 # 需求分析层（4 文档）
@@ -116,7 +116,7 @@ docs/AirymaxAgentOS/
 | 模块                                                                   | 描述                                     | 0.1.1 状态  |
 | -------------------------------------------------------------------- | -------------------------------------- | --------- |
 | [140-application-development](140-application-development/README.md) | Agent 应用开发（4 语言 16 嵌套客户端 + Token 预算契约） | README 占位 |
-| [150-cloudnative](150-cloudnative/README.md)                       | 云原生部署（containerd + K8s CRD + 超节点 OS）   | README 占位 |
+| [150-cloudnative](150-cloudnative/README.md)                         | 云原生部署（containerd + K8s CRD + 超节点 OS）   | README 占位 |
 | [160-compatibility](160-compatibility/README.md)                     | 兼容性（4 层接口稳定性 + KABI + 跨发行版）            | README 占位 |
 | [170-performance](170-performance/README.md)                         | 性能工程（Token 能效 + Agent 延迟 SLO）          | README 占位 |
 | [180-i18n](180-i18n/README.md)                                       | 国际化（多语言 + 国密合规）                        | README 占位 |
@@ -126,33 +126,32 @@ docs/AirymaxAgentOS/
 
 所有 agentrt-linux 仓库归属 `openairymax` 组织，托管于 atomgit.com：
 
-| 仓库   | URL                                               |
-| ---- | ------------------------------------------------- |
-| 管理仓  | `git@atomgit.com:openairymax/agentrt-linux.git`   |
-| 子仓 1 | `git@atomgit.com:openairymax/kernel.git`          |
-| 子仓 2 | `git@atomgit.com:openairymax/services.git`        |
-| 子仓 3 | `git@atomgit.com:openairymax/security.git`        |
-| 子仓 4 | `git@atomgit.com:openairymax/memory.git`          |
-| 子仓 5 | `git@atomgit.com:openairymax/cognition.git`       |
-| 子仓 6 | `git@atomgit.com:openairymax/cloudnative.git`     |
-| 子仓 7 | `git@atomgit.com:openairymax/system.git`          |
-| 子仓 8 | `git@atomgit.com:openairymax/airymaxos-tests.git` |
+| 仓库   | URL                                             |
+| ---- | ----------------------------------------------- |
+| 管理仓  | `git@atomgit.com:openairymax/agentrt-linux.git` |
+| 子仓 1 | `git@atomgit.com:openairymax/kernel.git`        |
+| 子仓 2 | `git@atomgit.com:openairymax/services.git`      |
+| 子仓 3 | `git@atomgit.com:openairymax/security.git`      |
+| 子仓 4 | `git@atomgit.com:openairymax/memory.git`        |
+| 子仓 5 | `git@atomgit.com:openairymax/cognition.git`     |
+| 子仓 6 | `git@atomgit.com:openairymax/cloudnative.git`   |
+| 子仓 7 | `git@atomgit.com:openairymax/system.git`        |
+| 子仓 8 | `git@atomgit.com:openairymax/tests-linux.git`   |
 
 ## 6. 版本规划
 
-| 版本        | agentrt-linux 范围                       | agentrt 范围                 |
-| --------- | -------------------------------------- | -------------------------- |
-| **0.1.1** | 文档体系完成（README + 设计草案 + 工程基线声明，\~64 文档） | 全部三大支柱（奠基 + 29 仓拆分 + 生产就绪） |
-| **1.0.1** | 内核和 OS 实际开发                            | 与 agentrt-linux 协同验证           |
+| 版本        | agentrt-linux 范围                  | agentrt 范围                 |
+| --------- | --------------------------------- | -------------------------- |
+| **0.1.1** | 文档体系完成（README + 完整的设计草案 + 工程基线声明） | 全部三大支柱（奠基 + 29 仓拆分 + 生产就绪） |
+| **1.0.1** | 内核和 OS 实际开发                       | 与 agentrt-linux 协同验证       |
 
 ## 7. 前沿理论参考（2026-07-07 最新）
 
 | 前沿理论                                                    | 应用到子仓                                 |
 | ------------------------------------------------------- | ------------------------------------- |
-| seL4 微内核（形式化验证、capability、MCS 2026.6.29 验证完成）       | airymaxos-kernel + airymaxos-security |
-| Zircon 微内核（消息传递、对象导向）                                   | airymaxos-kernel + airymaxos-services |
-| LionsOS（seL4 Microkit 生态，2026）                             | airymaxos-kernel + airymaxos-system |
-| sDDF（seL4 设备驱动框架，2026）                                   | airymaxos-kernel + airymaxos-services |
+| seL4 微内核（形式化验证、capability、MCS 2026.6.29 验证完成、消息传递 IPC）| airymaxos-kernel + airymaxos-security + airymaxos-services |
+| LionsOS（seL4 Microkit 生态，2026）                          | airymaxos-kernel + airymaxos-system   |
+| sDDF（seL4 设备驱动框架，2026）                                  | airymaxos-kernel + airymaxos-services |
 | Linux 6.6 内核基线（EEVDF + MGLRU + eBPF kfunc + Rust 实验性支持） | airymaxos-kernel                      |
 | sched\_ext（eBPF 用户态调度器、sub-scheduler）                   | airymaxos-kernel（SCHED\_AGENT）        |
 | io\_uring（零 syscall 高性能 I/O）                            | airymaxos-kernel + airymaxos-services |
@@ -180,7 +179,7 @@ agentrt（AirymaxAgentRT，跨平台用户态运行时）
 ## 9. 相关文档
 
 - RT 设计文档: 内部参考文档（闭源，仅授权人员访问）
-- OS 设计文档: `docs/AirymaxAgentOS/`（本目录，开源）
+- OS 设计文档: `docs/AirymaxOS/`（本目录，开源）
 - 工程规范: IRON-9 v2 工程铁律（闭源内部参考，含同源代码共享）
 - 微内核参考: 内部参考文档（闭源，仅授权人员访问）
 

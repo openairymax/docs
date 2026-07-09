@@ -33,7 +33,7 @@ graph TB
     D --> E
     E --> G[airymaxos-system]
     F --> G
-    G --> H[airymaxos-tests]
+    G --> H[airymaxos-tests-linux]
     
     classDef kernel fill:#f9f,stroke:#333,stroke-width:2px;
     classDef module fill:#ccf,stroke:#333,stroke-width:1px;
@@ -283,7 +283,7 @@ IRON-9 v2 硬件平台提供了丰富的扩展接口，agentrt-linux（AirymaxOS
 
 ---
 
-### 3.8 airymaxos-tests 模块
+### 3.8 airymaxos-tests-linux 模块
 
 **功能边界**
 - 集成 KUnit 单元测试框架
@@ -435,7 +435,7 @@ matrix
 ### 7.2 测试阶段
 
 - 合入开发分支后，由 CI 运行全套测试
-- airymaxos-tests 模块执行对应的测试用例
+- airymaxos-tests-linux 模块执行对应的测试用例
 - 性能基准测试运行，生成性能报告
 - 安全扫描运行，发现潜在漏洞
 

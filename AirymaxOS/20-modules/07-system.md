@@ -486,7 +486,7 @@ graph TD
 | `airymaxos-memory` | 提供内存监控工具（MemoryRovol L1-L4） | [SC] |
 | `airymaxos-cognition` | DevStation 调用 LLM 能力（CoreLoopThree 阶段） | [SC] |
 | `airymaxos-cloudnative` | 提供云原生监控集成 | [IND] |
-| `airymaxos-tests` | 提供测试工具 | [IND] |
+| `airymaxos-tests-linux` | 提供测试工具 | [IND] |
 
 ---
 

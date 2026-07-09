@@ -22,7 +22,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [第 7 章 ftrace 多缓冲 trace_instances](#第-7-章-ftrace-多缓冲-trace_instances)
 - [第 8 章 ftrace 触发器](#第-8-章-ftrace-触发器)
 - [第 9 章 ftrace 与 kallsyms 关联](#第-9-章-ftrace-与-kallsyms-关联)
-- [第 10 章 agentrt-linux Agent 行为追踪扩展](#第-10-章-airymaxos-agent-行为追踪扩展)
+- [第 10 章 agentrt-linux Agent 行为追踪扩展](#第-10-章-agentrt-linux-agent-行为追踪扩展)
 - [第 11 章 五维原则映射](#第-11-章-五维原则映射)
 - [第 12 章 同源 agentrt 映射](#第-12-章-同源-agentrt-映射)
 - [第 13 章 相关文档与版本维护](#第-13-章-相关文档与版本维护)

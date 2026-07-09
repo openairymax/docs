@@ -129,7 +129,7 @@ https://repo.airymaxos.dev/
 ├── airymaxos-security-1.0.1-1.x86_64.rpm
 ├── airymaxos-cloudnative-1.0.1-1.x86_64.rpm
 ├── airymaxos-system-1.0.1-1.x86_64.rpm
-├── airymaxos-tests-1.0.1-1.x86_64.rpm
+├── airymaxos-tests-linux-1.0.1-1.x86_64.rpm
 ├── airymaxos-sdk-python-1.0.1-1.noarch.rpm
 ├── airymaxos-sdk-go-1.0.1-1.noarch.rpm
 ├── airymaxos-sdk-rust-1.0.1-1.noarch.rpm

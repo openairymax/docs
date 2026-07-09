@@ -806,9 +806,9 @@ graph LR
 ## 10. 相关文档
 
 - [集成标准总览](README.md)：集成标准顶层入口
-- [项目管理规范总览](../project_erp/README.md)：项目管理规范
-- [统一错误码参考](../project_erp/error_code_reference.md)：统一错误码体系
-- [SBOM 规范](../project_erp/SBOM.md)：软件物料清单规范
+- [项目管理规范总览](../50-project-erp/README.md)：项目管理规范
+- [统一错误码参考](../50-project-erp/error_code_reference.md)：统一错误码体系
+- [SBOM 规范](../50-project-erp/SBOM.md)：软件物料清单规范
 - [架构设计](../../10-architecture/README.md)：系统架构总览
 - [系统架构](../../10-architecture/01-system-architecture.md)：系统架构详情
 - [五维正交原则](../../10-architecture/02-five-dimensional-principles.md)：五维正交 24 原则

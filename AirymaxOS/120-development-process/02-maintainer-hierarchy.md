@@ -109,7 +109,7 @@ M:	Alice Chen <alice@airymaxos.org>
 R:	Bob Li <bob@airymaxos.org>
 L:	https://github.com/agentrt-linux/airymaxos-system/issues
 S:	Maintained
-W:	docs/AirymaxAgentOS/30-interfaces/
+W:	docs/AirymaxOS/30-interfaces/
 Q:	https://github.com/orgs/agentrt-linux/projects/agentsipc
 B:	https://github.com/agentrt-linux/airymaxos-system/issues/new?template=bug.md
 C:	matrix:#agentsipc
@@ -153,9 +153,9 @@ K:	\b(microcorert_init|microcorert_dispatch)\b
 | security | 安全子系统维护者 | Cupolas 安全穹顶、LSM、capability | Cupolas |
 | memory | 内存子系统维护者 | MemoryRovol 四层记忆、MGLRU 多代 LRU、CXL/PMEM | MemoryRovol |
 | cognition | 认知子系统维护者 | CoreLoopThree 三层认知循环 | CoreLoopThree |
-| clouds | 云子系统维护者 | 云原生 Agent 部署、容器化 | - |
+| cloudnative | 云子系统维护者 | 云原生 Agent 部署、容器化 | - |
 | system | 系统接口子系统维护者 | 系统调用、ABI、AgentsIPC 128B 协议 | AgentsIPC |
-| tests | 测试子系统维护者 | KUnit/kselftest/Agent 行为契约测试 | - |
+| tests-linux | 测试子系统维护者 | KUnit/kselftest/Agent 行为契约测试 | - |
 
 ### 4.2 跨子仓会签规则
 
@@ -175,7 +175,7 @@ flowchart LR
     M[memory 维护者]
     S[services 维护者]
     CO[cognition 维护者]
-    CL[clouds 维护者]
+    CL[cloudnative 维护者]
     T[tests 维护者]
 
     CM --> K

@@ -46,7 +46,7 @@ agentrt-linux（AirymaxOS）作为面向全球开发者和用户的智能体操�
 agentrt-linux 文档体系采用"英文权威 + 中文翻译"的命名规范：
 
 ```
-docs/AirymaxAgentOS/
+docs/AirymaxOS/
 ├── README.md                # 英文（权威源 SSoT）
 ├── README_zh.md             # 中文（翻译镜像）
 ├── 10-architecture/
@@ -504,7 +504,7 @@ agentrt-linux 文档翻译质量按以下维度评分：
 
 ### 6.1 测试套件
 
-文档国际化测试位于 `airymaxos-tests/docs/`：
+文档国际化测试位于 `tests-linux/docs/`：
 
 | 测试名 | 描述 | 通过标准 |
 |--------|------|----------|
@@ -518,7 +518,7 @@ agentrt-linux 文档翻译质量按以下维度评分：
 
 ```python
 #!/usr/bin/env python3
-# airymaxos-tests/docs/test_bilingual.py [IND]
+# tests-linux/docs/test_bilingual.py [IND]
 """测试所有英文文档都有中文翻译"""
 
 from pathlib import Path
@@ -542,7 +542,7 @@ def find_untranslated_docs(docs_dir):
     return untranslated
 
 def main():
-    untranslated = find_untranslated_docs("docs/AirymaxAgentOS")
+    untranslated = find_untranslated_docs("docs/AirymaxOS")
     if untranslated:
         print(f"FAIL: {len(untranslated)} 个文档缺少中文翻译")
         for doc in untranslated:
@@ -560,7 +560,7 @@ if __name__ == "__main__":
 
 ```python
 #!/usr/bin/env python3
-# airymaxos-tests/docs/test_encoding.py [IND]
+# tests-linux/docs/test_encoding.py [IND]
 """测试所有文档都是 UTF-8 编码"""
 
 from pathlib import Path
@@ -579,7 +579,7 @@ def check_encoding(docs_dir):
     return bad_encoding
 
 def main():
-    bad = check_encoding("docs/AirymaxAgentOS")
+    bad = check_encoding("docs/AirymaxOS")
     if bad:
         print(f"FAIL: {len(bad)} 个文档非 UTF-8 编码")
         for doc in bad:

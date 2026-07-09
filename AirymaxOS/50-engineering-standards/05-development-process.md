@@ -144,7 +144,7 @@ main 分支
 ### 2.2 信任链长度
 
 - **链可任意长，但很少超过 2-3 级**——超过 3 级通常意味着子系统拆分不合理。
-- agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/clouds/system/tests）各设 1 名顶级子系统维护者，其下可有 2-3 层子系统维护者。
+- agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）各设 1 名顶级子系统维护者，其下可有 2-3 层子系统维护者。
 
 ### 2.3 信任传递规则
 
@@ -501,9 +501,9 @@ agentrt-linux 的 8 子仓各有独立的子系统手册，作为本卷的补丁
 | security | `110-security/` + security 子仓 | Cupolas 安全穹顶、LSM 集成、capability |
 | memory | `170-performance/` + memory 子仓 | MemoryRovol 四层记忆、MGLRU 多代 LRU、CXL/PMEM |
 | cognition | `40-dataflows/` + cognition 子仓 | CoreLoopThree 三层认知循环 |
-| clouds | `180-clouds/` + clouds 子仓 | 云原生 Agent 部署、容器化 |
+| cloudnative | `150-cloudnative/` + cloudnative 子仓 | 云原生 Agent 部署、容器化 |
 | system | `10-architecture/` + system 子仓 | 系统调用、ABI、AgentsIPC 128B 协议 |
-| tests | `80-testing/` + tests 子仓 | KUnit / kselftest / Agent 行为契约测试 |
+| tests-linux | `80-testing/` + tests-linux 子仓 | KUnit / kselftest / Agent 行为契约测试 |
 
 **OS-STD-221**：每个子仓必须维护一份 `MAINTAINERS.md`，列出该子仓的所有维护者、审查者、文件路径映射、PR SLA。
 

@@ -35,7 +35,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | airymaxos-cognition | 认知循环、Wasm、LLM 调度 | coreloopthree + frameworks | CoreLoopThree kthread + Wasm 3.0 |
 | airymaxos-cloudnative | K8s、containerd、OCI | gateway + sdk | K8s CRD + containerd shim |
 | airymaxos-system | 包管理、配置、shell | commons | RPM + dnf + DevStation |
-| airymaxos-tests | 单元、集成、形式化 | 全模块测试 | agentrt-linux 集成测试框架 + seL4 风格验证 |
+| airymaxos-tests-linux | 单元、集成、形式化 | 全模块测试 | agentrt-linux 集成测试框架 + seL4 风格验证 |
 
 ---
 
@@ -173,7 +173,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | FR-069 | 多架构构建 | 构建配置 | 多架构包 | - | x86_64/ARM64 双构建 |
 | FR-070 | 系统初始化 | 初始化配置 | 初始化结果 | - | 初始化可重复 |
 
-### 4.8 airymaxos-tests 子仓（FR-071 ~ FR-080）
+### 4.8 airymaxos-tests-linux 子仓（FR-071 ~ FR-080）
 
 | 编号 | 功能需求 | 输入 | 输出 | 同源 agentrt | 验收标准 |
 |---|---|---|---|---|---|
@@ -203,7 +203,7 @@ graph TB
     COGNITION[airymaxos-cognition<br/>认知循环/Wasm/LLM]
     CLOUD[airymaxos-cloudnative<br/>K8s/containerd/OCI]
     SYSTEM[airymaxos-system<br/>包管理/配置/shell]
-    TESTS[airymaxos-tests<br/>测试/验证]
+    TESTS[airymaxos-tests-linux<br/>测试/验证]
 
     KERNEL --> SERVICES
     KERNEL --> SECURITY
@@ -306,7 +306,7 @@ flowchart TD
 | P1 | memory | FR-031~FR-040 | 记忆是认知基础 |
 | P1 | cognition | FR-041~FR-050 | 认知是核心能力 |
 | P2 | cloudnative | FR-051~FR-060 | 云原生是扩展能力 |
-| P2 | tests | FR-071~FR-080 | 测试是质量保证 |
+| P2 | tests-linux | FR-071~FR-080 | 测试是质量保证 |
 
 ---
 
@@ -316,12 +316,12 @@ flowchart TD
 
 | 验收类型 | 工具 | 覆盖目标 | 责任子仓 |
 |---|---|---|---|
-| 单元测试 | CUnit + CMock | 行覆盖率 > 90% | airymaxos-tests |
-| 集成测试 | 自定义框架 | 接口覆盖率 > 80% | airymaxos-tests |
-| 契约测试 | 契约测试框架 | 契约 100% 强制 | airymaxos-tests |
-| 性能基准 | Locust + k6 + perf | SLA 达标率 > 99% | airymaxos-tests |
-| 形式化验证 | seL4 风格验证 | 关键路径 100% | airymaxos-tests |
-| 兼容性测试 | agentrt-linux 集成测试框架 | 兼容性矩阵 100% | airymaxos-tests + system |
+| 单元测试 | CUnit + CMock | 行覆盖率 > 90% | airymaxos-tests-linux |
+| 集成测试 | 自定义框架 | 接口覆盖率 > 80% | airymaxos-tests-linux |
+| 契约测试 | 契约测试框架 | 契约 100% 强制 | airymaxos-tests-linux |
+| 性能基准 | Locust + k6 + perf | SLA 达标率 > 99% | airymaxos-tests-linux |
+| 形式化验证 | seL4 风格验证 | 关键路径 100% | airymaxos-tests-linux |
+| 兼容性测试 | agentrt-linux 集成测试框架 | 兼容性矩阵 100% | airymaxos-tests-linux + system |
 
 ---
 
@@ -350,7 +350,7 @@ flowchart TD
 - [业务需求分析](01-business-requirements.md)：Agent 工作负载与生态对齐
 - [非功能需求分析](03-non-functional-requirements.md)：性能、安全、可靠性需求
 - [agentrt-linux 总览](../README.md)：agentrt-linux 整体设计与子仓清单
-- [Airymax 架构设计原则](../../ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
+- [Airymax 架构设计原则](../../AirymaxRT/ARCHITECTURAL_PRINCIPLES.md)：五维正交 24 原则
 
 ---
 

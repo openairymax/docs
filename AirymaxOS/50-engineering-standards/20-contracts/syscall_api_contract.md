@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**: agentrt-linux（AirymaxOS）系统调用接口的契约定义，涵盖编号、签名、参数传递、返回值、错误码
 > **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 > **最后更新**: 2026-07-07
-> **父文档**: [agentrt_contract README](README.md)
+> **父文档**: [20-contracts README](README.md)
 
 ---
 
@@ -401,7 +401,7 @@ agentrt-linux 独有的系统调用维度（如 io_uring 固定 OP 扩展、CXL 
 
 ### 10.2 性能回归保护
 
-- 每次 PR 运行 `airymaxos-tests/benchmark/syscall-latency` 微基准。
+- 每次 PR 运行 `tests-linux/benchmark/syscall-latency` 微基准。
 - 与基线对比，延迟退化 > 5% 自动打回。
 - 新增系统调用必须附带性能基准测试。
 
@@ -409,7 +409,7 @@ agentrt-linux 独有的系统调用维度（如 io_uring 固定 OP 扩展、CXL 
 
 ## 11. 相关文档
 
-- [agentrt_contract README](README.md)
+- [20-contracts README](README.md)
 - [IPC 协议契约](ipc_protocol_contract.md)
 - [日志格式契约](logging_contract.md)
 - [接口设计 - 系统调用](../../30-interfaces/01-syscalls.md)

@@ -521,9 +521,8 @@ TRACE  → 青色 (Cyan)     → 极细粒度跟踪
 
 ### 14.3 相关文档
 
-- [agentrt-linux（AirymaxOS）IRON-9 v2 通道规范](iron9_channel_contract.md)
-- [agentrt-linux（AirymaxOS）安全策略规范](security_policy.md)
-- [agentrt-linux（AirymaxOS）OpenTelemetry 集成指南](otel_integration.md)
+- [IPC 协议契约（含 IRON-9 v2 通道规范）](ipc_protocol_contract.md)
+- [安全模块设计（airymaxos-security capability 系统）](../../20-modules/03-security.md)
 - [OpenTelemetry Logging Specification](https://opentelemetry.io/docs/specs/otel/logs/)
 
 ---

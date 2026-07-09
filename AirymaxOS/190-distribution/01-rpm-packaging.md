@@ -43,7 +43,7 @@ agentrt-linux（AirymaxOS）RPM 打包设计旨在为发行版构建提供可重
 | 安全穹顶 | airymaxos-security | 3 | cupolas / capability / lsm |
 | 云原生 | airymaxos-cloudnative | 4 | container / k8s / etcd / cni |
 | 系统编排 | airymaxos-system | 5 | systemd-units / init / config / docs / locales |
-| 测试框架 | airymaxos-tests | 6 | unit / perf / fuzz / integration / e2e / bench |
+| 测试框架 | airymaxos-tests-linux | 6 | unit / perf / fuzz / integration / e2e / bench |
 | SDK | airymaxos-sdk | 4 | python / rust / go / typescript |
 | 字体 | airymaxos-fonts | 5 | cjk-zh-cn / cjk-zh-tw / cjk-ja / cjk-ko / common |
 | 总计 | — | 51 | — |

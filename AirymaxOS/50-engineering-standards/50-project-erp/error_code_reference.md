@@ -37,7 +37,7 @@ agentrt-linux（AirymaxOS）统一错误码体系的设计目标：
 | airymaxos-cognition | 用户态十六进制 (0x5XXX0000) | 认知运行时返回值 |
 | airymaxos-cloudnative | 用户态十六进制 (0x6XXX0000) | 云原生组件返回值 |
 | airymaxos-system | 用户态十六进制 (0x7XXX0000) | 系统工具返回值 |
-| airymaxos-tests | 用户态十六进制 (0x8XXX0000) | 测试框架返回值 |
+| airymaxos-tests-linux | 用户态十六进制 (0x8XXX0000) | 测试框架返回值 |
 
 ---
 
@@ -372,7 +372,7 @@ IPC 错误码由 airymaxos-kernel 和 airymaxos-services 联合定义：
 | 0x05 | airymaxos-cognition | 0x05010000 ~ 0x05FF0000 | 认知运行时错误 |
 | 0x06 | airymaxos-cloudnative | 0x06010000 ~ 0x06FF0000 | 云原生组件错误 |
 | 0x07 | airymaxos-system | 0x07010000 ~ 0x07FF0000 | 系统工具错误 |
-| 0x08 | airymaxos-tests | 0x08010000 ~ 0x08FF0000 | 测试框架错误 |
+| 0x08 | airymaxos-tests-linux | 0x08010000 ~ 0x08FF0000 | 测试框架错误 |
 
 ---
 
@@ -502,7 +502,7 @@ IPC 错误码由 airymaxos-kernel 和 airymaxos-services 联合定义：
 #define AGENTRT_ERR_COGNITION_BASE   0x05000000  /**< cognition 子仓错误码基址 */
 #define AGENTRT_ERR_CLOUDNATIVE_BASE 0x06000000  /**< cloudnative 子仓错误码基址 */
 #define AGENTRT_ERR_SYSTEM_BASE      0x07000000  /**< system 子仓错误码基址 */
-#define AGENTRT_ERR_TESTS_BASE       0x08000000  /**< tests 子仓错误码基址 */
+#define AGENTRT_ERR_TESTS_BASE       0x08000000  /**< tests-linux 子仓错误码基址 */
 ```
 
 ### 4.2 错误码传播规范
@@ -670,8 +670,8 @@ graph TD
 
 - [项目管理规范总览](README.md)：项目管理规范顶层入口
 - [SBOM 规范](SBOM.md)：软件物料清单规范
-- [集成标准总览](../integration_standards/README.md)：集成标准
-- [agentrt 集成规范](../integration_standards/agentrt_integration.md)：与 agentrt 的集成规范
+- [集成标准总览](../40-integration/README.md)：集成标准
+- [agentrt 集成规范](../40-integration/agentrt_integration.md)：与 agentrt 的集成规范
 - [接口设计](../../30-interfaces/README.md)：系统调用与 IPC 接口
 - [五维正交原则](../../10-architecture/02-five-dimensional-principles.md)：E-6 错误可追溯原则
 - IRON-9 v2 工程铁律（闭源内部参考）

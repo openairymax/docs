@@ -542,7 +542,7 @@ sequenceDiagram
 | `airymaxos-memory` | 提供 MemoryRovol 快照、超节点沙箱迁移 | [IND] |
 | `airymaxos-cloudnative` | 提供 Agent 容器化、超节点 OS 集成 | [IND] |
 | `airymaxos-system` | 提供认知监控工具 | [SS] |
-| `airymaxos-tests` | 认知测试、性能基准 | [SS] |
+| `airymaxos-tests-linux` | 认知测试、性能基准 | [SS] |
 
 ---
 

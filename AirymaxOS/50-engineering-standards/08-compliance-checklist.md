@@ -22,7 +22,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 范围 | 路径 | 检查类型 | 优先级 |
 |------|------|----------|--------|
-| 开源设计文档 | `docs/AirymaxAgentOS/` | 文档标准化 | P0 |
+| 开源设计文档 | `docs/AirymaxOS/` | 文档标准化 | P0 |
 | 闭源参考文档 | 内部闭源文档路径 | 文档标准化（放宽禁词） | P1 |
 | C 源码 | `atoms/` `daemons/` `commons/` `memoryrovol/` | 代码标准化 | P0 |
 | CMake 构建系统 | `cmake/` `CMakeLists.txt` | 构建标准化 | P1 |
@@ -52,11 +52,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ```bash
 #!/bin/bash
 # check-copyright.sh
-find docs/AirymaxAgentOS/ -name "*.md" -exec grep -L "^Copyright (c) 2025-2026 SPHARX" {} \;
+find docs/AirymaxOS/ -name "*.md" -exec grep -L "^Copyright (c) 2025-2026 SPHARX" {} \;
 # 退出码 0 = 全部通过，非 0 = 有文件缺失 Copyright
 ```
 
-**适用范围**：`docs/AirymaxAgentOS/` 全部 `.md` 文件（含 README.md）。
+**适用范围**：`docs/AirymaxOS/` 全部 `.md` 文件（含 README.md）。
 **例外**：内部闭源文档可选 Copyright（建议有但不阻断）。
 
 ### 2.2 禁词检查（开源文档）
@@ -83,16 +83,16 @@ if [ ! -f "$FORBIDDEN_FILE" ]; then
     exit 2
 fi
 FORBIDDEN=$(cat "$FORBIDDEN_FILE" | grep -v '^#' | tr '\n' '|' | sed 's/|$//')
-VIOLATIONS=$(grep -rniE "$FORBIDDEN" docs/AirymaxAgentOS/ --include="*.md" | wc -l)
+VIOLATIONS=$(grep -rniE "$FORBIDDEN" docs/AirymaxOS/ --include="*.md" | wc -l)
 if [ "$VIOLATIONS" -ne 0 ]; then
     echo "ERROR: $VIOLATIONS forbidden word(s) found in open-source docs"
-    grep -rniE "$FORBIDDEN" docs/AirymaxAgentOS/ --include="*.md"
+    grep -rniE "$FORBIDDEN" docs/AirymaxOS/ --include="*.md"
     exit 1
 fi
 echo "OK: 0 forbidden words in open-source docs"
 ```
 
-**适用范围**：`docs/AirymaxAgentOS/` 全部 `.md` 文件。
+**适用范围**：`docs/AirymaxOS/` 全部 `.md` 文件。
 **例外**：内部闭源文档允许引用（但路径引用不应泄露到开源文档）。
 
 ### 2.3 IRON-9 v2 三层标注检查
@@ -114,7 +114,7 @@ echo "OK: 0 forbidden words in open-source docs"
 ```bash
 #!/bin/bash
 # check-iron9-v2.sh
-for doc in docs/AirymaxAgentOS/20-modules/0[1-8]-*.md; do
+for doc in docs/AirymaxOS/20-modules/0[1-8]-*.md; do
     SC=$(grep -c "\[SC\]" "$doc")
     SS=$(grep -c "\[SS\]" "$doc")
     IND=$(grep -c "\[IND\]" "$doc")
@@ -124,7 +124,7 @@ for doc in docs/AirymaxAgentOS/20-modules/0[1-8]-*.md; do
 done
 ```
 
-**适用范围**：`docs/AirymaxAgentOS/20-modules/0[1-8]-*.md`（8 个模块设计文档）。
+**适用范围**：`docs/AirymaxOS/20-modules/0[1-8]-*.md`（8 个模块设计文档）。
 
 ### 2.4 [SC] 头文件清单一致性检查
 
@@ -151,7 +151,7 @@ done
 ```bash
 #!/bin/bash
 # check-links.sh
-find docs/AirymaxAgentOS/ -name "*.md" -exec grep -oP '\[.*?\]\((?!http|#|mailto)([^)]+)\)' {} \; | \
+find docs/AirymaxOS/ -name "*.md" -exec grep -oP '\[.*?\]\((?!http|#|mailto)([^)]+)\)' {} \; | \
   while IFS= read -r match; do
     link=$(echo "$match" | grep -oP '(?<=\()[^)]+(?=\))')
     # 解析相对路径
@@ -184,8 +184,8 @@ find docs/AirymaxAgentOS/ -name "*.md" -exec grep -oP '\[.*?\]\((?!http|#|mailto
 ```bash
 #!/bin/bash
 # check-mermaid.sh
-for doc in docs/AirymaxAgentOS/20-modules/0[1-8]-*.md \
-           docs/AirymaxAgentOS/40-dataflows/0[1-4]-*.md; do
+for doc in docs/AirymaxOS/20-modules/0[1-8]-*.md \
+           docs/AirymaxOS/40-dataflows/0[1-4]-*.md; do
     MERMAID=$(grep -c '```mermaid' "$doc")
     if [ "$MERMAID" -lt 2 ]; then
         echo "WARN: $doc has only $MERMAID Mermaid diagrams (need >= 2)"
@@ -201,7 +201,7 @@ done
 ```bash
 #!/bin/bash
 # check-principles.sh
-for doc in docs/AirymaxAgentOS/80-testing/0[1-2]-*.md; do
+for doc in docs/AirymaxOS/80-testing/0[1-2]-*.md; do
     COUNT=$(grep -c "五维正交" "$doc")
     if [ "$COUNT" -lt 2 ]; then
         echo "WARN: $doc references '五维正交' only $COUNT times (need >= 2)"
@@ -473,10 +473,10 @@ scripts/
 **违规报告**：
 ```
 [2026-07-07 18:30:00] [ERROR] STD-DOC-02 Forbidden words: 2 violations
-  - docs/AirymaxAgentOS/20-modules/03-security.md:454: <禁词类别: 内核发行版名称>
-  - docs/AirymaxAgentOS/20-modules/05-cognition.md:599: <禁词类别: 内核发行版名称>
+  - docs/AirymaxOS/20-modules/03-security.md:454: <禁词类别: 内核发行版名称>
+  - docs/AirymaxOS/20-modules/05-cognition.md:599: <禁词类别: 内核发行版名称>
 [2026-07-07 18:30:01] [ERROR] STD-DOC-05 Link integrity: 1 broken link
-  - docs/AirymaxAgentOS/20-modules/README.md:210 -> 09-obsolete.md (not found)
+  - docs/AirymaxOS/20-modules/README.md:210 -> 09-obsolete.md (not found)
 ```
 
 ---

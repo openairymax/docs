@@ -14,13 +14,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ## 目录
 
 - [第 1 章 Landlock 设计哲学](#第-1-章-landlock-设计哲学)
-- [第 2 章 Landlock 在 agentrt-linux 中的定位](#第-2-章-landlock-在-airymaxos-中的定位)
+- [第 2 章 Landlock 在 agentrt-linux 中的定位](#第-2-章-landlock-在-agentrt-linux-中的定位)
 - [第 3 章 landlock_ruleset 数据结构](#第-3-章-landlock_ruleset-数据结构)
 - [第 4 章 Landlock 安全 blob](#第-4-章-landlock-安全-blob)
 - [第 5 章 Landlock 文件系统访问控制](#第-5-章-landlock-文件系统访问控制)
 - [第 6 章 Landlock 网络访问控制](#第-6-章-landlock-网络访问控制)
 - [第 7 章 Landlock 系统调用 API](#第-7-章-landlock-系统调用-api)
-- [第 8 章 agentrt-linux Agent 沙箱实现](#第-8-章-airymaxos-agent-沙箱实现)
+- [第 8 章 agentrt-linux Agent 沙箱实现](#第-8-章-agentrt-linux-agent-沙箱实现)
 - [第 9 章 Workbench 虚拟工作台与 Landlock 集成](#第-9-章-workbench-虚拟工作台与-landlock-集成)
 - [第 10 章 五维原则映射](#第-10-章-五维原则映射)
 - [第 11 章 同源 agentrt 映射](#第-11-章-同源-agentrt-映射)

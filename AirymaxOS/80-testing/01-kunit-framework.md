@@ -396,7 +396,7 @@ CI 矩阵覆盖 `arch: [um, x86_64, arm64, riscv64] × config: [defconfig, allmo
 - `80-testing/03-kernel-selftests.md`（`lib/test_*` 内核自检）
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证体系，本卷属第 7 层）
 - `50-engineering-standards/01-coding-standards.md`（错误处理强制，KUnit 断言与之对齐）
-- `20-modules/08-tests.md`（tests 子仓设计，agentrt-linux 测试代码组织）
+- `20-modules/08-tests.md`（tests-linux 子仓设计，agentrt-linux 测试代码组织）
 - `110-security/README.md`（安全测试，复用 KUnit 框架）
 
 ### 12.1 上游参考

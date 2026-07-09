@@ -607,7 +607,7 @@ airymaxos-error-trace AGENTRT_IPC_ETIMEDOUT
 
 ### 7.1 测试套件
 
-错误消息 i18n 测试位于 `airymaxos-tests/i18n/`：
+错误消息 i18n 测试位于 `tests-linux/i18n/`：
 
 | 测试名 | 描述 | 通过标准 |
 |--------|------|----------|
@@ -620,7 +620,7 @@ airymaxos-error-trace AGENTRT_IPC_ETIMEDOUT
 ### 7.2 SSoT 校验测试
 
 ```c
-/* airymaxos-tests/i18n/test_error_ssot.c [IND] */
+/* tests-linux/i18n/test_error_ssot.c [IND] */
 #include <airymax/error.h>
 #include <assert.h>
 

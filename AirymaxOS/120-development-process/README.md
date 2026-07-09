@@ -147,7 +147,7 @@ Actual diff
 
 ### 4.1 8 子仓协同开发流程
 
-8 个子仓（kernel/services/security/memory/cognition/clouds/system/tests）的协同开发：
+8 个子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）的协同开发：
 - **跨仓 PR**：通过 submodule 更新触发上游仓 PR
 - **跨仓审查**：CODEOWNERS 跨仓引用
 - **跨仓 CI**：触发上下游仓的 CI 测试
