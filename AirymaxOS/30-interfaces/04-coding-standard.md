@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 编码规范遵循
 
-> **文档定位**: agentrt-linux（AirymaxOS） 编码规范的遵循声明、命名规范、C/Rust 风格、日志标准、Doxygen 与安全编码
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **父文档**: [接口设计](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS） 编码规范的遵循声明、命名规范、C/Rust 风格、日志标准、Doxygen 与安全编码\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **父文档**： [接口设计](README.md)
 
 ---
 
@@ -480,6 +480,80 @@ AGENTRT_API int agentrt_sys_task_submit(const agentrt_task_desc_t *task_desc,
 - [内核设计](../20-modules/01-kernel.md)
 - [安全设计](../20-modules/03-security.md)
 - 编码规范目录: `50-engineering-standards/10-coding-style/`（编码规范文件）
+
+---
+
+## 10. IRON-9 v2 三层共享模型
+
+> **OS-IFACE-007**： 编码规范遵循 IRON-9 v2 三层共享模型——命名前缀（`agentrt_`）、类型命名（`snake_case_t`）、Doxygen 注释、错误码（`AGENTRT_E*`）通过 [SC] 共享契约层头文件同源；构建系统与缩进风格各自独立。禁止在 agentrt 与 agentrt-linux 之间引入风格转换工具或 lint 规则映射层。
+
+### 10.1 三层模型概览
+
+| 层次 | 共享程度 | 本接口涉及内容 |
+|------|---------|---------------|
+| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件的命名风格、类型定义、Doxygen 注释、`AGENTRT_E*` 错误码前缀在两侧完全一致 |
+| **[SS] 语义同源层** | 规范同源，实现独立 | agentrt（CMake 管理）↔ agentrt-linux（Kbuild + Kconfig 管理）的命名规范、daemon 命名（`_d` 后缀）、函数命名（`module_action_object()`）同源 |
+| **[IND] 完全独立层** | 完全独立 | agentrt 用户态编码风格（4 空格 + 1TBS + 100 列）↔ agentrt-linux 内核态编码风格（OLK-6.6：Tab 8 + K&R + 80 列 + errno+goto） |
+
+### 10.2 [SC] 共享契约层——头文件编码风格在两侧的角色
+
+| 头文件 | 共享的编码风格要素 | 消费方 |
+|--------|-------------------|--------|
+| `sched.h` | `agentrt_task_desc_t` 类型命名 + magic 宏 UPPER_SNAKE + kernel-doc | kernel / cognition |
+| `ipc.h` | `agentrt_ipc_msg_hdr_t` 类型命名 + `AGENTRT_IPC_*` 宏前缀 + Doxygen | kernel / services |
+| `bpf_struct_ops.h` | 4 状态枚举命名 + `common_value` 结构 + kernel-doc | kernel / cognition |
+| `security_types.h` | 38 cap ID 枚举 + 254 LSM 钩子枚举 + `snake_case_t` | kernel / security |
+| `memory_types.h` | L1-L4 结构命名 + GFP 掩码宏 + Doxygen | kernel / memory |
+| `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + kernel-doc | kernel / cognition |
+
+### 10.3 [SS] 语义同源层——agentrt ↔ agentrt-linux 编码规范映射
+
+| 规范项 | agentrt（用户态，CMake） | agentrt-linux（内核态，Kbuild） | 同源程度 |
+|--------|------------------------|-------------------------------|---------|
+| 命名前缀 | `agentrt_` / `agentrt::` / `agentrt.` | `agentrt_` / `agentrt::` / `agentrt.` | 完全同源 |
+| daemon 命名 | `<service>_d` 后缀 | `<service>_d` 后缀 | 完全同源 |
+| 函数命名 | `module_action_object()` | `module_action_object()` | 完全同源 |
+| 类型命名 | `snake_case_t`（C）/ PascalCase（Rust/Go） | `snake_case_t`（C）/ PascalCase（Rust/Go） | 完全同源 |
+| Doxygen 注释 | `@brief` / `@param` / `@return` | `@brief` / `@param` / `@return` | 完全同源 |
+| 错误码 | `AGENTRT_E*` 负值返回 | `AGENTRT_E*` 负值返回 | 完全同源 |
+
+### 10.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 缩进风格 | 4 空格（禁止 Tab） | OLK-6.6 Tab 8（内核态强制） | 内核编码传统 |
+| 括号风格 | 1TBS（K&R 变体） | K&R（OLK-6.6 标准） | 内核风格统一 |
+| 行宽限制 | 100 字符 | 80 列（OLK-6.6 强制） | 内核传统 |
+| 错误处理 | 异常 / Result / error | errno + goto（OLK-6.6 单出口） | 内核 goto 惯例 |
+| 构建系统 | CMake（跨三平台） | Kbuild + Kconfig（Linux 6.6） | 工具链差异 |
+| Lint 工具 | clang-format / rustfmt / gofmt | checkpatch.pl（OLK-6.6） | 内核审查工具 |
+
+### 10.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态（CMake）"
+        RT_CODE[源码 4 空格 + 1TBS<br/>100 列 + 异常/Result]
+    end
+
+    subgraph "agentrt-linux 内核态（Kbuild）"
+        OS_CODE[源码 Tab 8 + K&R<br/>80 列 + errno+goto]
+    end
+
+    subgraph "[SC] 共享契约层"
+        SC[6 头文件<br/>agentrt_ 前缀 + snake_case_t + Doxygen + AGENTRT_E*]
+    end
+
+    RT_CODE -.->|"规范同源 [SS]"| OS_CODE
+    RT_CODE ==>|"共享代码 [SC]"| SC
+    OS_CODE ==>|"共享代码 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_CODE fill:#e3f2fd,stroke:#1565c0
+    style OS_CODE fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-IFACE-008**： 编码规范在 agentrt（用户态，4 空格 + 1TBS + 100 列）与 agentrt-linux 内核态（OLK-6.6 Tab 8 + K&R + 80 列 + errno+goto）间保持命名同源而风格独立——6 个 [SC] 共享头文件统一采用 `agentrt_` 前缀 + `snake_case_t` + Doxygen + `AGENTRT_E*`，在两侧编译期通过 `-I` 引用同一份源码，禁止生成风格转换中间文件。
 
 ---
 

@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）云原生设计文档（airymaxos-cloudnative，极境云原生）
 
-> **子仓编号**：06
-> **子仓代号**：极境云原生（Airymax Cloud Native）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：K8s + containerd + OCI + agentctl + OpenTelemetry + DPU/IPU + 超节点 OS
-> **同源 agentrt**：gateway + sdk
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 gateway/sdk 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] K8s/containerd/OCI/CNI 实现独立
+> **子仓编号**：06\
+> **子仓代号**：极境云原生（Airymax Cloud Native）\
+> **文档版本**：v1.1（2026-07-07）\
+> **设计基准**：K8s + containerd + OCI + agentctl + OpenTelemetry + DPU/IPU + 超节点 OS\
+> **同源 agentrt**：gateway + sdk\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 gateway/sdk 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] K8s/containerd/OCI/CNI 实现独立\
 > **横切关注点**：云原生是横切关注点（cross-cutting concern），贯穿调度（CRD 调度器）、IPC（gateway_d io_uring 通道）、eBPF（服务网格数据平面）、记忆卷载（容器快照/迁移）4 大数据流
 
 ---

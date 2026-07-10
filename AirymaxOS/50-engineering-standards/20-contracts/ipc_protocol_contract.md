@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux IPC 协议契约
 
-> **文档定位**: agentrt-linux（AirymaxOS）进程间通信协议的契约定义，涵盖 128B 消息头、payload 协议、io_uring 传输层、capability 传递
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [20-contracts README](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS）进程间通信协议的契约定义，涵盖 128B 消息头、payload 协议、io_uring 传输层、capability 传递\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [20-contracts README](README.md)
 
 ---
 

@@ -75,11 +75,11 @@ Airymax采用**分层配置**策略，支持多环境、多实例配置：
 
 ### 配置文件位置
 
-Airymax 使用**单一统一配置文件** `configs/agentos.yaml`，包含所有子系统的配置段。
+Airymax 使用**单一统一配置文件** `configs/agentrt.yaml`，包含所有子系统的配置段。
 
 | 环境 | 配置路径 | 用途 |
 |------|---------|------|
-| **源码安装** | `configs/agentos.yaml` | 统一配置（kernel/llm/memory/security/multi_agent/gateway/hooks/plugins/observability） |
+| **源码安装** | `configs/agentrt.yaml` | 统一配置（kernel/llm/memory/security/multi_agent/gateway/hooks/plugins/observability） |
 | **Docker开发** | `docker/.env` | Docker Compose 环境变量 |
 | **Docker生产** | `docker/.env.production` | 生产环境变量 |
 | **Kubernetes** | ConfigMap/Secret | K8s 原生配置 |
@@ -279,8 +279,8 @@ security:
   # TLS配置（API加密传输）
   tls:
     enabled: false  # 生产环境建议开启
-    cert_path: "/etc/ssl/certs/agentos.crt"
-    key_path: "/etc/ssl/private/agentos.key"
+    cert_path: "/etc/ssl/certs/agentrt.crt"
+    key_path: "/etc/ssl/private/agentrt.key"
     ca_path: "/etc/ssl/certs/ca-bundle.crt"
     min_version: "TLS1.2"
     cipher_suites:
@@ -304,7 +304,7 @@ default_provider: "openai"
 providers:
   openai:
     type: "openai_compatible"
-    api_key: "${AGENTOS_LLM_API_KEY}"  # 从环境变量读取
+    api_key: "${AGENTRT_LLM_API_KEY}"  # 从环境变量读取
     base_url: "https://api.openai.com/v1"
     models:
       primary:
@@ -419,9 +419,9 @@ l2:
   database:
     host: "${POSTGRES_HOST:-postgres}"
     port: ${POSTGRES_PORT:-5432}
-    user: "${POSTGRES_USER:-agentos}"
+    user: "${POSTGRES_USER:-agentrt}"
     password: "${POSTGRES_PASSWORD}"
-    dbname: "${POSTGRES_DB:-agentos}"
+    dbname: "${POSTGRES_DB:-agentrt}"
   vector_index:
     engine: "faiss"            # faiss, hnswlib, milvus
     index_type: "ivf_flat"     # ivf_flat, ivf_pq, hnsw
@@ -511,7 +511,7 @@ base:
   log_level: "${LOG_LEVEL:-INFO}"
 
   # 内核连接
-  kernel_url: "${AGENTOS_KERNEL_URL:-http://localhost:8080}"
+  kernel_url: "${AGENTRT_KERNEL_URL:-http://localhost:8080}"
 
   # 数据库连接
   database_url: "${DATABASE_URL}"
@@ -604,18 +604,18 @@ daemons:
 
 | 变量名 | 说明 | 默认值 | 必填 |
 |--------|------|--------|------|
-| `AGENTOS_IPC_BIND_ADDR` | IPC绑定地址 | 0.0.0.0 | ❌ |
-| `AGENTOS_IPC_BIND_PORT` | IPC绑定端口 | 8080 | ❌ |
+| `AGENTRT_IPC_BIND_ADDR` | IPC绑定地址 | 0.0.0.0 | ❌ |
+| `AGENTRT_IPC_BIND_PORT` | IPC绑定端口 | 8080 | ❌ |
 | `LOG_LEVEL` | 日志级别 | INFO | ❌ |
 | `TZ` | 时区 | Asia/Shanghai | ❌ |
-| `AGENTOS_CUPOLAS_ENABLED` | 启用安全穹顶 | true | ❌ |
-| `AGENTOS_PERMISSION_MODE` | 权限检查模式 | strict | ❌ |
-| `AGENTOS_SANITIZER_MODE` | 输入净化模式 | strict | ❌ |
-| `AGENTOS_AUDIT_ENABLED` | 启用审计日志 | true | ❌ |
-| `AGENTOS_LLM_PROVIDER` | LLM提供商 | openai | ❌ |
-| `AGENTOS_LLM_API_KEY` | LLM API密钥 | - | ✅ |
-| `AGENTOS_LLM_BASE_URL` | LLM API地址 | https://api.openai.com/v1 | ❌ |
-| `AGENTOS_LLM_MODEL` | 默认LLM模型 | gpt-4-turbo | ❌ |
+| `AGENTRT_CUPOLAS_ENABLED` | 启用安全穹顶 | true | ❌ |
+| `AGENTRT_PERMISSION_MODE` | 权限检查模式 | strict | ❌ |
+| `AGENTRT_SANITIZER_MODE` | 输入净化模式 | strict | ❌ |
+| `AGENTRT_AUDIT_ENABLED` | 启用审计日志 | true | ❌ |
+| `AGENTRT_LLM_PROVIDER` | LLM提供商 | openai | ❌ |
+| `AGENTRT_LLM_API_KEY` | LLM API密钥 | - | ✅ |
+| `AGENTRT_LLM_BASE_URL` | LLM API地址 | https://api.openai.com/v1 | ❌ |
+| `AGENTRT_LLM_MODEL` | 默认LLM模型 | gpt-4-turbo | ❌ |
 | `DATABASE_URL` | 数据库连接字符串 | - | ✅ |
 | `POSTGRES_PASSWORD` | PostgreSQL密码 | - | ✅ |
 | `REDIS_PASSWORD` | Redis密码 | - | ✅ |
@@ -633,10 +633,10 @@ daemons:
 docker compose -f docker/docker-compose.yml config  # 验证Compose语法
 
 # 源码环境
-./build/bin/agentos-kernel --validate-config --config config/kernel.yaml
+./build/bin/agentrt-kernel --validate-config --config config/kernel.yaml
 
 # 检查必需的环境变量
-./scripts/check-env.sh --required AGENTOS_LLM_API_KEY,DATABASE_URL
+./scripts/check-env.sh --required AGENTRT_LLM_API_KEY,DATABASE_URL
 ```
 
 ---

@@ -16,7 +16,7 @@ Skill（技能）是 Airymax 中 Agent 的原子能力单元。每一个 Skill �
 
 ```
 ┌─────────────────────────────────────────────┐
-│              agentos/daemon/ 用户态服务                │
+│              agentrt/daemon/ 用户态服务                │
 │          ┌─────────────────────┐            │
 │          │   agent_d           │            │
 │          │  ┌───────────────┐  │            │
@@ -131,7 +131,7 @@ Skill 的创建过程是 **执行体** 能力单元的具体实现过程：
 
 ```json
 {
-  "$schema": "https://agentos.io/schemas/skill_contract_v1.2.0.json",
+  "$schema": "https://agentrt.io/schemas/skill_contract_v1.2.0.json",
   "name": "file_reader",
   "version": "1.0.0",
   "description": "安全地读取文件内容",
@@ -189,20 +189,20 @@ Skill 的创建过程是 **执行体** 能力单元的具体实现过程：
 ### 3.2 Skill 接口定义
 
 ```c
-#ifndef AGENTOS_SKILL_H
-#define AGENTOS_SKILL_H
+#ifndef AGENTRT_SKILL_H
+#define AGENTRT_SKILL_H
 
-#include <agentos/commons.h>
+#include <agentrt/commons.h>
 
-typedef struct agentos_skill agentos_skill_t;
-typedef struct agentos_skill_input agentos_skill_input_t;
-typedef struct agentos_skill_output agentos_skill_output_t;
+typedef struct agentrt_skill agentrt_skill_t;
+typedef struct agentrt_skill_input agentrt_skill_input_t;
+typedef struct agentrt_skill_output agentrt_skill_output_t;
 
-typedef int (*skill_execute_fn)(const agentos_skill_input_t* input, agentos_skill_output_t* output);
-typedef int (*skill_validate_fn)(const agentos_skill_input_t* input);
+typedef int (*skill_execute_fn)(const agentrt_skill_input_t* input, agentrt_skill_output_t* output);
+typedef int (*skill_validate_fn)(const agentrt_skill_input_t* input);
 typedef int (*skill_cleanup_fn)(void);
 
-struct agentos_skill {
+struct agentrt_skill {
     const char*            name;
     const char*            version;
     const char*            description;
@@ -212,7 +212,7 @@ struct agentos_skill {
     void*                  user_data;
 };
 
-struct agentos_skill_input {
+struct agentrt_skill_input {
     const char*  json_payload;
     size_t       payload_size;
     uint64_t     trace_id;
@@ -220,7 +220,7 @@ struct agentos_skill_input {
     void*        user_context;
 };
 
-struct agentos_skill_output {
+struct agentrt_skill_output {
     char*        json_result;
     size_t       result_size;
     int          error_code;
@@ -253,7 +253,7 @@ skill_file_reader/
 #ifndef FILE_READER_SKILL_H
 #define FILE_READER_SKILL_H
 
-#include <agentos/skill.h>
+#include <agentrt/skill.h>
 
 #define FILE_READER_VERSION "1.0.0"
 #define FILE_READER_MAX_SIZE (10 * 1024 * 1024)
@@ -265,14 +265,14 @@ skill_file_reader/
  * 
  * @return 技能实例指针，需由调用者释放
  */
-agentos_skill_t* file_reader_skill_create(void);
+agentrt_skill_t* file_reader_skill_create(void);
 
 /**
  * @brief 销毁文件读取技能实例
  * 
  * @param skill 技能实例指针
  */
-void file_reader_skill_destroy(agentos_skill_t* skill);
+void file_reader_skill_destroy(agentrt_skill_t* skill);
 
 #endif
 ```
@@ -288,16 +288,16 @@ void file_reader_skill_destroy(agentos_skill_t* skill);
 /**
  * @brief 验证输入参数
  */
-static int file_reader_validate(const agentos_skill_input_t* input)
+static int file_reader_validate(const agentrt_skill_input_t* input)
 {
     if (!input || !input->json_payload) {
-        return AGENTOS_EINVAL;
+        return AGENTRT_EINVAL;
     }
 
     // 解析 JSON 检查必需字段
     // 简化示例：实际使用 JSON 解析库
     if (strstr(input->json_payload, "\"path\"") == NULL) {
-        return AGENTOS_EINVAL;
+        return AGENTRT_EINVAL;
     }
 
     return 0;
@@ -306,16 +306,16 @@ static int file_reader_validate(const agentos_skill_input_t* input)
 /**
  * @brief 执行文件读取
  */
-static int file_reader_execute(const agentos_skill_input_t* input, agentos_skill_output_t* output)
+static int file_reader_execute(const agentrt_skill_input_t* input, agentrt_skill_output_t* output)
 {
-    uint64_t start = agentos_time_now_ns();
+    uint64_t start = agentrt_time_now_ns();
 
     // 1. 解析输入
     char path[4096] = { 0 };
     const char* encoding = "utf-8";
     size_t max_bytes = FILE_READER_MAX_SIZE;
 
-    // 简化 JSON 解析 — 实际使用 agentos_json_parse()
+    // 简化 JSON 解析 — 实际使用 agentrt_json_parse()
     // parse_path(input->json_payload, path, sizeof(path));
     // parse_encoding(input->json_payload, &encoding);
     // parse_max_bytes(input->json_payload, &max_bytes);
@@ -329,10 +329,10 @@ static int file_reader_execute(const agentos_skill_input_t* input, agentos_skill
     // 3. 读取文件
     FILE* fp = fopen(path, "rb");
     if (!fp) {
-        output->error_code = AGENTOS_ENOENT;
+        output->error_code = AGENTRT_ENOENT;
         snprintf(output->error_message, sizeof(output->error_message),
                  "文件不存在: %s", path);
-        return AGENTOS_ENOENT;
+        return AGENTRT_ENOENT;
     }
 
     // 检查文件大小
@@ -352,7 +352,7 @@ static int file_reader_execute(const agentos_skill_input_t* input, agentos_skill
     char* content = malloc((size_t)file_size + 1);
     if (!content) {
         fclose(fp);
-        return AGENTOS_ENOMEM;
+        return AGENTRT_ENOMEM;
     }
 
     size_t bytes_read = fread(content, 1, (size_t)file_size, fp);
@@ -360,7 +360,7 @@ static int file_reader_execute(const agentos_skill_input_t* input, agentos_skill
     fclose(fp);
 
     // 4. 构建输出
-    // 简化 JSON 构建 — 实际使用 agentos_json_build()
+    // 简化 JSON 构建 — 实际使用 agentrt_json_build()
     char json_buf[bytes_read + 256];
     snprintf(json_buf, sizeof(json_buf),
              "{\"content\":\"%s\",\"size\":%zu,\"encoding\":\"%s\"}",
@@ -369,7 +369,7 @@ static int file_reader_execute(const agentos_skill_input_t* input, agentos_skill
     output->json_result = strdup(json_buf);
     output->result_size = strlen(json_buf);
     output->error_code = 0;
-    output->elapsed_ms = (agentos_time_now_ns() - start) / 1000000;
+    output->elapsed_ms = (agentrt_time_now_ns() - start) / 1000000;
 
     free(content);
     return 0;
@@ -386,9 +386,9 @@ static int file_reader_cleanup(void)
 /**
  * @brief 创建技能实例
  */
-agentos_skill_t* file_reader_skill_create(void)
+agentrt_skill_t* file_reader_skill_create(void)
 {
-    agentos_skill_t* skill = calloc(1, sizeof(agentos_skill_t));
+    agentrt_skill_t* skill = calloc(1, sizeof(agentrt_skill_t));
     if (!skill) return NULL;
 
     skill->name = "file_reader";
@@ -404,7 +404,7 @@ agentos_skill_t* file_reader_skill_create(void)
 /**
  * @brief 销毁技能实例
  */
-void file_reader_skill_destroy(agentos_skill_t* skill)
+void file_reader_skill_destroy(agentrt_skill_t* skill)
 {
     if (skill) {
         if (skill->cleanup) skill->cleanup();
@@ -430,8 +430,8 @@ add_library(skill_file_reader SHARED src/file_reader_skill.c)
 target_include_directories(skill_file_reader PRIVATE include)
 target_link_libraries(skill_file_reader PRIVATE Airymax::corekern)
 
-install(TARGETS skill_file_reader DESTINATION lib/agentos/skills)
-install(FILES skill_contract.json DESTINATION share/agentos/skills/file_reader)
+install(TARGETS skill_file_reader DESTINATION lib/agentrt/skills)
+install(FILES skill_contract.json DESTINATION share/agentrt/skills/file_reader)
 ```
 
 ---
@@ -450,24 +450,24 @@ sudo cmake --install .
 ### 6.2 在 Agent 中注册
 
 ```c
-#include <agentos/skill_registry.h>
+#include <agentrt/skill_registry.h>
 #include "file_reader_skill.h"
 
 int setup_skills(void)
 {
     // 创建技能
-    agentos_skill_t* reader = file_reader_skill_create();
-    if (!reader) return AGENTOS_ENOMEM;
+    agentrt_skill_t* reader = file_reader_skill_create();
+    if (!reader) return AGENTRT_ENOMEM;
 
     // 验证契约
-    int ret = agentos_skill_validate_contract(reader, "skill_contract.json");
+    int ret = agentrt_skill_validate_contract(reader, "skill_contract.json");
     if (ret != 0) {
         file_reader_skill_destroy(reader);
         return ret;
     }
 
     // 注册到注册表
-    ret = agentos_skill_registry_register(reader);
+    ret = agentrt_skill_registry_register(reader);
     if (ret != 0) {
         file_reader_skill_destroy(reader);
         return ret;
@@ -483,17 +483,17 @@ int setup_skills(void)
 /**
  * @brief 通过注册表调用技能
  */
-int call_file_reader(const char* file_path, agentos_skill_output_t* output)
+int call_file_reader(const char* file_path, agentrt_skill_output_t* output)
 {
     // 查找技能
-    agentos_skill_t* skill = agentos_skill_registry_find("file_reader");
-    if (!skill) return AGENTOS_ENOENT;
+    agentrt_skill_t* skill = agentrt_skill_registry_find("file_reader");
+    if (!skill) return AGENTRT_ENOENT;
 
     // 准备输入
-    agentos_skill_input_t input = {
+    agentrt_skill_input_t input = {
         .json_payload = "{\"path\":\"/tmp/data.csv\"}",
         .payload_size = 23,
-        .trace_id = agentos_trace_current_id(),
+        .trace_id = agentrt_trace_current_id(),
         .task_id = 0
     };
 
@@ -516,13 +516,13 @@ int call_file_reader(const char* file_path, agentos_skill_output_t* output)
  */
 int create_analysis_pipeline(void)
 {
-    agentos_pipeline_t* pipeline = agentos_pipeline_create("data_analysis");
+    agentrt_pipeline_t* pipeline = agentrt_pipeline_create("data_analysis");
 
-    agentos_pipeline_add_stage(pipeline, "file_reader", NULL);
-    agentos_pipeline_add_stage(pipeline, "csv_parser", NULL);
-    agentos_pipeline_add_stage(pipeline, "stat_analyzer", NULL);
+    agentrt_pipeline_add_stage(pipeline, "file_reader", NULL);
+    agentrt_pipeline_add_stage(pipeline, "csv_parser", NULL);
+    agentrt_pipeline_add_stage(pipeline, "stat_analyzer", NULL);
 
-    return agentos_pipeline_register(pipeline);
+    return agentrt_pipeline_register(pipeline);
 }
 ```
 
@@ -534,10 +534,10 @@ int create_analysis_pipeline(void)
 /**
  * @brief 条件路由 — 根据文件类型选择解析器
  */
-static int route_by_extension(const agentos_skill_input_t* input, char* skill_name, size_t len)
+static int route_by_extension(const agentrt_skill_input_t* input, char* skill_name, size_t len)
 {
     const char* ext = strrchr(input->json_payload, '.');
-    if (!ext) return AGENTOS_EINVAL;
+    if (!ext) return AGENTRT_EINVAL;
 
     if (strcmp(ext, ".csv") == 0) {
         snprintf(skill_name, len, "csv_parser");
@@ -562,18 +562,18 @@ static int route_by_extension(const agentos_skill_input_t* input, char* skill_na
  * @brief 异步执行技能
  */
 int execute_skill_async(const char* skill_name, const char* input_json,
-                        agentos_async_callback_t callback, void* user_data)
+                        agentrt_async_callback_t callback, void* user_data)
 {
-    agentos_skill_t* skill = agentos_skill_registry_find(skill_name);
-    if (!skill) return AGENTOS_ENOENT;
+    agentrt_skill_t* skill = agentrt_skill_registry_find(skill_name);
+    if (!skill) return AGENTRT_ENOENT;
 
-    agentos_skill_input_t input = {
+    agentrt_skill_input_t input = {
         .json_payload = input_json,
         .payload_size = strlen(input_json),
-        .trace_id = agentos_trace_current_id()
+        .trace_id = agentrt_trace_current_id()
     };
 
-    return agentos_task_spawn((agentos_task_fn)skill->execute, &input, callback, user_data);
+    return agentrt_task_spawn((agentrt_task_fn)skill->execute, &input, callback, user_data);
 }
 ```
 
@@ -589,12 +589,12 @@ int execute_skill_async(const char* skill_name, const char* input_json,
 
 CTEST(file_reader, validate_success)
 {
-    agentos_skill_input_t input = {
+    agentrt_skill_input_t input = {
         .json_payload = "{\"path\":\"/tmp/test.txt\"}",
         .payload_size = 26
     };
 
-    agentos_skill_t* skill = file_reader_skill_create();
+    agentrt_skill_t* skill = file_reader_skill_create();
     int ret = skill->validate(&input);
     ASSERT_EQUAL(0, ret);
 
@@ -603,12 +603,12 @@ CTEST(file_reader, validate_success)
 
 CTEST(file_reader, validate_missing_path)
 {
-    agentos_skill_input_t input = {
+    agentrt_skill_input_t input = {
         .json_payload = "{\"encoding\":\"utf-8\"}",
         .payload_size = 21
     };
 
-    agentos_skill_t* skill = file_reader_skill_create();
+    agentrt_skill_t* skill = file_reader_skill_create();
     int ret = skill->validate(&input);
     ASSERT_NOT_EQUAL(0, ret);
 
@@ -619,7 +619,7 @@ CTEST(file_reader, validate_missing_path)
 ### 8.2 契约验证
 
 ```bash
-agentos-cli skill validate --contract skill_contract.json
+agentrt-cli skill validate --contract skill_contract.json
 ```
 
 ---

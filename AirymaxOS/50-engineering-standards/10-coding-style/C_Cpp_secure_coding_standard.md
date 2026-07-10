@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）C 安全编码规范
 
-> **文档定位**: agentrt-linux（AirymaxOS）内核态 C 语言安全编码规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [编码规范总览](README.md)
-> **同源参考**: CERT C Coding Standard + Linux 内核安全实践
-> **理论根基**: Airymax 五维正交 24 原则 E-1 安全内生 + Linux 内核 CVE 修复经验
+> **文档定位**： agentrt-linux（AirymaxOS）内核态 C 语言安全编码规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [编码规范总览](README.md)\
+> **同源参考**： CERT C Coding Standard + Linux 内核安全实践\
+> **理论根基**： Airymax 五维正交 24 原则 E-1 安全内生 + Linux 内核 CVE 修复经验
 
 ---
 

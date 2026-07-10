@@ -11,7 +11,7 @@
 
 | 错误码系统 | 位置 | 问题 |
 |-----------|------|------|
-| commons 权威码 | `commons/utils/error/include/error.h:111-120` | `AGENTOS_ERR_INVALID_PARAM=-2` 等，权威源 |
+| commons 权威码 | `commons/utils/error/include/error.h:111-120` | `AGENTRT_ERR_INVALID_PARAM=-2` 等，权威源 |
 | cupolas enum | `cupolas/src/security/cupolas_error.h:39-60` | `cupolas_ERR_INVALID_PARAM=-2` 等，重复定义（独立前缀） |
 | cupolas 本地 #define | `cupolas/src/platform/platform.h:846-879` | `cupolas_ERROR_NO_MEMORY=-3` 等，**与 enum 数值冲突** |
 
@@ -40,7 +40,7 @@
 
 - 删除 `cupolas/src/platform/platform.h:846-879` 的本地 `#define` 错误码
 - 删除 `cupolas/src/security/cupolas_error.h:39-60` 的 `cupolas_ERR_*` enum（重复定义）
-- cupolas 直接复用 `AGENTOS_ERR_*` 宏
+- cupolas 直接复用 `AGENTRT_ERR_*` 宏
 
 ### 2.3 模块专属错误码分段（ARE-ERR-03）
 

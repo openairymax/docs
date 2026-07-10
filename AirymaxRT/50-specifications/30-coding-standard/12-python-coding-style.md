@@ -35,7 +35,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件 | Python 版本 | 类型检查 |
 |------|-------------|----------|
-| agentos/daemon/ | Python 3.11+ | mypy |
+| agentrt/daemon/ | Python 3.11+ | mypy |
 | SDK Python | Python 3.10+ | pyright |
 | 工具脚本 | Python 3.9+ | - |
 
@@ -45,8 +45,8 @@ Python 代码在 Airymax 中主要应用于以下场景：
 
 | 场景 | 位置 | 关联原则 | Python 特性 |
 |------|------|---------|------------|
-| 用户态服务层 | `agentos/daemon/` | S-3, K-3 | asyncio, multiprocessing |
-| 工具脚本 | `agentos/toolkit/` | E-7 | 快速原型，脚本自动化 |
+| 用户态服务层 | `agentrt/daemon/` | S-3, K-3 | asyncio, multiprocessing |
+| 工具脚本 | `agentrt/toolkit/` | E-7 | 快速原型，脚本自动化 |
 | SDK Python | `sdks/python/` | K-2, E-2 | 类型提示，数据类 |
 | 机器学习 | `ml/` | C-1, C-4 | NumPy, PyTorch |
 
@@ -94,7 +94,7 @@ Airymax 任务调度模块。
 - t2 慢思考：深度路径，处理复杂任务
 
 Example:
-    >>> from agentos.scheduler import TaskScheduler
+    >>> from agentrt.scheduler import TaskScheduler
     >>> scheduler = TaskScheduler(max_workers=4)
     >>> task_id = scheduler.submit(plan)
     >>> result = scheduler.wait(task_id)
@@ -118,9 +118,9 @@ import pydantic
 from pydantic import BaseModel, Field
 
 # 3. 项目内部导入
-from agentos.types import TaskPlan, TaskResult
-from agentos.errors import SchedulerError
-from agentos.constants import DEFAULT_TIMEOUT
+from agentrt.types import TaskPlan, TaskResult
+from agentrt.errors import SchedulerError
+from agentrt.constants import DEFAULT_TIMEOUT
 
 # 4. 公开导出
 __all__ = ["TaskScheduler", "SchedulerConfig"]
@@ -138,7 +138,7 @@ DEFAULT_MAX_WORKERS = 4
 
 | 类型 | 风格 | 示例 |
 |------|------|------|
-| 模块/包名 | snake_case | `task_scheduler.py`, `agentos` |
+| 模块/包名 | snake_case | `task_scheduler.py`, `agentrt` |
 | 类名 | PascalCase | `class TaskScheduler`, `@dataclass TaskConfig` |
 | 函数/方法 | snake_case | `submit_task()`, `get_task_status()` |
 | 变量 | snake_case | `task_id`, `max_workers` |
@@ -591,15 +591,15 @@ class ResourceManager:
 ### 7.1 异常类定义
 
 ```python
-class AgentOSError(Exception):
+class AgentRTError(Exception):
     """Airymax 错误基类。"""
     
-    def __init__(self, message: str, code: str = "AGENTOS_ERROR") -> None:
+    def __init__(self, message: str, code: str = "AGENTRT_ERROR") -> None:
         self.message = message
         self.code = code
         super().__init__(self.message)
 
-class SchedulerError(AgentOSError):
+class SchedulerError(AgentRTError):
     """调度器错误。"""
     pass
 
@@ -616,11 +616,11 @@ class TaskNotFoundError(SchedulerError):
         super().__init__(f"Task not found: {task_id}", "TASK_NOT_FOUND")
         self.task_id = task_id
 
-class ValidationError(AgentOSError):
+class ValidationError(AgentRTError):
     """验证错误。"""
     pass
 
-class ResourceError(AgentOSError):
+class ResourceError(AgentRTError):
     """资源错误。"""
     pass
 ```
@@ -774,12 +774,12 @@ from pydantic import BaseModel, Field
 import numpy as np
 
 # 4. 项目内部
-from agentos.types import TaskPlan, TaskResult
-from agentos.errors import SchedulerError
-from agentos.constants import DEFAULT_TIMEOUT
+from agentrt.types import TaskPlan, TaskResult
+from agentrt.errors import SchedulerError
+from agentrt.constants import DEFAULT_TIMEOUT
 
 # 5. 类型导入（使用 type: ignore 类型注释）
-from agentos.manager import manager  # type: ignore[attr-defined]
+from agentrt.manager import manager  # type: ignore[attr-defined]
 ```
 
 ### 9.2 导出模式
@@ -789,7 +789,7 @@ from agentos.manager import manager  # type: ignore[attr-defined]
 """Airymax 调度模块。
 
 Example:
-    >>> from agentos.scheduler import TaskScheduler
+    >>> from agentrt.scheduler import TaskScheduler
     >>> scheduler = TaskScheduler()
 """
 
@@ -803,9 +803,9 @@ __all__ = [
 ]
 
 # 导入并重新导出
-from agentos.scheduler.scheduler import TaskScheduler
-from agentos.scheduler.manager import SchedulerConfig
-from agentos.scheduler.errors import (
+from agentrt.scheduler.scheduler import TaskScheduler
+from agentrt.scheduler.manager import SchedulerConfig
+from agentrt.scheduler.errors import (
     SchedulerError,
     SchedulerClosedError,
     TaskNotFoundError,
@@ -826,7 +826,7 @@ Airymax 任务调度器测试。
 import pytest
 import asyncio
 from typing import Optional
-from agentos.scheduler import TaskScheduler, SchedulerConfig, TaskStatus
+from agentrt.scheduler import TaskScheduler, SchedulerConfig, TaskStatus
 
 @pytest.fixture
 def scheduler() -> TaskScheduler:
@@ -891,19 +891,19 @@ def test_scheduler_with_strategy(strategy: str, scheduler: TaskScheduler) -> Non
 
 ### 10-A.2 绑定代码命名与组织
 
-- **文件命名**：`agentos_<module>_ffi.py`，例如 `agentos_scheduler_ffi.py`、`agentos_memory_ffi.py`
-- **目录位置**：与 C 头文件对应，放置在 `sdks/python/agentos/` 下
+- **文件命名**：`agentrt_<module>_ffi.py`，例如 `agentrt_scheduler_ffi.py`、`agentrt_memory_ffi.py`
+- **目录位置**：与 C 头文件对应，放置在 `sdks/python/agentrt/` 下
 - **导出规范**：FFI 模块仅暴露 Pythonic 接口，不暴露原始 C 指针
 
 ```python
-# agentos_scheduler_ffi.py
+# agentrt_scheduler_ffi.py
 """Airymax 调度器 FFI 绑定。"""
 
 from ctypes import CDLL, c_int, c_char_p, POINTER, byref
-from agentos.errors import AgentOSError, SchedulerError
+from agentrt.errors import AgentRTError, SchedulerError
 
 # 加载共享库
-_lib = CDLL("libagentos_scheduler.so")
+_lib = CDLL("libagentrt_scheduler.so")
 
 # 函数签名声明
 _lib.cognition_schedule.argtypes = [c_char_p, c_char_p, POINTER(c_char_p)]
@@ -931,31 +931,31 @@ def schedule(plan_json: str) -> str:
     if rc != 0:
         raise _convert_error(rc, "cognition_schedule")
     result = out_id.value.decode("utf-8")
-    _lib.agentos_free(out_id)  # C 侧分配的内存由 C 侧释放
+    _lib.agentrt_free(out_id)  # C 侧分配的内存由 C 侧释放
     return result
 ```
 
 ### 10-A.3 错误码转换
 
-所有 `AGENTOS_E*` C 错误码必须转换为 Python 异常：
+所有 `AGENTRT_E*` C 错误码必须转换为 Python 异常：
 
 ```python
-# agentos/errors/ffi_errors.py
+# agentrt/errors/ffi_errors.py
 """FFI 错误码到 Python 异常的映射。"""
 
-from agentos.errors import AgentOSError, ValidationError, ResourceError
+from agentrt.errors import AgentRTError, ValidationError, ResourceError
 
 # 错误码 → 异常类映射表
-_ERROR_CODE_MAP: dict[int, type[AgentOSError]] = {
-    0: None,                          # AGENTOS_OK
-    -2: ValidationError,              # AGENTOS_ERR_INVALID_PARAM
-    -4: ResourceError,                # AGENTOS_ERR_OUT_OF_MEMORY
-    -8: ResourceError,                # AGENTOS_ERR_TIMEOUT
-    -17: ResourceError,               # AGENTOS_ERR_BUSY
+_ERROR_CODE_MAP: dict[int, type[AgentRTError]] = {
+    0: None,                          # AGENTRT_OK
+    -2: ValidationError,              # AGENTRT_ERR_INVALID_PARAM
+    -4: ResourceError,                # AGENTRT_ERR_OUT_OF_MEMORY
+    -8: ResourceError,                # AGENTRT_ERR_TIMEOUT
+    -17: ResourceError,               # AGENTRT_ERR_BUSY
 }
 
 
-def _convert_error(rc: int, context: str) -> AgentOSError:
+def _convert_error(rc: int, context: str) -> AgentRTError:
     """将 C 错误码转换为 Python 异常。
 
     Args:
@@ -965,7 +965,7 @@ def _convert_error(rc: int, context: str) -> AgentOSError:
     Returns:
         对应的 Python 异常实例
     """
-    exc_class = _ERROR_CODE_MAP.get(rc, AgentOSError)
+    exc_class = _ERROR_CODE_MAP.get(rc, AgentRTError)
     return exc_class(f"[{context}] C error code: {rc}")
 ```
 
@@ -973,7 +973,7 @@ def _convert_error(rc: int, context: str) -> AgentOSError:
 
 | 所有权 | 规则 | 示例 |
 |--------|------|------|
-| C → Python（C 分配） | Python 使用后必须调用 C 侧释放函数 | `_lib.agentos_free(out_id)` |
+| C → Python（C 分配） | Python 使用后必须调用 C 侧释放函数 | `_lib.agentrt_free(out_id)` |
 | Python → C（Python 分配） | Python 保持引用，C 侧不得释放 | `byref(c_buffer)` |
 | 共享缓冲区 | 明确文档化生命周期，使用 `memoryview` 避免拷贝 | `memoryview(c_array)` |
 

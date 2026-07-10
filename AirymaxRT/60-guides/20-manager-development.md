@@ -106,7 +106,7 @@ kernel:
   log_level: "warning"  # ← 当前生效
 
 # 3. 运行时覆盖 (可选)
-export AGENTOS_KERNEL_LOG_LEVEL="debug"  # ← 最高优先级
+export AGENTRT_KERNEL_LOG_LEVEL="debug"  # ← 最高优先级
 ```
 
 #### 双重责任模型
@@ -466,7 +466,7 @@ cat ecosystem/manager/.gitignore
 ## 📞 支持与反馈
 
 - **技术支持**: support@spharx.cn
-- **问题反馈**: https://gitcode.com/spharx/agentos/issues
+- **问题反馈**: https://gitcode.com/spharx/agentrt/issues
 - **架构文档**: [00-architectural-principles.md](../../../docs/00-architectural-principles.md)
 
 ---

@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）规范符合性检查机制
 
-> **文档定位**: agentrt-linux（AirymaxOS）工程标准规范符合性检查清单与自动化验证机制
-> **版本**: 0.1.1（文档体系完成）
-> **最后更新**: 2026-07-07
-> **父文档**: [工程标准规范 README](README.md)
-> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件落地于 `include/airymax/`
+> **文档定位**： agentrt-linux（AirymaxOS）工程标准规范符合性检查清单与自动化验证机制\
+> **版本**： 0.1.1（文档体系完成）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [工程标准规范 README](README.md)\
+> **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件落地于 `include/airymax/`
 
 ---
 
@@ -563,7 +563,7 @@ scripts/
 
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
-| 0.1.1 | 2026-07-07 | 初始版本，建立规范符合性检查机制：8 项 STD-DOC + 5 项 STD-CODE + 4 项 STD-IRON 规则，16 个检查脚本规范，CI/CD 集成方案 | Airymax 架构委员会 |
+| 0.1.1 | 2026-07-07 | 初始版本，建立规范符合性检查机制：8 项 STD-DOC + 5 项 STD-CODE + 4 项 STD-IRON 规则，16 个检查脚本规范，CI/CD 集成方案 | 工程规范委员会 |
 
 ---
 

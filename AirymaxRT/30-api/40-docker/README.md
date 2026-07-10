@@ -43,36 +43,36 @@ docker-compose logs -f
 
 ```bash
 # 构建镜像
-docker build -t agentos:latest .
+docker build -t agentrt:latest .
 
 # 基本运行
 docker run -d \
-  --name agentos-gateway \
+  --name agentrt-gateway \
   -p 8080:8080 \
   -p 8081:8081 \
-  agentos:latest
+  agentrt:latest
 
 # 带自定义配置运行
 docker run -d \
-  --name agentos-gateway \
+  --name agentrt-gateway \
   -p 9090:8080 \
-  -v $(pwd)/config:/etc/agentos:ro \
-  -e AGENTOS_LOG_LEVEL=debug \
+  -v $(pwd)/config:/etc/agentrt:ro \
+  -e AGENTRT_LOG_LEVEL=debug \
   -e OPENAI_API_KEY=sk-your-key-here \
-  agentos:latest gateway_d -c /etc/agentos/gateway.conf
+  agentrt:latest gateway_d -c /etc/agentrt/gateway.conf
 ```
 
 #### 进入容器调试
 
 ```bash
 # 交互式shell
-docker run -it --rm agentos:latest bash
+docker run -it --rm agentrt:latest bash
 
 # 查看日志
-docker logs -f agentos-gateway
+docker logs -f agentrt-gateway
 
 # 执行命令
-docker exec agentos-gateway gateway_d --help
+docker exec agentrt-gateway gateway_d --help
 ```
 
 ---
@@ -86,7 +86,7 @@ docker exec agentos-gateway gateway_d --help
 docker run -it --rm \
   -v /path/to/Airymax:/workspace/Airymax \
   -w /workspace/AgentRT/build \
-  agentos:latest bash
+  agentrt:latest bash
 
 # 在容器内执行构建命令
 cmake .. -DCMAKE_BUILD_TYPE=Debug
@@ -129,20 +129,20 @@ services:
 /usr/local/
 ├── bin/
 │   ├── gateway_d          # 网关用户态服务
-│   ├── agentos-llm-d      # LLM服务
+│   ├── agentrt-llm-d      # LLM服务
 │   ├── channel_d          # 通道服务
-│   ├── agentos-sched-d    # 调度器
-│   ├── agentos-monit-d    # 监控服务
-│   ├── agentos-market-d   # 市场服务
-│   └── agentos-tool-d     # 工具执行器
+│   ├── agentrt-sched-d    # 调度器
+│   ├── agentrt-monit-d    # 监控服务
+│   ├── agentrt-market-d   # 市场服务
+│   └── agentrt-tool-d     # 工具执行器
 ├── lib/
-│   ├── libagentos_common.a
-│   ├── libagentos_core.a
-│   ├── libagentos_protocols.so → libagentos_protocols.so.2.1.0
+│   ├── libagentrt_common.a
+│   ├── libagentrt_core.a
+│   ├── libagentrt_protocols.so → libagentrt_protocols.so.2.1.0
 │   └── ... (其他库文件)
 ├── include/
-│   └── agentos.h          # 主头文件
-└── share/doc/agentos/
+│   └── agentrt.h          # 主头文件
+└── share/doc/agentrt/
     └── README.md
 ```
 
@@ -153,41 +153,41 @@ services:
 ### 1. 最小权限原则
 
 ```bash
-# 使用非root用户运行（镜像已内置agentos用户）
-# Dockerfile中已配置: USER agentos
+# 使用非root用户运行（镜像已内置agentrt用户）
+# Dockerfile中已配置: USER agentrt
 
 # 限制Linux capabilities
-docker run --cap-drop=ALL --cap-add=NET_BIND_SERVICE agentos:latest
+docker run --cap-drop=ALL --cap-add=NET_BIND_SERVICE agentrt:latest
 
 # 只读文件系统（必要时挂载可写卷）
 docker run --read-only \
-  -v agentos-data:/var/lib/agentos/data \
-  -v agentos-logs:/var/log/agentos \
-  agentos:latest
+  -v agentrt-data:/var/lib/agentrt/data \
+  -v agentrt-logs:/var/log/agentrt \
+  agentrt:latest
 ```
 
 ### 2. 网络隔离
 
 ```bash
 # 创建独立网络
-docker network create agentos-net --subnet=172.28.0.0/16
+docker network create agentrt-net --subnet=172.28.0.0/16
 
 # 只暴露必要端口
-docker run --network agentos-net \
+docker run --network agentrt-net \
   -p 127.0.0.1:8080:8080 \  # 仅绑定localhost
-  agentos:latest
+  agentrt:latest
 
 # 内部网络（不暴露端口）
-docker run --network agentos-net \
+docker run --network agentrt-net \
   --expose 8080 \
-  agentos:latest
+  agentrt:latest
 ```
 
 ### 3. 资源限制
 
 ```bash
 # 限制内存和CPU
-docker run -m 512m --cpus="1.5" agentos:latest
+docker run -m 512m --cpus="1.5" agentrt:latest
 
 # 在docker-compose.yml中配置:
 services:
@@ -242,12 +242,12 @@ docker-compose logs -f gateway
 docker-compose logs --tail=100 llm-service
 
 # 导出日志到文件
-docker-compose logs > agentos_$(date +%Y%m%d).log 2>&1
+docker-compose logs > agentrt_$(date +%Y%m%d).log 2>&1
 
 # 结构化日志 (JSON格式)
 docker run --log-driver=json-file \
   --log-opt labels="service=gateway" \
-  agentos:latest
+  agentrt:latest
 ```
 
 ### 健康检查
@@ -266,7 +266,7 @@ curl http://localhost:8080/health
 }
 
 # Docker内置健康检查
-docker inspect --format='{{.State.Health.Status}}' agentos-gateway
+docker inspect --format='{{.State.Health.Status}}' agentrt-gateway
 # 输出: healthy / unhealthy / starting
 ```
 
@@ -277,17 +277,17 @@ docker inspect --format='{{.State.Health.Status}}' agentos-gateway
 curl http://localhost:9090/metrics
 
 # 输出示例:
-# HELP agentos_requests_total Total requests processed
-TYPE agentos_requests_total counter
-agentos_requests_total{service="gateway",endpoint="/api/v1/chat"} 567.000
+# HELP agentrt_requests_total Total requests processed
+TYPE agentrt_requests_total counter
+agentrt_requests_total{service="gateway",endpoint="/api/v1/chat"} 567.000
 
-# HELP agentos_request_duration_seconds Request duration in seconds
-TYPE agentos_request_duration_seconds histogram
-agentos_request_duration_seconds_bucket{le="0.1"} 100.000
-agentos_request_duration_seconds_bucket{le="0.5"} 250.000
-agentos_request_duration_seconds_bucket{le="1.0"} 300.000
-agentos_request_duration_seconds_sum 125.500
-agentos_request_duration_seconds_count 300.000
+# HELP agentrt_request_duration_seconds Request duration in seconds
+TYPE agentrt_request_duration_seconds histogram
+agentrt_request_duration_seconds_bucket{le="0.1"} 100.000
+agentrt_request_duration_seconds_bucket{le="0.5"} 250.000
+agentrt_request_duration_seconds_bucket{le="1.0"} 300.000
+agentrt_request_duration_seconds_sum 125.500
+agentrt_request_duration_seconds_count 300.000
 ```
 
 **Grafana Dashboard配置**:
@@ -314,10 +314,10 @@ agentos_request_duration_seconds_count 300.000
 
 ```bash
 # 1. 拉取新版本
-docker pull spharx/agentos:v0.1.0
+docker pull spharx/agentrt:v0.1.0
 
 # 2. 更新镜像标签
-sed -i 's/image: spharx\/agentos:.*/image: spharx\/agentos:v0.1.0/' docker-compose.yml
+sed -i 's/image: spharx\/agentrt:.*/image: spharx\/agentrt:v0.1.0/' docker-compose.yml
 
 # 3. 逐个重启服务
 docker-compose up -d --no-deps gateway     # 先重启gateway
@@ -331,18 +331,18 @@ docker-compose up -d --no-deps llm-service
 ```bash
 # 备份当前数据
 docker run --rm \
-  -v agentos-data:/data \
+  -v agentrt-data:/data \
   -v $(pwd)/backup:/backup \
   alpine tar czf /backup/backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
 
 # 恢复到新版本
 docker run --rm \
-  -v agentos-new-data:/data \
+  -v agentrt-new-data:/data \
   -v $(pwd)/backup:/backup \
   alpine sh -c "tar xzf /backup/backup-latest.tar.gz -C /data"
 
 # 验证数据完整性
-docker exec agentos-gateway ls -la /var/lib/agentos/data/
+docker exec agentrt-gateway ls -la /var/lib/agentrt/data/
 ```
 
 ### 回滚操作
@@ -354,7 +354,7 @@ docker-compose down
 docker-compose up -d
 
 # 或使用特定镜像标签
-docker tag spharx/agentos:v0.0.3 spharx/agentos:rollback
+docker tag spharx/agentrt:v0.0.3 spharx/agentrt:rollback
 docker-compose up -d
 ```
 
@@ -366,7 +366,7 @@ docker-compose up -d
 
 ```bash
 # 检查日志
-docker logs agentos-gateway
+docker logs agentrt-gateway
 
 # 常见原因及解决:
 
@@ -375,11 +375,11 @@ docker logs agentos-gateway
 
 # 2. 权限不足
 # 解决: 检查数据目录权限
-ls -la /var/lib/agentos/
+ls -la /var/lib/agentrt/
 
 # 3. 配置文件错误
 # 解决: 进入容器检查配置
-docker exec -it agentos-gateway cat /etc/agentos/gateway.conf
+docker exec -it agentrt-gateway cat /etc/agentrt/gateway.conf
 
 # 4. 内存不足
 # 解决: 增加内存限制 -m 1g
@@ -389,25 +389,25 @@ docker exec -it agentos-gateway cat /etc/agentos/gateway.conf
 
 ```bash
 # 查看资源使用
-docker stats agentos-gateway
+docker stats agentrt-gateway
 
 # 分析CPU使用
-docker exec agentos-gateway top
+docker exec agentrt-gateway top
 
 # 如果内存持续增长，可能是内存泄漏
 # 尝试重启并观察:
-docker restart agentos-gateway
-docker stats --no-stream agentos-gateway
+docker restart agentrt-gateway
+docker stats --no-stream agentrt-gateway
 ```
 
 ### 网络问题
 
 ```bash
 # 测试容器间连通性
-docker exec agentos-gateway ping llm-service
+docker exec agentrt-gateway ping llm-service
 
 # 检查端口绑定
-docker port agentos-gateway
+docker port agentrt-gateway
 
 # 查看网络详情
 docker network inspect bridge
@@ -438,19 +438,19 @@ services:
   gateway:
     environment:
       # 减少日志输出
-      - AGENTOS_LOG_LEVEL=warn
+      - AGENTRT_LOG_LEVEL=warn
       
       # 调整线程池大小
-      - AGENTOS_EXECUTION_THREADS=8
+      - AGENTRT_EXECUTION_THREADS=8
       
       # 启用缓存
-      - AGENTOS_LLM_CACHE_ENABLED=true
-      - AGENTOS_LLM_CACHE_SIZE=2000
+      - AGENTRT_LLM_CACHE_ENABLED=true
+      - AGENTRT_LLM_CACHE_SIZE=2000
     
     # 使用tmpfs减少磁盘I/O
     tmpfs:
       - /tmp:size=64M,mode=1777
-      - /var/run/agentos:size=16M,mode=1777
+      - /var/run/agentrt:size=16M,mode=1777
 ```
 
 ---
@@ -493,9 +493,9 @@ docker-compose logs --tail=50
 
 ## 📞 技术支持
 
-- **Docker Hub**: https://hub.docker.com/r/spharx/agentos
+- **Docker Hub**: https://hub.docker.com/r/spharx/agentrt
 - **GitHub Issues**: https://github.com/spharx/AgentRT/issues?q=is%3Aissue+is%3Aopen+label%3Adocker
-- **文档**: https://docs.agentos.dev/docker
+- **文档**: https://docs.agentrt.dev/docker
 
 ---
 

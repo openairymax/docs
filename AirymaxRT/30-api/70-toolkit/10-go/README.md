@@ -29,7 +29,7 @@ Go SDK 将 Airymax 的五维正交设计原则深度融入 Go 语言特性中：
 ## 📦 安装
 
 ```bash
-go get github.com/spharx/agentos-go
+go get github.com/spharx/agentrt-go
 ```
 
 ---
@@ -46,23 +46,23 @@ import (
     "fmt"
     "log"
     
-    "github.com/spharx/agentos-go"
+    "github.com/spharx/agentrt-go"
 )
 
 func main() {
     ctx := context.Background()
     
     // 创建 Agent 配置
-    manager := &agentos.AgentConfig{
+    manager := &agentrt.AgentConfig{
         Name:                "my_agent",
         Description:         "My first Airymax agent",
-        Type:                agentos.AgentTypeChat,
+        Type:                agentrt.AgentTypeChat,
         MaxConcurrentTasks:  8,
         TaskQueueDepth:      64,
     }
     
     // 创建 Agent
-    agent, err := agentos.NewAgent(ctx, manager)
+    agent, err := agentrt.NewAgent(ctx, manager)
     if err != nil {
         log.Fatalf("创建 Agent 失败: %v", err)
     }
@@ -74,9 +74,9 @@ func main() {
     }
     
     // 提交任务
-    taskID, err := agent.SubmitTask(ctx, &agentos.TaskRequest{
+    taskID, err := agent.SubmitTask(ctx, &agentrt.TaskRequest{
         Description: "分析用户反馈数据",
-        Priority:    agentos.PriorityNormal,
+        Priority:    agentrt.PriorityNormal,
         InputParams: map[string]interface{}{
             "data_source": "feedback.csv",
         },
@@ -108,15 +108,15 @@ import (
     "fmt"
     "log"
     
-    "github.com/spharx/agentos-go"
+    "github.com/spharx/agentrt-go"
 )
 
 func main() {
     ctx := context.Background()
-    client := agentos.NewMemoryClient()
+    client := agentrt.NewMemoryClient()
     
     // 写入记忆
-    recordID, err := client.Write(ctx, &agentos.MemoryWriteRequest{
+    recordID, err := client.Write(ctx, &agentrt.MemoryWriteRequest{
         Content:    "用户对新产品功能表示满意，特别是实时协作功能",
         Metadata:   map[string]interface{}{"type": "user_feedback", "rating": 5},
         Importance: 0.8,
@@ -129,7 +129,7 @@ func main() {
     fmt.Printf("记忆写入成功: %s\n", recordID)
     
     // 语义检索
-    results, err := client.Query(ctx, &agentos.MemoryQuery{
+    results, err := client.Query(ctx, &agentrt.MemoryQuery{
         Text:              "用户对协作功能的反馈",
         Limit:             10,
         SimilarityThreshold: 0.6,
@@ -371,20 +371,20 @@ if err != nil {
 ## ⚠️ 错误处理
 
 ```go
-import "github.com/spharx/agentos-go"
+import "github.com/spharx/agentrt-go"
 
 taskID, err := agent.SubmitTask(ctx, req)
 if err != nil {
-    var agentErr *agentos.Error
+    var agentErr *agentrt.Error
     if errors.As(err, &agentErr) {
         log.Printf("错误码: 0x%04X", agentErr.Code)
         log.Printf("错误信息: %s", agentErr.Message)
         log.Printf("trace_id: %s", agentErr.TraceID)
         
         switch agentErr.Code {
-        case agentos.ErrInvalidArgument:
+        case agentrt.ErrInvalidArgument:
             log.Println("参数无效")
-        case agentos.ErrResourceLimit:
+        case agentrt.ErrResourceLimit:
             log.Println("资源限制超出")
         }
     }
@@ -402,15 +402,15 @@ import (
     "context"
     "testing"
     
-    "github.com/spharx/agentos-go"
-    "github.com/spharx/agentos-go/testing"
+    "github.com/spharx/agentrt-go"
+    "github.com/spharx/agentrt-go/testing"
 )
 
 func TestAgentSubmitTask(t *testing.T) {
     mockAgent := testing.NewMockAgent()
     ctx := context.Background()
     
-    taskID, err := mockAgent.SubmitTask(ctx, &agentos.TaskRequest{
+    taskID, err := mockAgent.SubmitTask(ctx, &agentrt.TaskRequest{
         Description: "test task",
     })
     

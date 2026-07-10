@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）工程基线
 
-> **文档定位**: agentrt-linux（AirymaxOS）工程基线（Engineering Baseline）的完整定义与落地规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **父文档**: [架构设计](README.md)
+> **文档定位**：agentrt-linux（AirymaxOS）工程基线（Engineering Baseline）的完整定义与落地规范\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **父文档**：[架构设计](README.md)
 
 ---
 
@@ -289,7 +289,7 @@ agentrt-linux 工程基线受以下工程铁律约束：
 
 | 铁律 | 内容 |
 |------|------|
-| IRON-9 | agentrt 和 agentrt-linux 同源且部分代码共享（IRON-9 v2：共享契约层代码完全共享 + 语义同源层 API 同源实现独立 + 完全独立层各自独立） |
+| IRON-9 | agentrt 和 agentrt-linux 同源且部分代码共享（IRON-9 v2：共享契约层代码完全共享 + 语义同源层高层 API 语义同源（签名因抽象层级独立演进） + 完全独立层各自独立） |
 | IRON-10 | 内核基线锁定，禁止引用未来内核专属特性作为 6.6 原生能力 |
 | BAN-361 | 禁止未来内核特性误引 |
 | ACC-OS04 | Grep 扫描未来内核误引残留（每次发布执行） |
@@ -558,6 +558,84 @@ agentrt-linux 工程基线声明以下兼容性：
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [架构决策记录](05-adrs.md)：14 个核心 ADR（含 ADR-011~014：架构模型论证 / 微内核路线 / 版本基线锁定 / 微内核来源单一化）
 - [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
+
+---
+
+## 12.1 IRON-9 v2 三层共享模型
+
+> **OS-ARCH-007**： 工程基线在 agentrt（CMake / libc / POSIX）与 agentrt-linux（Kbuild / Kconfig / Linux 6.6）间遵循 IRON-9 v2 三层共享模型——编码契约经 [SC] 共享，构建系统与平台适配落入 [IND] 各自独立，禁止在双端工程基线间引入构建兼容垫片。
+
+### 三层模型概览
+
+| 层次 | 共享程度 | 工程基线映射 |
+|------|---------|-------------|
+| **[SC] 共享契约层** | 完全共享代码 | 6 头文件编码契约（OLK-6.6：Tab 8 / snake_case / 最小 typedef / K&R / 80 列 / errno+goto / kernel-doc），物理宿主 `kernel/include/airymax/`，`-I` 引用 |
+| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt CMake 模块 ↔ agentrt-linux 8 子仓 Kbuild 的工程规范同源 |
+| **[IND] 完全独立层** | 完全独立 | 构建系统（CMake vs Kbuild + Kconfig）+ 平台适配（libc / POSIX vs Linux 6.6 内核 API） |
+
+### [SC] 共享契约层——6 个头文件在工程基线中的角色
+
+| 头文件 | 工程基线角色 | 编码契约 | 消费方 |
+|--------|-------------|---------|--------|
+| `sched.h` | magic 0x41475453 'AGTS' + SCHED_EXT=7 + MAC_MAX_AGENTS=1024 | kernel-doc + snake_case | kernel / cognition |
+| `ipc.h` | magic 0x41524531 'ARE1' + 128B 消息头 | kernel-doc + errno | kernel / services |
+| `bpf_struct_ops.h` | struct_ops 4 状态机 + common_value 16B | kernel-doc + K&R | kernel / cognition |
+| `security_types.h` | 38 cap + 254 LSM + Cupolas blob | kernel-doc + minimal typedef | kernel / security |
+| `memory_types.h` | MemoryRovol L1-L4 + GFP 掩码 | kernel-doc + 80 列 | kernel / memory |
+| `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 | kernel-doc + snake_case | kernel / cognition |
+
+### [SS] 语义同源层——工程基线 agentrt ↔ agentrt-linux 映射
+
+| 工程维度 | agentrt 实现（用户态） | agentrt-linux 实现（内核态） | 同源点 |
+|---------|----------------------|---------------------------|--------|
+| 构建规范 | CMake + libc / POSIX | Kbuild + Kconfig + Linux 6.6 | OLK-6.6 编码风格 |
+| 子仓治理 | 7 大模块（CMake target） | 8 子仓（Kconfig menu） | 模块边界同源 |
+| 版本基线 | 跨平台独立演进 | 1.x.x 锁定 Linux 6.6 / 2.x.x 升级 7.1 | ADR-013 双基线 |
+| 文档体系 | Markdown + kernel-doc | Markdown + kernel-doc | 文档规范同源 |
+| AI 原生 | 用户态 Wasm 3.0 | 内核态 Wasm 3.0 + eBPF | Wasm 同源 |
+
+### [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 构建系统 | CMake | Kbuild + Kconfig | 工具链差异 |
+| 平台适配 | libc / POSIX 跨三平台 | Linux 6.6 内核 API | IRON-1 二进制兼容约束 |
+| 内核基线 | 无（用户态运行时） | Linux 6.6 LTS 锁定 | 内核态独有 |
+| 调度原语 | 用户态协程 | sched_ext + eBPF | 跨平台约束 |
+
+### 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态（工程基线）"
+        RT_CMAKE[CMake 构建]
+        RT_LIBC[libc / POSIX]
+        RT_DOC[Markdown + kernel-doc]
+    end
+
+    subgraph "agentrt-linux 内核态（工程基线）"
+        OS_KBUILD[Kbuild + Kconfig]
+        OS_LINUX[Linux 6.6 内核 API]
+        OS_DOC[Markdown + kernel-doc]
+    end
+
+    subgraph "[SC] 共享契约层（6 头文件）"
+        SC[OLK-6.6 编码契约<br/>Tab 8 / snake_case / K&R / 80 列]
+    end
+
+    RT_CMAKE -.->|"风格同源 [SS]"| OS_KBUILD
+    RT_LIBC -.->|"独立 [IND]"| OS_LINUX
+    RT_DOC -.->|"规范同源 [SS]"| OS_DOC
+
+    RT_CMAKE ==>|"共享契约 [SC]"| SC
+    OS_KBUILD ==>|"共享契约 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_CMAKE fill:#e3f2fd,stroke:#1565c0
+    style OS_KBUILD fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-ARCH-008**： 工程基线跨态协作遵循"契约共享、构建独立"原则——6 头文件编码契约经 [SC] 直接共享，CMake 与 Kbuild 经 [SS] 风格同源但工具链独立落入 [IND]，禁止生成 `build_compat shim` 或构建兼容垫片。
 
 ---
 

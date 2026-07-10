@@ -2,9 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）架构设计
 
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **设计原则**: 微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源性
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-06\
+> **设计原则**：微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源性
+
+---
 
 ## 1. 设计哲学
 
@@ -14,7 +16,7 @@ agentrt-linux 采用三大设计支柱:
 
 **核心原则**: 最小化特权态代码（Liedtke minimality principle）
 
-> **ADR-014 约束**: 微内核设计思想唯一来源为 seL4，不引入 Zircon / Minix3 / 其他微内核架构，以避免工程思想在哲学和逻辑学层面的多元化冲突。
+> **ADR-014 约束**： 微内核设计思想唯一来源为 seL4，不引入 Zircon / Minix3 / 其他微内核架构，以避免工程思想在哲学和逻辑学层面的多元化冲突。
 
 | 原则 | 含义 | agentrt-linux 落地 |
 |---|---|---|
@@ -105,7 +107,7 @@ agentrt-linux 采用三大设计支柱:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-> **概念图澄清**: 上图为 agentrt-linux 整体栈的概念性展示（4 层），用于呈现 agentrt 与 agentrt-linux 的运行关系。
+> **概念图澄清**： 上图为 agentrt-linux 整体栈的概念性展示（4 层），用于呈现 agentrt 与 agentrt-linux 的运行关系。
 > agentrt-linux 内部 8 子仓的依赖关系采用 **7 层架构模型**（L1-L7），权威定义见 [README.md §3](README.md#3-架构层次模型)。
 > 7 层架构模型**不包含** agentrt（agentrt 是外部组件，运行于 agentrt-linux 之上，见 [ADR-011](05-adrs.md#adr-011-7-层架构模型范围界定与-agentrt-用户态关系论证)）。
 > 完整技术论证见 [C-2.3 架构模型论证报告](../../../docs-closed/agentrt-linux/_analysis_0.3.0/03-architecture-model-analysis.md)（VP-4 决策确认）。
@@ -178,7 +180,7 @@ agentrt-linux 的 IPC 子系统 (airymaxos-kernel + airymaxos-services):
 
 ### 4.1 微内核理论（seL4，ADR-014）
 
-> **ADR-014 约束**: 微内核设计思想唯一来源为 seL4。
+> **ADR-014 约束**： 微内核设计思想唯一来源为 seL4。
 
 | 理论 | 来源 | 应用 |
 |---|---|---|
@@ -232,6 +234,101 @@ agentrt-linux 的 IPC 子系统 (airymaxos-kernel + airymaxos-services):
 | ADR-012 | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发） | 2026-07-09 |
 | ADR-013 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1） | 2026-07-09 |
 | ADR-014 | 微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3） | 2026-07-09 |
+
+---
+
+## 6. IRON-9 v2 三层共享模型
+
+> **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v2 三层共享模型——[SC] 共享契约层完全共享代码（6 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
+
+### 6.1 三层模型概览
+
+| 层次 | 共享程度 | 本文档涉及内容 |
+|------|---------|---------------|
+| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件 `include/airymax/{sched,ipc,bpf_struct_ops,memory_types,security_types,cognition_types}.h`，物理宿主在 airymaxos-kernel 子仓 `kernel/include/airymax/`，其他子仓通过 `-I` 引用 |
+| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
+| **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_ext/io_uring/eBPF） |
+
+### 6.2 [SC] 共享契约层——6 个头文件在本架构层的角色
+
+| 头文件 | 在系统架构中的角色 | 消费方 |
+|--------|-------------------|--------|
+| `sched.h` | 任务描述符 magic（0x41475453 'AGTS'）+ SCHED_EXT=7 调度类编号 + vtime 衰减公式 + 优先级范围 0-139 | kernel / cognition |
+| `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`agentrt_ipc_msg_hdr_t`）+ SQE/CQE 操作码 | kernel / services |
+| `bpf_struct_ops.h` | struct_ops 状态机 4 状态枚举（INIT/INUSE/TOBEFREE/READY）+ common_value 16B 布局 | kernel / cognition |
+| `security_types.h` | POSIX capability 38 ID 枚举 + LSM 钩子 254 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
+| `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | kernel / memory |
+| `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
+
+### 6.3 [SS] 语义同源层——agentrt 7 大模块 ↔ agentrt-linux 8 子仓映射
+
+| agentrt 模块（用户态） | agentrt-linux 子仓（内核态） | 同源 API | 实现差异 |
+|----------------------|---------------------------|---------|---------|
+| MicroCoreRT（atoms/corekern） | airymaxos-kernel | sched_ext 17 项 + eBPF 11 项同源 API | 用户态链表 vs 内核 BPF 回调 |
+| AgentsIPC（atoms/ipc） | airymaxos-kernel + airymaxos-services | io_uring 8 项同源 API | 用户态 mmap vs 内核 io_uring_setup() |
+| Cupolas（cupolas） | airymaxos-security | capability 4 项同源 API（mint/revoke/derive/copy） | 用户态 Cupolas vs 内核 CNode（ES-SEL4） |
+| MemoryRovol（memoryrovol） | airymaxos-memory | MemoryRovol L1-L4 4 层接口同源 | 用户态 mmap+msync vs 内核 PMEM+CXL |
+| CoreLoopThree（atoms/coreloopthree） | airymaxos-cognition | 三阶段枚举 + Thinkdual 模式同源 | 用户态协程 vs 内核 kthread |
+| Frameworks（atoms/frameworks） | airymaxos-cognition + airymaxos-cloudnative | DAG 工作流编排同源 | 用户态线程池 vs 内核 kthread_pool |
+| Daemons（daemons） | airymaxos-services | 12 daemons systemd 单元同源 | 用户态进程 vs 内核 kthread/daemon |
+
+### 6.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 调度器核心 | 用户态 priority queue + 协程 | 内核 BPF struct_ops + sched_ext | 跨平台约束（macOS/Windows 无 sched_ext） |
+| IPC 传输层 | 用户态 POSIX MQ + mmap | 内核 io_uring + SQPOLL | 内核态性能优势 |
+| 安全执行 | 用户态 Landlock + seccomp | 内核 LSM + Landlock + capability | 内核态安全纵深 |
+| 内存后端 | 用户态 malloc/mmap | 内核 slab/buddy/MGLRU | 内核态内存管理 |
+| 认知调度 | 用户态 event loop | 内核 kthread + EEVDF | 内核态调度优先级 |
+| 构建系统 | CMake | Kbuild + Kconfig | 工具链差异 |
+| 平台适配 | libc/POSIX 跨三平台 | Linux 6.6 内核 API | IRON-1 二进制兼容约束 |
+
+### 6.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态（跨 Linux/macOS/Windows）"
+        RT_CORE[MicroCoreRT<br/>atoms/corekern]
+        RT_IPC[AgentsIPC<br/>atoms/ipc]
+        RT_SEC[Cupolas<br/>cupolas]
+        RT_MEM[MemoryRovol<br/>memoryrovol]
+        RT_COG[CoreLoopThree<br/>atoms/coreloopthree]
+    end
+
+    subgraph "agentrt-linux 内核态（Linux 6.6）"
+        OS_KERN[airymaxos-kernel<br/>sched_ext + eBPF + io_uring]
+        OS_SEC[airymaxos-security<br/>LSM + Landlock + cap]
+        OS_MEM[airymaxos-memory<br/>MGLRU + PMEM + CXL]
+        OS_COG[airymaxos-cognition<br/>kthread + Wasm 3.0]
+    end
+
+    subgraph "[SC] 共享契约层（6 头文件）"
+        SC[sched.h / ipc.h / bpf_struct_ops.h<br/>security_types.h / memory_types.h / cognition_types.h]
+    end
+
+    RT_CORE -.->|"API 同源 [SS]"| OS_KERN
+    RT_IPC -.->|"API 同源 [SS]"| OS_KERN
+    RT_SEC -.->|"API 同源 [SS]"| OS_SEC
+    RT_MEM -.->|"API 同源 [SS]"| OS_MEM
+    RT_COG -.->|"API 同源 [SS]"| OS_COG
+
+    RT_CORE ==>|"共享代码 [SC]"| SC
+    RT_IPC ==>|"共享代码 [SC]"| SC
+    RT_SEC ==>|"共享代码 [SC]"| SC
+    RT_MEM ==>|"共享代码 [SC]"| SC
+    RT_COG ==>|"共享代码 [SC]"| SC
+    OS_KERN ==>|"共享代码 [SC]"| SC
+    OS_SEC ==>|"共享代码 [SC]"| SC
+    OS_MEM ==>|"共享代码 [SC]"| SC
+    OS_COG ==>|"共享代码 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_CORE fill:#e3f2fd,stroke:#1565c0
+    style OS_KERN fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-ARCH-002**： 跨态协作遵循"零适配层天然契合"原则——agentrt 与 agentrt-linux 通过 [SC] 共享契约层 6 个头文件直接对接，不生成 `agentrt_compat_aliases.h` 或任何兼容层。在 Linux 平台上，agentrt 可选启用 agentrt-linux 内核加速路径（通过 ops 注入机制，非强制）；在 macOS/Windows 上仅走用户态路径。
 
 ---
 

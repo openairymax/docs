@@ -38,7 +38,7 @@ Airymax Gateway 是 Airymax 平台的统一接入层，负责将外部请求转�
 ### 架构定位
 
 ```
-外部客户端 → Gateway（协议转换层） → agentos/atoms/syscall（系统调用层）
+外部客户端 → Gateway（协议转换层） → agentrt/atoms/syscall（系统调用层）
 ```
 
 Gateway 只做协议转换，零业务逻辑，所有业务能力通过底层 syscall 接口暴露。
@@ -59,13 +59,13 @@ Gateway 只做协议转换，零业务逻辑，所有业务能力通过底层 sy
 
 ```bash
 # 使用默认配置启动（HTTP: 8080, WS: 8081）
-agentos-gateway
+agentrt-gateway
 
 # 指定端口启动
-agentos-gateway -h 0.0.0.0 -p 8080 -w 8081
+agentrt-gateway -h 0.0.0.0 -p 8080 -w 8081
 
 # 从配置文件启动
-agentos-gateway -c /etc/agentos/gateway.conf
+agentrt-gateway -c /etc/agentrt/gateway.conf
 ```
 
 ---
@@ -97,8 +97,8 @@ curl -X POST http://localhost:8080/ \
 SDK 支持通过环境变量设置认证信息：
 
 ```bash
-export AGENTOS_ENDPOINT="http://localhost:8080"
-export AGENTOS_API_KEY="sk-your-api-key-here"
+export AGENTRT_ENDPOINT="http://localhost:8080"
+export AGENTRT_API_KEY="sk-your-api-key-here"
 ```
 
 ---
@@ -147,7 +147,7 @@ export AGENTOS_API_KEY="sk-your-api-key-here"
 {
   "jsonrpc": "2.0",
   "result": {
-    "task_id": "agentos-0000000000000001-00000001",
+    "task_id": "agentrt-0000000000000001-00000001",
     "status": 1,
     "message": "Task accepted and queued"
   },
@@ -197,7 +197,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "task.status",
   "params": {
-    "task_id": "agentos-0000000000000001-00000001"
+    "task_id": "agentrt-0000000000000001-00000001"
   },
   "id": 2
 }
@@ -238,7 +238,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "task.status",
-    "params": {"task_id": "agentos-0000000000000001-00000001"},
+    "params": {"task_id": "agentrt-0000000000000001-00000001"},
     "id": 2
   }'
 ```
@@ -256,7 +256,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "task.result",
   "params": {
-    "task_id": "agentos-0000000000000001-00000001",
+    "task_id": "agentrt-0000000000000001-00000001",
     "timeout_ms": 30000
   },
   "id": 3
@@ -274,7 +274,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "task_id": "agentos-0000000000000001-00000001",
+    "task_id": "agentrt-0000000000000001-00000001",
     "status": 2,
     "result": "{\"output\":\"processed\",\"exit_code\":0}"
   },
@@ -297,7 +297,7 @@ curl -X POST http://localhost:8080/ \
     "jsonrpc": "2.0",
     "method": "task.result",
     "params": {
-      "task_id": "agentos-0000000000000001-00000001",
+      "task_id": "agentrt-0000000000000001-00000001",
       "timeout_ms": 30000
     },
     "id": 3
@@ -317,7 +317,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "task.cancel",
   "params": {
-    "task_id": "agentos-0000000000000001-00000001"
+    "task_id": "agentrt-0000000000000001-00000001"
   },
   "id": 4
 }
@@ -343,7 +343,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "task.cancel",
-    "params": {"task_id": "agentos-0000000000000001-00000001"},
+    "params": {"task_id": "agentrt-0000000000000001-00000001"},
     "id": 4
   }'
 ```
@@ -381,7 +381,7 @@ curl -X POST http://localhost:8080/ \
   "result": {
     "tasks": [
       {
-        "task_id": "agentos-0000000000000001-00000001",
+        "task_id": "agentrt-0000000000000001-00000001",
         "status": 2,
         "created_at": 1718700000
       }
@@ -431,8 +431,8 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "result": {
     "agent_ids": [
-      "agentos-0000000000000001-00000003",
-      "agentos-0000000000000001-00000004"
+      "agentrt-0000000000000001-00000003",
+      "agentrt-0000000000000001-00000004"
     ],
     "total": 2
   },
@@ -477,7 +477,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "agent_id": "agentos-0000000000000001-00000005"
+    "agent_id": "agentrt-0000000000000001-00000005"
   },
   "id": 2
 }
@@ -511,7 +511,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "agent.info",
   "params": {
-    "agent_id": "agentos-0000000000000001-00000005",
+    "agent_id": "agentrt-0000000000000001-00000005",
     "input": "可选的输入数据"
   },
   "id": 3
@@ -529,7 +529,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "agent_id": "agentos-0000000000000001-00000005",
+    "agent_id": "agentrt-0000000000000001-00000005",
     "output": "invocation processed",
     "processing_time_ms": 5.2
   },
@@ -546,7 +546,7 @@ curl -X POST http://localhost:8080/ \
     "jsonrpc": "2.0",
     "method": "agent.info",
     "params": {
-      "agent_id": "agentos-0000000000000001-00000005",
+      "agent_id": "agentrt-0000000000000001-00000005",
       "input": "Hello, agent!"
     },
     "id": 3
@@ -566,7 +566,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "agent.start",
   "params": {
-    "agent_id": "agentos-0000000000000001-00000005"
+    "agent_id": "agentrt-0000000000000001-00000005"
   },
   "id": 4
 }
@@ -578,7 +578,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "agent_id": "agentos-0000000000000001-00000005",
+    "agent_id": "agentrt-0000000000000001-00000005",
     "status": "started"
   },
   "id": 4
@@ -593,7 +593,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "agent.start",
-    "params": {"agent_id": "agentos-0000000000000001-00000005"},
+    "params": {"agent_id": "agentrt-0000000000000001-00000005"},
     "id": 4
   }'
 ```
@@ -611,7 +611,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "agent.stop",
   "params": {
-    "agent_id": "agentos-0000000000000001-00000005"
+    "agent_id": "agentrt-0000000000000001-00000005"
   },
   "id": 5
 }
@@ -637,7 +637,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "agent.stop",
-    "params": {"agent_id": "agentos-0000000000000001-00000005"},
+    "params": {"agent_id": "agentrt-0000000000000001-00000005"},
     "id": 5
   }'
 ```
@@ -675,7 +675,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "record_id": "agentos-0000000000000001-0000000a"
+    "record_id": "agentrt-0000000000000001-0000000a"
   },
   "id": 1
 }
@@ -730,7 +730,7 @@ curl -X POST http://localhost:8080/ \
   "result": {
     "results": [
       {
-        "record_id": "agentos-0000000000000001-0000000a",
+        "record_id": "agentrt-0000000000000001-0000000a",
         "score": 1.0
       }
     ],
@@ -766,7 +766,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "memory.query",
   "params": {
-    "record_id": "agentos-0000000000000001-0000000a"
+    "record_id": "agentrt-0000000000000001-0000000a"
   },
   "id": 3
 }
@@ -797,7 +797,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "memory.query",
-    "params": {"record_id": "agentos-0000000000000001-0000000a"},
+    "params": {"record_id": "agentrt-0000000000000001-0000000a"},
     "id": 3
   }'
 ```
@@ -833,7 +833,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "session_id": "agentos-0000000000000001-0000000b"
+    "session_id": "agentrt-0000000000000001-0000000b"
   },
   "id": 1
 }
@@ -865,7 +865,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "session.get",
   "params": {
-    "session_id": "agentos-0000000000000001-0000000b"
+    "session_id": "agentrt-0000000000000001-0000000b"
   },
   "id": 2
 }
@@ -877,7 +877,7 @@ curl -X POST http://localhost:8080/ \
 {
   "jsonrpc": "2.0",
   "result": {
-    "session_id": "agentos-0000000000000001-0000000b",
+    "session_id": "agentrt-0000000000000001-0000000b",
     "metadata": "{\"user\":\"admin\"}",
     "age_seconds": 120.5
   },
@@ -893,7 +893,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "session.get",
-    "params": {"session_id": "agentos-0000000000000001-0000000b"},
+    "params": {"session_id": "agentrt-0000000000000001-0000000b"},
     "id": 2
   }'
 ```
@@ -911,7 +911,7 @@ curl -X POST http://localhost:8080/ \
   "jsonrpc": "2.0",
   "method": "session.delete",
   "params": {
-    "session_id": "agentos-0000000000000001-0000000b"
+    "session_id": "agentrt-0000000000000001-0000000b"
   },
   "id": 3
 }
@@ -937,7 +937,7 @@ curl -X POST http://localhost:8080/ \
   -d '{
     "jsonrpc": "2.0",
     "method": "session.delete",
-    "params": {"session_id": "agentos-0000000000000001-0000000b"},
+    "params": {"session_id": "agentrt-0000000000000001-0000000b"},
     "id": 3
   }'
 ```
@@ -958,7 +958,7 @@ curl -X POST http://localhost:8080/ \
   "method": "skill.load",
   "params": {
     "skill_name": "code_review",
-    "skill_path": "/opt/agentos/skills/code_review.so",
+    "skill_path": "/opt/agentrt/skills/code_review.so",
     "config": "{\"language\":\"python\",\"severity\":\"strict\"}"
   },
   "id": 1
@@ -995,7 +995,7 @@ curl -X POST http://localhost:8080/ \
     "method": "skill.load",
     "params": {
       "skill_name": "code_review",
-      "skill_path": "/opt/agentos/skills/code_review.so"
+      "skill_path": "/opt/agentrt/skills/code_review.so"
     },
     "id": 1
   }'
@@ -1545,7 +1545,7 @@ MCP（Model Context Protocol）是用于 AI 模型与工具/资源交互的标�
       "resources": {"subscribe": true, "listChanged": true}
     },
     "serverInfo": {
-      "name": "agentos-gateway",
+      "name": "agentrt-gateway",
       "version": "1.0.0"
     }
   },
@@ -1900,7 +1900,7 @@ A2A（Agent-to-Agent）协议用于 Agent 之间的通信与协作。Airymax Gat
 
 ```json
 {
-  "name": "agentos-a2a",
+  "name": "agentrt-a2a",
   "version": "0.3.0",
   "url": "http://localhost:8080/a2a",
   "capabilities": {
@@ -1960,7 +1960,7 @@ curl -X POST http://localhost:8080/a2a \
 {
   "jsonrpc": "2.0",
   "result": {
-    "agent_id": "agentos-0000000000000001-00000010",
+    "agent_id": "agentrt-0000000000000001-00000010",
     "status": "registered"
   },
   "id": 2
@@ -2052,7 +2052,7 @@ curl -X POST http://localhost:8080/a2a/task \
   "method": "negotiate.propose",
   "params": {
     "proposal": "{\"action\":\"share_resource\",\"resource\":\"gpu-0\"}",
-    "target_agent": "agentos-0000000000000001-00000010"
+    "target_agent": "agentrt-0000000000000001-00000010"
   },
   "id": 4
 }
@@ -2081,7 +2081,7 @@ curl -X POST http://localhost:8080/a2a \
     "method": "negotiate.propose",
     "params": {
       "proposal": "{\"action\":\"share_resource\",\"resource\":\"gpu-0\"}",
-      "target_agent": "agentos-0000000000000001-00000010"
+      "target_agent": "agentrt-0000000000000001-00000010"
     },
     "id": 4
   }'
@@ -2316,7 +2316,7 @@ curl -X POST http://localhost:8080/v1/embeddings \
     {
       "id": "gpt-4",
       "object": "model",
-      "owned_by": "agentos"
+      "owned_by": "agentrt"
     }
   ]
 }
@@ -2562,7 +2562,7 @@ WebSocket 支持 JSON-RPC 2.0 通知（无需 `id` 字段的请求），用于�
   "jsonrpc": "2.0",
   "method": "task.status_changed",
   "params": {
-    "task_id": "agentos-0000000000000001-00000001",
+    "task_id": "agentrt-0000000000000001-00000001",
     "status": 2
   }
 }
@@ -2670,13 +2670,13 @@ curl http://localhost:8080/metrics
 
 | 环境变量 | 默认值 | 说明 |
 |:---------|:-------|:-----|
-| `AGENTOS_ENDPOINT` | `http://127.0.0.1:8080` | Gateway 端点地址 |
-| `AGENTOS_API_KEY` | （空） | API 认证密钥 |
-| `AGENTOS_MAX_TASKS` | `256` | 最大任务数 |
-| `AGENTOS_MAX_RECORDS` | `1024` | 最大记忆记录数 |
-| `AGENTOS_MAX_SESSIONS` | `64` | 最大会话数 |
-| `AGENTOS_MAX_AGENTS` | `128` | 最大 Agent 数 |
-| `AGENTOS_RATE_LIMIT_TABLE_SIZE` | `1021` | 速率限制哈希表大小 |
+| `AGENTRT_ENDPOINT` | `http://127.0.0.1:8080` | Gateway 端点地址 |
+| `AGENTRT_API_KEY` | （空） | API 认证密钥 |
+| `AGENTRT_MAX_TASKS` | `256` | 最大任务数 |
+| `AGENTRT_MAX_RECORDS` | `1024` | 最大记忆记录数 |
+| `AGENTRT_MAX_SESSIONS` | `64` | 最大会话数 |
+| `AGENTRT_MAX_AGENTS` | `128` | 最大 Agent 数 |
+| `AGENTRT_RATE_LIMIT_TABLE_SIZE` | `1021` | 速率限制哈希表大小 |
 
 ---
 

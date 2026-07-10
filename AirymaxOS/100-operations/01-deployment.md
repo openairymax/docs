@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）部署体系
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）运维体系第 1 卷——部署工程。本文档规定从裸机到可用 Agent 工作负载的完整交付链路：RPM 包格式、dnf 包管理器、ISO 镜像制作、Kickstart 自动化安装、PXE 网络安装、系统初始化、12 daemons 部署、DevStation 部署、版本升级路径与回滚机制。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt daemons（12 个用户态服务）+ Linux 6.6 systemd 集成 + MicroCoreRT 极简内核契约
-> **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 五维正交 24 原则 + S-1 反馈闭环
-> **核心约束**: IRON-9 v2 同源且部分代码共享——与 agentrt 同源语义，agentrt-linux 独立承担发行版部署责任
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）运维体系第 1 卷——部署工程。本文档规定从裸机到可用 Agent 工作负载的完整交付链路：RPM 包格式、dnf 包管理器、ISO 镜像制作、Kickstart 自动化安装、PXE 网络安装、系统初始化、12 daemons 部署、DevStation 部署、版本升级路径与回滚机制。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt daemons（12 个用户态服务）+ Linux 6.6 systemd 集成 + MicroCoreRT 极简内核契约
+> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 五维正交 24 原则 + S-1 反馈闭环
+> **核心约束**： IRON-9 v2 同源且部分代码共享——与 agentrt 同源语义，agentrt-linux 独立承担发行版部署责任
 
 ---
 
@@ -589,7 +589,7 @@ struct agentsipc_hdr {
 };
 ```
 
-**约束**：`AGENT_TASK_MAGIC` 与 `AGENTSIPC_MAGIC` 的任何变更必须经协议委员会签字（OS-OPS-024），且两端必须同步升级到同一头文件版本；部署时 systemd unit 不得绕过 [SC] 层直接操作任务描述符或 IPC 消息头。
+**约束**：`AGENT_TASK_MAGIC` 与 `AGENTSIPC_MAGIC` 的任何变更必须经工程规范委员会签字（OS-OPS-024），且两端必须同步升级到同一头文件版本；部署时 systemd unit 不得绕过 [SC] 层直接操作任务描述符或 IPC 消息头。
 
 #### 13.3.3 [SS] 语义同源层
 
@@ -638,6 +638,121 @@ graph LR
 
 部署协作流：agentrt 12 daemons 以 `*_d` 二进制名同源交付，部署到 agentrt-linux 时通过 [SC] 层的 `sched.h` 完成任务注册（`AGENT_TASK_MAGIC` 校验任务描述符完整性），通过 `ipc.h` 的 128B 消息头实现 daemon 间通信。agentrt-linux 独立承担 systemd 单元编排（[SS] 语义同源——unit 文件三段式对应 supervisor 配置语义）与 RPM/initramfs/镜像构建（[IND] 完全独立），两端在部署阶段通过同源二进制名与共享 IPC 协议实现无适配层互操作。
 
+### 13.4 12 daemons systemd 生命周期管理
+
+本节定义 agentrt 12 daemons 在 systemd 下的完整生命周期管理——通过依赖排序、崩溃恢复策略与 `agentrt.target` 聚合单元，实现启动有序、崩溃自愈、依赖无环的运维目标。该节是 §8 12 daemons 部署的深化，遵循 IRON-9 v2 同源且部分代码共享原则：daemon 二进制名 `*_d` 同源，systemd unit 文件独立编排。
+
+#### 13.4.1 12 daemons 依赖排序表
+
+12 daemons 按分层依赖启动，依赖图必须无环（OS-STD-109），`After=` 表达顺序、`Requires=` 表达强依赖、`Wants=` 表达弱依赖：
+
+| 启动序号 | daemon | systemd unit | 依赖的 daemon | After= | Requires= | Wants= |
+|---------|--------|--------------|---------------|--------|-----------|--------|
+| 1 | `gateway_d` | `agentrt-gateway.service` | 无 | `network-online.target` | — | — |
+| 2 | `llm_d` | `agentrt-llm.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 3 | `tool_d` | `agentrt-tool.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 4 | `sched_d` | `agentrt-sched.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 5 | `market_d` | `agentrt-market.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 6 | `monit_d` | `agentrt-monit.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 7 | `channel_d` | `agentrt-channel.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 8 | `info_d` | `agentrt-info.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 9 | `notify_d` | `agentrt-notify.service` | `monit_d` | `agentrt-monit.service` | `agentrt-monit.service` | — |
+| 10 | `observe_d` | `agentrt-observe.service` | `monit_d` | `agentrt-monit.service` | `agentrt-monit.service` | — |
+| 11 | `hook_d` | `agentrt-hook.service` | `channel_d` + `notify_d` | `agentrt-channel.service agentrt-notify.service` | — | `agentrt-channel.service agentrt-notify.service` |
+| 12 | `plugin_d` | `agentrt-plugin.service` | `hook_d` | `agentrt-hook.service` | — | `agentrt-hook.service` |
+
+#### 13.4.2 systemd 崩溃恢复策略表
+
+| 崩溃场景 | Restart 策略 | RestartSec | WatchdogSec | 健康检查 | 回退行为 |
+|---------|-------------|------------|-------------|---------|---------|
+| daemon 进程退出码非 0 | `on-failure` | `5s` | `30s` | `sd_notify(WATCHDOG)` + AgentsIPC probe | 重启 daemon，最多 5 次/10 分钟 |
+| daemon 无心跳（watchdog 超时） | `on-failure` | `5s` | `30s` | `sd_notify` 30s 无心跳 | systemd 强制重启，触发 `DAEMON_E_WATCHDOG` |
+| daemon OOM kill | `on-failure` | `10s` | `30s` | `MemoryMax` 触发 + cgroup OOM | 重启并降低 `MemoryMax`，告警 `monit_d` |
+| AgentsIPC 协议版本不匹配 | `on-failure` | `5s` | `30s` | IPC handshake 失败 | 拒绝启动，输出 `DAEMON_E_IPC`，触发版本锁校验 |
+| 依赖 daemon 未就绪 | — | — | `30s` | `Requires=` 依赖检查 | systemd 自动等待依赖，超时则标记失败 |
+| daemon 段错误（SIGSEGV） | `on-failure` | `5s` | `30s` | coredump 捕获 + journal 记录 | 重启，coredump 上报 `observe_d`，3 次连续崩溃触发告警 |
+
+#### 13.4.3 systemd target 依赖 Mermaid 图
+
+```mermaid
+graph TD
+    MT["multi-user.target<br/>系统默认启动目标"]
+    AT["agentrt.target<br/>12 daemons 聚合单元<br/>WantedBy=multi-user.target"]
+    SI["sysinit.target<br/>系统初始化前置"]
+
+    MT --> AT
+    AT --> SI
+
+    subgraph L1["第 1 层（序号 1）"]
+        GW["gateway_d<br/>agentrt-gateway.service<br/>序号 1"]
+    end
+
+    subgraph L2["第 2 层（序号 2-4）"]
+        LLM["llm_d<br/>agentrt-llm.service<br/>序号 2"]
+        TOOL["tool_d<br/>agentrt-tool.service<br/>序号 3"]
+        SCHED["sched_d<br/>agentrt-sched.service<br/>序号 4"]
+    end
+
+    subgraph L3["第 3 层（序号 5-8）"]
+        MARKET["market_d<br/>序号 5"]
+        MONIT["monit_d<br/>序号 6"]
+        CHANNEL["channel_d<br/>序号 7"]
+        INFO["info_d<br/>序号 8"]
+    end
+
+    subgraph L4["第 4 层（序号 9-10）"]
+        NOTIFY["notify_d<br/>序号 9"]
+        OBSERVE["observe_d<br/>序号 10"]
+    end
+
+    subgraph L5["第 5 层（序号 11-12）"]
+        HOOK["hook_d<br/>序号 11"]
+        PLUGIN["plugin_d<br/>序号 12"]
+    end
+
+    AT --> GW
+    GW --> LLM
+    GW --> TOOL
+    GW --> SCHED
+    SCHED --> MARKET
+    SCHED --> MONIT
+    GW --> CHANNEL
+    SCHED --> CHANNEL
+    GW --> INFO
+    SCHED --> INFO
+    MONIT --> NOTIFY
+    MONIT --> OBSERVE
+    CHANNEL --> HOOK
+    NOTIFY --> HOOK
+    HOOK --> PLUGIN
+
+    style MT fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style AT fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    style SI fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style GW fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style LLM fill:#fce4ec,stroke:#c62828,color:#000
+    style TOOL fill:#fce4ec,stroke:#c62828,color:#000
+    style SCHED fill:#fce4ec,stroke:#c62828,color:#000
+    style MARKET fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style MONIT fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style CHANNEL fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style INFO fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style NOTIFY fill:#fff3e0,stroke:#e65100,color:#000
+    style OBSERVE fill:#fff3e0,stroke:#e65100,color:#000
+    style HOOK fill:#e1f5fe,stroke:#01579b,color:#000
+    style PLUGIN fill:#e1f5fe,stroke:#01579b,color:#000
+```
+
+#### 13.4.4 agentrt-linux 扩展深化规则
+
+**OS-OPS-025**：所有 12 daemons 的 systemd unit 必须设置 `RestartSec=5s`（OOM kill 场景 `RestartSec=10s`），避免崩溃后立即重启导致抖动；连续重启次数上限 5 次/10 分钟，超限触发 `monit_d` 告警并停止自动重启。
+
+**OS-OPS-026**：所有 12 daemons 的 `WatchdogSec` 必须为 `30s`，daemon 二进制必须通过 `sd_notify(WATCHDOG=1, "READY=1")` 每 15 秒上报心跳；30 秒无心跳 systemd 自动重启并输出 `DAEMON_E_WATCHDOG` 诊断码。
+
+**OS-OPS-027**：12 daemons 依赖图必须无环——`systemd-analyze verify` 在 RPM 构建阶段（`%check` 段）执行循环依赖检测，检测到环则构建失败（`DAEMON_E_DEPENDENCY_CYCLE`）；`Requires=` 仅用于强依赖（前序 daemon 不可达则本 daemon 不启动），`Wants=` 用于弱依赖（前序失败不影响本 daemon 启动）。
+
+**OS-OPS-028**：`agentrt.target` 必须声明 `After=sysinit.target network-online.target`，且 12 daemons 的 `WantedBy=agentrt.target`；禁止 daemon 直接 `WantedBy=multi-user.target` 绕过聚合单元，违反则 `systemd-analyze verify` 报错。
+
 ---
 
 ## 第 14 章 相关文档
@@ -654,15 +769,15 @@ graph LR
 
 - **当前版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 - **最后更新**: 2026-07-06
-- **维护者**: agentrt-linux 运维工程委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
-- **变更流程**: 任何部署规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议或 MicroCoreRT 契约的变更需额外经协议委员会签字
+- **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
+- **变更流程**: 任何部署规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议或 MicroCoreRT 契约的变更需额外经工程规范委员会签字
 - **回顾周期与不变性**: 季度回顾 + 每次大版本升级后回顾；本文档所依据的 Linux 6.6 内核基线工程思想与 Airymax 五维正交 24 原则不随版本变更，具体规则编号（OS-OPS / OS-STD / OS-KER）可随版本演进并通过规则编号注册表追溯
 
 ---
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集部署体系所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 RPM/systemd 工程实践、openEuler 发行版工具链（rpmbuild/dnf/lorax/dractu），以及 agentrt-linux 12 daemons 部署专属契约（`include/airymax/deploy_types.h`）。
+> **附录定位**： 本附录汇集部署体系所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 RPM/systemd 工程实践、openEuler 发行版工具链（rpmbuild/dnf/lorax/dractu），以及 agentrt-linux 12 daemons 部署专属契约（`include/airymax/deploy_types.h`）。
 
 ### A.1 核心数据结构
 

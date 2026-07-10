@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # SDK API
 
-> **文档定位**: agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **父文档**: [接口设计](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **父文档**： [接口设计](README.md)
 
 ---
 
@@ -504,6 +504,81 @@ client = AirymaxClient(
 - [认知设计](../20-modules/05-cognition.md)
 - [云原生设计](../20-modules/06-cloudnative.md)
 - [非功能性需求](../00-requirements/03-non-functional-requirements.md)
+
+---
+
+## 9. IRON-9 v2 三层共享模型
+
+> **OS-IFACE-005**： SDK API 遵循 IRON-9 v2 三层共享模型——SDK 层签名同源（同一份源码两端编译，构建期条件编译切换传输层），其他层（系统调用层等）仅语义同源、签名因抽象层级不同而独立演进；底层系统调用通过 [SC] 共享契约层头文件同源；传输层与构建链各自独立。禁止在 SDK 层引入平台判定或后端切换的适配层。
+
+### 9.1 三层模型概览
+
+| 层次 | 共享程度 | 本接口涉及内容 |
+|------|---------|---------------|
+| **[SC] 共享契约层** | 完全共享代码 | `sched.h`（TaskDesc 结构）+ `ipc.h`（消息头与 payload）+ `security_types.h`（capability 模型）+ `cognition_types.h`（CoreLoopThree 阶段）+ `memory_types.h`（记忆快照）+ `bpf_struct_ops.h`（状态机） |
+| **[SS] 语义同源层** | SDK 层签名同源（同一份源码两端编译，构建期条件编译切换传输层），其他层语义同源 | agentrt sdk（4 语言）↔ agentrt-linux SDK（4 语言）的 `AirymaxClient` + 4 嵌套客户端签名一致 |
+| **[IND] 完全独立层** | 完全独立 | agentrt SDK 用户态传输（libc/gRPC）↔ agentrt-linux SDK 内核加速路径（io_uring/syscall 直达） |
+
+### 9.2 [SC] 共享契约层——头文件在 SDK 中的角色
+
+| 头文件 | 在 SDK 中的角色 | 消费客户端 |
+|--------|----------------|-----------|
+| `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + MAC_MAX_AGENTS=1024 | CognitionClient.submit_task |
+| `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
+| `security_types.h` | capability 38 ID + mint/revoke/derive 签名 + 254 LSM 钩子 | SafetyClient.check_capability |
+| `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + Token 能效 | CognitionClient / ChatClient |
+| `memory_types.h` | MemoryRovol L1-L4 快照结构 | ToolClient（记忆上下文） |
+| `bpf_struct_ops.h` | struct_ops 4 状态机（INIT/INUSE/TOBEFREE/READY） | SDK 网关状态管理 |
+
+### 9.3 [SS] 语义同源层——agentrt ↔ agentrt-linux SDK API 映射
+
+| agentrt SDK（用户态） | agentrt-linux SDK（OS 级） | 同源签名 | 实现差异 |
+|----------------------|---------------------------|---------|---------|
+| `AirymaxClient.connect()` | `AirymaxClient.connect()` | `(endpoint: str) -> Client` | agentrt gRPC vs agentrt-linux unix socket + io_uring |
+| `CognitionClient.submit_task()` | `CognitionClient.submit_task()` | `(desc, priority, max_depth) -> task_id` | 用户态协程 vs 内核 SCHED_AGENT |
+| `SafetyClient.check_capability()` | `SafetyClient.check_capability()` | `(action, resource) -> Permission` | 用户态 Cupolas vs 内核 LSM + cap |
+| `ToolClient.execute()` | `ToolClient.execute()` | `(name, args) -> Result` | 用户态 tool_d 进程 vs 内核 daemon |
+| `ChatClient.complete()` | `ChatClient.complete()` | `(messages, model) -> Response` | 用户态 llm_d vs 内核 llm_d kthread |
+
+### 9.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 传输层 | gRPC over mTLS（本地 unix socket 备选） | unix socket + io_uring（本地）/ gRPC mTLS（远程） | 内核态加速 |
+| 错误处理 | `AGENTRT_E*` 用户态异常包装 | `AGENTRT_E*` 内核负值直达 | 语言绑定差异 |
+| 重试策略 | SDK 层指数退避 | SDK 层指数退避（同源配置） | 配置一致，实现独立 |
+| 可观测性 | OpenTelemetry 用户态导出 | OpenTelemetry + 内核 tracepoint | 导出路径差异 |
+
+### 9.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt SDK（4 语言）"
+        RT_PY[Python/Rust/Go/TS<br/>AirymaxClient]
+    end
+
+    subgraph "agentrt-linux SDK（4 语言）"
+        OS_PY[Python/Rust/Go/TS<br/>AirymaxClient]
+    end
+
+    subgraph "[SC] 共享契约层"
+        SC1[sched.h + ipc.h<br/>TaskDesc + 128B hdr]
+        SC2[security_types.h<br/>+ cognition_types.h]
+    end
+
+    RT_PY -.->|"SDK 签名同源 [SS]"| OS_PY
+    RT_PY ==>|"共享代码 [SC]"| SC1
+    RT_PY ==>|"共享代码 [SC]"| SC2
+    OS_PY ==>|"共享代码 [SC]"| SC1
+    OS_PY ==>|"共享代码 [SC]"| SC2
+
+    style SC1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style SC2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_PY fill:#e3f2fd,stroke:#1565c0
+    style OS_PY fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-IFACE-006**： 4 语言 SDK 的 `AirymaxClient` 及 4 嵌套客户端（CognitionClient/SafetyClient/ToolClient/ChatClient）API 签名在 agentrt 与 agentrt-linux 上一致——SDK 层签名同源（同一份 SDK 源码两端编译运行，底层传输由构建期条件编译切换）；此一致性仅限 SDK 层，系统调用层等签名因抽象层级不同而独立演进、仅概念操作语义同源。禁止运行时平台判定。
 
 ---
 

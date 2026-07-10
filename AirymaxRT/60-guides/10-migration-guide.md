@@ -52,14 +52,14 @@ core/
 └── CMakeLists.txt
 
 /* v1.0 目录结构（分层） */
-agentos/atoms/
+agentrt/atoms/
 ├── corekern/       /* 微核心：仅4个原子机制 */
 │   ├── include/    /* 7个头文件 */
 │   └── src/        /* 13个源文件 */
 ├── coreloopthree/  /* 三层认知运行时 */
 ├── memoryrovol/    /* 四层记忆系统 */
 ├── syscall/        /* 系统调用接口 */
-├── agentos/cupolas/          /* 安全穹顶 */
+├── agentrt/cupolas/          /* 安全穹顶 */
 └── utils/          /* 通用工具 */
 ```
 
@@ -81,15 +81,15 @@ agentos/atoms/
 
 #### 2.1.3 符号导出管理
 
-引入了 `AGENTOS_API` 宏用于精确控制符号可见性：
+引入了 `AGENTRT_API` 宏用于精确控制符号可见性：
 
 ```c
 /* 所有公共函数声明 */
-AGENTOS_API agentos_error_t
-agentos_cognition_create(const agentos_config_t* manager,
-                         agentos_cognition_engine_t** out_engine);
+AGENTRT_API agentrt_error_t
+agentrt_cognition_create(const agentrt_config_t* manager,
+                         agentrt_cognition_engine_t** out_engine);
 
-/* CMake 自动处理 AGENTOS_BUILDING_SHARED 宏 */
+/* CMake 自动处理 AGENTRT_BUILDING_SHARED 宏 */
 ```
 
 #### 2.1.4 统一错误处理
@@ -104,11 +104,11 @@ if (result < 0) {
 }
 
 /* v1.0：结构化错误码 */
-agentos_error_t err = agentos_cognition_create(NULL, &engine);
-if (err != AGENTOS_OK) {
-    AGENTOS_LOG_ERROR("cognition_init",
+agentrt_error_t err = agentrt_cognition_create(NULL, &engine);
+if (err != AGENTRT_OK) {
+    AGENTRT_LOG_ERROR("cognition_init",
         "Failed to create engine: %s (code=0x%04X)",
-        agentos_strerror(err), err);
+        agentrt_strerror(err), err);
     return err;
 }
 ```
@@ -123,10 +123,10 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../core/include")
 
 # v1.0 - 按层引入
 include_directories(
-    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/corekern/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/coreloopthree/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/memoryrovol/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentos/atoms/syscall/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentrt/atoms/corekern/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentrt/atoms/coreloopthree/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentrt/atoms/memoryrovol/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../AgentRT/agentrt/atoms/syscall/include"
 )
 ```
 
@@ -139,36 +139,36 @@ v1.0 引入了严格的资源所有权模型，每个资源都有明确的生命
  * @brief 资源创建与释放的标准范式
  * @note 遵循 RAII 原则：创建即绑定，作用域即释放
  */
-agentos_cognition_engine_t* engine = NULL;
-agentos_error_t err = agentos_cognition_create(NULL, &engine);
-if (err != AGENTOS_OK) {
+agentrt_cognition_engine_t* engine = NULL;
+agentrt_error_t err = agentrt_cognition_create(NULL, &engine);
+if (err != AGENTRT_OK) {
     return err;
 }
 
 /* 使用引擎... */
 
 /* 明确释放资源 - 析构顺序与构造顺序相反 */
-agentos_cognition_destroy(engine);
+agentrt_cognition_destroy(engine);
 ```
 
 #### 步骤 3：迁移到新的系统调用接口
 
-v1.0 将所有内核交互统一为 `agentos_syscall_invoke()` 入口：
+v1.0 将所有内核交互统一为 `agentrt_syscall_invoke()` 入口：
 
 ```c
 /* v0.x：直接调用内核函数 */
-agentos_task_submit("process data", &task_id);
+agentrt_task_submit("process data", &task_id);
 
 /* v1.0：通过系统调用接口 */
-agentos_syscall_req_t req = {
-    .category = AGENTOS_SYS_TASK,
-    .action   = AGENTOS_SYS_TASK_SUBMIT,
-    .payload  = &(agentos_task_submit_args_t){
+agentrt_syscall_req_t req = {
+    .category = AGENTRT_SYS_TASK,
+    .action   = AGENTRT_SYS_TASK_SUBMIT,
+    .payload  = &(agentrt_task_submit_args_t){
         .description = "process data",
     }
 };
-agentos_syscall_rsp_t rsp;
-agentos_error_t err = agentos_syscall_invoke(&req, &rsp);
+agentrt_syscall_rsp_t rsp;
+agentrt_error_t err = agentrt_syscall_invoke(&req, &rsp);
 ```
 
 #### 步骤 4：更新记忆系统接口
@@ -181,9 +181,9 @@ v1.0 的 MemoryRovol 采用四层渐进抽象架构：
  * @param memory 记忆引擎实例
  * @param record 记忆记录（包含内容、元数据、重要度）
  * @param out_id 输出分配的记录 ID
- * @return AGENTOS_OK 成功，其他值表示失败
+ * @return AGENTRT_OK 成功，其他值表示失败
  */
-agentos_memory_record_t record = {
+agentrt_memory_record_t record = {
     .content     = "Hello, Airymax!",
     .content_len = 14,
     .metadata    = "{\"type\": \"greeting\"}",
@@ -192,20 +192,20 @@ agentos_memory_record_t record = {
     .trace_id    = "trace_123",
 };
 char* record_id = NULL;
-err = agentos_memory_write(memory, &record, &record_id);
+err = agentrt_memory_write(memory, &record, &record_id);
 
 /* 查询记忆 - 支持语义检索 */
-agentos_memory_query_t query = {
+agentrt_memory_query_t query = {
     .text      = "greeting",
     .limit     = 10,
     .threshold = 0.5,
     .layer     = MEMORY_LAYER_ALL,
 };
-agentos_memory_result_t* result = NULL;
-err = agentos_memory_query(memory, &query, &result);
+agentrt_memory_result_t* result = NULL;
+err = agentrt_memory_query(memory, &query, &result);
 
 /* 释放结果链 */
-agentos_memory_result_free(result);
+agentrt_memory_result_free(result);
 free(record_id);
 ```
 
@@ -218,15 +218,15 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 if(BUILD_SHARED_LIBS)
-    add_definitions(-DAGENTOS_BUILDING_SHARED)
+    add_definitions(-DAGENTRT_BUILDING_SHARED)
 endif()
 
 /* 链接新架构的库 */
 target_link_libraries(my_agent PRIVATE
-    agentos_corekern
-    agentos_coreloopthree
-    agentos_memoryrovol
-    agentos_syscall
+    agentrt_corekern
+    agentrt_coreloopthree
+    agentrt_memoryrovol
+    agentrt_syscall
 )
 ```
 
@@ -242,7 +242,7 @@ target_link_libraries(my_agent PRIVATE
 | IPC 通信 | `ctest -R integration --label-regex ipc` | 延迟 < 10μs |
 | 记忆读写 | `ctest -R integration --label-regex memory` | 10k+ entries/sec |
 | 系统调用 | `ctest -R integration --label-regex syscall` | 全部通过 |
-| 日志输出 | 检查 `agentos/heapstore/logs/` | 格式正确、trace_id 连通 |
+| 日志输出 | 检查 `agentrt/heapstore/logs/` | 格式正确、trace_id 连通 |
 
 ---
 
@@ -254,7 +254,7 @@ target_link_libraries(my_agent PRIVATE
 
 | 变更类型 | 内容 | 影响 |
 |----------|------|------|
-| 新增 | `agentos_memory_evolve()` 触发记忆进化 | 可选采用 |
+| 新增 | `agentrt_memory_evolve()` 触发记忆进化 | 可选采用 |
 | 改进 | FAISS 向量检索性能优化 30% | 自动生效 |
 | 修复 | IPC Binder 连接池泄漏 | 自动生效 |
 
@@ -262,7 +262,7 @@ target_link_libraries(my_agent PRIVATE
 
 | 变更类型 | 内容 | 影响 |
 |----------|------|------|
-| 新增 | `agentos_compensation_get_human_queue()` | 可选采用 |
+| 新增 | `agentrt_compensation_get_human_queue()` | 可选采用 |
 | 改进 | 补偿事务可靠性增强 | 自动生效 |
 | 改进 | LRU 缓存命中率提升 15% | 自动生效 |
 
@@ -289,7 +289,7 @@ target_link_libraries(my_agent PRIVATE
 ### 4.2 评估阶段
 
 - 审查 CHANGELOG 中的所有破坏性变更
-- 运行 `agentos-migrate --analyze` 生成影响分析报告
+- 运行 `agentrt-migrate --analyze` 生成影响分析报告
 - 评估迁移复杂度和所需资源
 
 ### 4.3 隔离阶段
@@ -299,7 +299,7 @@ target_link_libraries(my_agent PRIVATE
 git checkout -b migrate/v2.x
 
 # 使用 Docker 隔离测试环境
-docker run -v $(pwd):/workspace agentos/migrate:latest \
+docker run -v $(pwd):/workspace agentrt/migrate:latest \
     /workspace/scripts/migrate.sh --from=v1.x --to=v2.x
 ```
 
@@ -314,14 +314,14 @@ python scripts/benchmark.py --compare baseline.json migrated.json
 
 # 内存泄漏检查
 valgrind --leak-check=full --error-exitcode=1 \
-    ./build/bin/agentos_test_integration
+    ./build/bin/agentrt_test_integration
 ```
 
 ### 4.5 回滚方案
 
 ```bash
 # 如果迁移后验证失败，一键回滚
-agentos-migrate --rollback --to=v1.x
+agentrt-migrate --rollback --to=v1.x
 
 # 或使用 Git
 git checkout main && git branch -D migrate/v2.x
@@ -333,29 +333,29 @@ git checkout main && git branch -D migrate/v2.x
 
 ### 5.1 编译问题
 
-**问题**: `AGENTOS_API` 未定义
+**问题**: `AGENTRT_API` 未定义
 
 **诊断**: 确认头文件包含路径和 CMake 宏定义
 
 ```bash
-# 检查 CMake 配置输出中的 AGENTOS_BUILDING_SHARED
-cmake --build build/ -- VERBOSE=1 | grep AGENTOS_BUILDING_SHARED
+# 检查 CMake 配置输出中的 AGENTRT_BUILDING_SHARED
+cmake --build build/ -- VERBOSE=1 | grep AGENTRT_BUILDING_SHARED
 ```
 
-**解决**: 确保 `agentos.h` 在所有自定义头文件之前被包含
+**解决**: 确保 `agentrt.h` 在所有自定义头文件之前被包含
 
 ### 5.2 链接问题
 
-**问题**: 找不到符号 `agentos_some_function`
+**问题**: 找不到符号 `agentrt_some_function`
 
-**诊断**: 检查符号是否使用 `AGENTOS_API` 导出
+**诊断**: 检查符号是否使用 `AGENTRT_API` 导出
 
 ```bash
 # Linux: 检查动态库导出符号
-nm -D libagentos_corekern.so | grep agentos_some_function
+nm -D libagentrt_corekern.so | grep agentrt_some_function
 
 # macOS: 检查动态库导出符号
-nm -gU libagentos_corekern.dylib | grep agentos_some_function
+nm -gU libagentrt_corekern.dylib | grep agentrt_some_function
 ```
 
 ### 5.3 运行时问题
@@ -378,7 +378,7 @@ ctest --output-on-failure
 
 ```bash
 # 查看记忆层性能指标
-agentos-cli metrics memory --format=json | jq '.layer_l2.latency_p99'
+agentrt-cli metrics memory --format=json | jq '.layer_l2.latency_p99'
 ```
 
 ---
@@ -389,13 +389,13 @@ Airymax 提供自动化迁移辅助工具：
 
 ```bash
 # 分析迁移影响
-agentos-migrate --analyze --from=v0.9 --to=v1.0
+agentrt-migrate --analyze --from=v0.9 --to=v1.0
 
 # 自动应用标准迁移规则
-agentos-migrate --apply --from=v0.9 --to=v1.0
+agentrt-migrate --apply --from=v0.9 --to=v1.0
 
 # 生成迁移报告
-agentos-migrate --report --output=migration_report.md
+agentrt-migrate --report --output=migration_report.md
 ```
 
 ---

@@ -61,7 +61,7 @@ SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
    ```python
    # Python 示例
    engine = create_engine(
-       "postgresql://agentos:password@localhost/agentos",
+       "postgresql://agentrt:password@localhost/agentrt",
        pool_size=20,
        max_overflow=10,
        pool_timeout=30,
@@ -74,7 +74,7 @@ SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
    ```ini
    # pgbouncer.ini
    [databases]
-   agentos = host=localhost port=5432 dbname=agentos
+   agentrt = host=localhost port=5432 dbname=agentrt
 
    [pgbouncer]
    pool_mode = transaction
@@ -151,7 +151,7 @@ containerd[12345]: time="..." level=warning msg="OOMKilled container"
 
 ```bash
 # 1. 启用容器内存限制和监控
-docker update --memory=4g --memory-swap=4g agentos-kernel-1
+docker update --memory=4g --memory-swap=4g agentrt-kernel-1
 
 # 2. 配置日志轮转（在 docker-compose.yml 中）
 logging:
@@ -344,16 +344,16 @@ TZ=Asia/Shanghai  # 所有容器统一时区
 2. **收集诊断信息**:
    ```bash
    # 运行诊断工具
-   ./scripts/agentos_diagnose.sh > diagnosis_output.txt
+   ./scripts/agentrt_diagnose.sh > diagnosis_output.txt
 
    # 收集关键日志
-   journalctl -u agentos-kernel --since "1 hour ago" --no-pager > kernel_logs.txt
+   journalctl -u agentrt-kernel --since "1 hour ago" --no-pager > kernel_logs.txt
    ```
 3. **提交 Issue**:
-   - GitCode Issues: https://gitcode.com/spharx/agentos/issues/new
+   - GitCode Issues: https://gitcode.com/spharx/agentrt/issues/new
    - 邮箱: support@spharx.cn
    - 包含信息：
-     - Airymax 版本 (`agentos --version`)
+     - Airymax 版本 (`agentrt --version`)
      - 操作系统 (`uname -a`)
      - 复现步骤
      - 期望行为 vs 实际行为

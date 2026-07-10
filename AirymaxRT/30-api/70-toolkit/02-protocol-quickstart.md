@@ -18,8 +18,8 @@
 检查网关是否运行以及协议是否可用：
 
 ```bash
-agentos status
-agentos protocol list
+agentrt status
+agentrt protocol list
 ```
 
 预期输出：
@@ -40,9 +40,9 @@ OpenJiuwen    1.0      active    /ojiuwen
 测试各协议的连接：
 
 ```bash
-agentos protocol test jsonrpc
-agentos protocol test mcp
-agentos protocol test openai
+agentrt protocol test jsonrpc
+agentrt protocol test mcp
+agentrt protocol test openai
 ```
 
 ---
@@ -52,14 +52,14 @@ agentos protocol test openai
 ### 安装 SDK
 
 ```bash
-pip install agentos-toolkit
+pip install agentrt-toolkit
 ```
 
 ### 发送 JSON-RPC 请求
 
 ```python
 import asyncio
-from agentos.protocol import ProtocolClient, ProtocolConfig
+from agentrt.protocol import ProtocolClient, ProtocolConfig
 
 async def main():
     config = ProtocolConfig(
@@ -91,7 +91,7 @@ python my_first_protocol.py
 SDK 可以根据内容自动检测应使用哪种协议：
 
 ```python
-from agentos.protocol import ProtocolClient, ProtocolType
+from agentrt.protocol import ProtocolClient, ProtocolType
 
 client = ProtocolClient.from_env()
 
@@ -108,7 +108,7 @@ print(f"检测到: {result.protocol_type}")  # ProtocolType.MCP
 
 或使用 CLI：
 ```bash
-echo '{"model":"gpt-4","messages":[{}]}' | agentos protocol detect --content-type application/json
+echo '{"model":"gpt-4","messages":[{}]}' | agentrt protocol detect --content-type application/json
 ```
 
 ---
@@ -118,7 +118,7 @@ echo '{"model":"gpt-4","messages":[{}]}' | agentos protocol detect --content-typ
 ### MCP (Model Context Protocol)
 
 ```python
-from agentos.protocol import create_mcp_client
+from agentrt.protocol import create_mcp_client
 
 mcp = create_mcp_client(base_url="http://localhost:8080")
 
@@ -132,7 +132,7 @@ print(f"结果: {result}")
 ### OpenAI API 兼容
 
 ```python
-from agentos.protocol import create_openai_client
+from agentrt.protocol import create_openai_client
 
 openai = create_openai_client(
     base_url="http://localhost:8080",
@@ -146,7 +146,7 @@ print(response)
 ### A2A (Agent-to-Agent)
 
 ```python
-from agentos.protocol import ProtocolClient, ProtocolType
+from agentrt.protocol import ProtocolClient, ProtocolType
 
 client = ProtocolClient.from_env()
 
@@ -185,38 +185,38 @@ asyncio.run(streaming_example())
 
 | 命令 | 说明 |
 |---------|-------------|
-| `agentos protocol list` | 列出所有可用协议 |
-| `agentos protocol info jsonrpc` | 显示协议的详细信息 |
-| `agentos protocol test mcp` | 测试协议连接 |
-| `agentos protocol detect -c '{"..."}'` | 从内容自动检测协议 |
-| `agentos protocol send jsonrpc task.submit '{"content":"Hi"}'` | 发送协议消息 |
-| `agentos protocol stats` | 查看协议统计信息 |
-| `agentos protocol transform jsonrpc mcp` | 显示转换详情 |
-| `agentos protocol capabilities openai` | 显示协议支持的能力 |
+| `agentrt protocol list` | 列出所有可用协议 |
+| `agentrt protocol info jsonrpc` | 显示协议的详细信息 |
+| `agentrt protocol test mcp` | 测试协议连接 |
+| `agentrt protocol detect -c '{"..."}'` | 从内容自动检测协议 |
+| `agentrt protocol send jsonrpc task.submit '{"content":"Hi"}'` | 发送协议消息 |
+| `agentrt protocol stats` | 查看协议统计信息 |
+| `agentrt protocol transform jsonrpc mcp` | 显示转换详情 |
+| `agentrt protocol capabilities openai` | 显示协议支持的能力 |
 
 ### 使用示例
 
 ```bash
 # 查看所有协议
-$ agentos protocol list
+$ agentrt protocol list
 
 # 获取 OpenAI 协议的详细信息
-$ agentos protocol info openai
+$ agentrt protocol info openai
 
 # 测试 MCP 连接（含详细输出）
-$ agentos protocol test mcp -v
+$ agentrt protocol test mcp -v
 
 # 从字符串检测协议
-$ agentos protocol detect -c '{"tools/call":{"name":"search"}}'
+$ agentrt protocol detect -c '{"tools/call":{"name":"search"}}'
 
 # 发送 JSON-RPC 请求
-$ agentos protocol send jsonrpc ping '{}'
+$ agentrt protocol send jsonrpc ping '{}'
 
 # 查看统计信息
-$ agentos protocol stats
+$ agentrt protocol stats
 
 # 了解 JSON-RPC → MCP 转换
-$ agentos protocol transform jsonrpc mcp
+$ agentrt protocol transform jsonrpc mcp
 ```
 
 ---
@@ -231,8 +231,8 @@ package main
 import (
     "context"
     "fmt"
-    agentos "github.com/spharxworks/agentos-toolkit-go"
-    "github.com/spharxworks/agentos-toolkit-go/protocol"
+    agentrt "github.com/spharxworks/agentrt-toolkit-go"
+    "github.com/spharxworks/agentrt-toolkit-go/protocol"
 )
 
 func main() {
@@ -253,7 +253,7 @@ func main() {
 ### Rust
 
 ```rust
-use agentos_toolkit::protocol::{ProtocolClient, ProtocolConfig};
+use agentrt_toolkit::protocol::{ProtocolClient, ProtocolConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -271,7 +271,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### TypeScript
 
 ```typescript
-import { createProtocolClient } from '@agentos/toolkit';
+import { createProtocolClient } from '@agentrt/toolkit';
 
 const client = createProtocolClient({ baseURL: 'http://localhost:8080' });
 
@@ -298,7 +298,7 @@ console.log('结果:', result);
 1. **阅读完整指南**: [PROTOCOL_GUIDE.md](./PROTOCOL_GUIDE.md) — 全面的协议系统文档
 2. **尝试 OpenLab 集成**: 在您的代理中使用 `openlab.protocols.ProtocolSessionManager`
 3. **构建自定义适配器**: 为新协议实现 `proto_adapter_vtable_t`
-4. **探索协议转换**: 使用 `agentos protocol transform <src> <tgt>` 了解消息映射
+4. **探索协议转换**: 使用 `agentrt protocol transform <src> <tgt>` 了解消息映射
 
 ---
 
@@ -306,8 +306,8 @@ console.log('结果:', result);
 
 **网关无响应？**
 ```bash
-agentos status
-agentos service health
+agentrt status
+agentrt service health
 ```
 
 **协议检测错误？**
@@ -315,8 +315,8 @@ agentos service health
 - 使用 `protocol detect -t application/mcp` 强制指定类型
 
 **连接超时？**
-- 检查 `AGENTOS_GATEWAY_URL` 环境变量
-- 确认网关正在运行：`agentos status`
+- 检查 `AGENTRT_GATEWAY_URL` 环境变量
+- 确认网关正在运行：`agentrt status`
 
 ---
 

@@ -39,7 +39,7 @@ L1 采用**仅追加写入**模式，适合增量备份：
 set -e
 
 SOURCE_DIR="/app/data/memory/l1"
-BACKUP_DIR="/backup/agentos/l1"
+BACKUP_DIR="/backup/agentrt/l1"
 DATE=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS=3650  # 10年保留
 
@@ -88,8 +88,8 @@ fi
 ```bash
 # crontab -e
 # 每日凌晨 2 点执行全量备份，每小时执行增量同步
-0 2 * * * /opt/agentos/scripts/backup_l1.sh >> /var/log/agentos/backup.log 2>&1
-0 * * * * /opt/agentos/scripts/backup_l1_incremental.sh >> /var/log/agentos/backup.log 2>&1
+0 2 * * * /opt/agentrt/scripts/backup_l1.sh >> /var/log/agentrt/backup.log 2>&1
+0 * * * * /opt/agentrt/scripts/backup_l1_incremental.sh >> /var/log/agentrt/backup.log 2>&1
 ```
 
 ### 2. PostgreSQL 数据库备份
@@ -102,9 +102,9 @@ set -e
 
 DB_HOST="localhost"
 DB_PORT="5432"
-DB_NAME="agentos"
-DB_USER="agentos"
-BACKUP_DIR="/backup/agentos/postgres"
+DB_NAME="agentrt"
+DB_USER="agentrt"
+BACKUP_DIR="/backup/agentrt/postgres"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
@@ -115,27 +115,27 @@ echo "[$(date)] Starting PostgreSQL backup..."
 pg_dump -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME \
     --format=custom \
         --compress=9 \
-        --file="$BACKUP_DIR/agentos_$DATE.dump"
+        --file="$BACKUP_DIR/agentrt_$DATE.dump"
 
 # 方法2: pg_basebackup 物理备份（推荐用于大数据库）
 # pg_basebackup -h $DB_HOST -p $DB_PORT -U $DB_USER \
 #     -D "$BACKUP_DIR/base_$DATE" -Ft -z -P -Xs
 
 # 验证备份文件
-pg_restore --list "$BACKUP_DIR/agentos_$DATE.dump" > /dev/null && echo "Backup valid"
+pg_restore --list "$BACKUP_DIR/agentrt_$DATE.dump" > /dev/null && echo "Backup valid"
 
 # 加密备份（可选）
 gpg --symmetric --cipher-algo AES256 --batch --passphrase "$ENCRYPTION_KEY" \
-    --output "$BACKUP_DIR/agentos_$DATE.dump.gpg" \
-    "$BACKUP_DIR/agentos_$DATE.dump"
+    --output "$BACKUP_DIR/agentrt_$DATE.dump.gpg" \
+    "$BACKUP_DIR/agentrt_$DATE.dump"
 
 # 清理未加密文件
-rm "$BACKUP_DIR/agentos_$DATE.dump"
+rm "$BACKUP_DIR/agentrt_$DATE.dump"
 
 # 保留最近 30 天备份
 find "$BACKUP_DIR" -name "*.dump.gpg" -mtime +30 -delete
 
-echo "[$(date)] PostgreSQL backup completed: agentos_$DATE.dump.gpg"
+echo "[$(date)] PostgreSQL backup completed: agentrt_$DATE.dump.gpg"
 ```
 
 ### 3. Redis 缓存备份
@@ -147,7 +147,7 @@ echo "[$(date)] PostgreSQL backup completed: agentos_$DATE.dump.gpg"
 REDIS_HOST="localhost"
 REDIS_PORT="6379"
 REDIS_PASSWORD="${REDIS_PASSWORD}"
-BACKUP_DIR="/backup/agentos/redis"
+BACKUP_DIR="/backup/agentrt/redis"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
@@ -260,11 +260,11 @@ if __name__ == "__main__":
 
 CONFIG_DIRS=(
     "/app/config"
-    "/etc/agentos"
-    "/opt/agentos/conf"
+    "/etc/agentrt"
+    "/opt/agentrt/conf"
 )
 
-BACKUP_DIR="/backup/agentos/configs"
+BACKUP_DIR="/backup/agentrt/configs"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
@@ -309,14 +309,14 @@ case $SERVICE_NAME in
 
     postgres)
         echo "Restoring PostgreSQL..."
-        BACKUP_FILE=$(ls -t /backup/agentos/postgres/*.dump.gpg | head -1)
+        BACKUP_FILE=$(ls -t /backup/agentrt/postgres/*.dump.gpg | head -1)
         gpg --decrypt --batch --passphrase "$ENCRYPTION_KEY" "$BACKUP_FILE" | \
-            pg_restore -h localhost -U agentos -d agentos --clean --if-exists
+            pg_restore -h localhost -U agentrt -d agentrt --clean --if-exists
         ;;
 
     redis)
         echo "Restoring Redis..."
-        BACKUP_FILE=$(ls -t /backup/agentos/redis/*.rdb.gz | head -1)
+        BACKUP_FILE=$(ls -t /backup/agentrt/redis/*.rdb.gz | head -1)
         gunzip -c "$BACKUP_FILE" > /var/lib/redis/dump.rdb
         systemctl restart redis-server
         ;;
@@ -343,7 +343,7 @@ BACKUP_DATE=$1  # 格式: YYYYMMDD_HHMMSS
 if [ -z "$BACKUP_DATE" ]; then
     echo "Usage: $0 <YYYYMMDD_HHMMSS>"
     echo "Available backups:"
-    ls -la /backup/agentos/l1/ | grep "^d"
+    ls -la /backup/agentrt/l1/ | grep "^d"
     exit 1
 fi
 
@@ -359,29 +359,29 @@ docker compose -f docker/docker-compose.prod.yml down
 # Step 2: 恢复 PostgreSQL
 echo "[Step 2/7] Restoring PostgreSQL database..."
 docker run -d --name postgres-restore \
-    -v /backup/agentos/postgres:/backup \
-    -e POSTGRES_DB=agentos -e POSTGRES_USER=agentos \
+    -v /backup/agentrt/postgres:/backup \
+    -e POSTGRES_DB=agentrt -e POSTGRES_USER=agentrt \
     postgres:15-alpine &
 sleep 10
 # 执行恢复命令...
 
 # Step 3: 恢复 Redis
 echo "[Step 3/7] Restoring Redis cache..."
-cp /backup/agentos/redis/dump_${BACKUP_DATE}.rdb.gz /tmp/
+cp /backup/agentrt/redis/dump_${BACKUP_DATE}.rdb.gz /tmp/
 gunzip /tmp/dump_${BACKUP_DATE}.rdb.gz
 
 # Step 4: 恢复 L1 记忆数据
 echo "[Step 4/7] Restoring L1 memory data..."
 rm -rf /data/kernel/memory/l1/*
-rsync -av /backup/agentos/l1/${BACKUP_DATE}/ /data/kernel/memory/l1/
+rsync -av /backup/agentrt/l1/${BACKUP_DATE}/ /data/kernel/memory/l1/
 
 # Step 5: 恢复 FAISS 索引
 echo "[Step 5/7] Restoring L2 FAISS index..."
-cp /backup/agentos/faiss/faiss_${BACKUP_DATE}/faiss_index.index /data/kernel/memory/l2/
+cp /backup/agentrt/faiss/faiss_${BACKUP_DATE}/faiss_index.index /data/kernel/memory/l2/
 
 # Step 6: 恢复配置文件
 echo "[Step 6/7] Restoring configuration files..."
-tar xzf /backup/agentos/configs/config_${BACKUP_DATE}.tar.gz -C /
+tar xzf /backup/agentrt/configs/config_${BACKUP_DATE}.tar.gz -C /
 
 # Step 7: 启动所有服务并验证
 echo "[Step 7/7] Starting all services..."
@@ -408,7 +408,7 @@ echo "=========================================="
 -- PostgreSQL PITR 示例
 -- 1. 停止 PostgreSQL
 -- 2. 从基础备份恢复
-pg_restore -U agentos -D /var/lib/postgresql/data base_backup.dump
+pg_restore -U agentrt -D /var/lib/postgresql/data base_backup.dump
 
 -- 3. 配置 recovery.conf
 echo "restore_command = 'cp /wal_archive/%f %p'" >> /var/lib/postgresql/data/recovery.conf
@@ -516,7 +516,7 @@ def send_alert(message: str):
     requests.post(os.environ.get('ALERT_WEBHOOK_URL'), json={'text': message})
 
 if __name__ == "__main__":
-    backup_dir = os.environ.get("BACKUP_DIR", "/backup/agentos")
+    backup_dir = os.environ.get("BACKUP_DIR", "/backup/agentrt")
     verify_backup_integrity(backup_dir)
 ```
 
@@ -531,7 +531,7 @@ groups:
   - name: backup_alerts
     rules:
       - alert: BackupFailed
-        expr: agentos_backup_success{job="agentos-backup"} == 0
+        expr: agentrt_backup_success{job="agentrt-backup"} == 0
         for: 1h
         labels:
           severity: critical
@@ -540,7 +540,7 @@ groups:
           description: "Last backup of {{ $labels.backup_type }} failed at {{ $value }}"
 
       - alert: BackupStale
-        expr: time() - agentos_backup_timestamp_seconds > 86400
+        expr: time() - agentrt_backup_timestamp_seconds > 86400
         for: 1h
         labels:
           severity: warning
@@ -550,8 +550,8 @@ groups:
 
       - alert: BackupSizeAnomaly
         expr |
-          abs(agentos_backup_size_bytes -
-              avg_over_time(agentos_backup_size_bytes[7d])) / avg_over_time(agentos_backup_size_bytes[7d]) > 0.5
+          abs(agentrt_backup_size_bytes -
+              avg_over_time(agentrt_backup_size_bytes[7d])) / avg_over_time(agentrt_backup_size_bytes[7d]) > 0.5
         labels:
           severity: warning
         annotations:

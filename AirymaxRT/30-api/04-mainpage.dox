@@ -1,26 +1,26 @@
 /**
- * @mainpage AgentOS — 多体控制论智能操作系统
+ * @mainpage AgentRT — 多体控制论智能操作系统
  *
  * @section overview 系统概述
  *
- * AgentOS 是基于**多体控制论智能系统 (MCIS)** 构建的智能体操作系统，
+ * AgentRT 是基于**多体控制论智能系统 (MCIS)** 构建的智能体操作系统，
  * 采用微核心架构，支持五大框架、多协议网关和分层安全防护。
  *
  * @section architecture 系统架构
  *
- * AgentOS 采用分层微核心架构，自底向上分为以下层次：
+ * AgentRT 采用分层微核心架构，自底向上分为以下层次：
  *
  * @subsection layer_atoms 原子层 (Atoms)
  * 系统最底层的核心构件，提供基础能力：
  *
  * | 模块 | 说明 | 关键头文件 |
  * |------|------|-----------|
- * | **CoreKern** | 内核核心：IPC、内存、任务调度、时间管理 | `agentos.h`, `ipc.h`, `mem.h`, `task.h`, `time.h` |
+ * | **CoreKern** | 内核核心：IPC、内存、任务调度、时间管理 | `agentrt.h`, `ipc.h`, `mem.h`, `task.h`, `time.h` |
  * | **CoreLoopThree** | 核心循环三层：认知、执行、记忆循环 | `loop.h`, `cognition.h`, `execution.h`, `memory.h` |
  * | **MemoryRovol** | 记忆卷载：多层记忆存储与检索 | `memoryrovol.h`, `layer1_raw.h`, `retrieval.h`, `forgetting.h` |
  * | **Syscall** | 系统调用：Agent/Skill/Task/Session管理 | `syscalls.h` |
  * | **TaskFlow** | 任务流：图计算引擎与工作流 | `taskflow.h`, `graph_engine.h`, `pregel_engine.h` |
- * | **Frameworks** | 统一框架抽象：五大框架生命周期管理 | `agentos_frameworks.h` |
+ * | **Frameworks** | 统一框架抽象：五大框架生命周期管理 | `agentrt_frameworks.h` |
  *
  * @subsection layer_commons 公共层 (Commons)
  * 跨模块共享的基础设施：
@@ -95,7 +95,7 @@
  *
  * @section protocols 多协议支持
  *
- * AgentOS 网关支持以下协议的统一接入与互转：
+ * AgentRT 网关支持以下协议的统一接入与互转：
  *
  * | 协议 | 版本 | 用途 |
  * |------|------|------|
@@ -118,7 +118,7 @@
  *
  * @subsection build 构建系统
  *
- * AgentOS 使用 CMake 构建，最低要求 CMake 3.20+：
+ * AgentRT 使用 CMake 构建，最低要求 CMake 3.20+：
  *
  * @code
  * mkdir build && cd build
@@ -130,12 +130,12 @@
  * @subsection docker Docker部署
  *
  * @code
- * docker compose -f agentos/gateway/docker/docker-compose.dev.yml up -d
+ * docker compose -f agentrt/gateway/docker/docker-compose.dev.yml up -d
  * @endcode
  *
  * @section mcis MCIS
  *
- * AgentOS 基于**多体控制论智能系统 (Multibody Cybernetic Intelligent System)**
+ * AgentRT 基于**多体控制论智能系统 (Multibody Cybernetic Intelligent System)**
  * 理论设计，核心控制论机制：
  *
  * - **负反馈**: 质量门禁 → 阻断不合格变更

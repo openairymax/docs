@@ -35,7 +35,7 @@ brew install cmake openssl cJSON sqlite curl pkg-config
 #### Docker (推荐)
 ```bash
 # 使用预构建镜像，无需本地编译
-docker pull spharx/agentos:v0.0.4
+docker pull spharx/agentrt:v0.0.4
 ```
 
 ---
@@ -64,9 +64,9 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake .. \
     -DCMAKE_BUILD_TYPE=Release \        # Release/Debug/RelWithDebInfo
     -DBUILD_TESTING=ON \                # 构建测试
-    -DAGENTOS_ENABLE_EXAMPLES=ON \       # 构建示例程序
+    -DAGENTRT_ENABLE_EXAMPLES=ON \       # 构建示例程序
     -DCMAKE_INSTALL_PREFIX=/usr/local \   # 安装路径
-    -DAGENTOS_SANITIZE=ON                # 启用地址消毒器(调试)
+    -DAGENTRT_SANITIZE=ON                # 启用地址消毒器(调试)
 ```
 
 ### Step 3: 编译
@@ -79,7 +79,7 @@ make -j$(nproc)
 **预期输出**:
 ```
 [100%] Built target gateway_d
-[100%] Built target agentos-sched-d
+[100%] Built target agentrt-sched-d
 ...
 ✅ Build completed successfully!
 ```
@@ -103,7 +103,7 @@ sudo make install
 
 # 验证安装
 gateway_d --version
-agentos-llm-d --help
+agentrt-llm-d --help
 ```
 
 ---
@@ -130,15 +130,15 @@ docker-compose logs -f gateway
 
 ```bash
 # 构建镜像
-docker build -t agentos:v0.0.4 .
+docker build -t agentrt:v0.0.4 .
 
 # 运行
 docker run -d \
-    --name agentos-gateway \
+    --name agentrt-gateway \
     -p 8080:8080 \
     -p 8081:8081 \
     -e OPENAI_API_KEY=your-api-key-here \
-    agentos:v0.0.4
+    agentrt:v0.0.4
 ```
 
 ### 验证Docker部署
@@ -165,7 +165,7 @@ curl http://localhost:8080/health
  * @brief 第一个Airymax程序 - 简单问答
  */
 
-#include "agentos.h"
+#include "agentrt.h"
 #include "loop.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -184,8 +184,8 @@ int main(int argc, char* argv[]) {
 
     // 1️⃣ 初始化核心系统
     printf("[1/6] 初始化核心系统...");
-    agentos_error_t err = agentos_core_init();
-    if (err != AGENTOS_OK) {
+    agentrt_error_t err = agentrt_core_init();
+    if (err != AGENTRT_OK) {
         fprintf(stderr, "❌ 初始化失败: %d\n", err);
         return 1;
     }
@@ -193,11 +193,11 @@ int main(int argc, char* argv[]) {
 
     // 2️⃣ 创建三层循环
     printf("[2/6] 创建三层循环...");
-    agentos_core_loop_t* loop = NULL;
-    err = agentos_loop_create(NULL, &loop);
-    if (err != AGENTOS_OK) {
+    agentrt_core_loop_t* loop = NULL;
+    err = agentrt_loop_create(NULL, &loop);
+    if (err != AGENTRT_OK) {
         fprintf(stderr, "❌ 创建循环失败: %d\n", err);
-        agentos_core_shutdown();
+        agentrt_core_shutdown();
         return 1;
     }
     printf(" ✅ 完成\n");
@@ -211,11 +211,11 @@ int main(int argc, char* argv[]) {
     // 4️⃣ 提交任务
     printf("[4/6] 提交问题给认知层...");
     char* task_id = NULL;
-    err = agentos_loop_submit(loop, question, strlen(question), &task_id);
-    if (err != AGENTOS_OK) {
+    err = agentrt_loop_submit(loop, question, strlen(question), &task_id);
+    if (err != AGENTRT_OK) {
         fprintf(stderr, "❌ 提交失败: %d\n", err);
-        agentos_loop_destroy(loop);
-        agentos_core_shutdown();
+        agentrt_loop_destroy(loop);
+        agentrt_core_shutdown();
         return 1;
     }
     printf(" ✅ 任务ID: %s\n", task_id);
@@ -226,17 +226,17 @@ int main(int argc, char* argv[]) {
     size_t answer_len = 0;
     
     // 设置超时为30秒
-    err = agentos_loop_wait(loop, task_id, 30000, &answer, &answer_len);
+    err = agentrt_loop_wait(loop, task_id, 30000, &answer, &answer_len);
     
-    if (err == AGENTOS_OK && answer) {
+    if (err == AGENTRT_OK && answer) {
         printf("\n🎯 Agent回答:\n");
         printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
         printf("%.*s\n", (int)answer_len, answer);
         printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
         
         // 释放结果内存
-        AGENTOS_FREE(answer);
-    } else if (err == AGENTOS_ETIMEDOUT) {
+        AGENTRT_FREE(answer);
+    } else if (err == AGENTRT_ETIMEDOUT) {
         printf("\n⏰ 超时：Agent在30秒内未完成思考\n");
     } else {
         printf("\n❌ 错误: %d\n", err);
@@ -244,9 +244,9 @@ int main(int argc, char* argv[]) {
 
     // 6️⃣ 清理资源
     printf("\n[6/6] 清理资源...\n");
-    AGENTOS_FREE(task_id);
-    agentos_loop_destroy(loop);
-    agentos_core_shutdown();
+    AGENTRT_FREE(task_id);
+    agentrt_loop_destroy(loop);
+    agentrt_core_shutdown();
     printf("✅ 所有资源已释放\n");
 
     printf("\n感谢使用 Airymax! 👋\n");
@@ -259,10 +259,10 @@ int main(int argc, char* argv[]) {
 ```bash
 # 编译
 gcc -o hello_agent hello_agent.c \
-    -I/usr/local/include/agentos \
+    -I/usr/local/include/agentrt \
     -L/usr/local/lib \
-    -lagentos_coreloopthree -lagentos_cognition -lagentos_execution \
-    -lagentos_memoryrovol -lagentos_common -lpthread
+    -lagentrt_coreloopthree -lagentrt_cognition -lagentrt_execution \
+    -lagentrt_memoryrovol -lagentrt_common -lpthread
 
 # 运行
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
@@ -313,7 +313,7 @@ int main() {
 
     // 1. 创建记忆系统
     printf("[1] 创建四层记忆系统...\n");
-    agentos_memoryrov_handle_t* memory = agentos_memoryrov_create();
+    agentrt_memoryrov_handle_t* memory = agentrt_memoryrov_create();
     if (!memory) {
         fprintf(stderr, "❌ 创建记忆系统失败\n");
         return 1;
@@ -331,13 +331,13 @@ int main() {
 
     printf("[2] 写入 %zu 条记忆...\n", sizeof(memories)/sizeof(memories[0]));
     for (size_t i = 0; i < sizeof(memories)/sizeof(memories[0]); i++) {
-        agentos_error_t err = agentos_memoryrov_add_memory(
+        agentrt_error_t err = agentrt_memoryrov_add_memory(
             memory, 
             memories[i], 
             strlen(memories[i])
         );
         
-        if (err == AGENTOS_OK) {
+        if (err == AGENTRT_OK) {
             printf("   ✅ [%zu] %s\n", i+1, memories[i]);
         } else {
             printf("   ❌ [%zu] 写入失败: %d\n", i+1, err);
@@ -356,21 +356,21 @@ int main() {
     for (size_t q = 0; q < sizeof(queries)/sizeof(queries[0]); q++) {
         printf("\n   🔍 查询: \"%s\"\n", queries[q]);
         
-        agentos_memory_query_t query = {
+        agentrt_memory_query_t query = {
             .memory_query_text = (char*)queries[q],
             .memory_query_text_len = strlen(queries[q]),
             .memory_query_limit = 3,
             .memory_query_include_raw = 1
         };
         
-        agentos_memory_result_ext_t* result = NULL;
-        agentos_error_t err = agentos_memoryrov_query(memory, &query, &result);
+        agentrt_memory_result_ext_t* result = NULL;
+        agentrt_error_t err = agentrt_memoryrov_query(memory, &query, &result);
         
-        if (err == AGENTOS_OK && result && result->memory_result_count > 0) {
+        if (err == AGENTRT_OK && result && result->memory_result_count > 0) {
             printf("   📝 找到 %zu 条相关记忆:\n", result->memory_result_count);
             
             for (size_t i = 0; i < result->memory_result_count && i < 3; i++) {
-                agentos_memory_record_t* record = 
+                agentrt_memory_record_t* record = 
                     result->memory_result_items[i]->memory_result_item_record;
                 
                 printf("      [%zu] %.80s%s\n", 
@@ -379,7 +379,7 @@ int main() {
                        strlen((const char*)record->memory_record_data) > 80 ? "..." : "");
             }
             
-            agentos_memory_result_free(result);
+            agentrt_memory_result_free(result);
         } else {
             printf("   ℹ️  未找到相关记忆\n");
         }
@@ -391,7 +391,7 @@ int main() {
     
     // 5. 销毁
     printf("\n[5] 销毁记忆系统...\n");
-    agentos_memoryrov_destroy(memory);
+    agentrt_memoryrov_destroy(memory);
     printf("   ✅ 完成\n");
 
     printf("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -505,34 +505,34 @@ int main() {
 
 ### 编译错误
 
-**问题**: `fatal error: 'agentos.h' file not found`
+**问题**: `fatal error: 'agentrt.h' file not found`
 ```bash
 # 解决：指定正确的include路径
--I/path/to/AgentRT/agentos/include
+-I/path/to/AgentRT/agentrt/include
 ```
 
-**问题**: `undefined reference to 'agentos_core_init'`
+**问题**: `undefined reference to 'agentrt_core_init'`
 ```bash
 # 解决：链接必要的库
--lagentos_core -lagentos_common -lpthread
+-lagentrt_core -lagentrt_common -lpthread
 ```
 
 ### 运行时错误
 
-**问题**: `libagentos_common.so: cannot open shared object file`
+**问题**: `libagentrt_common.so: cannot open shared object file`
 ```bash
 # 解决：设置库路径
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 # 或添加到/etc/ld.so.conf.d/
-echo '/usr/local/lib' | sudo tee /etc/ld.so.conf.d/agentos.conf
+echo '/usr/local/lib' | sudo tee /etc/ld.so.conf.d/agentrt.conf
 sudo ldconfig
 ```
 
 **问题**: Segmentation fault
 ```bash
 # 解决：使用AddressSanitizer重新编译
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DAGENTOS_SANITIZE=ON
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DAGENTRT_SANITIZE=ON
 make clean && make
 # 再次运行，会显示详细的错误位置
 ```
@@ -542,12 +542,12 @@ make clean && make
 **问题**: 响应缓慢
 ```bash
 # 检查日志级别（debug模式会很慢）
-export AGENTOS_LOG_LEVEL=warn
+export AGENTRT_LOG_LEVEL=warn
 
 # 增加执行线程数
 # 在创建loop时配置：
-agentos_loop_config_t config = { .loop_config_execution_threads = 16 };
-agentos_loop_create(&config, &loop);
+agentrt_loop_config_t config = { .loop_config_execution_threads = 16 };
+agentrt_loop_create(&config, &loop);
 ```
 
 ---
@@ -576,10 +576,10 @@ agentos_loop_create(&config, &loop);
 
 ## 🆘 获取帮助
 
-- **文档**: https://docs.agentos.dev
+- **文档**: https://docs.agentrt.dev
 - **GitHub Issues**: https://github.com/spharx/AgentRT/issues
 - **Discussions**: https://github.com/spharx/AgentRT/discussions
-- **邮件列表**: dev@agentos.dev (即将开放)
+- **邮件列表**: dev@agentrt.dev (即将开放)
 
 ---
 

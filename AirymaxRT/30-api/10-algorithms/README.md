@@ -1678,7 +1678,7 @@ class AlgorithmDebugger:
 ### 配置文件示例
 
 ```yaml
-# agentos/manager/algorithms.yaml
+# agentrt/manager/algorithms.yaml
 algorithms:
   tokenizer:
     language: "zh"

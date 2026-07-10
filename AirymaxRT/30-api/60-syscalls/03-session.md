@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 概述
 
-会话管理系统调用提供会话生命周期管理接口：创建、查询、关闭和列出会话，以及查询会话持久化状态。会话是 Agent 与用户交互的上下文容器。所有函数使用 `agentos_sys_session_*` 前缀。
+会话管理系统调用提供会话生命周期管理接口：创建、查询、关闭和列出会话，以及查询会话持久化状态。会话是 Agent 与用户交互的上下文容器。所有函数使用 `agentrt_sys_session_*` 前缀。
 
 ### 五维正交原则体现
 
@@ -29,89 +29,89 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 函数 | 描述 |
 |------|------|
-| `agentos_sys_session_create()` | 创建新会话 |
-| `agentos_sys_session_get()` | 获取会话信息 |
-| `agentos_sys_session_close()` | 关闭会话 |
-| `agentos_sys_session_list()` | 列出所有会话 |
-| `agentos_sys_session_get_persist_status()` | 获取会话持久化状态 |
+| `agentrt_sys_session_create()` | 创建新会话 |
+| `agentrt_sys_session_get()` | 获取会话信息 |
+| `agentrt_sys_session_close()` | 关闭会话 |
+| `agentrt_sys_session_list()` | 列出所有会话 |
+| `agentrt_sys_session_get_persist_status()` | 获取会话持久化状态 |
 
 ---
 
 ## API 详细说明
 
-### `agentos_sys_session_create()`
+### `agentrt_sys_session_create()`
 
 ```c
 /**
  * @brief 创建新会话
  * @param metadata 会话元数据（JSON 格式，可为 NULL）
  * @param out_session_id 输出参数，返回会话 ID
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_session_id，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_session_id，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_session_create(const char *metadata,
+AGENTRT_API agentrt_error_t agentrt_sys_session_create(const char *metadata,
                                                         char **out_session_id);
 ```
 
 **使用示例**：
 ```c
 char *session_id = NULL;
-agentos_error_t err = agentos_sys_session_create(
+agentrt_error_t err = agentrt_sys_session_create(
     "{\"user\": \"alice\", \"type\": \"chat\"}", &session_id);
-if (err == AGENTOS_OK) {
+if (err == AGENTRT_OK) {
     printf("Session created: %s\n", session_id);
-    agentos_sys_free(session_id);
+    agentrt_sys_free(session_id);
 }
 ```
 
-### `agentos_sys_session_get()`
+### `agentrt_sys_session_get()`
 
 ```c
 /**
  * @brief 获取会话信息
  * @param session_id 会话 ID
  * @param out_info 输出参数，返回会话信息（JSON 格式）
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_info，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_info，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTOS_API agentos_error_t agentos_sys_session_get(const char *session_id,
+AGENTRT_API agentrt_error_t agentrt_sys_session_get(const char *session_id,
                                                      char **out_info);
 ```
 
-### `agentos_sys_session_close()`
+### `agentrt_sys_session_close()`
 
 ```c
 /**
  * @brief 关闭会话
  * @param session_id 会话 ID
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_session_close(const char *session_id);
+AGENTRT_API agentrt_error_t agentrt_sys_session_close(const char *session_id);
 ```
 
-### `agentos_sys_session_list()`
+### `agentrt_sys_session_list()`
 
 ```c
 /**
  * @brief 列出所有会话
  * @param out_sessions 输出参数，返回会话 ID 数组
  * @param out_count 输出参数，返回会话数量
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_sessions，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_sessions，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_session_list(char ***out_sessions,
+AGENTRT_API agentrt_error_t agentrt_sys_session_list(char ***out_sessions,
                                                       size_t *out_count);
 ```
 
@@ -119,16 +119,16 @@ AGENTOS_API agentos_error_t agentos_sys_session_list(char ***out_sessions,
 ```c
 char **sessions = NULL;
 size_t count = 0;
-agentos_error_t err = agentos_sys_session_list(&sessions, &count);
-if (err == AGENTOS_OK) {
+agentrt_error_t err = agentrt_sys_session_list(&sessions, &count);
+if (err == AGENTRT_OK) {
     for (size_t i = 0; i < count; i++) {
         printf("[%zu] %s\n", i, sessions[i]);
     }
-    agentos_sys_free(sessions);
+    agentrt_sys_free(sessions);
 }
 ```
 
-### `agentos_sys_session_get_persist_status()`
+### `agentrt_sys_session_get_persist_status()`
 
 ```c
 /**
@@ -136,15 +136,15 @@ if (err == AGENTOS_OK) {
  * @param session_id 会话 ID
  * @param out_status 输出参数，返回持久化状态
  * @param out_error 输出参数，返回持久化错误码（可为 NULL）
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTOS_API agentos_error_t agentos_sys_session_get_persist_status(
+AGENTRT_API agentrt_error_t agentrt_sys_session_get_persist_status(
     const char *session_id,
     session_persist_status_t *out_status,
-    agentos_error_t *out_error);
+    agentrt_error_t *out_error);
 ```
 
 **持久化状态枚举**：
@@ -162,9 +162,9 @@ typedef enum {
 
 ## 注意事项
 
-1. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentos_sys_free()` 释放。
-2. **错误码**：返回值使用 [error.h](../../AgentRT/agentos/commons/utils/error/include/error.h) 定义的负整数错误码。
-3. **系统调用初始化**：使用会话相关 API 前需调用 `agentos_syscalls_init()`。
+1. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentrt_sys_free()` 释放。
+2. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+3. **系统调用初始化**：使用会话相关 API 前需调用 `agentrt_syscalls_init()`。
 4. **会话 ID 格式**：返回的会话 ID 为字符串类型，由系统内部生成。
 
 ---
@@ -176,7 +176,7 @@ typedef enum {
 - [记忆管理系统调用](memory.md)
 - [Agent 管理系统调用](agent.md)
 - [架构设计：CoreLoopThree 认知循环](../../10-architecture/02-coreloopthree.md)
-- [错误码体系](../../AgentRT/agentos/commons/utils/error/include/error.h)
+- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
 
 ---
 

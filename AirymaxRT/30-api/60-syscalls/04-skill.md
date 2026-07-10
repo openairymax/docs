@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 Skill 管理 API 提供 Airymax 技能（Skill）的完整生命周期管理。Skill 是 Airymax 中可复用的能力单元，遵循**市场-安装-执行-卸载**的标准化流程。每个 Skill 通过 URL 标识来源，安装后获得唯一 Skill ID，可被 Agent 绑定调用，也可独立执行。
 
-Skill 系统与 Agent 系统协同工作：Agent 通过 `agentos_agent_skill_bind()` 绑定 Skill 获得扩展能力，Skill 也可通过 `agentos_sys_skill_execute()` 独立执行。这种设计遵循**关注点分离**原则——Agent 负责任务编排，Skill 负责具体能力实现。
+Skill 系统与 Agent 系统协同工作：Agent 通过 `agentrt_agent_skill_bind()` 绑定 Skill 获得扩展能力，Skill 也可通过 `agentrt_sys_skill_execute()` 独立执行。这种设计遵循**关注点分离**原则——Agent 负责任务编排，Skill 负责具体能力实现。
 
 ### 🧩 五维正交原则体现
 
@@ -32,10 +32,10 @@ Skill 管理 API 深度体现了 Airymax 的五维正交设计原则：
 
 | 函数 | 描述 | 复杂度 |
 |------|------|--------|
-| `agentos_sys_skill_install()` | 安装 Skill | O(1) |
-| `agentos_sys_skill_execute()` | 执行 Skill | O(n) |
-| `agentos_sys_skill_list()` | 列出已安装 Skill | O(n) |
-| `agentos_sys_skill_uninstall()` | 卸载 Skill | O(n) |
+| `agentrt_sys_skill_install()` | 安装 Skill | O(1) |
+| `agentrt_sys_skill_execute()` | 执行 Skill | O(n) |
+| `agentrt_sys_skill_list()` | 列出已安装 Skill | O(n) |
+| `agentrt_sys_skill_uninstall()` | 卸载 Skill | O(n) |
 
 ---
 
@@ -48,9 +48,9 @@ Skill 管理 API 深度体现了 Airymax 的五维正交设计原则：
  * @brief Skill 条目结构体
  *
  * 描述已安装 Skill 的完整信息。
- * @ownership 调用者拥有返回指针，需通过 agentos_sys_skill_list_free() 释放
+ * @ownership 调用者拥有返回指针，需通过 agentrt_sys_skill_list_free() 释放
  */
-typedef struct agentos_skill_entry {
+typedef struct agentrt_skill_entry {
     /** Skill 唯一标识符（系统自动生成） */
     char skill_id[64];
 
@@ -109,7 +109,7 @@ typedef struct agentos_skill_entry {
 
     /** Skill 元数据（JSON 格式） */
     char* metadata;
-} agentos_skill_entry_t;
+} agentrt_skill_entry_t;
 ```
 
 ### Skill 安装配置
@@ -120,7 +120,7 @@ typedef struct agentos_skill_entry {
  *
  * 定义 Skill 安装时的参数和选项。
  */
-typedef struct agentos_skill_install_config {
+typedef struct agentrt_skill_install_config {
     /** Skill 来源 URL（必填） */
     const char* url;
 
@@ -166,7 +166,7 @@ typedef struct agentos_skill_install_config {
             uint32_t max_execution_time_sec;
         } resource_limits;
     } permission_config;
-} agentos_skill_install_config_t;
+} agentrt_skill_install_config_t;
 ```
 
 ### Skill 执行结果
@@ -176,9 +176,9 @@ typedef struct agentos_skill_install_config {
  * @brief Skill 执行结果结构体
  *
  * 描述 Skill 执行的完整结果信息。
- * @ownership 调用者拥有返回指针，需通过 agentos_sys_skill_result_free() 释放
+ * @ownership 调用者拥有返回指针，需通过 agentrt_sys_skill_result_free() 释放
  */
-typedef struct agentos_skill_result {
+typedef struct agentrt_skill_result {
     /** 执行状态码（0=成功，负值=错误） */
     int status;
 
@@ -199,14 +199,14 @@ typedef struct agentos_skill_result {
 
     /** 执行警告列表（JSON 数组，可能为 NULL） */
     char* warnings;
-} agentos_skill_result_t;
+} agentrt_skill_result_t;
 ```
 
 ---
 
 ## 📖 API 详细说明
 
-### agentos_sys_skill_install
+### agentrt_sys_skill_install
 
 ```c
 /**
@@ -216,39 +216,39 @@ typedef struct agentos_skill_result {
  * 可通过返回的 skill_id 进行后续操作。
  *
  * @param skill_url   Skill 来源 URL（必填，格式：scheme://host/path）
- * @param out_skill_id [out] 返回分配的 Skill ID（调用者负责 agentos_sys_free 释放）
+ * @param out_skill_id [out] 返回分配的 Skill ID（调用者负责 agentrt_sys_free 释放）
  *
- * @return AGENTOS_OK 成功
- * @return AGENTOS_EINVAL  参数无效（skill_url 或 out_skill_id 为 NULL）
- * @return AGENTOS_ENOMEM  内存不足
- * @return AGENTOS_EEXIST  Skill 已安装（URL 重复）
- * @return AGENTOS_ETIMEOUT 安装超时
+ * @return AGENTRT_OK 成功
+ * @return AGENTRT_EINVAL  参数无效（skill_url 或 out_skill_id 为 NULL）
+ * @return AGENTRT_ENOMEM  内存不足
+ * @return AGENTRT_EEXIST  Skill 已安装（URL 重复）
+ * @return AGENTRT_ETIMEOUT 安装超时
  *
- * @ownership 调用者拥有 *out_skill_id，需通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_skill_id，需通过 agentrt_sys_free() 释放
  * @threadsafe 是。内部使用互斥锁保护 Skill 列表
  * @reentrant  否。使用全局 Skill 列表
  *
  * @note Skill ID 格式为 "skill_N"，N 为原子递增计数器
  * @note 当前实现为同步安装，未来版本将支持异步安装
  *
- * @see agentos_sys_skill_uninstall()
- * @see agentos_sys_skill_list()
+ * @see agentrt_sys_skill_uninstall()
+ * @see agentrt_sys_skill_list()
  */
-agentos_error_t agentos_sys_skill_install(const char* skill_url, char** out_skill_id);
+agentrt_error_t agentrt_sys_skill_install(const char* skill_url, char** out_skill_id);
 ```
 
 **使用示例**：
 
 ```c
 char* skill_id = NULL;
-agentos_error_t err = agentos_sys_skill_install(
-    "https://market.agentos.dev/skills/web-search/v2.1.0",
+agentrt_error_t err = agentrt_sys_skill_install(
+    "https://market.agentrt.dev/skills/web-search/v2.1.0",
     &skill_id
 );
-if (err == AGENTOS_OK) {
+if (err == AGENTRT_OK) {
     printf("Skill installed: %s\n", skill_id);
-    agentos_sys_free(skill_id);
-} else if (err == AGENTOS_EEXIST) {
+    agentrt_sys_free(skill_id);
+} else if (err == AGENTRT_EEXIST) {
     printf("Skill already installed\n");
 } else {
     printf("Install failed: %d\n", err);
@@ -257,7 +257,7 @@ if (err == AGENTOS_OK) {
 
 ---
 
-### agentos_sys_skill_execute
+### agentrt_sys_skill_execute
 
 ```c
 /**
@@ -268,26 +268,26 @@ if (err == AGENTOS_OK) {
  *
  * @param skill_id   已安装 Skill 的标识符（必填）
  * @param input      输入数据（JSON 格式字符串，必填）
- * @param out_output [out] 返回执行输出（调用者负责 agentos_sys_free 释放）
+ * @param out_output [out] 返回执行输出（调用者负责 agentrt_sys_free 释放）
  *
- * @return AGENTOS_OK 成功
- * @return AGENTOS_EINVAL  参数无效（任何参数为 NULL）
- * @return AGENTOS_ENOMEM  内存不足
- * @return AGENTOS_ENOENT  Skill 未找到
- * @return AGENTOS_EACCES  Skill 无执行权限
- * @return AGENTOS_EBUSY   Skill 正在执行中
+ * @return AGENTRT_OK 成功
+ * @return AGENTRT_EINVAL  参数无效（任何参数为 NULL）
+ * @return AGENTRT_ENOMEM  内存不足
+ * @return AGENTRT_ENOENT  Skill 未找到
+ * @return AGENTRT_EACCES  Skill 无执行权限
+ * @return AGENTRT_EBUSY   Skill 正在执行中
  *
- * @ownership 调用者拥有 *out_output，需通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_output，需通过 agentrt_sys_free() 释放
  * @threadsafe 是。内部使用互斥锁保护 Skill 列表
  * @reentrant  否。Skill 执行可能修改全局状态
  *
  * @note 当前实现为回显模式（echo），生产环境将调用 Skill 的实际执行逻辑
  * @note 执行超时由 Skill 配置决定，默认为 30 秒
  *
- * @see agentos_sys_skill_install()
- * @see agentos_agent_skill_bind()
+ * @see agentrt_sys_skill_install()
+ * @see agentrt_agent_skill_bind()
  */
-agentos_error_t agentos_sys_skill_execute(const char* skill_id,
+agentrt_error_t agentrt_sys_skill_execute(const char* skill_id,
                                           const char* input,
                                           char** out_output);
 ```
@@ -299,11 +299,11 @@ const char* skill_id = "skill_0";
 const char* input = "{\"query\": \"Airymax architecture\", \"limit\": 5}";
 char* output = NULL;
 
-agentos_error_t err = agentos_sys_skill_execute(skill_id, input, &output);
-if (err == AGENTOS_OK) {
+agentrt_error_t err = agentrt_sys_skill_execute(skill_id, input, &output);
+if (err == AGENTRT_OK) {
     printf("Skill output: %s\n", output);
-    agentos_sys_free(output);
-} else if (err == AGENTOS_ENOENT) {
+    agentrt_sys_free(output);
+} else if (err == AGENTRT_ENOENT) {
     printf("Skill not found: %s\n", skill_id);
 } else {
     printf("Execution failed: %d\n", err);
@@ -315,33 +315,33 @@ if (err == AGENTOS_OK) {
 ```c
 // 1. 安装 Skill
 char* skill_id = NULL;
-agentos_sys_skill_install("https://market.agentos.dev/skills/code-review/v1.0.0", &skill_id);
+agentrt_sys_skill_install("https://market.agentrt.dev/skills/code-review/v1.0.0", &skill_id);
 
 // 2. 创建 Agent 并绑定 Skill
-agentos_agent_config_t config = {0};
+agentrt_agent_config_t config = {0};
 strncpy(config.name, "code-reviewer", sizeof(config.name));
 config.type = AGENT_TYPE_TASK;
 
 char* agent_id = NULL;
-agentos_agent_create(&config, &agent_id);
-agentos_agent_skill_bind(agent_id, skill_id);
+agentrt_agent_create(&config, &agent_id);
+agentrt_agent_skill_bind(agent_id, skill_id);
 
 // 3. 通过 Agent 调用 Skill
 char* output = NULL;
-agentos_agent_invoke(agent_id, "Review this code: ...", strlen("Review this code: ..."), &output);
-agentos_sys_free(output);
+agentrt_agent_invoke(agent_id, "Review this code: ...", strlen("Review this code: ..."), &output);
+agentrt_sys_free(output);
 
 // 4. 清理
-agentos_agent_skill_unbind(agent_id, skill_id);
-agentos_agent_destroy(agent_id);
-agentos_sys_skill_uninstall(skill_id);
-agentos_sys_free(skill_id);
-agentos_sys_free(agent_id);
+agentrt_agent_skill_unbind(agent_id, skill_id);
+agentrt_agent_destroy(agent_id);
+agentrt_sys_skill_uninstall(skill_id);
+agentrt_sys_free(skill_id);
+agentrt_sys_free(agent_id);
 ```
 
 ---
 
-### agentos_sys_skill_list
+### agentrt_sys_skill_list
 
 ```c
 /**
@@ -349,23 +349,23 @@ agentos_sys_free(agent_id);
  *
  * 返回当前系统中所有已安装 Skill 的 ID 列表。
  *
- * @param out_skills [out] 返回 Skill ID 数组（调用者负责逐个 agentos_sys_free 释放，然后释放数组本身）
+ * @param out_skills [out] 返回 Skill ID 数组（调用者负责逐个 agentrt_sys_free 释放，然后释放数组本身）
  * @param out_count  [out] 返回 Skill 数量
  *
- * @return AGENTOS_OK 成功
- * @return AGENTOS_EINVAL  参数无效（out_skills 或 out_count 为 NULL）
- * @return AGENTOS_ENOMEM  内存不足
+ * @return AGENTRT_OK 成功
+ * @return AGENTRT_EINVAL  参数无效（out_skills 或 out_count 为 NULL）
+ * @return AGENTRT_ENOMEM  内存不足
  *
- * @ownership 调用者拥有 *out_skills 数组及其每个元素，需逐个 agentos_sys_free() 释放元素后 agentos_sys_free() 释放数组
+ * @ownership 调用者拥有 *out_skills 数组及其每个元素，需逐个 agentrt_sys_free() 释放元素后 agentrt_sys_free() 释放数组
  * @threadsafe 是。内部使用互斥锁保护 Skill 列表
  * @reentrant  否。使用全局 Skill 列表
  *
  * @note 当没有已安装 Skill 时，*out_skills 为 NULL，*out_count 为 0
  *
- * @see agentos_sys_skill_install()
- * @see agentos_sys_skill_uninstall()
+ * @see agentrt_sys_skill_install()
+ * @see agentrt_sys_skill_uninstall()
  */
-agentos_error_t agentos_sys_skill_list(char*** out_skills, size_t* out_count);
+agentrt_error_t agentrt_sys_skill_list(char*** out_skills, size_t* out_count);
 ```
 
 **使用示例**：
@@ -374,20 +374,20 @@ agentos_error_t agentos_sys_skill_list(char*** out_skills, size_t* out_count);
 char** skills = NULL;
 size_t count = 0;
 
-agentos_error_t err = agentos_sys_skill_list(&skills, &count);
-if (err == AGENTOS_OK) {
+agentrt_error_t err = agentrt_sys_skill_list(&skills, &count);
+if (err == AGENTRT_OK) {
     printf("Installed skills (%zu):\n", count);
     for (size_t i = 0; i < count; i++) {
         printf("  - %s\n", skills[i]);
-        agentos_sys_free(skills[i]);
+        agentrt_sys_free(skills[i]);
     }
-    if (skills) agentos_sys_free(skills);
+    if (skills) agentrt_sys_free(skills);
 }
 ```
 
 ---
 
-### agentos_sys_skill_uninstall
+### agentrt_sys_skill_uninstall
 
 ```c
 /**
@@ -398,10 +398,10 @@ if (err == AGENTOS_OK) {
  *
  * @param skill_id 要卸载的 Skill 标识符（必填）
  *
- * @return AGENTOS_OK 成功
- * @return AGENTOS_EINVAL  参数无效（skill_id 为 NULL）
- * @return AGENTOS_ENOENT  Skill 未找到
- * @return AGENTOS_EBUSY   Skill 正在被 Agent 使用，无法卸载
+ * @return AGENTRT_OK 成功
+ * @return AGENTRT_EINVAL  参数无效（skill_id 为 NULL）
+ * @return AGENTRT_ENOENT  Skill 未找到
+ * @return AGENTRT_EBUSY   Skill 正在被 Agent 使用，无法卸载
  *
  * @ownership 无输出参数，不涉及所有权转移
  * @threadsafe 是。内部使用互斥锁保护 Skill 列表
@@ -410,10 +410,10 @@ if (err == AGENTOS_OK) {
  * @warning 卸载正在被 Agent 使用的 Skill 可能导致运行时错误
  * @note 卸载操作不可逆，Skill 的所有运行时数据将被清除
  *
- * @see agentos_sys_skill_install()
- * @see agentos_agent_skill_unbind()
+ * @see agentrt_sys_skill_install()
+ * @see agentrt_agent_skill_unbind()
  */
-agentos_error_t agentos_sys_skill_uninstall(const char* skill_id);
+agentrt_error_t agentrt_sys_skill_uninstall(const char* skill_id);
 ```
 
 **使用示例**：
@@ -421,12 +421,12 @@ agentos_error_t agentos_sys_skill_uninstall(const char* skill_id);
 ```c
 const char* skill_id = "skill_0";
 
-agentos_error_t err = agentos_sys_skill_uninstall(skill_id);
-if (err == AGENTOS_OK) {
+agentrt_error_t err = agentrt_sys_skill_uninstall(skill_id);
+if (err == AGENTRT_OK) {
     printf("Skill uninstalled successfully\n");
-} else if (err == AGENTOS_ENOENT) {
+} else if (err == AGENTRT_ENOENT) {
     printf("Skill not found: %s\n", skill_id);
-} else if (err == AGENTOS_EBUSY) {
+} else if (err == AGENTRT_EBUSY) {
     printf("Skill is in use, cannot uninstall\n");
 }
 ```
@@ -502,26 +502,26 @@ if (err == AGENTOS_OK) {
 #include <string.h>
 
 int main(void) {
-    agentos_error_t err;
+    agentrt_error_t err;
 
     // 1. 初始化系统调用层
-    err = agentos_syscalls_init();
-    if (err != AGENTOS_OK) {
+    err = agentrt_syscalls_init();
+    if (err != AGENTRT_OK) {
         fprintf(stderr, "Failed to init syscalls: %d\n", err);
         return 1;
     }
 
     // 2. 安装多个 Skill
     const char* skill_urls[] = {
-        "https://market.agentos.dev/skills/web-search/v2.1.0",
-        "https://market.agentos.dev/skills/code-review/v1.0.0",
-        "https://market.agentos.dev/skills/data-analysis/v3.0.0"
+        "https://market.agentrt.dev/skills/web-search/v2.1.0",
+        "https://market.agentrt.dev/skills/code-review/v1.0.0",
+        "https://market.agentrt.dev/skills/data-analysis/v3.0.0"
     };
 
     char* skill_ids[3] = {NULL};
     for (int i = 0; i < 3; i++) {
-        err = agentos_sys_skill_install(skill_urls[i], &skill_ids[i]);
-        if (err != AGENTOS_OK) {
+        err = agentrt_sys_skill_install(skill_urls[i], &skill_ids[i]);
+        if (err != AGENTRT_OK) {
             fprintf(stderr, "Failed to install skill from %s: %d\n", skill_urls[i], err);
             goto cleanup;
         }
@@ -531,37 +531,37 @@ int main(void) {
     // 3. 列出所有已安装 Skill
     char** skills = NULL;
     size_t count = 0;
-    err = agentos_sys_skill_list(&skills, &count);
-    if (err == AGENTOS_OK) {
+    err = agentrt_sys_skill_list(&skills, &count);
+    if (err == AGENTRT_OK) {
         printf("\nInstalled skills (%zu):\n", count);
         for (size_t i = 0; i < count; i++) {
             printf("  [%zu] %s\n", i, skills[i]);
-            agentos_sys_free(skills[i]);
+            agentrt_sys_free(skills[i]);
         }
-        if (skills) agentos_sys_free(skills);
+        if (skills) agentrt_sys_free(skills);
     }
 
     // 4. 执行 Skill
     char* output = NULL;
-    err = agentos_sys_skill_execute(skill_ids[0],
+    err = agentrt_sys_skill_execute(skill_ids[0],
         "{\"query\": \"MicroCoreRT architecture patterns\", \"limit\": 5}",
         &output);
-    if (err == AGENTOS_OK) {
+    if (err == AGENTRT_OK) {
         printf("\nSkill output: %s\n", output);
-        agentos_sys_free(output);
+        agentrt_sys_free(output);
     }
 
     // 5. 卸载 Skill
 cleanup:
     for (int i = 0; i < 3; i++) {
         if (skill_ids[i]) {
-            agentos_sys_skill_uninstall(skill_ids[i]);
-            agentos_sys_free(skill_ids[i]);
+            agentrt_sys_skill_uninstall(skill_ids[i]);
+            agentrt_sys_free(skill_ids[i]);
         }
     }
 
     // 6. 清理系统调用层
-    agentos_syscalls_cleanup();
+    agentrt_syscalls_cleanup();
     return 0;
 }
 ```
@@ -573,46 +573,46 @@ cleanup:
 
 // 1. 安装所需 Skill
 char* review_skill_id = NULL;
-agentos_sys_skill_install(
-    "https://market.agentos.dev/skills/code-review/v1.0.0",
+agentrt_sys_skill_install(
+    "https://market.agentrt.dev/skills/code-review/v1.0.0",
     &review_skill_id);
 
 char* lint_skill_id = NULL;
-agentos_sys_skill_install(
-    "https://market.agentos.dev/skills/lint-checker/v2.3.0",
+agentrt_sys_skill_install(
+    "https://market.agentrt.dev/skills/lint-checker/v2.3.0",
     &lint_skill_id);
 
 // 2. 创建 Agent 并绑定 Skill
-agentos_agent_config_t config = {0};
+agentrt_agent_config_t config = {0};
 strncpy(config.name, "code-reviewer", sizeof(config.name));
 config.type = AGENT_TYPE_TASK;
 config.max_concurrent_tasks = 5;
 
 char* agent_id = NULL;
-agentos_agent_create(&config, &agent_id);
-agentos_agent_skill_bind(agent_id, review_skill_id);
-agentos_agent_skill_bind(agent_id, lint_skill_id);
+agentrt_agent_create(&config, &agent_id);
+agentrt_agent_skill_bind(agent_id, review_skill_id);
+agentrt_agent_skill_bind(agent_id, lint_skill_id);
 
 // 3. 通过 Agent 执行任务（Agent 自动选择合适的 Skill）
 char* result = NULL;
-agentos_agent_invoke(agent_id,
+agentrt_agent_invoke(agent_id,
     "Review the following C code for security vulnerabilities:\n"
     "char buf[64]; strcpy(buf, user_input);",
     strlen("Review the following C code..."),
     &result);
 
 printf("Review result: %s\n", result);
-agentos_sys_free(result);
+agentrt_sys_free(result);
 
 // 4. 清理
-agentos_agent_skill_unbind(agent_id, review_skill_id);
-agentos_agent_skill_unbind(agent_id, lint_skill_id);
-agentos_agent_destroy(agent_id);
-agentos_sys_skill_uninstall(review_skill_id);
-agentos_sys_skill_uninstall(lint_skill_id);
-agentos_sys_free(review_skill_id);
-agentos_sys_free(lint_skill_id);
-agentos_sys_free(agent_id);
+agentrt_agent_skill_unbind(agent_id, review_skill_id);
+agentrt_agent_skill_unbind(agent_id, lint_skill_id);
+agentrt_agent_destroy(agent_id);
+agentrt_sys_skill_uninstall(review_skill_id);
+agentrt_sys_skill_uninstall(lint_skill_id);
+agentrt_sys_free(review_skill_id);
+agentrt_sys_free(lint_skill_id);
+agentrt_sys_free(agent_id);
 ```
 
 ---
@@ -621,7 +621,7 @@ agentos_sys_free(agent_id);
 
 1. **线程安全**：所有 Skill API 均为线程安全，使用原子操作和互斥锁保护全局 Skill 列表。惰性锁初始化采用 Double-Checked Locking 模式（`__atomic_compare_exchange_n`），避免静态初始化顺序问题。
 
-2. **内存管理**：`agentos_sys_skill_install()` 和 `agentos_sys_skill_list()` 返回的字符串需要调用者通过 `agentos_sys_free()` 释放。`agentos_sys_skill_uninstall()` 会自动释放 Skill 内部数据。
+2. **内存管理**：`agentrt_sys_skill_install()` 和 `agentrt_sys_skill_list()` 返回的字符串需要调用者通过 `agentrt_sys_free()` 释放。`agentrt_sys_skill_uninstall()` 会自动释放 Skill 内部数据。
 
 3. **Skill ID 唯一性**：Skill ID 使用原子递增计数器生成（格式 `skill_N`），在单次运行期间保证唯一。系统重启后计数器重置。
 
@@ -635,27 +635,27 @@ agentos_sys_free(agent_id);
 
 | 错误码 | 值 | 描述 |
 |-------|-----|------|
-| `AGENTOS_OK` | 0 | 成功 |
-| `AGENTOS_EINVAL` | -2 | 参数无效 |
-| `AGENTOS_ENOMEM` | -4 | 内存不足 |
-| `AGENTOS_ENOENT` | -6 | Skill 未找到 |
-| `AGENTOS_EEXIST` | -7 | Skill 已安装 |
-| `AGENTOS_EBUSY` | -11 | Skill 正在使用 |
-| `AGENTOS_EACCES` | -10 | 权限不足 |
-| `AGENTOS_ETIMEOUT` | -8 | 操作超时 |
+| `AGENTRT_OK` | 0 | 成功 |
+| `AGENTRT_EINVAL` | -2 | 参数无效 |
+| `AGENTRT_ENOMEM` | -4 | 内存不足 |
+| `AGENTRT_ENOENT` | -6 | Skill 未找到 |
+| `AGENTRT_EEXIST` | -7 | Skill 已安装 |
+| `AGENTRT_EBUSY` | -11 | Skill 正在使用 |
+| `AGENTRT_EACCES` | -10 | 权限不足 |
+| `AGENTRT_ETIMEOUT` | -8 | 操作超时 |
 
 ### 高层错误码（API 层）
 
 | 错误码 | 值 | 描述 |
 |-------|-----|------|
-| `AGENTOS_ERROR_SKILL_NOT_FOUND` | 0x6001 | Skill 未找到 |
-| `AGENTOS_ERROR_SKILL_ALREADY_INSTALLED` | 0x6002 | Skill 已安装 |
-| `AGENTOS_ERROR_SKILL_INSTALL_FAILED` | 0x6003 | Skill 安装失败 |
-| `AGENTOS_ERROR_SKILL_EXECUTION_FAILED` | 0x6004 | Skill 执行失败 |
-| `AGENTOS_ERROR_SKILL_PERMISSION_DENIED` | 0x6005 | Skill 权限不足 |
-| `AGENTOS_ERROR_SKILL_BUSY` | 0x6006 | Skill 正在执行 |
-| `AGENTOS_ERROR_SKILL_INVALID_URL` | 0x6007 | Skill URL 无效 |
-| `AGENTOS_ERROR_SKILL_VERIFICATION_FAILED` | 0x6008 | Skill 验证失败 |
+| `AGENTRT_ERROR_SKILL_NOT_FOUND` | 0x6001 | Skill 未找到 |
+| `AGENTRT_ERROR_SKILL_ALREADY_INSTALLED` | 0x6002 | Skill 已安装 |
+| `AGENTRT_ERROR_SKILL_INSTALL_FAILED` | 0x6003 | Skill 安装失败 |
+| `AGENTRT_ERROR_SKILL_EXECUTION_FAILED` | 0x6004 | Skill 执行失败 |
+| `AGENTRT_ERROR_SKILL_PERMISSION_DENIED` | 0x6005 | Skill 权限不足 |
+| `AGENTRT_ERROR_SKILL_BUSY` | 0x6006 | Skill 正在执行 |
+| `AGENTRT_ERROR_SKILL_INVALID_URL` | 0x6007 | Skill URL 无效 |
+| `AGENTRT_ERROR_SKILL_VERIFICATION_FAILED` | 0x6008 | Skill 验证失败 |
 
 ---
 
@@ -667,7 +667,7 @@ agentos_sys_free(agent_id);
 | [任务管理 API](./task.md) | 任务提交与查询 |
 | [Skill 契约规范](../../50-specifications/10-contracts/02-skill-contract.md) | Skill 契约定义与验证 |
 | [架构设计原则](../../00-architectural-principles.md) | 五维正交设计体系 |
-| [系统调用接口](../../../AgentRT/agentos/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
+| [系统调用接口](../../../AgentRT/agentrt/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
 
 ---
 

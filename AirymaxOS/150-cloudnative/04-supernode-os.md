@@ -2,14 +2,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 超节点 OS 实现方案
 
-> **文档定位**: agentrt-linux（AirymaxOS）超节点 OS 的完整实现方案，定义超节点拓扑模型、NUMA 感知调度、跨 die 迁移协议、CXL 内存分层、超节点级 Token 预算池与整机快照恢复
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **父文档**: [云原生 Agent 部署 README](README.md)
-> **文档性质**: 实现方案文档（非设计文档）。本方案在 [20-modules/06-cloudnative.md](../20-modules/06-cloudnative.md) §3.8/§4.8 超节点 OS 设计与 [40-dataflows/02-memory-flow.md](../40-dataflows/02-memory-flow.md) 记忆卷载数据流的基础上，补充完整的超节点拓扑、调度、迁移、分层与预算实现
-> **同源映射**: agentrt gateway（Agent 网关多节点协调）[SS] + Linux 6.6 NUMA 调度与内存分层 [IND]
-> **设计参考**: Linux 6.6 `kernel/sched/topology.c:2068`（`sched_init_numa`）+ `kernel/sched/fair.c:3496`（`task_numa_fault`）+ `kernel/sched/fair.c:2958`（`numa_migrate_preferred`）+ `mm/memory-tiers.c:13`（`struct memory_tier`）+ `mm/memory-tiers.c:321`（`next_demotion_node`）+ `mm/migrate.c:2025`（`migrate_pages`）+ `drivers/cxl/`（CXL 驱动）+ seL4 `src/kernel/smp/`（多核同步）
-> **IRON-9 v2 层次**: [IND] 完全独立层（超节点 OS 为 agentrt-linux 云原生专属，MemoryRovol L1-L4 数据结构 [SC] 共享）
+> **文档定位**：agentrt-linux（AirymaxOS）超节点 OS 的完整实现方案，定义超节点拓扑模型、NUMA 感知调度、跨 die 迁移协议、CXL 内存分层、超节点级 Token 预算池与整机快照恢复\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **父文档**：[云原生 Agent 部署 README](README.md)\
+> **文档性质**：实现方案文档（非设计文档）。本方案在 [20-modules/06-cloudnative.md](../20-modules/06-cloudnative.md) §3.8/§4.8 超节点 OS 设计与 [40-dataflows/02-memory-flow.md](../40-dataflows/02-memory-flow.md) 记忆卷载数据流的基础上，补充完整的超节点拓扑、调度、迁移、分层与预算实现\
+> **同源映射**：agentrt gateway（Agent 网关多节点协调）[SS] + Linux 6.6 NUMA 调度与内存分层 [IND]\
+> **设计参考**：Linux 6.6 `kernel/sched/topology.c:2068`（`sched_init_numa`）+ `kernel/sched/fair.c:3496`（`task_numa_fault`）+ `kernel/sched/fair.c:2958`（`numa_migrate_preferred`）+ `mm/memory-tiers.c:13`（`struct memory_tier`）+ `mm/memory-tiers.c:321`（`next_demotion_node`）+ `mm/migrate.c:2025`（`migrate_pages`）+ `drivers/cxl/`（CXL 驱动）+ seL4 `src/kernel/smp/`（多核同步）\
+> **IRON-9 v2 层次**：[IND] 完全独立层（超节点 OS 为 agentrt-linux 云原生专属，MemoryRovol L1-L4 数据结构 [SC] 共享）
 
 ---
 

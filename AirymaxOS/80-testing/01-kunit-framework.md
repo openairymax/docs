@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）KUnit 单元测试框架详解
 
-> **文档定位**: agentrt-linux（AirymaxOS）测试工程体系第 1 卷——KUnit 白盒单元测试框架详解。本卷规定 KUnit 架构、`kunit_suite`/`kunit_case` 结构、`KUNIT_EXPECT_*`/`KUNIT_ASSERT_*` 宏、参数化测试、套件注册、KUnit 运行器、Kconfig 集成（`CONFIG_KUNIT`）、TAP 输出格式与 in-tree 测试组织。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt 7 层验证 L1（白盒单元测试）+ Linux 6.6 内核基线 `lib/kunit/`、`include/kunit/test.h`
-> **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义）
-> **核心约束**: IRON-9 v2 同源且部分代码共享——KUnit 框架与 Linux 6.6 上游保持源码同源，agentrt-linux 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
+> **文档定位**： agentrt-linux（AirymaxOS）测试工程体系第 1 卷——KUnit 白盒单元测试框架详解。本卷规定 KUnit 架构、`kunit_suite`/`kunit_case` 结构、`KUNIT_EXPECT_*`/`KUNIT_ASSERT_*` 宏、参数化测试、套件注册、KUnit 运行器、Kconfig 集成（`CONFIG_KUNIT`）、TAP 输出格式与 in-tree 测试组织。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt 7 层验证 L1（白盒单元测试）+ Linux 6.6 内核基线 `lib/kunit/`、`include/kunit/test.h`
+> **理论根基**： Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义）
+> **核心约束**： IRON-9 v2 同源且部分代码共享——KUnit 框架与 Linux 6.6 上游保持源码同源，agentrt-linux 扩展必须以独立套件形式注入，禁止改写上游 KUnit 核心代码。
 
 ---
 
@@ -522,6 +522,160 @@ graph LR
 
 **协作说明**：agentrt 用户态测试通过 `AGENTRT_TEST` + `agentrt_assert_*` 编写并运行于用户态进程，agentrt-linux 内核态测试通过 `KUNIT_CASE` + `KUNIT_EXPECT_*` 编写并运行于内核态 kthread。两端在 **[SS] 语义同源层** 共享"声明式测试注册 + 断言驱动"的设计模式（套件注册 / 断言宏 / 生命周期 / TAP 13 格式），使测试用例的编写心智模型在两端可复用；但在 **[IND] 完全独立层** 各自维护运行器、执行环境、panic 捕获、KASAN 集成。两端测试结果均输出 **TAP 13 格式**，通过 **AgentsIPC** 通道汇总至 CI 第 7 层统一解析。这正是 **IRON-9 v2 同源且部分代码共享** 在测试框架层的落地——同源模式，独立实现，无共享契约，靠 IPC 协作。
 
+### 11.3 Agent 行为契约测试矩阵
+
+本节定义 Agent 行为契约测试的完整矩阵——验证 4 种 Agent 角色（LLM/TOOL/PLAN/OBSERVE）在 8 类行为触发时的返回值、状态变更与副作用符合预期。该矩阵是 §10 Agent 契约测试的细化，遵循 IRON-9 v2 同源且部分代码共享原则：测试以独立 `airymax_*` 套件形式注入，不修改上游 KUnit 框架。
+
+#### 11.3.1 Agent 角色 × 行为 枚举契约
+
+角色枚举（`include/airymax/cognition_types.h`）与行为枚举（`include/airymax/agent_types.h`）均属 [SC] 共享契约层，两端字节级一致：
+
+```c
+/* include/airymax/cognition_types.h — Agent 角色枚举（[SC] 共享契约层） */
+enum agentrt_role {
+    AGENTRT_ROLE_LLM     = 0,  /* 大语言模型推理角色 */
+    AGENTRT_ROLE_TOOL    = 1,  /* 工具执行角色 */
+    AGENTRT_ROLE_PLAN    = 2,  /* 规划角色 */
+    AGENTRT_ROLE_OBSERVE = 3,  /* 观测角色 */
+};
+
+/* include/airymax/agent_types.h — Agent 行为枚举（[SC] 共享契约层） */
+enum agentrt_action {
+    AGENTRT_ACTION_PROBE          = 0,  /* 探测 Agent 可用性 */
+    AGENTRT_ACTION_BIND           = 1,  /* 绑定资源 */
+    AGENTRT_ACTION_DISPATCH       = 2,  /* 分派任务 */
+    AGENTRT_ACTION_SUSPEND        = 3,  /* 挂起 */
+    AGENTRT_ACTION_RESUME         = 4,  /* 恢复 */
+    AGENTRT_ACTION_TERMINATE      = 5,  /* 终止 */
+    AGENTRT_ACTION_TOKEN_EXHAUST  = 6,  /* token 耗尽 */
+    AGENTRT_ACTION_COMM_FAILURE   = 7,  /* 通信失败 */
+};
+```
+
+#### 11.3.2 完整测试矩阵表
+
+4 角色 × 8 行为 = 32 个测试用例。`AGENT_STATE_*` 状态名对齐 `include/airymax/agent_types.h`：
+
+| Agent 角色 | 测试行为 | 预期返回值 | 预期状态变更 | 预期副作用 |
+|-----------|---------|-----------|-------------|-----------|
+| LLM | probe | `AGENTRT_OK` | `AGENT_STATE_IDLE` | 注册到 `agentrt_registry`，`agent_handle != NULL` |
+| LLM | bind | `AGENTRT_OK` | `AGENT_STATE_BOUND` | 绑定 token 配额，`token_quota > 0` |
+| LLM | dispatch | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 调用 `llm_infer()`，`output != NULL`，`tokens_used > 0` |
+| LLM | suspend | `AGENTRT_OK` | `AGENT_STATE_SUSPENDED` | 暂停推理上下文，`vtime` 冻结 |
+| LLM | resume | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 恢复推理上下文，`vtime` 续算 |
+| LLM | terminate | `AGENTRT_OK` | `AGENT_STATE_TERMINATED` | 释放 token 句柄，注销 registry |
+| LLM | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler(TOKEN_EVENT_EXHAUST)`，触发回退 |
+| LLM | comm_failure | `-EAGENTRT_COMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到 fallback agent |
+| TOOL | probe | `AGENTRT_OK` | `AGENT_STATE_IDLE` | 注册到 registry，`tool_table` 非空 |
+| TOOL | bind | `AGENTRT_OK` | `AGENT_STATE_BOUND` | 绑定 capability，`CAP_SYS_PTRACE` 校验 |
+| TOOL | dispatch | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 调用 `tool_exec()`，`exit_code == 0` |
+| TOOL | suspend | `AGENTRT_OK` | `AGENT_STATE_SUSPENDED` | 暂停子进程，`SIGSTOP` 发送 |
+| TOOL | resume | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 恢复子进程，`SIGCONT` 发送 |
+| TOOL | terminate | `AGENTRT_OK` | `AGENT_STATE_TERMINATED` | 回收子进程，`waitpid` 返回 |
+| TOOL | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，工具调用降级 |
+| TOOL | comm_failure | `-EAGENTRT_COMM` | `AGENT_STATE_ERROR` | 5 秒超时回退，工具调用重试 ≤ 3 次 |
+| PLAN | probe | `AGENTRT_OK` | `AGENT_STATE_IDLE` | 注册到 registry，`plan_graph` 非空 |
+| PLAN | bind | `AGENTRT_OK` | `AGENT_STATE_BOUND` | 绑定规划上下文，`plan_depth <= MAX_DEPTH` |
+| PLAN | dispatch | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 调用 `plan_solve()`，`plan_steps > 0` |
+| PLAN | suspend | `AGENTRT_OK` | `AGENT_STATE_SUSPENDED` | 暂停规划栈，`plan_stack` 冻结 |
+| PLAN | resume | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 恢复规划栈，续算依赖 |
+| PLAN | terminate | `AGENTRT_OK` | `AGENT_STATE_TERMINATED` | 释放规划上下文，清空 `plan_graph` |
+| PLAN | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，规划降级为粗粒度 |
+| PLAN | comm_failure | `-EAGENTRT_COMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到上一规划节点 |
+| OBSERVE | probe | `AGENTRT_OK` | `AGENT_STATE_IDLE` | 注册到 registry，`observe_channel` 就绪 |
+| OBSERVE | bind | `AGENTRT_OK` | `AGENT_STATE_BOUND` | 绑定观测源，`event_mask != 0` |
+| OBSERVE | dispatch | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 调用 `observe_collect()`，`event_count > 0` |
+| OBSERVE | suspend | `AGENTRT_OK` | `AGENT_STATE_SUSPENDED` | 暂停事件采集，`ring_buffer` 冻结 |
+| OBSERVE | resume | `AGENTRT_OK` | `AGENT_STATE_RUNNING` | 恢复事件采集，续采 |
+| OBSERVE | terminate | `AGENTRT_OK` | `AGENT_STATE_TERMINATED` | 释放观测通道，flush `ring_buffer` |
+| OBSERVE | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，观测降采样 |
+| OBSERVE | comm_failure | `-EAGENTRT_COMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到本地缓存模式 |
+
+#### 11.3.3 关键测试用例代码片段
+
+LLM 角色 token_exhaust——验证 `token_handler` 被调用且状态转为 ERROR：
+
+```c
+/* airymaxos-cognition/agent_contract_test.c */
+static void llm_token_exhaust_test(struct kunit *test)
+{
+    struct agent_handle *agent = agentrt_agent_create(AGENTRT_ROLE_LLM);
+    KUNIT_ASSERT_NOT_ERR_OR_NULL(test, agent);
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_bind(agent, 100));
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_dispatch(agent, "long prompt", 200));
+    KUNIT_EXPECT_EQ(test, -ETOKEN_EXHAUSTED,
+                    agentrt_agent_action(agent, AGENTRT_ACTION_TOKEN_EXHAUST));
+    KUNIT_EXPECT_EQ(test, AGENT_STATE_ERROR, agentrt_agent_state(agent));
+    KUNIT_EXPECT_EQ(test, 1, mock_token_handler_call_count(TOKEN_EVENT_EXHAUST));
+    agentrt_agent_destroy(agent);
+}
+```
+
+OBSERVE 角色 comm_failure——验证 5 秒超时回退到本地缓存模式：
+
+```c
+static void observe_comm_failure_test(struct kunit *test)
+{
+    struct agent_handle *agent = agentrt_agent_create(AGENTRT_ROLE_OBSERVE);
+    KUNIT_ASSERT_NOT_ERR_OR_NULL(test, agent);
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_bind(agent, 0));
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_dispatch(agent, NULL, 0));
+    mock_agentsipc_set_error(-EAGAIN);  /* 注入通信故障 */
+    ktime_t start = ktime_get();
+    int ret = agentrt_agent_action(agent, AGENTRT_ACTION_COMM_FAILURE);
+    s64 elapsed_ms = ktime_to_ms(ktime_sub(ktime_get(), start));
+    KUNIT_EXPECT_EQ(test, -EAGENTRT_COMM, ret);
+    KUNIT_EXPECT_EQ(test, AGENT_STATE_ERROR, agentrt_agent_state(agent));
+    KUNIT_EXPECT_GE(test, elapsed_ms, 4900);  /* 5s 超时（±100ms 抖动） */
+    KUNIT_EXPECT_LE(test, elapsed_ms, 5100);
+    KUNIT_EXPECT_TRUE(test, agentrt_observe_is_local_cache(agent));
+    agentrt_agent_destroy(agent);
+}
+```
+
+PLAN 角色 dispatch——验证规划步数 > 0：
+
+```c
+static void plan_dispatch_test(struct kunit *test)
+{
+    struct agent_handle *agent = agentrt_agent_create(AGENTRT_ROLE_PLAN);
+    KUNIT_ASSERT_NOT_ERR_OR_NULL(test, agent);
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_bind(agent, 1000));
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK,
+                    agentrt_agent_dispatch(agent, "plan: reach goal X", 0));
+    KUNIT_EXPECT_EQ(test, AGENT_STATE_RUNNING, agentrt_agent_state(agent));
+    KUNIT_EXPECT_GT(test, agentrt_plan_step_count(agent), 0);
+    agentrt_agent_destroy(agent);
+}
+```
+
+TOOL 角色 terminate——验证子进程已回收（无僵尸）：
+
+```c
+static void tool_terminate_test(struct kunit *test)
+{
+    struct agent_handle *agent = agentrt_agent_create(AGENTRT_ROLE_TOOL);
+    KUNIT_ASSERT_NOT_ERR_OR_NULL(test, agent);
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_bind(agent, 100));
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK, agentrt_agent_dispatch(agent, "exec: ls", 0));
+    KUNIT_EXPECT_EQ(test, AGENTRT_OK,
+                    agentrt_agent_action(agent, AGENTRT_ACTION_TERMINATE));
+    KUNIT_EXPECT_EQ(test, AGENT_STATE_TERMINATED, agentrt_agent_state(agent));
+    KUNIT_EXPECT_EQ(test, 0, agentrt_tool_pending_children(agent));
+    agentrt_agent_destroy(agent);
+}
+```
+
+#### 11.3.4 agentrt-linux 扩展深化规则
+
+**OS-TST-013**：每种 Agent 角色（LLM/TOOL/PLAN/OBSERVE）必须有完整的 8 行为测试用例覆盖（probe/bind/dispatch/suspend/resume/terminate/token_exhaust/comm_failure），共 32 个用例；缺失任一行为测试视为契约覆盖不完整，禁止合入。
+
+**OS-TST-014**：token_exhaust 行为测试必须验证 `token_handler` 被调用且 `TOKEN_EVENT_EXHAUST` 事件触发；测试通过 mock 注入 `mock_token_handler_call_count()` 计数器验证回调执行，禁止仅断言返回值不验证副作用。
+
+**OS-TST-015**：comm_failure 行为测试必须验证 5 秒超时回退——通过 `ktime_get()` 计时断言回退耗时在 [4900ms, 5100ms] 区间内，且回退后 Agent 进入降级模式（OBSERVE 进入本地缓存模式、PLAN 回退上一节点）；禁止用 `msleep(5000)` 硬等待替代真实超时检测。
+
+**OS-TST-016**：Agent 行为契约测试套件必须以 `airymax_agent_contract` 前缀命名（如 `airymax_agent_contract_llm`），遵循 OS-KER-002 命名规范；套件注册到 `.kunit_test_suites` ELF section，由 CI 第 7 层 `kunit.filter_glob=airymax_agent_contract_*` 单独运行以隔离命名空间。
+
 ---
 
 ## 12. 相关文档
@@ -567,7 +721,7 @@ graph LR
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集 KUnit 单元测试框架所需的完整 C 接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/kunit/test.h`、`lib/kunit/test.c`、`lib/kunit/assert.c`、`lib/kunit/try-catch.c`、`lib/kunit/executor.c` 及 `include/airymax/test_types.h`（[SC] 共享契约层）。KUnit 框架与 Linux 6.6 上游保持源码同源（IRON-9 v2），agentrt-linux 扩展以独立套件形式注入，禁止改写上游核心代码。
+> **附录定位**： 本附录汇集 KUnit 单元测试框架所需的完整 C 接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/kunit/test.h`、`lib/kunit/test.c`、`lib/kunit/assert.c`、`lib/kunit/try-catch.c`、`lib/kunit/executor.c` 及 `include/airymax/test_types.h`（[SC] 共享契约层）。KUnit 框架与 Linux 6.6 上游保持源码同源（IRON-9 v2），agentrt-linux 扩展以独立套件形式注入，禁止改写上游核心代码。
 
 ### A.1 核心数据结构
 

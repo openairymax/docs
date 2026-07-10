@@ -36,7 +36,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **Airymax 使用上下文**: Airymax 微核心（CoreKern/MicroCoreRT）的核心机制之一，承载用户态服务（Daemon）之间、Agent 与内核之间的消息传递。
 
-**系统内代码**: `agentos_ipc_*`
+**系统内代码**: `agentrt_ipc_*`
 
 **参见**: CoreKern（原子核心）、AirymaxSyscall（系统调用层）、Daemon（用户态服务进程）
 
@@ -60,7 +60,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **Airymax 使用上下文**: Airymax 系统调用层（AirymaxSyscall）的七大功能域之一，为 Agent 与 Skill 提供隔离执行环境，配合 Cupolas（安全穹顶）共同构成安全防护体系。
 
-**系统内代码**: `agentos_sys_sandbox_*`
+**系统内代码**: `agentrt_sys_sandbox_*`
 
 **参见**: Cupolas（安全穹顶）、Service Isolation（服务隔离）、Security by Design（安全内生设计）
 
@@ -112,7 +112,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **定义**: 具有认知能力的实体，能够感知环境、进行推理决策并执行行动。Agent 是 Airymax 的基本执行单元。
 
-**系统内代码**: `agentos_sys_agent_*`
+**系统内代码**: `agentrt_sys_agent_*`
 
 **参见**: Skill（技能）、Contract（契约）
 
@@ -124,7 +124,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 系统调用层 (AirymaxSyscall)
 
-**系统内代码**: `agentos_sys_*`
+**系统内代码**: `agentrt_sys_*`
 
 **参见**: MicroCoreRT（微核心）、IPC
 
@@ -134,7 +134,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **定义**: CoreLoopThree 认知层的自适应能力提升系统。通过经验记录→模式提取→策略进化→知识迁移的闭环，实现感知→反应→学习→推理→创造的五级认知层级跃迁。
 
-**系统内代码**: `cog_*` / `agentos_cog_*`
+**系统内代码**: `cog_*` / `agentrt_cog_*`
 
 **参见**: Thinkdual（双思考系统）、CoreLoopThree（三层认知循环）、MAC（多智能体协作框架）
 
@@ -156,9 +156,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **注**: CoreKern 是标准模块名（对应目录 `corekern/`）。MicroCoreRT（微核心）是其架构概念层名称，描述"极简内核抽象层"的设计理念，两者共享同一目录和代码前缀，并非独立模块。详见下方 MicroCoreRT 条目。
 
-**系统内代码**: `agentos_core_*`
+**系统内代码**: `agentrt_core_*`
 
-**代码目录**: `AgentRT/agentos/atoms/corekern/`
+**代码目录**: `AgentRT/agentrt/atoms/corekern/`
 
 **参见**: MicroCoreRT（微核心，架构概念层）、IPC、AirymaxSyscall（系统调用层）
 
@@ -180,9 +180,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **旧称/禁止使用**: "三层循环运行时"、"三层一体架构"、"三层循环核心"
 
-**系统内代码**: `agentos_loop_*`
+**系统内代码**: `agentrt_loop_*`
 
-**代码目录**: `AgentRT/agentos/atoms/coreloopthree/`
+**代码目录**: `AgentRT/agentrt/atoms/coreloopthree/`
 
 **参见**: Thinkdual（双思考系统）、MemoryRovol（记忆卷载）、TaskFlow（任务流引擎）
 
@@ -206,10 +206,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 体系 | 适用场景 | 格式 |
 |------|---------|------|
-| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AGENTOS_OK=0`、`AGENTOS_EINVAL=-2` |
+| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AGENTRT_OK=0`、`AGENTRT_EINVAL=-2` |
 | **SDK 十六进制体系**（次要） | SDK 和外部接口 | `0x0000`-`0x7FFF` 分段 |
 
-**系统内代码**: `AGENTOS_E*` / `AGENTOS_ERR_*`
+**系统内代码**: `AGENTRT_E*` / `AGENTRT_ERR_*`
 
 **禁止**: C 内核代码中使用十六进制错误码；SDK 中使用负整数错误码
 
@@ -221,7 +221,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **定义**: 基于艾宾浩斯遗忘曲线驱动的记忆衰减与清理机制。遗忘公式: R(t) = e^(-t/τ)，τ 默认 7 天。支持 NONE/EBBINGHAUS/LINEAR/ACCESS_BASED 四种遗忘策略。
 
-**系统内代码**: `agentos_forgetting_*`
+**系统内代码**: `agentrt_forgetting_*`
 
 **代码目录**: `MemoryRovol/src/forgetting/`
 
@@ -233,9 +233,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **定义**: Airymax 的结构化数据分区持久层，支持日志、追踪、会话、Agent、Skill、内存、Token、IPC 等多数据分区的批量写入与熔断保护。
 
-**系统内代码**: `agentos_heapstore_*`
+**系统内代码**: `agentrt_heapstore_*`
 
-**代码目录**: `AgentRT/agentos/heapstore/`
+**代码目录**: `AgentRT/agentrt/heapstore/`
 
 ---
 
@@ -243,7 +243,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **定义**: CoreLoopThree 认知层的多智能体协作基础设施，支持独立、协作、共识、委托四种协作模式，以及多数投票、全票通过、加权投票、领导者否决四种共识策略。
 
-**系统内代码**: `mac_*` / `agentos_mac_*`
+**系统内代码**: `mac_*` / `agentrt_mac_*`
 
 **旧称/禁止使用**: "Multi-Agent System"（过于泛化）
 
@@ -256,11 +256,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 **定义**: Airymax 的内存操作安全宏体系，覆盖分配、释放、字符串操作和禁止函数，确保内存操作的类型安全和空指针安全。
 
 **核心宏**:
-- 分配: `AGENTOS_MALLOC` / `AGENTOS_CALLOC` / `AGENTOS_REALLOC`
-- 释放: `AGENTOS_FREE` / `MEMORY_FREE_SAFE`
-- 字符串: `AGENTOS_STRDUP` / `AGENTOS_STRNCPY_TERM`
-- 拷贝: `AGENTOS_MEMCPY_SAFE`
-- 清除: `AGENTOS_SEC_CLEAR`
+- 分配: `AGENTRT_MALLOC` / `AGENTRT_CALLOC` / `AGENTRT_REALLOC`
+- 释放: `AGENTRT_FREE` / `MEMORY_FREE_SAFE`
+- 字符串: `AGENTRT_STRDUP` / `AGENTRT_STRNCPY_TERM`
+- 拷贝: `AGENTRT_MEMCPY_SAFE`
+- 清除: `AGENTRT_SEC_CLEAR`
 
 **禁止函数**: `malloc`、`free`、`printf`、`strcpy`、`strcat`、`sprintf`、`gets` 等（完整列表见 `banned_functions.h`）
 
@@ -274,7 +274,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 记忆交换算法（正式）/ MemorySwap（简称）
 
-**系统内代码**: `agentos_memory_swap_manager_t`
+**系统内代码**: `agentrt_memory_swap_manager_t`
 
 **参见**: MemoryRovol（记忆卷载）、Forgetting Engine（遗忘机制）
 
@@ -297,9 +297,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **旧称/禁止使用**: "记忆漩涡引擎"
 
-**系统内代码**: `agentos_layer*_*` / `agentos_memoryrov_*`
+**系统内代码**: `agentrt_layer*_*` / `agentrt_memoryrov_*`
 
-**代码目录**: `MemoryRovol/`（独立模块，原位于 `AgentRT/agentos/atoms/memoryrovol/`，现已独立为 Airymax 商业化核心模块）
+**代码目录**: `MemoryRovol/`（独立模块，原位于 `AgentRT/agentrt/atoms/memoryrovol/`，现已独立为 Airymax 商业化核心模块）
 
 **参见**: CoreLoopThree（三层认知循环）、Forgetting Engine（遗忘机制）、TimeSliceInfer（分时推理框架）、MemorySwap（记忆交换算法）
 
@@ -321,13 +321,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > 注: 这是"微内核风格"的用户态抽象层，不是真正的操作系统内核（不运行在 ring 0，不管理硬件）。
 
-**与 CoreKern 的关系**: MicroCoreRT 是 **CoreKern 的架构概念层名称**，描述"极简内核抽象层"的设计理念。CoreKern 是该理念的具体实现模块（对应目录 `corekern/`，代码前缀 `agentos_core_*`）。两者**不是独立模块**，共享同一目录和代码前缀。
+**与 CoreKern 的关系**: MicroCoreRT 是 **CoreKern 的架构概念层名称**，描述"极简内核抽象层"的设计理念。CoreKern 是该理念的具体实现模块（对应目录 `corekern/`，代码前缀 `agentrt_core_*`）。两者**不是独立模块**，共享同一目录和代码前缀。
 
 **旧称/禁止使用**: "微内核"、"Microkernel"（不加限定词时易与真正 OS 内核混淆）
 
-**系统内代码**: `agentos_core_*`（与 CoreKern 共享）
+**系统内代码**: `agentrt_core_*`（与 CoreKern 共享）
 
-**代码目录**: `AgentRT/agentos/atoms/corekern/`（与 CoreKern 同目录）
+**代码目录**: `AgentRT/agentrt/atoms/corekern/`（与 CoreKern 同目录）
 
 **参见**: CoreKern（原子核心，标准模块名）、IPC、AirymaxSyscall（系统调用层）、Service Isolation（服务隔离）
 
@@ -339,7 +339,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 协议适配层 (Protocols)
 
-**代码目录**: `AgentRT/agentos/protocols/`
+**代码目录**: `AgentRT/agentrt/protocols/`
 
 **参见**: Daemon（用户态服务层）
 
@@ -351,7 +351,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 技能 (Skill)
 
-**系统内代码**: `agentos_sys_skill_*`
+**系统内代码**: `agentrt_sys_skill_*`
 
 **参见**: Agent（智能体）、Contract（契约）
 
@@ -363,7 +363,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 任务流引擎 (TaskFlow)
 
-**代码目录**: `AgentRT/agentos/atoms/taskflow/`
+**代码目录**: `AgentRT/agentrt/atoms/taskflow/`
 
 **参见**: CoreLoopThree（三层认知循环）
 
@@ -388,7 +388,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `tc_*`（思考链）/ `mc_*`（元认知）/ `sc_*`（流式验证）/ `tc3_*`（协调器）
 
-**代码目录**: `AgentRT/agentos/atoms/coreloopthree/src/cognition/`
+**代码目录**: `AgentRT/agentrt/atoms/coreloopthree/src/cognition/`
 
 **参见**: CoreLoopThree（三层认知循环）、CognitiveEvolution（认知进化系统）
 
@@ -412,30 +412,30 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 标准中文 | 标准英文 | 代码前缀 | 禁止使用的旧称 |
 |----------|----------|---------|---------------|
-| 智能体 | Agent | `agentos_sys_agent_*` | — |
-| 系统调用层 | AirymaxSyscall | `agentos_sys_*` | Syscall Layer |
+| 智能体 | Agent | `agentrt_sys_agent_*` | — |
+| 系统调用层 | AirymaxSyscall | `agentrt_sys_*` | Syscall Layer |
 | 认知进化系统 | CognitiveEvolution | `cog_*` | — |
 | 契约 | Contract | — | — |
-| 原子核心 | CoreKern | `agentos_core_*` | 原子核心（MicroCoreRT 为其架构概念层名称，非独立模块） |
-| 三层认知循环 | CoreLoopThree | `agentos_loop_*` | 第三循环内核、三层循环运行时、三层一体架构 |
+| 原子核心 | CoreKern | `agentrt_core_*` | 原子核心（MicroCoreRT 为其架构概念层名称，非独立模块） |
+| 三层认知循环 | CoreLoopThree | `agentrt_loop_*` | 第三循环内核、三层循环运行时、三层一体架构 |
 | 安全穹顶 | Cupolas | `cupolas_*` | Cupolas安全模块 |
 | 用户态服务层 | Daemon | `*_d` 进程 | 守护进程、后端服务层 |
-| 统一错误码体系 | ErrorCodeSystem | `AGENTOS_E*` | — |
+| 统一错误码体系 | ErrorCodeSystem | `AGENTRT_E*` | — |
 | 反馈闭环 | Feedback Loop | — | — |
-| 遗忘机制 | Forgetting Engine | `agentos_forgetting_*` | — |
-| 数据分区存储 | HeapStore | `agentos_heapstore_*` | — |
-| 进程间通信 | IPC | `agentos_ipc_*` | — |
+| 遗忘机制 | Forgetting Engine | `agentrt_forgetting_*` | — |
+| 数据分区存储 | HeapStore | `agentrt_heapstore_*` | — |
+| 进程间通信 | IPC | `agentrt_ipc_*` | — |
 | 多智能体协作框架 | MAC | `mac_*` | Multi-Agent System |
-| 安全宏体系 | Memory Safety Macro System | `AGENTOS_MALLOC` 等 | — |
-| 记忆交换算法 | MemorySwap | `agentos_memory_swap_*` | — |
-| 记忆卷载 | MemoryRovol | `agentos_layer*_*` | 记忆漩涡引擎 |
-| 微核心（概念层） | MicroCoreRT（CoreKern 别称） | `agentos_core_*`（与 CoreKern 共享） | 微内核、Microkernel |
+| 安全宏体系 | Memory Safety Macro System | `AGENTRT_MALLOC` 等 | — |
+| 记忆交换算法 | MemorySwap | `agentrt_memory_swap_*` | — |
+| 记忆卷载 | MemoryRovol | `agentrt_layer*_*` | 记忆漩涡引擎 |
+| 微核心（概念层） | MicroCoreRT（CoreKern 别称） | `agentrt_core_*`（与 CoreKern 共享） | 微内核、Microkernel |
 | 协议适配层 | Protocols | — | — |
-| 沙箱 | Sandbox | `agentos_sys_sandbox_*` | — |
+| 沙箱 | Sandbox | `agentrt_sys_sandbox_*` | — |
 | 安全内生设计 | Security by Design | — | — |
 | 服务隔离 | Service Isolation | — | — |
-| 技能 | Skill | `agentos_sys_skill_*` | — |
-| 任务流引擎 | TaskFlow | `agentos_taskflow_*` | — |
+| 技能 | Skill | `agentrt_sys_skill_*` | — |
+| 任务流引擎 | TaskFlow | `agentrt_taskflow_*` | — |
 | 双思考系统 | Thinkdual | `tc_*` / `mc_*` / `sc_*` | 认知双思系统、双系统认知模型、Thinkdual 认知双思系统 |
 | 分时推理框架 | TimeSliceInfer | `ts_*` | 时间切片推理 |
 | 跟踪标识符 | TraceID | — | — |
@@ -448,55 +448,55 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 原始卷 | L1 Raw | `agentos_layer1_raw_*` |
-| 元数据索引 | Metadata DB | `agentos_raw_metadata_db_*` |
+| 原始卷 | L1 Raw | `agentrt_layer1_raw_*` |
+| 元数据索引 | Metadata DB | `agentrt_raw_metadata_db_*` |
 | 异步存储引擎 | Async Storage Engine | `async_storage_engine` |
 
 ### L2 特征层
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 特征层 | L2 Feature | `agentos_layer2_feature_*` |
+| 特征层 | L2 Feature | `agentrt_layer2_feature_*` |
 | HNSW 索引 | HNSW Index | `hnsw_index_t` |
-| BM25 索引 | BM25 Index | `agentos_bm25_index_*` |
-| 混合检索 | Hybrid Search | `agentos_hybrid_search_*` |
+| BM25 索引 | BM25 Index | `agentrt_bm25_index_*` |
+| 混合检索 | Hybrid Search | `agentrt_hybrid_search_*` |
 | 嵌入器 | Embedder | `generate_*_embedding` |
 
 ### L3 结构层
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 结构层 | L3 Structure | `agentos_layer3_structure_*` |
-| 知识图谱 | Knowledge Graph | `agentos_knowledge_graph_*` |
-| 绑定算子 | VSA Binder | `agentos_binder_*` |
-| 解绑算子 | VSA Unbinder | `agentos_unbinder_*` |
-| 关系编码器 | Relation Encoder | `agentos_relation_encoder_*` |
+| 结构层 | L3 Structure | `agentrt_layer3_structure_*` |
+| 知识图谱 | Knowledge Graph | `agentrt_knowledge_graph_*` |
+| 绑定算子 | VSA Binder | `agentrt_binder_*` |
+| 解绑算子 | VSA Unbinder | `agentrt_unbinder_*` |
+| 关系编码器 | Relation Encoder | `agentrt_relation_encoder_*` |
 
 ### L4 模式层
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 模式层 | L4 Pattern | `agentos_layer4_pattern_*` |
-| 持久同调 | Persistent Homology | `agentos_persistence_*` |
+| 模式层 | L4 Pattern | `agentrt_layer4_pattern_*` |
+| 持久同调 | Persistent Homology | `agentrt_persistence_*` |
 | 模式挖掘器 | Pattern Miner | `miner_discover_patterns` |
-| 规则生成器 | Rule Generator | `agentos_rule_generator_*` |
+| 规则生成器 | Rule Generator | `agentrt_rule_generator_*` |
 
 ### 检索系统
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 吸引子网络 | Attractor Network | `agentos_attractor_network_*` |
-| 检索缓存 | Retrieval Cache | `agentos_retrieval_cache_*` |
-| 重排序器 | Reranker | `agentos_reranker_*` |
-| 挂载算子 | Mount Operator | `agentos_memoryrov_mount` |
+| 吸引子网络 | Attractor Network | `agentrt_attractor_network_*` |
+| 检索缓存 | Retrieval Cache | `agentrt_retrieval_cache_*` |
+| 重排序器 | Reranker | `agentrt_reranker_*` |
+| 挂载算子 | Mount Operator | `agentrt_memoryrov_mount` |
 
 ### 遗忘机制
 
 | 标准中文 | 标准英文 | 系统内代码 |
 |----------|----------|-----------|
-| 遗忘引擎 | Forgetting Engine | `agentos_forgetting_*` |
-| 遗忘策略 | Forget Strategy | `agentos_forget_strategy_t` |
-| 遗忘裁剪 | Prune | `agentos_forgetting_prune` |
+| 遗忘引擎 | Forgetting Engine | `agentrt_forgetting_*` |
+| 遗忘策略 | Forget Strategy | `agentrt_forget_strategy_t` |
+| 遗忘裁剪 | Prune | `agentrt_forgetting_prune` |
 | 记忆归档 | Archive | `archive_memory` |
 
 ### 跨层事件
@@ -514,28 +514,28 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 模块 | 格式 | 示例 |
 |------|------|------|
-| 内核 | `agentos_core_[action]` | `agentos_core_init` |
-| 系统调用 | `agentos_sys_[domain]_[action]` | `agentos_sys_task_submit` |
-| 认知层 | `agentos_[prefix]_[action]` | `agentos_tc_context_window_append` |
+| 内核 | `agentrt_core_[action]` | `agentrt_core_init` |
+| 系统调用 | `agentrt_sys_[domain]_[action]` | `agentrt_sys_task_submit` |
+| 认知层 | `agentrt_[prefix]_[action]` | `agentrt_tc_context_window_append` |
 | 安全穹顶 | `cupolas_[subsystem]_[action]` | `cupolas_permission_check` |
 | 用户态服务 | `[service]_[action]` | `llm_d_complete` |
-| 认知进化 | `cog_[action]` / `agentos_cog_[action]` | `cog_evolution_create` |
-| 多智能体 | `mac_[action]` / `agentos_mac_[action]` | `mac_framework_create` |
+| 认知进化 | `cog_[action]` / `agentrt_cog_[action]` | `cog_evolution_create` |
+| 多智能体 | `mac_[action]` / `agentrt_mac_[action]` | `mac_framework_create` |
 
 ### 结构体命名
 
 | 规范 | 格式 | 示例 |
 |------|------|------|
-| 公共结构体 | `agentos_[name]_t` | `agentos_error_t` |
+| 公共结构体 | `agentrt_[name]_t` | `agentrt_error_t` |
 | 子系统结构体 | `[prefix]_[name]_t` | `tc_context_window_t` |
-| 配置结构体 | `agentos_[name]_config_t` | `agentos_cognition_config_t` |
+| 配置结构体 | `agentrt_[name]_config_t` | `agentrt_cognition_config_t` |
 
 ### 枚举命名
 
 | 规范 | 格式 | 示例 |
 |------|------|------|
-| 状态枚举 | `AGENTOS_[NAME]_STATE_*` | `AGENTOS_TASK_STATE_READY` |
-| 类型枚举 | `AGENTOS_[NAME]_TYPE_*` | `AGENTOS_PROTOCOL_TYPE_MCP` |
+| 状态枚举 | `AGENTRT_[NAME]_STATE_*` | `AGENTRT_TASK_STATE_READY` |
+| 类型枚举 | `AGENTRT_[NAME]_TYPE_*` | `AGENTRT_PROTOCOL_TYPE_MCP` |
 
 ### 文件/目录命名
 
@@ -585,8 +585,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 段 | 范围 | 含义 |
 |----|------|------|
-| 成功 | 0 | `AGENTOS_OK` |
-| 通用 | -1 ~ -999 | `AGENTOS_ERR_UNKNOWN` 等 |
+| 成功 | 0 | `AGENTRT_OK` |
+| 通用 | -1 ~ -999 | `AGENTRT_ERR_UNKNOWN` 等 |
 | Task | -1001 ~ -1099 | 任务相关错误 |
 | Memory | -2001 ~ -2099 | 记忆相关错误 |
 | Session | -3001 ~ -3099 | 会话相关错误 |

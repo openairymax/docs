@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IPC 协议
 
-> **文档定位**: agentrt-linux（AirymaxOS） 进程间通信协议的 128B 消息头、5 种 payload、io_uring 零拷贝与同源映射
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **父文档**: [接口设计](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS） 进程间通信协议的 128B 消息头、5 种 payload、io_uring 零拷贝与同源映射\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **父文档**： [接口设计](README.md)
 
 ---
 
@@ -366,6 +366,82 @@ IPC 性能约束对齐非功能性需求 NFR-P-002（详见 [00-requirements/03-
 - [内核设计](../20-modules/01-kernel.md)
 - [服务设计](../20-modules/02-services.md)
 - [非功能性需求](../00-requirements/03-non-functional-requirements.md)（NFR-P-002）
+
+---
+
+## 8. IRON-9 v2 三层共享模型
+
+> **OS-IFACE-003**： IPC 协议遵循 IRON-9 v2 三层共享模型——128B 消息头结构、magic 0x41524531（'ARE1'）、5 种 payload type 通过 [SC] 共享契约层 `ipc.h` 完全共享；io_uring 操作码与传输实现各自独立。禁止在 agentrt 与 agentrt-linux 之间引入协议转换层或字节序适配层。
+
+### 8.1 三层模型概览
+
+| 层次 | 共享程度 | 本接口涉及内容 |
+|------|---------|---------------|
+| **[SC] 共享契约层** | 完全共享代码 | `ipc.h`（IPC magic 0x41524531 'ARE1' + `agentrt_ipc_msg_hdr_t` 128B 定长头 + 5 种 payload type + flags 位 + SQE/CQE 操作码枚举） |
+| **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | agentrt AgentsIPC（`atoms/ipc`）↔ agentrt-linux `io-uring-ipc`（services）的 send/recv/register_ring 同源 API |
+| **[IND] 完全独立层** | 完全独立 | agentrt POSIX MQ + mmap 传输 ↔ agentrt-linux io_uring + SQPOLL + page flipping 零拷贝传输 |
+
+### 8.2 [SC] 共享契约层——`ipc.h` 在 IPC 协议中的角色
+
+| `ipc.h` 定义项 | 在协议中的角色 | 消费方 |
+|---------------|---------------|--------|
+| `AGENTRT_IPC_MAGIC` 0x41524531 'ARE1' | 协议识别魔数，消息头首 4 字节 | agentrt AgentsIPC / agentrt-linux io-uring-ipc |
+| `agentrt_ipc_msg_hdr_t` 128B 定长头 | 64 字节对齐消息头结构（magic/version/type/payload_len/flags/src_pid/dst_pid/trace_id/timestamp_ns/reserved） | send/recv 路径 |
+| `AGENTRT_IPC_TYPE_*` 5 种 payload | REQUEST/RESPONSE/EVENT/STREAM/CONTROL 类型枚举 | payload 解码 |
+| `AGENTRT_IPC_FLAG_*` flags 位 | ZEROCOPY/CAP_CARRY/COMPRESS/ENCRYPT 标志位 | 消息处理 |
+| `IORING_OP_IPC_*` 操作码 | IPC_SEND/IPC_RECV/REGISTER_RING/DEREGISTER_RING SQE/CQE 操作码 | io_uring 数据面 |
+
+### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux IPC API 映射
+
+| agentrt AgentsIPC（用户态） | agentrt-linux io-uring-ipc（内核态） | 同源签名 | 实现差异 |
+|----------------------------|--------------------------------------|---------|---------|
+| `agentrt_ipc_send()` | `agentrt_sys_ipc_send()` | `(const agentrt_ipc_msg_hdr_t *, const void *) -> int` | 用户态 POSIX MQ vs 内核 io_uring SQE |
+| `agentrt_ipc_recv()` | `agentrt_sys_ipc_recv()` | `(agentrt_ipc_msg_hdr_t *, void *, size_t) -> int` | 用户态 mq_receive vs 内核 io_uring CQE |
+| `agentrt_ipc_send_with_cap()` | `agentrt_sys_ipc_send_with_cap()` | `(hdr, payload, cap_slot, cap_slot_out) -> int` | 用户态 Cupolas 令牌 vs 内核 LSM 令牌 |
+| `agentrt_ipc_register_ring()` | `agentrt_sys_ipc_register_ring()` | `(int ring_fd, uint32_t dst_pid) -> int` | 用户态 mmap 共享 vs 内核 io_uring_register |
+
+### 8.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 传输后端 | POSIX MQ + mmap | io_uring + SQPOLL + registered buffers | 内核态零拷贝优势 |
+| 零拷贝机制 | 用户态 page 共享（mmap） | 内核 page flipping（page table entry 翻转） | 内核态性能 |
+| 跨进程 ring | 用户态 fd 共享（SCM_RIGHTS） | `io_uring_register` 跨进程注册 | 内核态机制 |
+| 字节序处理 | `htonl/ntohl` 库函数 | 内核 `cpu_to_le32/le32_to_cpu` | 工具链差异 |
+
+### 8.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态 AgentsIPC"
+        RT_SEND[agentrt_ipc_send<br/>atoms/ipc]
+        RT_RECV[agentrt_ipc_recv<br/>atoms/ipc]
+    end
+
+    subgraph "agentrt-linux 内核态 io-uring-ipc"
+        OS_SQE[IORING_OP_IPC_SEND<br/>SQE 入队]
+        OS_CQE[IORING_OP_IPC_RECV<br/>CQE 出队]
+    end
+
+    subgraph "[SC] 共享契约层"
+        SC[ipc.h<br/>ARE1 magic + 128B hdr + 5 type + flags]
+    end
+
+    RT_SEND -.->|"API 同源 [SS]"| OS_SQE
+    RT_RECV -.->|"API 同源 [SS]"| OS_CQE
+    RT_SEND ==>|"共享代码 [SC]"| SC
+    RT_RECV ==>|"共享代码 [SC]"| SC
+    OS_SQE ==>|"共享代码 [SC]"| SC
+    OS_CQE ==>|"共享代码 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_SEND fill:#e3f2fd,stroke:#1565c0
+    style RT_RECV fill:#e3f2fd,stroke:#1565c0
+    style OS_SQE fill:#fff3e0,stroke:#e65100
+    style OS_CQE fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-IFACE-004**： IPC 协议的 128B 消息头布局（`agentrt_ipc_msg_hdr_t`）与 magic 0x41524531（'ARE1'）在 agentrt 与 agentrt-linux 间完全共享同一份 `ipc.h`——agentrt 在 agentrt-linux 上运行时无需任何协议转换或字节序适配，消息头字段布局二进制兼容。
 
 ---
 

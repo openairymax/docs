@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentsIPC 版本协商实现方案
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 AgentsIPC 协议的版本化演进与运行时协商机制
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 UABI 永不破坏哲学 + seL4 接口契约 XML 思想 + Airymax K-2 接口契约化 + C-2 增量演化
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **同源映射**: Linux 6.6 系统调用兼容性（IRON-9 v2 [SC] 共享契约层，IPC 消息头与 agentrt 共享）
-> **IRON-9 v2 层次**: [SC] 共享契约层（IPC 消息头 `agentrt_ipc_msg_hdr_t` 与 agentrt 共享）+ [IND] 完全独立层（版本协商逻辑为 agentrt-linux 专属）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 AgentsIPC 协议的版本化演进与运行时协商机制\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 UABI 永不破坏哲学 + seL4 接口契约 XML 思想 + Airymax K-2 接口契约化 + C-2 增量演化\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
+> **同源映射**：Linux 6.6 系统调用兼容性（IRON-9 v2 [SC] 共享契约层，IPC 消息头与 agentrt 共享）\
+> **IRON-9 v2 层次**：[SC] 共享契约层（IPC 消息头 `agentrt_ipc_msg_hdr_t` 与 agentrt 共享）+ [IND] 完全独立层（版本协商逻辑为 agentrt-linux 专属）
 
 ---
 

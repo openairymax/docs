@@ -135,7 +135,7 @@ Airymax 将反馈设计为贯穿系统每一层的核心机制：
 
 | 反馈层级 | 时间尺度 | 机制描述 | 实现位置 |
 |---------|---------|---------|---------|
-| 实时反馈 | τ < 100ms | 行动层执行结果返回认知层，修正当前任务 | `agentos_execution_wait` → `agentos_cognition_process` |
+| 实时反馈 | τ < 100ms | 行动层执行结果返回认知层，修正当前任务 | `agentrt_execution_wait` → `agentrt_cognition_process` |
 | 轮次内反馈 | τ = 任务周期 | 增量规划器根据已完成节点动态扩展 DAG | execution callback → planner DAG 更新 |
 | 跨轮次反馈 | τ = 会话周期 | L4 模式层从历史轮次挖掘持久模式 | MemoryRovol L4 → 认知策略配置 |
 
@@ -149,16 +149,16 @@ Airymax 采用严格的层次分解：
 
 ```
 +---------------------------------------------+
-|              agentos/daemon/ 用户态服务               |
+|              agentrt/daemon/ 用户态服务               |
 |     llm_d · market_d · monit_d · tool_d     |
 +---------------------------------------------+
-|             agentos/gateway/ 网关层                  |
+|             agentrt/gateway/ 网关层                  |
 |          HTTP · WebSocket · Stdio           |
 +---------------------------------------------+
 |          syscall/ 系统调用接口               |
 |    task · memory · session · telemetry      |
 +---------------------------------------------+
-|            agentos/cupolas/ 安全穹顶                 |
+|            agentrt/cupolas/ 安全穹顶                 |
 |     workbench · permission · sanitizer      |
 +--------------+------------------------------+
 | corekern/      |  coreloopthree/            |
@@ -169,7 +169,7 @@ Airymax 采用严格的层次分解：
 |         memoryrovol/ 记忆卷载系统            |
 |  L1原始卷 → L2特征层 → L3结构层 → L4模式层    |
 +---------------------------------------------+
-|             agentos/commons/ 统一基础库              |
+|             agentrt/commons/ 统一基础库              |
 |  error · logger · metrics · trace · cost    |
 +---------------------------------------------+
 ```
@@ -199,8 +199,8 @@ Airymax 遵循严格的微核心架构哲学：
 
 - **`corekern/`** 仅包含**六大子系统**：IPC（进程间通信）、Mem（内存管理含池化与守卫）、Task（任务调度含 POSIX/Windows 双平台）、Time（时间服务含时钟事件与定时器），以及 OOM 处理、可观测性、错误处理。总计 7 个头文件、13 个源文件——这是整个系统的最小内核。
 - **`coreloopthree/`** 和 **`memoryrovol/`** 作为内核子系统，提供认知循环和记忆演化能力。
-- 所有用户态服务（LLM、市场、监控、调度、工具）运行在 `agentos/daemon/` 中，通过 `syscall/` 的标准化接口与内核交互。
-- 安全机制集中在 `agentos/cupolas/` 中，与内核逻辑解耦。
+- 所有用户态服务（LLM、市场、监控、调度、工具）运行在 `agentrt/daemon/` 中，通过 `syscall/` 的标准化接口与内核交互。
+- 安全机制集中在 `agentrt/cupolas/` 中，与内核逻辑解耦。
 
 这种分离保证了内核故障不会影响服务的可替换性，服务崩溃也不会拖垮内核稳定性。
 
@@ -374,11 +374,11 @@ Airymax 将《论系统工程》的整体观、层次观、优化观应用于智
 
 | 反馈类型 | 机制 | 实现位置 |
 |---------|------|---------|
-| 实时反馈 | 执行结果 → 认知层修正 | `agentos_execution_wait` → `agentos_cognition_process` |
+| 实时反馈 | 执行结果 → 认知层修正 | `agentrt_execution_wait` → `agentrt_cognition_process` |
 | 轮次内反馈 | 完成节点 → 增量规划器 | execution callback → planner DAG 更新 |
 | 跨轮次反馈 | 历史模式 → 策略参数 | L4 模式挖掘 → 认知策略配置热更新 |
 | 安全反馈 | 审计日志 → 权限规则 | `cupolas_audit_record` → `cupolas_permission_reload` |
-| 健康反馈 | 指标采集 → 自动伸缩 | `agentos_sys_telemetry_metrics` → monit_d 告警 |
+| 健康反馈 | 指标采集 → 自动伸缩 | `agentrt_sys_telemetry_metrics` → monit_d 告警 |
 
 **实施规则**：
 
@@ -402,7 +402,7 @@ bool has_feedback_path(const char* api_name);
 **工程化验证**：
 
 - **CI 反馈路径检查**：在 CI 中添加脚本 `scripts/check_feedback_paths.sh`，确保每个关键模块的输出都有对应的反馈消费者（通过静态分析或运行时追踪）
-- **持久化审计**：通过 `agentos_sys_telemetry_metrics` 记录反馈数据持久化成功率，低于阈值时触发告警
+- **持久化审计**：通过 `agentrt_sys_telemetry_metrics` 记录反馈数据持久化成功率，低于阈值时触发告警
 - **降级策略测试**：在集成测试中模拟反馈延迟超时，验证系统自动切换到无反馈模式且不丢失任务
 
 ### 2.2 原则 S-2：层次分解原则
@@ -414,11 +414,11 @@ bool has_feedback_path(const char* api_name);
 **在 Airymax 中的体现**：
 
 ```
-syscalls.h      --> 只依赖 agentos.h（corekern）
-cognition.h     --> 只依赖 agentos.h（corekern）
-execution.h     --> 只依赖 agentos.h（corekern）
-memoryrovol.h   --> 只依赖 agentos.h + layer1~layer4
-cupolas.h         --> 只依赖 agentos.h（corekern）
+syscalls.h      --> 只依赖 agentrt.h（corekern）
+cognition.h     --> 只依赖 agentrt.h（corekern）
+execution.h     --> 只依赖 agentrt.h（corekern）
+memoryrovol.h   --> 只依赖 agentrt.h + layer1~layer4
+cupolas.h         --> 只依赖 agentrt.h（corekern）
 ```
 
 所有内核头文件的 `#include` 关系严格遵守层次纪律——没有跨层依赖，没有循环引用。
@@ -426,8 +426,8 @@ cupolas.h         --> 只依赖 agentos.h（corekern）
 **实施规则**：
 
 1. 新模块的头文件只能 `#include` 同层或下层的接口
-2. 禁止从 `agentos/daemon/` 直接调用 `agentos/atoms/` 内部函数（必须通过 `syscalls.h`）
-3. 禁止从 `agentos/atoms/` 内部模块之间直接耦合（必须通过 `corekern/` 的 IPC）
+2. 禁止从 `agentrt/daemon/` 直接调用 `agentrt/atoms/` 内部函数（必须通过 `syscalls.h`）
+3. 禁止从 `agentrt/atoms/` 内部模块之间直接耦合（必须通过 `corekern/` 的 IPC）
 
 **验证方法**：
 
@@ -505,7 +505,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 **实施规则**：
 
 1. `corekern/` 新增接口必须通过架构委员会审批
-2. 新功能优先考虑作为 `agentos/daemon/` 守护进程实现
+2. 新功能优先考虑作为 `agentrt/daemon/` 守护进程实现
 3. 内核接口必须是泛化的——不包含任何业务语义
 
 ### 3.2 原则 K-2：接口契约化原则
@@ -522,10 +522,10 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
  * @ownership 释放 engine 及其内部资源
  * @threadsafe 否
  * @reentrant 否
- * @see agentos_cognition_create()
- * @deprecated v2.0.0 请使用 agentos_cognition_destroy_ex() 替代
+ * @see agentrt_cognition_create()
+ * @deprecated v2.0.0 请使用 agentrt_cognition_destroy_ex() 替代
  */
-AGENTOS_API void agentos_cognition_destroy(agentos_cognition_engine_t* engine);
+AGENTRT_API void agentrt_cognition_destroy(agentrt_cognition_engine_t* engine);
 ```
 
 契约包含七个维度：
@@ -561,19 +561,19 @@ AGENTOS_API void agentos_cognition_destroy(agentos_cognition_engine_t* engine);
 **在 Airymax 中的体现**：
 
 ```
-agentos/daemon/llm_d/     --> 通过 agentos_sys_* 系统调用与内核通信
-agentos/daemon/market_d/  --> 通过 agentos_sys_* 系统调用与内核通信
-agentos/daemon/monit_d/   --> 通过 agentos_sys_* 系统调用与内核通信
-agentos/daemon/sched_d/   --> 通过 agentos_sys_* 系统调用与内核通信
-agentos/daemon/tool_d/    --> 通过 agentos_sys_* 系统调用与内核通信
+agentrt/daemon/llm_d/     --> 通过 agentrt_sys_* 系统调用与内核通信
+agentrt/daemon/market_d/  --> 通过 agentrt_sys_* 系统调用与内核通信
+agentrt/daemon/monit_d/   --> 通过 agentrt_sys_* 系统调用与内核通信
+agentrt/daemon/sched_d/   --> 通过 agentrt_sys_* 系统调用与内核通信
+agentrt/daemon/tool_d/    --> 通过 agentrt_sys_* 系统调用与内核通信
 ```
 
 系统调用接口（`syscalls.h`）提供了统一的抽象：
 
-- **任务管理**：`agentos_sys_task_submit/query/wait/cancel`
-- **记忆管理**：`agentos_sys_memory_write/search/get/delete`
-- **会话管理**：`agentos_sys_session_create/get/close/list`
-- **可观测性**：`agentos_sys_telemetry_metrics/traces`
+- **任务管理**：`agentrt_sys_task_submit/query/wait/cancel`
+- **记忆管理**：`agentrt_sys_memory_write/search/get/delete`
+- **会话管理**：`agentrt_sys_session_create/get/close/list`
+- **可观测性**：`agentrt_sys_telemetry_metrics/traces`
 
 **实施规则**：
 
@@ -589,18 +589,18 @@ agentos/daemon/tool_d/    --> 通过 agentos_sys_* 系统调用与内核通信
 
 | 策略维度 | 接口定义 | 可选实现 |
 |---------|---------|---------|
-| 规划策略 | `agentos_plan_strategy_t` | 分层规划、反应式规划、反思式规划、ML 规划 |
-| 协同策略 | `agentos_coordinator_strategy_t` | 双模型协同、多数投票、加权融合、外部仲裁 |
-| 调度策略 | `agentos_dispatching_strategy_t` | 加权调度、轮询调度、优先级调度、ML 调度 |
-| 遗忘策略 | `agentos_forget_strategy_t` | 艾宾浩斯曲线、线性衰减、基于访问次数 |
-| 执行单元 | `agentos_execution_unit_t` | API、浏览器、代码、数据库、文件、Shell、工具 |
+| 规划策略 | `agentrt_plan_strategy_t` | 分层规划、反应式规划、反思式规划、ML 规划 |
+| 协同策略 | `agentrt_coordinator_strategy_t` | 双模型协同、多数投票、加权融合、外部仲裁 |
+| 调度策略 | `agentrt_dispatching_strategy_t` | 加权调度、轮询调度、优先级调度、ML 调度 |
+| 遗忘策略 | `agentrt_forget_strategy_t` | 艾宾浩斯曲线、线性衰减、基于访问次数 |
+| 执行单元 | `agentrt_execution_unit_t` | API、浏览器、代码、数据库、文件、Shell、工具 |
 
 每个策略接口遵循统一的三函数模式：
 
 ```c
-struct agentos_plan_strategy {
-    agentos_plan_func_t plan;       /* 核心算法函数 */
-    agentos_plan_destroy_t destroy; /* 资源释放函数 */
+struct agentrt_plan_strategy {
+    agentrt_plan_func_t plan;       /* 核心算法函数 */
+    agentrt_plan_destroy_t destroy; /* 资源释放函数 */
     void* data;                     /* 私有数据指针 */
 };
 ```
@@ -661,14 +661,14 @@ struct agentos_plan_strategy {
 /**
  * @brief 任务节点结构
  */
-typedef struct agentos_task_node {
+typedef struct agentrt_task_node {
     char* task_node_id;                   /* 任务ID */
     char* task_node_agent_role;           /* 需要的Agent角色 */
     char** task_node_depends_on;          /* 依赖的任务ID数组 */
     uint32_t task_node_timeout_ms;        /* 超时时间 */
     uint8_t retry_count;                  /* 重试次数统计 */
     uint8_t max_retries;                  /* 最大重试次数（默认3） */
-} agentos_task_node_t;
+} agentrt_task_node_t;
 ```
 
 **实施规则**：
@@ -683,7 +683,7 @@ typedef struct agentos_task_node {
 
 - **集成测试**：编写集成测试 `tests/integration/test_planning_fallback.c`，模拟任务部分失败，验证回退机制的行为符合预期
 - **深度限制测试**：验证规划深度超过限制时系统正确处理（报错或截断）
-- **回退统计监控**：通过 `agentos_sys_telemetry_metrics` 记录回退次数，超过阈值时触发告警
+- **回退统计监控**：通过 `agentrt_sys_telemetry_metrics` 记录回退次数，超过阈值时触发告警
 
 ### 4.3 原则 C-3：记忆卷载原则
 
@@ -746,7 +746,7 @@ R(t) = e^(-t/tau)
 
 **依据**：基于工程两论中的安全工程思想，安全内生原则强调安全应作为系统的基础属性而非附加功能，通过多层次、全方位的防护机制构建纵深防御体系。遵循最小特权、职责分离和不可否认性原则，确保系统从架构层面抵御各类安全威胁。
 
-**在 Airymax 中的体现**：`agentos/cupolas/` 安全穹顶提供**七大子系统**的纵深防御：
+**在 Airymax 中的体现**：`agentrt/cupolas/` 安全穹顶提供**七大子系统**的纵深防御：
 
 | 子系统 | 组件目录 | 机制 |
 |--------|---------|------|
@@ -760,7 +760,7 @@ R(t) = e^(-t/tau)
 
 **安全设计强化**：
 
-- **默认最小权限**：所有守护进程（`*_d`）启动时默认无任何权限，必须通过 `agentos/cupolas/permission/` 中的策略文件显式授予
+- **默认最小权限**：所有守护进程（`*_d`）启动时默认无任何权限，必须通过 `agentrt/cupolas/permission/` 中的策略文件显式授予
 - **权限动态更新**：权限策略支持运行时动态更新，更新时触发重新评估所有活动会话
 - **数据本地化**：除非用户明确授权，否则任何敏感数据（如对话内容、文件）不得离开本地节点
 
@@ -794,10 +794,10 @@ R(t) = e^(-t/tau)
 
 | 类型 | API | 用途 |
 |------|-----|------|
-| 指标 | `agentos_sys_telemetry_metrics` | 性能监控、资源使用、业务指标 |
-| 追踪 | `agentos_sys_telemetry_traces` | 分布式追踪、调用链分析 |
+| 指标 | `agentrt_sys_telemetry_metrics` | 性能监控、资源使用、业务指标 |
+| 追踪 | `agentrt_sys_telemetry_traces` | 分布式追踪、调用链分析 |
 | 日志 | `logger.h` | 结构化日志、错误诊断 |
-| 健康 | `agentos_sys_telemetry_health` | 服务状态、依赖检查 |
+| 健康 | `agentrt_sys_telemetry_health` | 服务状态、依赖检查 |
 
 **实施规则**：
 
@@ -823,16 +823,16 @@ R(t) = e^(-t/tau)
 
 **内存管理（`mem.h`）提供完整的生命周期追踪**：
 
-- `agentos_mem_alloc_ex` 记录分配位置（文件:行号）
-- `agentos_mem_free` 检查释放位置是否匹配分配位置
+- `agentrt_mem_alloc_ex` 记录分配位置（文件:行号）
+- `agentrt_mem_free` 检查释放位置是否匹配分配位置
 - 泄漏检测器在进程退出时报告未释放的内存块
 - 内存池（Memory Pool）提供预分配的内存块，避免频繁分配
 
 **异步资源管理**：
 
-- **所有者关联**：任何异步资源（如 `agentos_timer_t`）必须显式关联所有者（如任务或会话），并在所有者销毁时自动取消/释放
+- **所有者关联**：任何异步资源（如 `agentrt_timer_t`）必须显式关联所有者（如任务或会话），并在所有者销毁时自动取消/释放
 - **泄漏检测工具**：提供资源泄漏检测工具，在调试模式下记录异步资源的分配栈，退出时报告未释放资源
-- **异步资源追踪**：通过 `agentos_mem_alloc_ex` 扩展支持异步资源类型标记和所有者跟踪
+- **异步资源追踪**：通过 `agentrt_mem_alloc_ex` 扩展支持异步资源类型标记和所有者跟踪
 
 **实施规则**：
 
@@ -896,9 +896,9 @@ R(t) = e^(-t/tau)
 
 **实施规则**：
 
-1. 函数名采用 `动词_名词` 结构（如 `agentos_task_submit`）
-2. 类型名采用 `名词` 结构（如 `agentos_task_t`）
-3. 常量名采用 `大写_下划线` 结构（如 `AGENTOS_OK`）
+1. 函数名采用 `动词_名词` 结构（如 `agentrt_task_submit`）
+2. 类型名采用 `名词` 结构（如 `agentrt_task_t`）
+3. 常量名采用 `大写_下划线` 结构（如 `AGENTRT_OK`）
 4. 避免缩写（除非是广泛认知的，如 `IPC`、`LLM`）
 
 **验证方法**：
@@ -920,29 +920,29 @@ R(t) = e^(-t/tau)
 
 ```c
 typedef enum {
-    AGENTOS_OK = 0,                  /* 成功 */
-    AGENTOS_EINVAL = EINVAL,         /* 无效参数 */
-    AGENTOS_ENOMEM = ENOMEM,         /* 内存不足 */
-    AGENTOS_EPERM = EPERM,           /* 权限不足 */
-    AGENTOS_ETIMEDOUT = ETIMEDOUT,   /* 超时 */
-    AGENTOS_EBUSY = EBUSY,           /* 资源忙 */
-    AGENTOS_ENOENT = ENOENT,         /* 不存在 */
-    AGENTOS_EEXIST = EEXIST,         /* 已存在 */
-    AGENTOS_EIO = EIO,               /* I/O 错误 */
-    AGENTOS_EFAULT = EFAULT,         /* 地址错误 */
-    AGENTOS_EAGAIN = EAGAIN,         /* 重试 */
-    AGENTOS_EMSGSIZE = EMSGSIZE,     /* 消息过大 */
-    AGENTOS_EPROTO = EPROTO,         /* 协议错误 */
-    AGENTOS_ENOSYS = ENOSYS,         /* 功能未实现 */
-    AGENTOS_EDEADLK = EDEADLK,       /* 死锁 */
-    AGENTOS_EOVERFLOW = EOVERFLOW,   /* 溢出 */
-    AGENTOS_ELAST = 255              /* 最后一个错误码 */
-} agentos_error_t;
+    AGENTRT_OK = 0,                  /* 成功 */
+    AGENTRT_EINVAL = EINVAL,         /* 无效参数 */
+    AGENTRT_ENOMEM = ENOMEM,         /* 内存不足 */
+    AGENTRT_EPERM = EPERM,           /* 权限不足 */
+    AGENTRT_ETIMEDOUT = ETIMEDOUT,   /* 超时 */
+    AGENTRT_EBUSY = EBUSY,           /* 资源忙 */
+    AGENTRT_ENOENT = ENOENT,         /* 不存在 */
+    AGENTRT_EEXIST = EEXIST,         /* 已存在 */
+    AGENTRT_EIO = EIO,               /* I/O 错误 */
+    AGENTRT_EFAULT = EFAULT,         /* 地址错误 */
+    AGENTRT_EAGAIN = EAGAIN,         /* 重试 */
+    AGENTRT_EMSGSIZE = EMSGSIZE,     /* 消息过大 */
+    AGENTRT_EPROTO = EPROTO,         /* 协议错误 */
+    AGENTRT_ENOSYS = ENOSYS,         /* 功能未实现 */
+    AGENTRT_EDEADLK = EDEADLK,       /* 死锁 */
+    AGENTRT_EOVERFLOW = EOVERFLOW,   /* 溢出 */
+    AGENTRT_ELAST = 255              /* 最后一个错误码 */
+} agentrt_error_t;
 ```
 
 **错误链（Error Chaining）**：
 
-- **错误包装函数**：提供 `agentos_error_wrap` 函数，允许在传递错误时附加模块名、函数名、行号等上下文
+- **错误包装函数**：提供 `agentrt_error_wrap` 函数，允许在传递错误时附加模块名、函数名、行号等上下文
 - **链式上下文**：错误链支持多层包装，每个层级记录额外的上下文信息
 - **格式化输出**：错误链最终输出时，格式化显示完整调用栈（类似 `errno` 的 `strerror` 但带链）
 
@@ -956,8 +956,8 @@ typedef enum {
  * @param message 附加消息
  * @return 包装后的错误链句柄
  */
-agentos_error_chain_t agentos_error_wrap(
-    agentos_error_t err,
+agentrt_error_chain_t agentrt_error_wrap(
+    agentrt_error_t err,
     const char* module,
     const char* function,
     int line,
@@ -971,7 +971,7 @@ agentos_error_chain_t agentos_error_wrap(
 2. 错误消息必须包含上下文信息（如任务 ID、文件路径）
 3. 错误必须通过结构化日志记录
 4. 关键错误必须触发告警
-5. **错误链传递**：在传递错误时使用 `agentos_error_wrap` 添加上下文，形成错误链
+5. **错误链传递**：在传递错误时使用 `agentrt_error_wrap` 添加上下文，形成错误链
 6. **完整调用栈**：错误链最终输出时必须格式化显示完整调用栈，便于定位根因
 
 **验证方法**：
@@ -1118,7 +1118,7 @@ Airymax 的完美主义体现：
 | 简约维度 | 体现 | 代码示例 |
 |---------|------|---------|
 | **接口数量** | 每个模块的公共 API 不超过 20 个 | `corekern/` 总计 4 个核心机制 |
-| **参数数量** | 函数参数不超过 5 个（结构体封装复杂参数） | `agentos_task_create(task_config_t*)` |
+| **参数数量** | 函数参数不超过 5 个（结构体封装复杂参数） | `agentrt_task_create(task_config_t*)` |
 | **依赖关系** | 头文件依赖最小化，无循环依赖 | 严格的层次依赖检查 |
 | **配置选项** | 默认配置满足 80% 场景，高级配置可选 | YAML 配置的层次结构 |
 
@@ -1167,7 +1167,7 @@ scripts/check_api_complexity.sh --trend --report
 // [ERROR] <error_code>: <human_readable> (context: <key=value>). Suggestion: <action>
 
 // 示例：
-"[ERROR] AGENTOS_ENOMEM: 内存分配失败 (context: requested=256MB, available=128MB, process=agentos_llm_d, pid=1234, used=2.1GB). 
+"[ERROR] AGENTRT_ENOMEM: 内存分配失败 (context: requested=256MB, available=128MB, process=agentrt_llm_d, pid=1234, used=2.1GB). 
 Suggestion: 1) 减少批量大小 2) 启用内存压缩 3) 增加系统内存"
 ```
 
@@ -1190,7 +1190,7 @@ Suggestion: 1) 减少批量大小 2) 启用内存压缩 3) 增加系统内存"
 **错误消息标准化**：
 
 - **统一模板**：定义错误消息格式模板：`[ERROR] <error_code>: <human_readable> (context: <key=value>). Suggestion: <action>`
-- **强制遵循**：所有公共API抛出的错误必须符合此模板，并支持通过 `agentos_error_get_message` 获取格式化消息
+- **强制遵循**：所有公共API抛出的错误必须符合此模板，并支持通过 `agentrt_error_get_message` 获取格式化消息
 - **国际化支持**：提供错误消息的国际化扩展接口，允许加载不同语言的消息包
 - **上下文丰富化**：错误消息必须包含模块名、函数名、行号等上下文信息
 

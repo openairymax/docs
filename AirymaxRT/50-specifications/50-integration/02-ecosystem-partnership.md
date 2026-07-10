@@ -92,17 +92,17 @@ Airymax 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 
 | SDK | 语言 | 状态 | 说明 |
 |-----|------|------|------|
-| agentos-sdk-python | Python | 已发布 | 完整Python SDK |
-| agentos-sdk-rust | Rust | 已发布 | 高性能Rust SDK |
-| agentos-sdk-go | Go | 已发布 | 云原生Go SDK |
-| agentos-sdk-typescript | TypeScript | 已发布 | 前端/Node.js SDK |
+| agentrt-sdk-python | Python | 已发布 | 完整Python SDK |
+| agentrt-sdk-rust | Rust | 已发布 | 高性能Rust SDK |
+| agentrt-sdk-go | Go | 已发布 | 云原生Go SDK |
+| agentrt-sdk-typescript | TypeScript | 已发布 | 前端/Node.js SDK |
 
 ### 4.2 开发者资源
 
 | 资源 | 说明 | 获取方式 |
 |------|------|---------|
-| **沙箱环境** | 在线体验Airymax | sandbox.agentos.dev |
-| **开发者文档** | 完整API参考 | docs.agentos.dev |
+| **沙箱环境** | 在线体验Airymax | sandbox.agentrt.dev |
+| **开发者文档** | 完整API参考 | docs.agentrt.dev |
 | **示例代码** | 各语言示例 | GitHub Examples |
 | **技术论坛** | 问答与讨论 | GitHub Discussions |
 | **Office Hour** | 每周技术答疑 | 社区日历预约 |
@@ -142,10 +142,10 @@ Airymax 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 
 | 事项 | 联系方式 |
 |------|---------|
-| 伙伴申请 | partnership@agentos.dev |
-| 技术集成 | integration@agentos.dev |
-| 开发者支持 | dev-support@agentos.dev |
-| 商务合作 | business@agentos.dev |
-| 紧急安全 | security@agentos.dev |
+| 伙伴申请 | partnership@agentrt.dev |
+| 技术集成 | integration@agentrt.dev |
+| 开发者支持 | dev-support@agentrt.dev |
+| 商务合作 | business@agentrt.dev |
+| 紧急安全 | security@agentrt.dev |
 
 **加入流程**: 提交申请 → 审核评估 → 签署协议 → 技术对接 → 正式上线

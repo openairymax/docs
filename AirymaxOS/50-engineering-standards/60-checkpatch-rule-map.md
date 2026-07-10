@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）checkpatch 规则映射表
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）checkpatch 规则与编码规范的映射表。提取 OLK-6.6 `scripts/checkpatch.pl` 中的 ERROR/WARNING/CHK 规则，映射到 agentrt-linux 规则编号体系（OS-STD-CODE-NNN），供 CI 门禁、Code Review 与开发者自查使用。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **D-09 子域校验声明（2026-07-09）**: 本文件使用 `OS-STD-CODE-NNN`（4 段前缀，CODE = Coding）子域编号，已通过 C-2.6 D-09 校验。本文件是**映射表**而非规则定义文档：编号 OS-STD-CODE-010~027 引用 [01-coding-standards.md](01-coding-standards.md) 中定义的语义层规则（D-05 迁移后 01 统一为 OS-STD-CODE-001~027）；编号 OS-STD-CODE-028~036+ 为本文件**新增**的 checkpatch 专属规则（checkpatch 检查模式在 01 语义层未覆盖，需独立编号）。本文件与 01-coding-standards.md 的编号关系为"引用 + 扩展"，无冲突。同批校验的 70-kernel-doc-standard.md 使用 `OS-STD-DOC-NNN`（DOC 子域）、110-spdx-license-compliance.md 使用 `OS-STD-SPDX-NNN`（SPDX 子域），均为独立子域，互不冲突。
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）checkpatch 规则与编码规范的映射表。提取 OLK-6.6 `scripts/checkpatch.pl` 中的 ERROR/WARNING/CHK 规则，映射到 agentrt-linux 规则编号体系（OS-STD-CODE-NNN），供 CI 门禁、Code Review 与开发者自查使用。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **理论根基**： Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0\
+> **D-09 子域校验声明（2026-07-09）**： 本文件使用 `OS-STD-CODE-NNN`（4 段前缀，CODE = Coding）子域编号，已通过 C-2.6 D-09 校验。本文件是**映射表**而非规则定义文档：编号 OS-STD-CODE-010~027 引用 [01-coding-standards.md](01-coding-standards.md) 中定义的语义层规则（D-05 迁移后 01 统一为 OS-STD-CODE-001~027）；编号 OS-STD-CODE-028~036+ 为本文件**新增**的 checkpatch 专属规则（checkpatch 检查模式在 01 语义层未覆盖，需独立编号）。本文件与 01-coding-standards.md 的编号关系为"引用 + 扩展"，无冲突。同批校验的 70-kernel-doc-standard.md 使用 `OS-STD-DOC-NNN`（DOC 子域）、110-spdx-license-compliance.md 使用 `OS-STD-SPDX-NNN`（SPDX 子域），均为独立子域，互不冲突。
 
 ---
 
@@ -781,4 +781,4 @@ drivers/airymax/legacy/compat.c STRCPY 已知遗留代码，迁移中
 
 ---
 
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0

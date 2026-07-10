@@ -20,10 +20,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 名称 | 组件路径 | 功能 | 实现机制 |
 |------|------|---------|------|---------|
-| D1 | **虚拟工位** | `agentos/cupolas/workbench/` | 进程/容器级隔离 | 容器命名空间、WASM 沙箱、资源限额 |
-| D2 | **权限裁决** | `agentos/cupolas/permission/` | 动态规则引擎 | YAML 规则、RBAC、ABAC |
-| D3 | **输入净化** | `agentos/cupolas/sanitizer/` | 输入验证过滤 | 正则表达式、白名单、类型检查 |
-| D4 | **审计追踪** | `agentos/cupolas/audit/` | 全链路追踪 | 异步日志、不可篡改、轮转归档 |
+| D1 | **虚拟工位** | `agentrt/cupolas/workbench/` | 进程/容器级隔离 | 容器命名空间、WASM 沙箱、资源限额 |
+| D2 | **权限裁决** | `agentrt/cupolas/permission/` | 动态规则引擎 | YAML 规则、RBAC、ABAC |
+| D3 | **输入净化** | `agentrt/cupolas/sanitizer/` | 输入验证过滤 | 正则表达式、白名单、类型检查 |
+| D4 | **审计追踪** | `agentrt/cupolas/audit/` | 全链路追踪 | 异步日志、不可篡改、轮转归档 |
 
 **安全原则**（关联原则 E-1）:
 
@@ -66,7 +66,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ### 2.2 D1: 虚拟工位
 
 ```yaml
-# agentos/cupolas/workspace.yaml
+# agentrt/cupolas/workspace.yaml
 workspace:
   # 进程级隔离配置
   isolation:
@@ -80,21 +80,21 @@ workspace:
   network:
     mode: "none"  # none | bridge | host
     allowed_outbound:
-      - "api.agentos.internal"
+      - "api.agentrt.internal"
       - "metrics.internal"
       
   # 文件系统隔离
   filesystem:
-    root: "/var/agentos/workspace/{workspace_id}"
+    root: "/var/agentrt/workspace/{workspace_id}"
     readonly_paths:
       - "/etc"
       - "/usr/bin"
     writable_paths:
-      - "/tmp/agentos"
+      - "/tmp/agentrt"
 ```
 
 ```c
-// agentos/atoms/agentos/cupolas/workspace.h
+// agentrt/atoms/agentrt/cupolas/workspace.h
 /**
  * @file workspace.h
  * @brief 虚拟工位接口
@@ -102,7 +102,7 @@ workspace:
  * 提供进程/容器级隔离，确保任务在受限环境中执行。
  */
 
-typedef struct agentos_workspace {
+typedef struct agentrt_workspace {
     uint64_t workspace_id;
     WorkspaceConfig manager;
     WorkspaceState state;
@@ -118,28 +118,28 @@ typedef struct agentos_workspace {
     struct {
         bool initialized;
         bool is_isolated;
-        agentos_pid_t pid;  // 使用平台抽象层，禁止直接使用 pid_t（违反 CROSS-01）
+        agentrt_pid_t pid;  // 使用平台抽象层，禁止直接使用 pid_t（违反 CROSS-01）
     } isolation;
-} agentos_workspace_t;
+} agentrt_workspace_t;
 
 /**
  * @brief 创建虚拟工位
  */
 int workspace_create(
     const WorkspaceConfig* manager,
-    agentos_workspace_t** out_workspace
+    agentrt_workspace_t** out_workspace
 );
 
 /**
  * @brief 销毁虚拟工位
  */
-int workspace_destroy(agentos_workspace_t* workspace);
+int workspace_destroy(agentrt_workspace_t* workspace);
 
 /**
  * @brief 在工位中执行任务
  */
 int workspace_execute(
-    agentos_workspace_t* workspace,
+    agentrt_workspace_t* workspace,
     const TaskConfig* task_config,
     TaskResult* out_result
 );
@@ -148,7 +148,7 @@ int workspace_execute(
 ### 2.3 D2: 权限裁决
 
 ```yaml
-# agentos/cupolas/permission_rules.yaml
+# agentrt/cupolas/permission_rules.yaml
 permission_rules:
   # 默认策略：拒绝
   default_policy: "deny"
@@ -178,14 +178,14 @@ permission_rules:
         
   # 用户绑定
   bindings:
-    - user: "admin@agentos.internal"
+    - user: "admin@agentrt.internal"
       roles: ["admin"]
-    - user: "operator01@agentos.internal"
+    - user: "operator01@agentrt.internal"
       roles: ["operator"]
 ```
 
 ```c
-// agentos/atoms/agentos/cupolas/permission.h
+// agentrt/atoms/agentrt/cupolas/permission.h
 /**
  * @brief 权限裁决结果
  */
@@ -229,7 +229,7 @@ void log_permission_check(
 ### 2.4 D3: 输入净化
 
 ```yaml
-# agentos/cupolas/input_sanitization_rules.yaml
+# agentrt/cupolas/input_sanitization_rules.yaml
 sanitization_rules:
   # SQL 注入防护
   sql_injection:
@@ -279,7 +279,7 @@ sanitization_rules:
 ```
 
 ```c
-// agentos/atoms/agentos/cupolas/sanitizer.h
+// agentrt/atoms/agentrt/cupolas/sanitizer.h
 /**
  * @brief 输入净化上下文
  */
@@ -319,11 +319,11 @@ typedef enum {
 ### 2.5 D4: 审计日志
 
 ```yaml
-# agentos/cupolas/audit_config.yaml
+# agentrt/cupolas/audit_config.yaml
 audit:
   # 审计日志配置
   log:
-    path: "/var/agentos/logs/audit"
+    path: "/var/agentrt/logs/audit"
     rotation:
       max_size_mb: 100
       max_files: 30
@@ -357,7 +357,7 @@ audit:
 ```
 
 ```c
-// agentos/atoms/agentos/cupolas/audit.h
+// agentrt/atoms/agentrt/cupolas/audit.h
 /**
  * @brief 审计事件类型
  */
@@ -453,11 +453,11 @@ int audit_query(
 | 返回值 | 含义 | 示例错误码 |
 |--------|------|-----------|
 | `0` | 成功 | - |
-| 负值 | 错误码（定义于 `error.h`） | `AGENTOS_EINVAL`（参数无效）、`AGENTOS_ENOMEM`（内存不足）、`AGENTOS_EDECRYPT`（解密失败）、`AGENTOS_EKEYREVOKED`（密钥已吊销） |
+| 负值 | 错误码（定义于 `error.h`） | `AGENTRT_EINVAL`（参数无效）、`AGENTRT_ENOMEM`（内存不足）、`AGENTRT_EDECRYPT`（解密失败）、`AGENTRT_EKEYREVOKED`（密钥已吊销） |
 
 **规则**：
 - 调用方必须检查返回值，不得忽略错误
-- 负值错误码与 `error.h` 中定义的 `AGENTOS_E*` 常量一致
+- 负值错误码与 `error.h` 中定义的 `AGENTRT_E*` 常量一致
 - 禁止使用正数表示部分成功（违反一致性原则）
 
 ### 3.4 密钥轮换策略
@@ -469,10 +469,10 @@ int audit_query(
 | **轮换过程** | 1. 生成新密钥 → 2. 使用新密钥加密新数据 → 3. 旧数据按需重新加密 → 4. 旧密钥标记为"过渡期"（保留 30 天用于解密） → 5. 过渡期结束后安全擦除旧密钥 |
 | **紧急轮换** | 密钥泄露确认后 4 小时内完成轮换；紧急轮换跳过过渡期，立即吊销旧密钥并强制重新加密所有受影响数据 |
 | **密钥吊销** | 吊销的密钥立即加入 CRL（证书吊销列表），所有使用该密钥的会话和令牌强制失效 |
-| **密钥归档** | 已轮换密钥的安全擦除必须使用 `AGENTOS_SECURE_ZERO`，禁止依赖 `memset`（编译器可能优化掉） |
+| **密钥归档** | 已轮换密钥的安全擦除必须使用 `AGENTRT_SECURE_ZERO`，禁止依赖 `memset`（编译器可能优化掉） |
 
 ```c
-// agentos/atoms/security/crypto.h
+// agentrt/atoms/security/crypto.h
 /**
  * @brief 加密配置
  */
@@ -496,7 +496,7 @@ typedef struct crypto_config {
 /**
  * @brief 对称加密
  *
- * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTOS_EINVAL、AGENTOS_ENOMEM）
+ * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTRT_EINVAL、AGENTRT_ENOMEM）
  */
 int crypto_encrypt_symmetric(
     const uint8_t* plaintext,
@@ -510,7 +510,7 @@ int crypto_encrypt_symmetric(
 /**
  * @brief 对称解密
  *
- * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTOS_EINVAL、AGENTOS_EDECRYPT）
+ * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AGENTRT_EINVAL、AGENTRT_EDECRYPT）
  */
 int crypto_decrypt_symmetric(
     const uint8_t* ciphertext,
@@ -542,20 +542,20 @@ tls:
     
   # 证书配置
   certificate:
-    path: "/etc/agentos/tls/server.crt"
-    private_key_path: "/etc/agentos/tls/server.key"
-    ca_path: "/etc/agentos/tls/ca.crt"
+    path: "/etc/agentrt/tls/server.crt"
+    private_key_path: "/etc/agentrt/tls/server.key"
+    ca_path: "/etc/agentrt/tls/ca.crt"
     
   # 客户端认证
   client_auth:
     enabled: true
-    cert_path: "/etc/agentos/tls/client.crt"
+    cert_path: "/etc/agentrt/tls/client.crt"
 ```
 
 ### 4.2 mTLS 配置
 
 ```c
-// agentos/atoms/security/tls.h
+// agentrt/atoms/security/tls.h
 /**
  * @brief mTLS 连接配置
  */
@@ -596,8 +596,8 @@ authentication:
   
   # JWT 配置
   jwt:
-    issuer: "agentos.auth"
-    audience: "agentos.api"
+    issuer: "agentrt.auth"
+    audience: "agentrt.api"
     access_token_ttl_seconds: 3600
     refresh_token_ttl_days: 30
     algorithm: "ES256"
@@ -617,7 +617,7 @@ authentication:
 ### 5.2 会话管理
 
 ```c
-// agentos/atoms/security/session.h
+// agentrt/atoms/security/session.h
 /**
  * @brief 会话状态
  */
@@ -702,7 +702,7 @@ data_masking:
 ### 6.2 数据最小化
 
 ```c
-// agentos/atoms/security/privacy.h
+// agentrt/atoms/security/privacy.h
 /**
  * @brief 数据最小化配置
  */
@@ -772,7 +772,7 @@ health_check:
 ```
 
 ```c
-// agentos/atoms/security/health.h
+// agentrt/atoms/security/health.h
 /**
  * @brief 健康检查结果
  */
@@ -851,7 +851,7 @@ threat_detection:
 ### 8.2 内存安全
 
 ```c
-// agentos/atoms/security/memory.h
+// agentrt/atoms/security/memory.h
 /**
  * @brief 安全内存操作
  */
@@ -1177,7 +1177,7 @@ Atoms模块作为微核心核心，需要实现基础安全原语：
 
 #### 12.2.1 安全内存管理（映射原则：M-3 拓扑优化）
 
-> **跨平台合规说明**：本节代码中 `secure_memory_pool_t` 使用 `agentos_mutex_t` 而非 `pthread_mutex_t`，遵循 [C编码规范 CROSS-01](./C_coding_style_standard.md) 的跨平台规则。直接使用 POSIX 线程 API（如 `pthread_mutex_t`）违反 CROSS-01，必须使用 `platform.h` 提供的 `agentos_mutex_lock()`/`agentos_mutex_unlock()` 抽象。
+> **跨平台合规说明**：本节代码中 `secure_memory_pool_t` 使用 `agentrt_mutex_t` 而非 `pthread_mutex_t`，遵循 [C编码规范 CROSS-01](./C_coding_style_standard.md) 的跨平台规则。直接使用 POSIX 线程 API（如 `pthread_mutex_t`）违反 CROSS-01，必须使用 `platform.h` 提供的 `agentrt_mutex_lock()`/`agentrt_mutex_unlock()` 抽象。
 
 ```c
 /**
@@ -1193,7 +1193,7 @@ typedef struct secure_memory_pool {
     size_t allocated;
     size_t watermark;
     uint8_t canary[SECURITY_CANARY_SIZE];
-    agentos_mutex_t lock;  // 使用平台抽象层，禁止直接使用 pthread_mutex_t（违反 CROSS-01）
+    agentrt_mutex_t lock;  // 使用平台抽象层，禁止直接使用 pthread_mutex_t（违反 CROSS-01）
     numa_node_t numa_node;
 } secure_memory_pool_t;
 

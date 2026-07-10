@@ -43,7 +43,7 @@ Airymax 采用**多层次测试策略**，确保代码质量和系统稳定性�
 ```python
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from agentos.memory import MemoryClient
+from agentrt.memory import MemoryClient
 
 class TestMemoryClientStore:
     """MemoryClient.store() 方法测试"""
@@ -93,12 +93,12 @@ class TestMemoryClientStore:
 ```python
 # tests/integration/test_kernel_integration.py
 import pytest
-from agentos import AgentOSClient
+from agentrt import AgentRTClient
 
 @pytest.fixture(scope="module")
 def kernel_client():
     """创建内核客户端（需要运行中的内核服务）"""
-    client = AgentOSClient(
+    client = AgentRTClient(
         base_url="http://localhost:8080",
         api_key="test-api-key"
     )
@@ -116,7 +116,7 @@ class TestKernelIntegration:
 
     def test_create_and_chat_agent(self, kernel_client):
         """创建 Agent 并对话的完整流程"""
-        from agentos import AgentConfig
+        from agentrt import AgentConfig
 
         # 创建 Agent
         config = AgentConfig(
@@ -163,7 +163,7 @@ class TestKernelIntegration:
 ```python
 # tests/e2e/test_user_scenarios.py
 import pytest
-from agentos import AgentOSClient
+from agentrt import AgentRTClient
 
 class TestUserScenarios:
     """E2E 用户场景测试"""
@@ -179,7 +179,7 @@ class TestUserScenarios:
         5. 检索记忆
         6. 清理资源
         """
-        client = AgentOSClient(
+        client = AgentRTClient(
             base_url="http://localhost:8080",
             api_key=os.environ["TEST_API_KEY"]
         )
@@ -235,7 +235,7 @@ class TestUserScenarios:
         """并发 Agent 性能测试"""
         import concurrent.futures
 
-        client = AgentOSClient(base_url="http://localhost:8080")
+        client = AgentRTClient(base_url="http://localhost:8080")
 
         def run_agent_session(agent_index):
             agent = client.create_agent(AgentConfig(
@@ -281,7 +281,7 @@ class TestUserScenarios:
 
 ```bash
 # Python (pytest-cov)
-pytest --cov=agentos --cov-report=html --cov-fail-under=90
+pytest --cov=agentrt --cov-report=html --cov-fail-under=90
 
 # C++ (gcov)
 cmake .. -DCMAKE_BUILD_TYPE=Coverage
@@ -407,7 +407,7 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit/ -v \
-            --cov=agentos \
+            --cov=agentrt \
             --cov-report=xml \
             --cov-fail-under=90
 
@@ -500,7 +500,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["agentos"]
+source = ["agentrt"]
 branch = true
 omit = [
     "*/tests/*",
@@ -527,7 +527,7 @@ def test_with_mock(mock_client):
     assert result["status"] == "ok"
 
 # 使用 unittest.mock.patch
-@patch('agentos.client.requests.Session.post')
+@patch('agentrt.client.requests.Session.post')
 def test_with_patch(mock_post):
     mock_post.return_value.json.return_value = {"result": "success"}
     # ... test code
@@ -573,7 +573,7 @@ def temp_database():
 @pytest.fixture
 def authenticated_client():
     """返回已认证的客户端"""
-    client = AgentOSClient(
+    client = AgentRTClient(
         base_url="http://localhost:8080",
         api_key="test-key-for-testing"
     )
@@ -633,7 +633,7 @@ def cleanup_database(db_session):
 ```python
 @pytest.fixture
 async def async_client():
-    client = AsyncAgentOSClient()
+    client = AsyncAgentRTClient()
     yield client
     await client.close()
 

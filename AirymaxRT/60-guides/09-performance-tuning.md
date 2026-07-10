@@ -54,7 +54,7 @@ Airymax 内核调优遵循**测量→分析→调优→验证**的反馈闭环�
 
 ```bash
 # 运行标准性能基线测试
-agentos-cli benchmark baseline --duration 60
+agentrt-cli benchmark baseline --duration 60
 
 # 输出示例
 ┌─────────────────────────────────────────────┐
@@ -81,13 +81,13 @@ agentos-cli benchmark baseline --duration 60
 
 ```bash
 # 生成火焰图
-agentos-cli profile flamegraph --duration 30 --output flamegraph.svg
+agentrt-cli profile flamegraph --duration 30 --output flamegraph.svg
 
 # 生成调用图
-agentos-cli profile callgraph --output callgraph.dot
+agentrt-cli profile callgraph --output callgraph.dot
 
 # 内存分配分析
-agentos-cli profile memory --duration 30
+agentrt-cli profile memory --duration 30
 ```
 
 ---
@@ -99,7 +99,7 @@ agentos-cli profile memory --duration 30
 IPC（进程间通信）是 Airymax 内核性能的关键路径。
 
 ```yaml
-# agentos.yaml → corekern.ipc
+# agentrt.yaml → corekern.ipc
 corekern:
   ipc:
     # IPC 通道最大数量
@@ -533,7 +533,7 @@ telemetry:
 ### 8.1 开发环境
 
 ```yaml
-# agentos/manager/profiles/development.yaml
+# agentrt/manager/profiles/development.yaml
 corekern:
   ipc:
     max_channels: 512
@@ -578,7 +578,7 @@ telemetry:
 ### 8.2 生产环境（高吞吐）
 
 ```yaml
-# agentos/manager/profiles/production_high_throughput.yaml
+# agentrt/manager/profiles/production_high_throughput.yaml
 corekern:
   ipc:
     max_channels: 8192
@@ -620,7 +620,7 @@ telemetry:
 ### 8.3 生产环境（低延迟）
 
 ```yaml
-# agentos/manager/profiles/production_low_latency.yaml
+# agentrt/manager/profiles/production_low_latency.yaml
 corekern:
   ipc:
     max_channels: 4096
@@ -663,7 +663,7 @@ telemetry:
 ### 8.4 嵌入式 / 边缘设备
 
 ```yaml
-# agentos/manager/profiles/embedded.yaml
+# agentrt/manager/profiles/embedded.yaml
 corekern:
   ipc:
     max_channels: 64
@@ -721,27 +721,27 @@ telemetry:
 
 ```bash
 # 验证配置变更
-agentos-cli manager validate --profile production_high_throughput
+agentrt-cli manager validate --profile production_high_throughput
 
 # 预览变更影响
-agentos-cli manager diff --current /etc/agentos/agentos.yaml \
-                        --new agentos/manager/profiles/production_high_throughput.yaml
+agentrt-cli manager diff --current /etc/agentrt/agentrt.yaml \
+                        --new agentrt/manager/profiles/production_high_throughput.yaml
 
 # 热重载（无需重启）
-agentos-cli manager reload --profile production_high_throughput
+agentrt-cli manager reload --profile production_high_throughput
 ```
 
 ### 9.2 运行时参数调整
 
 ```bash
 # 动态调整日志级别
-agentos-cli manager set telemetry.logging.level DEBUG
+agentrt-cli manager set telemetry.logging.level DEBUG
 
 # 动态调整并发任务数
-agentos-cli manager set corekern.task.max_concurrent 512
+agentrt-cli manager set corekern.task.max_concurrent 512
 
 # 查看当前运行时参数
-agentos-cli manager get corekern.ipc.batch_size
+agentrt-cli manager get corekern.ipc.batch_size
 ```
 
 ---

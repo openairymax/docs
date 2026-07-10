@@ -2,14 +2,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）微内核设计思想详解
 
-> **文档定位**: agentrt-linux（AirymaxOS）微内核设计思想的深度解析，阐述基于 seL4 工程思想的 Linux 6.6 微内核化改造策略  
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）  
-> **最后更新**: 2026-07-09  
-> **父文档**: [架构设计](README.md)  
-> **理论基础**: seL4（唯一来源，ADR-014）  
-> **技术路线**: 基于 Linux 内核微内核化改造，非从零开发微内核（ADR-012）  
-> **版本基线**: 1.x.x 锁定 Linux 6.6 LTS / 2.x.x 锁定 Linux 7.1（ADR-013）  
-> **研读依据**: [seL4 深度报告](../../../docs-closed/agentrt-linux/_research_0.2.5/01-sel4-deep-analysis.md)（54 条 ES-SEL4 工程思想，2,187 行）  
+> **文档定位**：agentrt-linux（AirymaxOS）微内核设计思想的深度解析，阐述基于 seL4 工程思想的 Linux 6.6 微内核化改造策略\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **父文档**：[架构设计](README.md)\
+> **理论基础**：seL4（唯一来源，ADR-014）\
+> **技术路线**：基于 Linux 内核微内核化改造，非从零开发微内核（ADR-012）\
+> **版本基线**：1.x.x 锁定 Linux 6.6 LTS / 2.x.x 锁定 Linux 7.1（ADR-013）\
+> **研读依据**：[seL4 深度报告](../../../docs-closed/agentrt-linux/_research_0.2.5/01-sel4-deep-analysis.md)（54 条 ES-SEL4 工程思想，2,187 行）
 
 ---
 
@@ -557,7 +557,7 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 
 | 治理维度 | seL4 | agentrt-linux |
 |---------|------|--------------|
-| 治理主体 | Technical Steering Committee | Airymax 架构委员会 |
+| 治理主体 | Technical Steering Committee | 工程规范委员会 |
 | 贡献协议 | DCO sign-off（与 Linux 一致） | DCO sign-off |
 | 安全披露 | SECURITY.md 负责任披露 | agentrt-linux-SA |
 | 贡献指南 | CONTRIBUTING.md | CONTRIBUTING.md |
@@ -579,6 +579,83 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 | airymaxos-cloudnative | K8s + containerd 云原生 | 现代 OS 趋势 | ADR-009 |
 | airymaxos-system | 包管理 + 配置 + DevStation | 发行版规范 | — |
 | airymaxos-tests-linux | 形式化验证框架（seL4 风格） | ES-SEL4-16~20 | — |
+
+---
+
+## 10.1 IRON-9 v2 三层共享模型
+
+> **OS-ARCH-005**： seL4 微内核设计思想在 agentrt-linux 三层模型中分布落地——capability 模型经 [SC] `security_types.h` 共享契约，IPC 消息传递经 [SC] `ipc.h` + [SS] 同源 API 双层落地，形式化验证经 [IND] 各自独立实现，禁止将 seL4 验证代码混入共享契约层。
+
+### 三层模型概览
+
+| 层次 | 共享程度 | seL4 思想分布 |
+|------|---------|--------------|
+| **[SC] 共享契约层** | 完全共享代码 | capability 模型（`security_types.h` 38 cap + 254 LSM）+ IPC 契约（`ipc.h` magic 0x41524531 'ARE1' + 128B 头） |
+| **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | IPC 消息传递 API（agentrt POSIX MQ ↔ agentrt-linux io_uring）+ capability 4 项 API 同源 |
+| **[IND] 完全独立层** | 完全独立 | 形式化验证框架（airymaxos-tests-linux seL4 风格）+ 内核态调度（sched_ext / eBPF） |
+
+### [SC] 共享契约层——6 个头文件在微内核策略中的角色
+
+| 头文件 | seL4 对应概念 | 在微内核策略中的角色 | 消费方 |
+|--------|-------------|---------------------|--------|
+| `sched.h` | TCB 调度 | magic 0x41475453 'AGTS' + SCHED_EXT=7（禁用 SCHED_AGENT 宏）+ MAC_MAX_AGENTS=1024 | kernel / cognition |
+| `ipc.h` | Endpoint / Message | magic 0x41524531 'ARE1' + 128B 消息头（`agentrt_ipc_msg_hdr_t`） | kernel / services |
+| `bpf_struct_ops.h` | — | struct_ops 4 状态机（INIT/INUSE/TOBEFREE/READY）+ common_value 16B | kernel / cognition |
+| `security_types.h` | CNode / Capability | 38 cap + 254 LSM + Cupolas blob 布局 + capability 派生 | kernel / security |
+| `memory_types.h` | Untyped / Frame | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 | kernel / memory |
+| `cognition_types.h` | — | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 | kernel / cognition |
+
+### [SS] 语义同源层——seL4 概念 agentrt ↔ agentrt-linux 映射
+
+| seL4 概念 | agentrt 实现（用户态） | agentrt-linux 实现（内核态） | 同源 API |
+|----------|----------------------|---------------------------|---------|
+| Capability | Cupolas 用户态 CNode | LSM + Landlock + capability | mint/revoke/derive/copy |
+| IPC Endpoint | POSIX MQ + mmap | io_uring + SQPOLL（用户态-内核态）；kfifo + wait_event_interruptible（kthread 间） | 8 项 io_uring 同源 |
+| 服务用户态化 | Daemons systemd 单元 | kthread / daemon（12 daemons） | systemd 单元同源 |
+| 最小内核 | 用户态库 + 守护进程 | sched_ext + eBPF（5-10 万行预算） | Liedtke 极简原则 |
+
+### [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 形式化验证 | 无（用户态运行时） | airymaxos-tests-linux seL4 风格框架 | 验证目标为内核态 |
+| 调度原语 | 用户态协程 | BPF struct_ops + sched_ext | 跨平台约束 |
+| IPC 传输 | POSIX MQ + mmap | io_uring + kfifo | 内核态性能约束 |
+
+### 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态"
+        RT_CAP[Cupolas<br/>capability]
+        RT_IPC[AgentsIPC<br/>POSIX MQ]
+        RT_DAEMON[Daemons<br/>systemd]
+    end
+
+    subgraph "agentrt-linux 内核态（Linux 6.6）"
+        OS_CAP[airymaxos-security<br/>LSM + cap]
+        OS_IPC[airymaxos-kernel<br/>io_uring + kfifo]
+        OS_FV[airymaxos-tests-linux<br/>seL4 验证]
+    end
+
+    subgraph "[SC] 共享契约层（6 头文件）"
+        SC[ipc.h + security_types.h<br/>sched.h + memory_types.h]
+    end
+
+    RT_CAP -.->|"API 同源 [SS]"| OS_CAP
+    RT_IPC -.->|"API 同源 [SS]"| OS_IPC
+    RT_CAP ==>|"共享代码 [SC]"| SC
+    RT_IPC ==>|"共享代码 [SC]"| SC
+    OS_CAP ==>|"共享代码 [SC]"| SC
+    OS_IPC ==>|"共享代码 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_CAP fill:#e3f2fd,stroke:#1565c0
+    style OS_CAP fill:#fff3e0,stroke:#e65100
+    style OS_FV fill:#fce4ec,stroke:#880e4f
+```
+
+> **OS-ARCH-006**： 微内核化改造遵循"seL4 思想分布落地"原则——capability / IPC 契约经 [SC] 共享保证双端一致，形式化验证落入 [IND] 由 airymaxos-tests-linux 独立维护，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible。
 
 ---
 

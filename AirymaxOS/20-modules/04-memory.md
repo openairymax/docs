@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）记忆设计文档（airymaxos-memory，极境记忆）
 
-> **子仓编号**：04
-> **子仓代号**：极境记忆（Airymax Memory）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：MemoryRovol 内核态 + CXL 内存分层 + PMEM 持久化 + MGLRU 多代回收
-> **同源 agentrt**：heapstore + memoryrovol（MemoryRovol）
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 memoryrovol 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 CXL/PMEM/VFS 持久化实现独立
+> **子仓编号**：04\
+> **子仓代号**：极境记忆（Airymax Memory）\
+> **文档版本**：v1.1（2026-07-07）\
+> **设计基准**：MemoryRovol 内核态 + CXL 内存分层 + PMEM 持久化 + MGLRU 多代回收\
+> **同源 agentrt**：heapstore + memoryrovol（MemoryRovol）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 memoryrovol 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 CXL/PMEM/VFS 持久化实现独立\
 > **横切关注点**：记忆卷载贯穿调度（记忆迁移感知）、IPC（快照传递）、eBPF（回收追踪）、安全（记忆加密）4 大数据流
 
 ---
@@ -62,7 +62,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次 | 共享程度 | 记忆子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
 | **[SC] 共享契约层** | 完全共享代码 | MemoryRovol L1-L4 数据结构、GFP 掩码语义、PMEM 持久化接口 | `include/airymax/memory_types.h` |
-| **[SS] 语义同源层** | API 签名同源，实现独立 | `rovol_snapshot()`、`rovol_restore()`、`rovol_migrate()`、`rovol_compress()`、MGLRU aging/eviction 语义、userfaultfd 处理接口 等 6 项 | 各自独立实现 |
+| **[SS] 语义同源层** | 操作模式同源，函数签名独立 | `rovol_snapshot()`、`rovol_restore()`、`rovol_migrate()`、`rovol_compress()`、MGLRU aging/eviction 语义、userfaultfd 处理接口 等 6 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | CXL 设备驱动、PMEM 设备驱动、VFS 持久化层实现、THP 优化实现、zswap/zram 集成 | 各自独立仓库 |
 
 ### 2.1 维度对比
@@ -208,7 +208,7 @@ graph TD
 
 ### 4.1 MemoryRovol 内核态实现（同源）[SS]
 
-**记忆卷载语义** [SS]——API 签名同源，实现独立：
+**记忆卷载语义** [SS]——操作模式同源（概念操作一致），函数签名因抽象层级不同而独立：
 
 - `rovol_snapshot(pid)`：对指定进程创建记忆快照 [SS]。
 - `rovol_restore(snapshot_id)`：从快照恢复记忆 [SS]。
@@ -420,7 +420,7 @@ echo madvise > /sys/kernel/mm/transparent_hugepage/shmem_enabled
 
 ### 6.2 [SS] 语义同源层——6 项 API 映射
 
-API 签名同源，实现独立：
+操作模式同源（概念操作一致），函数签名因抽象层级不同而独立：
 
 | 序号 | API | 语义 | agentrt 实现 | agentrt-linux 实现 |
 |------|-----|------|-------------|---------------|
@@ -554,12 +554,12 @@ sequenceDiagram
 | 4 | L4 持久记忆数据结构一致性 | l4_persistent_t（含 checksum） | l4_persistent_t（同） | ✅ PASS [SC] |
 | 5 | GFP 掩码语义一致性 | 7 个 AGENTRT_GFP_* 宏 | 7 个（同） | ✅ PASS [SC] |
 | 6 | PMEM 持久化接口一致性 | 4 函数（persist/flush/map/unmap） | 4 函数（同） | ✅ PASS [SC] |
-| 7 | `rovol_snapshot()` 签名一致性 | 用户态 fork+COW | 内核 fork+userfaultfd | ✅ PASS [SS] |
-| 8 | `rovol_restore()` 签名一致性 | 用户态 mmap | 内核 mmap+userfaultfd | ✅ PASS [SS] |
-| 9 | `rovol_migrate()` 签名一致性 | 用户态迁移 | 内核 userfaultfd post-copy | ✅ PASS [SS] |
-| 10 | `rovol_compress()` 签名一致性 | 用户态 zstd | 内核 zswap/zram | ✅ PASS [SS] |
+| 7 | `rovol_snapshot()` 语义等价性 | 用户态 fork+COW | 内核 fork+userfaultfd | ✅ PASS [SS] |
+| 8 | `rovol_restore()` 语义等价性 | 用户态 mmap | 内核 mmap+userfaultfd | ✅ PASS [SS] |
+| 9 | `rovol_migrate()` 语义等价性 | 用户态迁移 | 内核 userfaultfd post-copy | ✅ PASS [SS] |
+| 10 | `rovol_compress()` 语义等价性 | 用户态 zstd | 内核 zswap/zram | ✅ PASS [SS] |
 | 11 | MGLRU aging/eviction 语义一致性 | 用户态模拟 | 内核 `lru_gen_folio` | ✅ PASS [SS] |
-| 12 | userfaultfd 处理接口一致性 | 用户态 handler | 内核 uffd 框架 | ✅ PASS [SS] |
+| 12 | userfaultfd 处理语义等价性 | 用户态 handler | 内核 uffd 框架 | ✅ PASS [SS] |
 | 13 | CXL/PMEM/VFS 独立性 | 不实现 | 内核态实现 | ✅ PASS [IND] |
 | 14 | THP/zswap 独立性 | 不实现 | 内核态实现 | ✅ PASS [IND] |
 | 15 | MGLRU Bloom 过滤器独立性 | 不使用 | 内核态使用（可选优化） | ✅ PASS [IND] |

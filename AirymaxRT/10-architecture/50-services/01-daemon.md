@@ -18,17 +18,17 @@ Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCo
 | 服务 | 端口 (TCP) | Unix Socket | 功能 |
 |------|-----------|-------------|------|
 | **gateway_d** | HTTP:8080 | 可选 | 统一入口网关，HTTP/WebSocket/Stdio → JSON-RPC 转换 |
-| **llm_d** | — | /var/run/agentos/llm.sock | 大语言模型推理服务，支持 OpenAI/Anthropic/Google/DeepSeek/本地模型 |
-| **tool_d** | — | /var/run/agentos/tool.sock | 工具注册、发现、执行管理，沙箱执行、超时控制、权限验证 |
-| **market_d** | — | /var/run/agentos/market.sock | Agent/Skill 应用市场，注册、搜索、安装、版本管理 |
-| **sched_d** | — | /var/run/agentos/sched.sock | 智能任务调度与负载均衡，轮询、加权、优先级队列、ML 调度 |
-| **monit_d** | HTTP:9090 | /var/run/agentos/monit.sock | 系统监控与告警，OpenTelemetry 兼容格式 |
-| **channel_d** | — | /var/run/agentos/channel.sock | 通道服务，跨组件通信通道管理 |
-| **observe_d** | — | /var/run/agentos/observe.sock | 观测服务，系统状态观测与数据采集 |
-| **notify_d** | — | /var/run/agentos/notify.sock | 通知服务，事件通知与消息推送 |
-| **info_d** | — | /var/run/agentos/info.sock | 信息服务，元数据查询与系统信息暴露 |
-| **hook_d** | — | /var/run/agentos/hook.sock | 全局 Hook 生命周期管理：注册、触发、卸载、审计；支持 8 种 Hook 类型（PRE/POST_EXEC、PRE/POST_LLM、PRE/POST_TOOL、ON_ERROR、ON_MEMORY_EVOLVE）；按优先级顺序执行，聚合决策（ABORT>RETRY>MODIFY>SKIP>CONTINUE）；PRE 阶段安全护栏前置拦截；委托 hook_registry/hook_executor/hook_interceptor/hook_timeout 模块化实现 |
-| **plugin_d** | — | /var/run/agentos/plugin.sock | 动态插件加载/卸载/生命周期管理：通过 dlopen/dlsym 加载动态库，状态机 UNLOADED→LOADED→INITIALIZED→RUNNING→ERROR/DISABLED；支持 4 种插件类型（TOOL_PROVIDER、PROTOCOL_ADAPTER、MEMORY_PROVIDER、HOOK_EXTENSION）；线程安全注册表（读写锁，最大 64 插件）；启动时自动扫描 ecosystem/plugins/ 经权限校验后加载 |
+| **llm_d** | — | /var/run/agentrt/llm.sock | 大语言模型推理服务，支持 OpenAI/Anthropic/Google/DeepSeek/本地模型 |
+| **tool_d** | — | /var/run/agentrt/tool.sock | 工具注册、发现、执行管理，沙箱执行、超时控制、权限验证 |
+| **market_d** | — | /var/run/agentrt/market.sock | Agent/Skill 应用市场，注册、搜索、安装、版本管理 |
+| **sched_d** | — | /var/run/agentrt/sched.sock | 智能任务调度与负载均衡，轮询、加权、优先级队列、ML 调度 |
+| **monit_d** | HTTP:9090 | /var/run/agentrt/monit.sock | 系统监控与告警，OpenTelemetry 兼容格式 |
+| **channel_d** | — | /var/run/agentrt/channel.sock | 通道服务，跨组件通信通道管理 |
+| **observe_d** | — | /var/run/agentrt/observe.sock | 观测服务，系统状态观测与数据采集 |
+| **notify_d** | — | /var/run/agentrt/notify.sock | 通知服务，事件通知与消息推送 |
+| **info_d** | — | /var/run/agentrt/info.sock | 信息服务，元数据查询与系统信息暴露 |
+| **hook_d** | — | /var/run/agentrt/hook.sock | 全局 Hook 生命周期管理：注册、触发、卸载、审计；支持 8 种 Hook 类型（PRE/POST_EXEC、PRE/POST_LLM、PRE/POST_TOOL、ON_ERROR、ON_MEMORY_EVOLVE）；按优先级顺序执行，聚合决策（ABORT>RETRY>MODIFY>SKIP>CONTINUE）；PRE 阶段安全护栏前置拦截；委托 hook_registry/hook_executor/hook_interceptor/hook_timeout 模块化实现 |
+| **plugin_d** | — | /var/run/agentrt/plugin.sock | 动态插件加载/卸载/生命周期管理：通过 dlopen/dlsym 加载动态库，状态机 UNLOADED→LOADED→INITIALIZED→RUNNING→ERROR/DISABLED；支持 4 种插件类型（TOOL_PROVIDER、PROTOCOL_ADAPTER、MEMORY_PROVIDER、HOOK_EXTENSION）；线程安全注册表（读写锁，最大 64 插件）；启动时自动扫描 ecosystem/plugins/ 经权限校验后加载 |
 
 ---
 
@@ -83,7 +83,7 @@ Airymax Daemon 模块是用户空间用户态服务集合，负责提供 MicroCo
 
 ```bash
 # 构建所有服务
-cd agentos/daemon
+cd agentrt/daemon
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
@@ -96,7 +96,7 @@ make tool_d
 sudo make install
 
 # 启动服务（示例）
-./llm_d --config /etc/agentos/llm.conf
+./llm_d --config /etc/agentrt/llm.conf
 ./tool_d -p 8081
 ```
 
@@ -110,7 +110,7 @@ ctest --output-on-failure
 
 # 手动测试 JSON-RPC 接口
 echo '{"jsonrpc":"2.0","method":"health_check","id":1}' \
-  | socat - UNIX-CONNECT:/var/run/agentos/llm.sock
+  | socat - UNIX-CONNECT:/var/run/agentrt/llm.sock
 ```
 
 ---

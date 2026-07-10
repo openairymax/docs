@@ -73,7 +73,7 @@ src/
  * 提供任务调度核心功能，包括任务提交、状态管理、
  * 优先级队列和依赖解析。
  *
- * @module agentos/scheduler
+ * @module agentrt/scheduler
  * @author SPHARX Ltd. - Airymax Team
  * @version 1.6.0
  */
@@ -128,7 +128,7 @@ export default TaskScheduler;
 | 常量 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_TIMEOUT` |
 | 枚举成员 | camelCase | `TaskStatus.Idle`, `Priority.Normal` |
 | 文件名 | kebab-case | `task-scheduler.ts`, `memory-manager.js` |
-| 目录名 | kebab-case | `task-scheduler/`, `memory-agentos/manager/` |
+| 目录名 | kebab-case | `task-scheduler/`, `memory-agentrt/manager/` |
 
 ### 3.2 命名示例
 
@@ -485,7 +485,7 @@ class TaskExecutor {
 /**
  * Airymax 错误基类
  */
-export class AgentOSError extends Error {
+export class AgentRTError extends Error {
     public readonly code: string;
     public readonly timestamp: number;
     
@@ -501,7 +501,7 @@ export class AgentOSError extends Error {
 /**
  * 调度器错误
  */
-export class SchedulerError extends AgentOSError {
+export class SchedulerError extends AgentRTError {
     public constructor(message: string) {
         super(message, 'SCHEDULER_ERROR');
     }
@@ -530,7 +530,7 @@ export class TaskNotFoundError extends SchedulerError {
 /**
  * 验证错误
  */
-export class ValidationError extends AgentOSError {
+export class ValidationError extends AgentRTError {
     public constructor(message: string) {
         super(message, 'VALIDATION_ERROR');
     }
@@ -578,7 +578,7 @@ async function processTask(taskId: string): Promise<TaskResult> {
         return await task.execute();
         
     } catch (error) {
-        if (error instanceof AgentOSError) {
+        if (error instanceof AgentRTError) {
             logger.error(`Task ${taskId} failed: ${error.message}`, { code: error.code });
             throw error;
         }
@@ -766,7 +766,7 @@ export { CognitionEngine } from './cognition-engine';
  * - t1 快思考：快速路径，处理简单任务
  * - t2 慢思考：深度路径，处理复杂任务
  *
- * @module agentos/scheduler
+ * @module agentrt/scheduler
  */
 
 /**
@@ -862,8 +862,8 @@ export interface TaskPlan<T = unknown, R = unknown> {
 /**
  * 类型守卫：检查是否为 Airymax 错误
  */
-function isAgentOSError(error: unknown): error is AgentOSError {
-    return error instanceof AgentOSError;
+function isAgentRTError(error: unknown): error is AgentRTError {
+    return error instanceof AgentRTError;
 }
 
 /**
@@ -885,7 +885,7 @@ function isValidTaskPlan(plan: unknown): plan is TaskPlan {
  * 使用类型守卫
  */
 async function handleError(error: unknown): Promise<void> {
-    if (isAgentOSError(error)) {
+    if (isAgentRTError(error)) {
         logger.error(`Airymax error: ${error.code} - ${error.message}`);
         // error.code 是确定存在的
     } else if (error instanceof Error) {
@@ -1091,17 +1091,17 @@ export class DaemonClient {
 
 ### 13-B.3 错误码映射
 
-AGENTOS_E* 错误码到 HTTP 状态码的映射：
+AGENTRT_E* 错误码到 HTTP 状态码的映射：
 
-| AGENTOS 错误码 | HTTP 状态码 | 说明 |
+| AGENTRT 错误码 | HTTP 状态码 | 说明 |
 |---------------|------------|------|
-| `AGENTOS_OK` (0) | 200 | 成功 |
-| `AGENTOS_ERR_INVALID_PARAM` (-2) | 400 | 参数无效 |
-| `AGENTOS_ERR_OUT_OF_MEMORY` (-4) | 503 | 资源不足 |
-| `AGENTOS_ERR_TIMEOUT` (-8) | 408 / 504 | 请求超时 |
-| `AGENTOS_ERR_BUSY` (-17) | 429 | 服务繁忙 |
-| `AGENTOS_ERR_NOT_FOUND` | 404 | 资源不存在 |
-| `AGENTOS_ERR_PERMISSION_DENIED` | 403 | 权限不足 |
+| `AGENTRT_OK` (0) | 200 | 成功 |
+| `AGENTRT_ERR_INVALID_PARAM` (-2) | 400 | 参数无效 |
+| `AGENTRT_ERR_OUT_OF_MEMORY` (-4) | 503 | 资源不足 |
+| `AGENTRT_ERR_TIMEOUT` (-8) | 408 / 504 | 请求超时 |
+| `AGENTRT_ERR_BUSY` (-17) | 429 | 服务繁忙 |
+| `AGENTRT_ERR_NOT_FOUND` | 404 | 资源不存在 |
+| `AGENTRT_ERR_PERMISSION_DENIED` | 403 | 权限不足 |
 | 其他负值 | 500 | 内部错误 |
 
 ### 13-B.4 JSON-RPC 2.0 服务层规范
@@ -1138,7 +1138,7 @@ export interface JsonRpcResponse<T = unknown> {
  * -32601: Method not found（方法不存在）
  * -32602: Invalid params（参数无效）
  * -32603: Internal error（内部错误）
- * -32000 ~ -32099: Server error（服务端自定义错误，映射 AGENTOS_E*）
+ * -32000 ~ -32099: Server error（服务端自定义错误，映射 AGENTRT_E*）
  */
 ```
 

@@ -181,7 +181,7 @@
         </mxCell>
 
         <!-- 顶层主接口标注 -->
-        <mxCell id="api_note" value="主接口 API:&#xa;agentos_memoryrov_init / create / destroy&#xa;write_raw / get_raw / delete_raw&#xa;query / retrieve / mount / forget / evolve&#xa;l3_bind_entity / l3_query_relations&#xa;get_rules (L4 规则导出)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;backgroundColor=#fafafa;strokeColor=#cccccc;" vertex="1" parent="1">
+        <mxCell id="api_note" value="主接口 API:&#xa;agentrt_memoryrov_init / create / destroy&#xa;write_raw / get_raw / delete_raw&#xa;query / retrieve / mount / forget / evolve&#xa;l3_bind_entity / l3_query_relations&#xa;get_rules (L4 规则导出)" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;backgroundColor=#fafafa;strokeColor=#cccccc;" vertex="1" parent="1">
           <mxGeometry x="60" y="160" width="220" height="110" as="geometry" />
         </mxCell>
 

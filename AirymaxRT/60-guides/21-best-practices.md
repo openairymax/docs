@@ -27,9 +27,9 @@ Airymax 遵循微核心架构，核心原则：
 
 ```c
 // ✅ 正确：通过统一框架接口管理生命周期
-agentos_fw_manager_t* mgr = agentos_fw_manager_create();
-agentos_fw_init(mgr, AGENTOS_FW_AGENT);
-agentos_fw_start(mgr, AGENTOS_FW_AGENT);
+agentrt_fw_manager_t* mgr = agentrt_fw_manager_create();
+agentrt_fw_init(mgr, AGENTRT_FW_AGENT);
+agentrt_fw_start(mgr, AGENTRT_FW_AGENT);
 
 // ❌ 错误：直接操作框架内部
 coreloopthree_loop_t* loop = clt_loop_create();  // 绕过抽象层
@@ -97,7 +97,7 @@ circuit_breaker_config_t config = {
     .failure_threshold = 5,        // 5次失败触发熔断
     .recovery_timeout_ms = 30000,  // 30秒恢复等待
     .half_open_max_calls = 3,      // 半开状态最多3次试探
-    .failover_strategy = AGENTOS_CB_FAILOVER_RETRY  // 失败后重试
+    .failover_strategy = AGENTRT_CB_FAILOVER_RETRY  // 失败后重试
 };
 ```
 
@@ -119,10 +119,10 @@ circuit_breaker_config_t config = {
 
 ```c
 // ✅ 正确：使用内存池减少分配开销
-agentos_mem_pool_t* pool = agentos_mem_pool_create(4096, 64);
-void* buf = agentos_mem_pool_alloc(pool, 256);
-agentos_mem_pool_free(pool, buf);
-agentos_mem_pool_destroy(pool);
+agentrt_mem_pool_t* pool = agentrt_mem_pool_create(4096, 64);
+void* buf = agentrt_mem_pool_alloc(pool, 256);
+agentrt_mem_pool_free(pool, buf);
+agentrt_mem_pool_destroy(pool);
 
 // ❌ 错误：频繁malloc/free
 for (int i = 0; i < 10000; i++) {
@@ -143,9 +143,9 @@ for (int i = 0; i < 10000; i++) {
 
 ```c
 // ✅ 正确：使用统一指标系统
-agentos_metrics_counter_inc("gateway_requests_total", 1, 
+agentrt_metrics_counter_inc("gateway_requests_total", 1, 
     "protocol", "jsonrpc", "method", "agent.list");
-agentos_metrics_histogram_observe("request_duration_seconds", 
+agentrt_metrics_histogram_observe("request_duration_seconds", 
     duration_ms / 1000.0,
     "protocol", "jsonrpc");
 
@@ -197,7 +197,7 @@ const char* api_key = "sk-xxxxxxxxxxxxxxxx";  // 绝对禁止！
 ```c
 // 生产环境推荐：加权最少连接策略
 service_discovery_config_t config = {
-    .strategy = AGENTOS_SD_LEAST_CONNECTION_WEIGHTED,
+    .strategy = AGENTRT_SD_LEAST_CONNECTION_WEIGHTED,
     .health_check_interval_ms = 5000,
     .health_check_timeout_ms = 3000,
     .unhealthy_threshold = 3,
@@ -236,7 +236,7 @@ FILE* f = fopen("config.yaml", "r");  // 无热加载、无版本控制
 # 生产环境推荐配置
 services:
   gateway:
-    image: spharx/agentos:latest
+    image: spharx/agentrt:latest
     deploy:
       replicas: 2
       resources:
@@ -288,9 +288,9 @@ protocol_router_t* protocol_router_create(const protocol_router_config_t* config
 ```c
 // ✅ 正确：使用统一错误码 + 日志
 int rc = ipc_service_bus_send(bus, &msg);
-if (rc != AGENTOS_OK) {
-    AGENTOS_LOG_ERROR("IPC send failed: %s (rc=%d)", 
-        agentos_error_string(rc), rc);
+if (rc != AGENTRT_OK) {
+    AGENTRT_LOG_ERROR("IPC send failed: %s (rc=%d)", 
+        agentrt_error_string(rc), rc);
     return rc;
 }
 

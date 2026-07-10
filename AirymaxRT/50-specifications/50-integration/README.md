@@ -18,18 +18,18 @@ This directory contains integration standards and best practices between Airymax
 
 | 标准名称 | 版本 | 适用模块 | 最后更新 | 状态 |
 |---------|------|---------|---------|------|
-| [Manager Config Integration Standard](./INTEGRATION_STANDARD.md) | v1.0.0 | manager ↔ agentos/commons/utils/config_unified | 2026-04-01 | ✅ Production Ready |
+| [Manager Config Integration Standard](./INTEGRATION_STANDARD.md) | v1.0.0 | manager ↔ agentrt/commons/utils/config_unified | 2026-04-01 | ✅ Production Ready |
 
 ### 计划中的标准 / Planned Standards
 
 | 标准名称 | 目标模块 | 计划发布日期 | 状态 |
 |---------|---------|-------------|------|
-| Gateway Integration Standard | gateway ↔ agentos/daemon/* | TBD | 🔨 In Progress |
+| Gateway Integration Standard | gateway ↔ agentrt/daemon/* | TBD | 🔨 In Progress |
 | MemoryRovol Integration Standard | memoryrovol ↔ coreloopthree | TBD | 📋 Planning |
 | Security Dome Integration Standard | cupolas ↔ all modules | TBD | 📋 Planning |
 
 > **📝 状态说明**  
-> - **🔨 In Progress**: Gateway 集成标准正在制定中，基于 `agentos/gateway/` 模块的 HTTP 网关和 MCP/A2A 协议适配器实现
+> - **🔨 In Progress**: Gateway 集成标准正在制定中，基于 `agentrt/gateway/` 模块的 HTTP 网关和 MCP/A2A 协议适配器实现
 > - **📋 Planning**: MemoryRovol 和 Security Dome 集成标准尚在规划阶段，待对应模块 API 稳定后启动制定
 
 ### 新标准模板 / Standard Template
@@ -147,7 +147,7 @@ This directory contains integration standards and best practices between Airymax
 
 ## 📞 联系方式 / Contact
 
-- **问题反馈**: [Gitee Issues](https://gitee.com/spharx/agentos/issues)
+- **问题反馈**: [Gitee Issues](https://gitee.com/spharx/agentrt/issues)
 - **安全 issues**: security@spharx.com
 - **技术讨论**: 查看 CONTRIBUTING.md
 

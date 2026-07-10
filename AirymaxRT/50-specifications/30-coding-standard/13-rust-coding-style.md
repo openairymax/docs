@@ -21,7 +21,7 @@
 9. [文档注释规范](#9-文档注释规范)
 10. [测试规范](#10-测试规范)
 11. [依赖管理](#11-依赖管理)
-12. [Airymax 模块编码示例](#12-agentos-模块编码示例)
+12. [Airymax 模块编码示例](#12-agentrt-模块编码示例)
 
 ---
 
@@ -31,7 +31,7 @@
 
 本标准适用于 Airymax 项目中所有 Rust 代码的编写，包括但不限于：
 
-- Airymax Rust SDK 核心库（`agentos-rs`）
+- Airymax Rust SDK 核心库（`agentrt-rs`）
 - 基于 SDK 的上层应用与工具
 - 与 Go SDK / Python SDK 保持跨语言一致性的接口层
 
@@ -73,7 +73,7 @@ Airymax Rust SDK **必须**遵循以下目录结构：
 ```
 src/
 ├── lib.rs              # 入口：模块声明 + pub use 重导出
-├── error.rs            # 统一错误体系（AgentOSError + 错误码常量）
+├── error.rs            # 统一错误体系（AgentRTError + 错误码常量）
 ├── protocol.rs         # 协议层（ProtocolClient, ProtocolType）
 ├── syscall.rs          # 系统调用绑定（SyscallBinding trait + 域 Syscall）
 ├── telemetry.rs        # 遥测（Meter + Tracer）
@@ -111,7 +111,7 @@ src/
 pub use client::{APIClient, Client};
 
 // 错误类型
-pub use error::{AgentOSError, ErrorCode};
+pub use error::{AgentRTError, ErrorCode};
 
 // Syscall 绑定
 pub use syscall::{
@@ -124,7 +124,7 @@ pub use syscall::{
 ```
 // ❌ 禁止：无分组的扁平导出
 pub use client::Client;
-pub use error::AgentOSError;
+pub use error::AgentRTError;
 pub use syscall::SyscallBinding;
 pub use types::TaskStatus;
 ```
@@ -215,7 +215,7 @@ pub mod httpClient;  // camelCase
 // ✅ 正确
 pub struct Client { ... }
 pub struct TaskManager { ... }
-pub enum AgentOSError { ... }
+pub enum AgentRTError { ... }
 pub trait SyscallBinding { ... }
 pub struct PluginRegistry { ... }
 ```
@@ -224,7 +224,7 @@ pub struct PluginRegistry { ... }
 // ❌ 禁止
 pub struct client { ... }          // snake_case
 pub struct Task_Manager { ... }    // 下划线分隔
-pub enum agentos_error { ... }     // snake_case
+pub enum agentrt_error { ... }     // snake_case
 ```
 
 ### 3.3 枚举变体命名
@@ -266,8 +266,8 @@ pub enum TaskStatus {
 
 ```rust
 // ✅ 正确
-pub fn new(endpoint: &str) -> Result<Self, AgentOSError> { ... }
-pub fn submit(&self, description: &str) -> Result<Task, AgentOSError> { ... }
+pub fn new(endpoint: &str) -> Result<Self, AgentRTError> { ... }
+pub fn submit(&self, description: &str) -> Result<Task, AgentRTError> { ... }
 pub fn with_code(code: &str, message: &str) -> Self { ... }
 pub fn is_terminal(&self) -> bool { ... }
 pub fn http_status_to_code(status: u16) -> ErrorCode { ... }
@@ -286,18 +286,18 @@ pub fn getTask() { ... }          // camelCase
 
 ```rust
 // ✅ 正确
-AgentOSError::network(msg)
-AgentOSError::http(msg)
-AgentOSError::json(msg)
-AgentOSError::task(msg)
-AgentOSError::timeout(msg)
+AgentRTError::network(msg)
+AgentRTError::http(msg)
+AgentRTError::json(msg)
+AgentRTError::task(msg)
+AgentRTError::timeout(msg)
 ```
 
 ```rust
 // ❌ 禁止
-AgentOSError::Network(msg)     // PascalCase
-AgentOSError::new_network(msg) // new_ 前缀冗余
-AgentOSError::from_net(msg)    // 非标准缩写
+AgentRTError::Network(msg)     // PascalCase
+AgentRTError::new_network(msg) // new_ 前缀冗余
+AgentRTError::from_net(msg)    // 非标准缩写
 ```
 
 ### 3.5 常量命名
@@ -486,7 +486,7 @@ impl std::fmt::Display for SyscallNamespace {
 ```rust
 // ✅ 正确
 #[derive(Error, Debug, Clone)]
-pub enum AgentOSError {
+pub enum AgentRTError {
     #[error("[{code}] {message}")]
     WithCode { code: String, message: String },
 
@@ -502,7 +502,7 @@ pub enum AgentOSError {
 // ❌ 禁止
 use anyhow::{anyhow, Result};  // 禁止使用 anyhow
 
-pub enum AgentOSError {
+pub enum AgentRTError {
     Network(String),  // 缺少 #[error(...)] 属性
 }
 ```
@@ -577,7 +577,7 @@ pub struct ProtocolConfig {
 
 impl Default for ProtocolConfig {
     fn default() -> Self {
-        let endpoint = std::env::var("AGENTOS_ENDPOINT")
+        let endpoint = std::env::var("AGENTRT_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
         Self {
             protocol_type: ProtocolType::JsonRpc,
@@ -598,7 +598,7 @@ impl Default for ProtocolConfig {
 
 ```rust
 // ✅ 正确：syscall.rs 内部
-type Result<T> = std::result::Result<T, AgentOSError>;
+type Result<T> = std::result::Result<T, AgentRTError>;
 ```
 
 **禁止**在 `lib.rs` 或公共 API 中暴露自定义 `Result` 类型别名。
@@ -616,7 +616,7 @@ type Result<T> = std::result::Result<T, AgentOSError>;
 ```rust
 // ✅ 正确
 impl Client {
-    pub fn new(endpoint: &str) -> Result<Self, AgentOSError> {
+    pub fn new(endpoint: &str) -> Result<Self, AgentRTError> {
         Self::builder(endpoint).build()
     }
 }
@@ -654,7 +654,7 @@ impl Client {
 2. 所有字段私有
 3. 提供 `new()` 初始化默认值
 4. 链式 setter 返回 `Self`
-5. `build()` 返回 `Result<T, AgentOSError>`
+5. `build()` 返回 `Result<T, AgentRTError>`
 
 ```rust
 // ✅ 正确
@@ -674,7 +674,7 @@ impl ClientBuilder {
     pub fn timeout(mut self, timeout: Duration) -> Self { ... }
     pub fn max_retries(mut self, max_retries: u32) -> Self { ... }
     pub fn api_key(mut self, api_key: &str) -> Self { ... }
-    pub fn build(self) -> Result<Client, AgentOSError> { ... }
+    pub fn build(self) -> Result<Client, AgentRTError> { ... }
 }
 ```
 
@@ -682,7 +682,7 @@ impl ClientBuilder {
 // ❌ 禁止：构造函数参数过多
 impl Client {
     pub fn new(endpoint: &str, timeout: Duration, retries: u32,
-               api_key: Option<&str>, user_agent: &str) -> Result<Self, AgentOSError> { ... }
+               api_key: Option<&str>, user_agent: &str) -> Result<Self, AgentRTError> { ... }
 }
 
 // ❌ 禁止：Builder::build() 返回 Self 而非 Result
@@ -753,20 +753,20 @@ pub struct TaskSyscall<B: SyscallBinding + Clone + Debug> {  // 过度约束
 
 ### 5.5 参数验证
 
-公共 API 函数**必须**在入口处验证参数，使用 `AgentOSError::with_code(CODE_*, msg)` 返回错误：
+公共 API 函数**必须**在入口处验证参数，使用 `AgentRTError::with_code(CODE_*, msg)` 返回错误：
 
 ```rust
 // ✅ 正确
-pub async fn submit(&self, description: &str) -> Result<Task, AgentOSError> {
+pub async fn submit(&self, description: &str) -> Result<Task, AgentRTError> {
     if description.is_empty() {
-        return Err(AgentOSError::with_code(CODE_MISSING_PARAMETER, "任务描述不能为空"));
+        return Err(AgentRTError::with_code(CODE_MISSING_PARAMETER, "任务描述不能为空"));
     }
     // ...
 }
 
-pub async fn get(&self, task_id: &str) -> Result<Task, AgentOSError> {
+pub async fn get(&self, task_id: &str) -> Result<Task, AgentRTError> {
     if task_id.is_empty() {
-        return Err(AgentOSError::with_code(CODE_MISSING_PARAMETER, "任务ID不能为空"));
+        return Err(AgentRTError::with_code(CODE_MISSING_PARAMETER, "任务ID不能为空"));
     }
     // ...
 }
@@ -774,7 +774,7 @@ pub async fn get(&self, task_id: &str) -> Result<Task, AgentOSError> {
 
 ```rust
 // ❌ 禁止：使用 panic 或 unwrap 处理用户输入
-pub async fn submit(&self, description: &str) -> Result<Task, AgentOSError> {
+pub async fn submit(&self, description: &str) -> Result<Task, AgentRTError> {
     assert!(!description.is_empty());  // 禁止在公共 API 中使用 assert
     // ...
 }
@@ -795,7 +795,7 @@ pub async fn submit(&self, description: &str) -> Result<Task, AgentOSError> {
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
-pub enum AgentOSError {
+pub enum AgentRTError {
     #[error("[{code}] {message}")]
     WithCode { code: String, message: String },
 
@@ -820,13 +820,13 @@ fn do_something() -> anyhow::Result<()> {
 
 ### 6.2 Result 类型
 
-所有可能失败的公共函数**必须**返回 `Result<T, AgentOSError>`：
+所有可能失败的公共函数**必须**返回 `Result<T, AgentRTError>`：
 
 ```rust
 // ✅ 正确
-pub async fn submit(&self, description: &str) -> Result<Task, AgentOSError> { ... }
-pub async fn health(&self) -> Result<HealthStatus, AgentOSError> { ... }
-pub fn build(self) -> Result<Client, AgentOSError> { ... }
+pub async fn submit(&self, description: &str) -> Result<Task, AgentRTError> { ... }
+pub async fn health(&self) -> Result<HealthStatus, AgentRTError> { ... }
+pub fn build(self) -> Result<Client, AgentRTError> { ... }
 ```
 
 ```rust
@@ -839,7 +839,7 @@ pub async fn submit(&self, description: &str) -> Option<Task> { ... }  // 丢失
 
 ```rust
 // ✅ 正确：仅限模块内部
-type Result<T> = std::result::Result<T, AgentOSError>;
+type Result<T> = std::result::Result<T, AgentRTError>;
 ```
 
 ### 6.3 错误码体系
@@ -876,11 +876,11 @@ pub const CODE_SUCCESS: &str = "0X0000"; // 必须小写 0x
 
 ### 6.4 错误工厂方法
 
-`AgentOSError` **必须**为每个领域提供工厂方法：
+`AgentRTError` **必须**为每个领域提供工厂方法：
 
 ```rust
 // ✅ 正确
-impl AgentOSError {
+impl AgentRTError {
     pub fn network(message: &str) -> Self { ... }
     pub fn http(message: &str) -> Self { ... }
     pub fn json(message: &str) -> Self { ... }
@@ -894,44 +894,44 @@ impl AgentOSError {
 
 ```rust
 // ❌ 禁止：直接构造枚举变体
-return Err(AgentOSError::Network("连接失败".to_string()));  // 应使用工厂方法
+return Err(AgentRTError::Network("连接失败".to_string()));  // 应使用工厂方法
 ```
 
 **推荐**使用工厂方法而非直接构造变体，以便未来在工厂方法中添加日志/追踪逻辑。
 
 ### 6.5 From 实现
 
-外部错误类型**必须**通过 `From<T> for AgentOSError` 转换，**禁止**在调用处手动映射：
+外部错误类型**必须**通过 `From<T> for AgentRTError` 转换，**禁止**在调用处手动映射：
 
 ```rust
 // ✅ 正确
-impl From<reqwest::Error> for AgentOSError {
+impl From<reqwest::Error> for AgentRTError {
     fn from(err: reqwest::Error) -> Self {
         if err.is_timeout() {
-            AgentOSError::timeout(&err.to_string())
+            AgentRTError::timeout(&err.to_string())
         } else if err.is_connect() {
-            AgentOSError::connection_refused(&err.to_string())
+            AgentRTError::connection_refused(&err.to_string())
         } else if err.is_request() {
-            AgentOSError::network(&err.to_string())
+            AgentRTError::network(&err.to_string())
         } else if err.is_status() {
-            AgentOSError::http(&err.to_string())
+            AgentRTError::http(&err.to_string())
         } else if err.is_body() || err.is_decode() {
-            AgentOSError::json(&err.to_string())
+            AgentRTError::json(&err.to_string())
         } else {
-            AgentOSError::Other(err.to_string())
+            AgentRTError::Other(err.to_string())
         }
     }
 }
 
-impl From<serde_json::Error> for AgentOSError {
+impl From<serde_json::Error> for AgentRTError {
     fn from(err: serde_json::Error) -> Self {
-        AgentOSError::json(&err.to_string())
+        AgentRTError::json(&err.to_string())
     }
 }
 
-impl From<std::io::Error> for AgentOSError {
+impl From<std::io::Error> for AgentRTError {
     fn from(err: std::io::Error) -> Self {
-        AgentOSError::with_code(CODE_INTERNAL, &err.to_string())
+        AgentRTError::with_code(CODE_INTERNAL, &err.to_string())
     }
 }
 ```
@@ -940,9 +940,9 @@ impl From<std::io::Error> for AgentOSError {
 // ❌ 禁止：手动映射
 let resp = client.send().await.map_err(|e| {
     if e.is_timeout() {
-        AgentOSError::Timeout(e.to_string())
+        AgentRTError::Timeout(e.to_string())
     } else {
-        AgentOSError::Other(e.to_string())
+        AgentRTError::Other(e.to_string())
     }
 })?;
 ```
@@ -1014,7 +1014,7 @@ pub struct Telemetry {
 // ✅ 正确
 #[async_trait::async_trait]
 pub trait APIClient: Send + Sync {
-    async fn get(&self, path: &str, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentOSError>;
+    async fn get(&self, path: &str, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentRTError>;
     // ...
 }
 
@@ -1029,7 +1029,7 @@ pub type PluginFactory = Box<dyn Fn() -> Box<dyn BasePlugin> + Send + Sync>;
 ```rust
 // ❌ 禁止
 pub trait APIClient {
-    async fn get(&self, path: &str) -> Result<APIResponse, AgentOSError>;
+    async fn get(&self, path: &str) -> Result<APIResponse, AgentRTError>;
     // 缺少 Send + Sync，无法放入 Arc<dyn APIClient>
 }
 ```
@@ -1092,14 +1092,14 @@ lazy_static! { ... }  // 使用已弃用的 lazy_static crate
 // ✅ 正确
 #[async_trait::async_trait]
 pub trait APIClient: Send + Sync {
-    async fn get(&self, path: &str, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentOSError>;
-    async fn post(&self, path: &str, body: Option<&Value>, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentOSError>;
+    async fn get(&self, path: &str, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentRTError>;
+    async fn post(&self, path: &str, body: Option<&Value>, opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentRTError>;
 }
 ```
 
 ```rust
 // ❌ 禁止：手动返回 Pin<Box<dyn Future>>
-fn get(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<APIResponse, AgentOSError>> + Send + '_>>;
+fn get(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<APIResponse, AgentRTError>> + Send + '_>>;
 ```
 
 ### 7.6 Mutex 中毒处理
@@ -1272,9 +1272,9 @@ pub struct ProtocolConfig {
 
 ```rust
 // ✅ 正确
-/// AgentOSError 是 SDK 所有错误的统一基类
+/// AgentRTError 是 SDK 所有错误的统一基类
 #[derive(Error, Debug, Clone)]
-pub enum AgentOSError { ... }
+pub enum AgentRTError { ... }
 
 /// 创建新的 Airymax 客户端
 ///
@@ -1282,20 +1282,20 @@ pub enum AgentOSError { ... }
 /// - `endpoint`: Airymax 服务端点地址
 ///
 /// # 返回
-/// 返回 Result<Client, AgentOSError>
+/// 返回 Result<Client, AgentRTError>
 ///
 /// # 示例
 /// ```rust
-/// use agentos_rs::new_client;
+/// use agentrt_rs::new_client;
 ///
 /// let client = new_client("http://localhost:8080");
 /// ```
-pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
+pub fn new_client(endpoint: &str) -> Result<Client, AgentRTError> { ... }
 ```
 
 ```rust
 // ❌ 禁止：无文档的公共 API
-pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
+pub fn new_client(endpoint: &str) -> Result<Client, AgentRTError> { ... }
 ```
 
 ### 9.2 文档注释结构
@@ -1320,8 +1320,8 @@ pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
 /// 返回任务结果
 ///
 /// # 错误
-/// - 超时返回 `AgentOSError::WithCode { code: CODE_TASK_TIMEOUT, ... }`
-pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult, AgentOSError> { ... }
+/// - 超时返回 `AgentRTError::WithCode { code: CODE_TASK_TIMEOUT, ... }`
+pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult, AgentRTError> { ... }
 ```
 
 ### 9.3 文件头注释
@@ -1335,7 +1335,7 @@ pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult,
 // Last updated: 2026-04-05
 //
 // 定义 SDK 的完整错误类型层级、错误码枚举、哨兵错误和 HTTP 状态码映射。
-// 所有异常继承自 AgentOSError，支持错误链追踪。
+// 所有异常继承自 AgentRTError，支持错误链追踪。
 // 对应 Go SDK: errors.go
 ```
 
@@ -1350,7 +1350,7 @@ pub async fn wait(&self, task_id: &str, timeout: Duration) -> Result<TaskResult,
 /// # 弃用
 /// 自 0.2.0 起请使用 `Client::builder(endpoint).build()`
 #[deprecated(since = "0.2.0", note = "请使用 Client::builder(endpoint).build()")]
-pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
+pub fn new_client(endpoint: &str) -> Result<Client, AgentRTError> { ... }
 ```
 
 ### 9.5 中文描述
@@ -1364,7 +1364,7 @@ pub fn new_client(endpoint: &str) -> Result<Client, AgentOSError> { ... }
 /// # 参数
 /// - `endpoint`: Airymax 服务端点地址
 /// - `api_key`: API 密钥
-pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentOSError> { ... }
+pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentRTError> { ... }
 ```
 
 ```rust
@@ -1373,7 +1373,7 @@ pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentOS
 ///
 /// # Arguments
 /// - `endpoint`: The Airymax service endpoint address
-pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentOSError> { ... }
+pub fn new_with_api_key(endpoint: &str, api_key: &str) -> Result<Client, AgentRTError> { ... }
 ```
 
 **强制执行**：`cargo doc` 构建成功；CI 检查 `pub` 项缺少文档注释。
@@ -1475,10 +1475,10 @@ struct MockAPIClient {
 
 #[async_trait::async_trait]
 impl APIClient for MockAPIClient {
-    async fn get(&self, path: &str, _opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentOSError> {
+    async fn get(&self, path: &str, _opts: Option<Vec<RequestOption>>) -> Result<APIResponse, AgentRTError> {
         self.responses.get(path)
             .cloned()
-            .ok_or_else(|| AgentOSError::not_found(&format!("mock not found: {}", path)))
+            .ok_or_else(|| AgentRTError::not_found(&format!("mock not found: {}", path)))
     }
     // ...
 }
@@ -1526,20 +1526,20 @@ mod tests {
 ```toml
 # ✅ 正确
 [package]
-name = "agentos-rs"
+name = "agentrt-rs"
 version = "0.1.0"
 edition = "2021"
 description = "Airymax Rust SDK - 与 Go SDK 保持一致的模块化结构"
 license = "MIT"
-homepage = "https://github.com/spharx/agentos"
-repository = "https://github.com/spharx/agentos"
+homepage = "https://github.com/spharx/agentrt"
+repository = "https://github.com/spharx/agentrt"
 authors = ["SPHARX Ltd."]
 ```
 
 ```toml
 # ❌ 禁止
 [package]
-name = "agentos-rs"
+name = "agentrt-rs"
 version = "0.1.0"
 edition = "2021"
 # 缺少 description, license, repository
@@ -1640,7 +1640,7 @@ use reqwest::Client as ReqwestClient;
 use serde_json::Value;
 use std::time::Duration;
 
-use crate::error::AgentOSError;
+use crate::error::AgentRTError;
 use crate::types::RequestOptions;
 
 /// XXXClient 提供 XXX 领域的 HTTP 通信能力
@@ -1659,8 +1659,8 @@ impl XxxClient {
     /// - `endpoint`: 服务端点地址
     ///
     /// # 返回
-    /// 返回 Result<XxxClient, AgentOSError>
-    pub fn new(endpoint: &str) -> Result<Self, AgentOSError> {
+    /// 返回 Result<XxxClient, AgentRTError>
+    pub fn new(endpoint: &str) -> Result<Self, AgentRTError> {
         Self::builder(endpoint).build()
     }
 
@@ -1700,9 +1700,9 @@ impl XxxClientBuilder {
     ///
     /// # 错误
     /// 如果端点地址格式无效，返回错误
-    pub fn build(self) -> Result<XxxClient, AgentOSError> {
+    pub fn build(self) -> Result<XxxClient, AgentRTError> {
         if !self.endpoint.starts_with("http://") && !self.endpoint.starts_with("https://") {
-            return Err(AgentOSError::Config(
+            return Err(AgentRTError::Config(
                 "端点地址必须以 http:// 或 https:// 开头".to_string(),
             ));
         }
@@ -1711,7 +1711,7 @@ impl XxxClientBuilder {
             .timeout(self.timeout)
             .use_rustls_tls()
             .build()
-            .map_err(|e| AgentOSError::Config(format!("创建 HTTP 客户端失败: {}", e)))?;
+            .map_err(|e| AgentRTError::Config(format!("创建 HTTP 客户端失败: {}", e)))?;
 
         Ok(XxxClient {
             endpoint: self.endpoint,
@@ -1754,7 +1754,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::client::APIClient;
-use crate::error::{AgentOSError, CODE_MISSING_PARAMETER, CODE_INVALID_PARAMETER};
+use crate::error::{AgentRTError, CODE_MISSING_PARAMETER, CODE_INVALID_PARAMETER};
 use crate::types::{ListOptions, APIResponse};
 use crate::utils::{extract_data_map, get_string, build_url};
 
@@ -1779,9 +1779,9 @@ impl XxxManager {
     ///
     /// # 返回
     /// 返回创建的对象
-    pub async fn create(&self, name: &str) -> Result<(), AgentOSError> {
+    pub async fn create(&self, name: &str) -> Result<(), AgentRTError> {
         if name.is_empty() {
-            return Err(AgentOSError::with_code(CODE_MISSING_PARAMETER, "名称不能为空"));
+            return Err(AgentRTError::with_code(CODE_MISSING_PARAMETER, "名称不能为空"));
         }
 
         let body = serde_json::json!({ "name": name });
@@ -1793,9 +1793,9 @@ impl XxxManager {
     ///
     /// # 参数
     /// - `id`: 对象 ID
-    pub async fn get(&self, id: &str) -> Result<(), AgentOSError> {
+    pub async fn get(&self, id: &str) -> Result<(), AgentRTError> {
         if id.is_empty() {
-            return Err(AgentOSError::with_code(CODE_MISSING_PARAMETER, "ID不能为空"));
+            return Err(AgentRTError::with_code(CODE_MISSING_PARAMETER, "ID不能为空"));
         }
 
         let path = format!("/api/v1/xxx/{}", id);
@@ -1804,7 +1804,7 @@ impl XxxManager {
     }
 
     /// 列出 XXX，支持分页和过滤
-    pub async fn list(&self, opts: Option<&ListOptions>) -> Result<(), AgentOSError> {
+    pub async fn list(&self, opts: Option<&ListOptions>) -> Result<(), AgentRTError> {
         let path = if let Some(options) = opts {
             build_url("/api/v1/xxx", options.to_query_params())
         } else {
@@ -1816,9 +1816,9 @@ impl XxxManager {
     }
 
     /// 删除指定 XXX
-    pub async fn delete(&self, id: &str) -> Result<(), AgentOSError> {
+    pub async fn delete(&self, id: &str) -> Result<(), AgentRTError> {
         if id.is_empty() {
-            return Err(AgentOSError::with_code(CODE_MISSING_PARAMETER, "ID不能为空"));
+            return Err(AgentRTError::with_code(CODE_MISSING_PARAMETER, "ID不能为空"));
         }
 
         let path = format!("/api/v1/xxx/{}", id);
@@ -1847,7 +1847,7 @@ mod tests {
 use std::collections::HashMap;
 use serde_json::Value;
 
-use crate::AgentOSError;
+use crate::AgentRTError;
 use crate::syscall::{SyscallBinding, SyscallRequest, SyscallResponse, SyscallNamespace};
 
 /// XXX 域系统调用
@@ -1862,7 +1862,7 @@ impl<B: SyscallBinding> XxxSyscall<B> {
     }
 
     /// 执行 XXX 操作
-    pub fn do_something(&self, param: &str) -> Result<SyscallResponse, AgentOSError> {
+    pub fn do_something(&self, param: &str) -> Result<SyscallResponse, AgentRTError> {
         let mut params = HashMap::new();
         params.insert("param".to_string(), Value::String(param.to_string()));
         self.binding.invoke(SyscallRequest {

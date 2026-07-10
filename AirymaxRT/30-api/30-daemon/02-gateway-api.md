@@ -47,25 +47,25 @@ Airymax 提供10个用户态服务（Daemon），构成完整的Agent运行时�
 void gateway_service_get_default_config(gateway_service_config_t* config);
 
 // 从文件加载配置
-agentos_error_t gateway_service_load_config(
+agentrt_error_t gateway_service_load_config(
     gateway_service_config_t* config,
     const char* config_path
 );
 
 // 创建服务实例
-agentos_error_t gateway_service_create(
+agentrt_error_t gateway_service_create(
     gateway_service_t* service,
     const gateway_service_config_t* config
 );
 
 // 初始化服务（创建后必须调用）
-agentos_error_t gateway_service_init(gateway_service_t service);
+agentrt_error_t gateway_service_init(gateway_service_t service);
 
 // 启动服务（开始监听端口）
-agentos_error_t gateway_service_start(gateway_service_t service);
+agentrt_error_t gateway_service_start(gateway_service_t service);
 
 // 停止服务
-agentos_error_t gateway_service_stop(gateway_service_t service, bool force);
+agentrt_error_t gateway_service_stop(gateway_service_t service, bool force);
 
 // 销毁服务
 void gateway_service_destroy(gateway_service_t service);
@@ -75,21 +75,21 @@ void gateway_service_destroy(gateway_service_t service);
 
 ```c
 // 获取当前状态
-agentos_svc_state_t gateway_service_get_state(gateway_service_t service);
+agentrt_svc_state_t gateway_service_get_state(gateway_service_t service);
 // 返回值: CREATED, READY, RUNNING, STOPPED, ERROR
 
 // 是否运行中
 bool gateway_service_is_running(gateway_service_t service);
 
 // 获取统计信息
-agentos_error_t gateway_service_get_stats(
+agentrt_error_t gateway_service_get_stats(
     gateway_service_t service,
-    agentos_svc_stats_t* stats
+    agentrt_svc_stats_t* stats
 );
 // stats包含: request_count, error_count, avg_time_ms, current_concurrent
 
 // 健康检查
-agentos_error_t gateway_service_healthcheck(gateway_service_t service);
+agentrt_error_t gateway_service_healthcheck(gateway_service_t service);
 ```
 
 ### 配置结构
@@ -156,17 +156,17 @@ int main() {
     config.enable_metrics = true;
 
     // 3. 创建服务
-    agentos_error_t err = gateway_service_create(&service, &config);
-    if (err != AGENTOS_OK) {
+    agentrt_error_t err = gateway_service_create(&service, &config);
+    if (err != AGENTRT_OK) {
         SVC_LOG_ERROR("Failed to create gateway: %d", err);
         return -1;
     }
 
     // 4. 初始化并启动
     err = gateway_service_init(service);
-    if (err == AGENTOS_OK) {
+    if (err == AGENTRT_OK) {
         err = gateway_service_start(service);
-        if (err == AGENTOS_OK) {
+        if (err == AGENTRT_OK) {
             SVC_LOG_INFO("Gateway started on port %d", config.http.port);
 
             // 主循环
@@ -175,7 +175,7 @@ int main() {
                 
                 // 定期健康检查
                 if (config.enable_metrics) {
-                    agentos_svc_stats_t stats;
+                    agentrt_svc_stats_t stats;
                     gateway_service_get_stats(service, &stats);
                     SVC_LOG_INFO("Requests: %llu, Errors: %llu",
                                stats.request_count, stats.error_count);
@@ -215,7 +215,7 @@ llm_service_t* llm_service_create(const char* config_path);
 void llm_service_destroy(llm_service_t* svc);
 
 // 发送请求
-agentos_error_t llm_service_request(
+agentrt_error_t llm_service_request(
     llm_service_t* svc,
     const llm_request_config_t* request,
     llm_response_t** response
@@ -227,11 +227,11 @@ int llm_count_tokens(llm_service_t* svc,
                       const char* model);
 
 // 缓存操作
-agentos_error_t llm_cache_put(llm_service_t* svc, 
+agentrt_error_t llm_cache_put(llm_service_t* svc, 
                                 const char* key, 
                                 const void* value, 
                                 size_t size);
-agentos_error_t llm_cache_get(llm_service_t* svc, 
+agentrt_error_t llm_cache_get(llm_service_t* svc, 
                                 const char* key, 
                                 void** value, 
                                 size_t* size);
@@ -268,7 +268,7 @@ typedef struct {
 
 int main() {
     // 1. 创建服务
-    llm_service_t* svc = llm_service_create("/etc/agentos/llm.conf");
+    llm_service_t* svc = llm_service_create("/etc/agentrt/llm.conf");
     if (!svc) {
         fprintf(stderr, "Failed to create LLM service\n");
         return -1;
@@ -291,9 +291,9 @@ int main() {
 
     // 3. 发送请求
     llm_response_t* response = NULL;
-    agentos_error_t err = llm_service_request(svc, &request, &response);
+    agentrt_error_t err = llm_service_request(svc, &request, &response);
 
-    if (err == AGENTOS_OK && response) {
+    if (err == AGENTRT_OK && response) {
         printf("Response:\n%s\n", response->content);
         printf("Tokens used: %d\n", response->usage.total_tokens);
         printf("Cost: $%.4f\n", response->cost);
@@ -325,27 +325,27 @@ int main() {
 #include "channel_service.h"
 
 // 创建通道服务
-agentos_error_t channel_service_create(channel_service_t* svc);
+agentrt_error_t channel_service_create(channel_service_t* svc);
 
 // 销毁
 void channel_service_destroy(channel_service_t svc);
 
 // 创建通道
-agentos_error_t channel_service_create_channel(
+agentrt_error_t channel_service_create_channel(
     channel_service_t svc,
     const char* channel_name,
     channel_config_t* config
 );
 
 // 发布消息
-agentos_error_t channel_service_publish(
+agentrt_error_t channel_service_publish(
     channel_service_t svc,
     const char* channel_name,
     const channel_message_t* message
 );
 
 // 订阅通道
-agentos_error_t channel_service_subscribe(
+agentrt_error_t channel_service_subscribe(
     channel_service_t svc,
     const char* channel_name,
     channel_callback_t callback,
@@ -353,7 +353,7 @@ agentos_error_t channel_service_subscribe(
 );
 
 // 取消订阅
-agentos_error_t channel_service_unsubscribe(
+agentrt_error_t channel_service_unsubscribe(
     channel_service_t svc,
     const char* channel_name,
     channel_subscription_t sub
@@ -376,26 +376,26 @@ agentos_error_t channel_service_unsubscribe(
 #include "scheduler_service.h"
 
 // 创建调度器
-agentos_error_t scheduler_service_create(
+agentrt_error_t scheduler_service_create(
     scheduler_service_t* svc,
     const scheduler_config_t* config
 );
 
 // 提交任务
-agentos_error_t scheduler_submit(
+agentrt_error_t scheduler_submit(
     scheduler_service_t svc,
     const task_descriptor_t* task,
     task_handle_t* out_handle
 );
 
 // 取消任务
-agentos_error_t scheduler_cancel(
+agentrt_error_t scheduler_cancel(
     scheduler_service_t svc,
     task_handle_t handle
 );
 
 // 等待完成
-agentos_error_t scheduler_wait(
+agentrt_error_t scheduler_wait(
     scheduler_service_t svc,
     task_handle_t handle,
     uint32_t timeout_ms,
@@ -403,7 +403,7 @@ agentos_error_t scheduler_wait(
 );
 
 // 获取调度器状态
-agentos_error_t scheduler_get_stats(
+agentrt_error_t scheduler_get_stats(
     scheduler_service_t svc,
     scheduler_stats_t* stats
 );
@@ -437,16 +437,16 @@ typedef enum {
 #include "monitoring_service.h"
 
 // 创建监控服务
-agentos_error_t monitoring_service_create(monitoring_service_t* svc);
+agentrt_error_t monitoring_service_create(monitoring_service_t* svc);
 
 // 注册指标
-agentos_error_t monitoring_register_metric(
+agentrt_error_t monitoring_register_metric(
     monitoring_service_t svc,
     const metric_definition_t* metric
 );
 
 // 记录指标值
-agentos_error_t monitoring_record(
+agentrt_error_t monitoring_record(
     monitoring_service_t svc,
     const char* metric_name,
     double value,
@@ -463,7 +463,7 @@ trace_span_t* monitoring_start_trace(
 void monitoring_end_trace(trace_span_t* span);
 
 // 配置告警规则
-agentos_error_t monitoring_set_alert_rule(
+agentrt_error_t monitoring_set_alert_rule(
     monitoring_service_t svc,
     const alert_rule_t* rule
 );
@@ -499,23 +499,23 @@ typedef enum {
 #include "market_service.h"
 
 // 创建市场服务
-agentos_error_t market_service_create(market_service_t* svc);
+agentrt_error_t market_service_create(market_service_t* svc);
 
 // 注册Agent
-agentos_error_t market_register_agent(
+agentrt_error_t market_register_agent(
     market_service_t svc,
     const agent_descriptor_t* agent,
     agent_handle_t* out_handle
 );
 
 // 注销Agent
-agentos_error_t market_unregister_agent(
+agentrt_error_t market_unregister_agent(
     market_service_t svc,
     agent_handle_t handle
 );
 
 // 发现Agent
-agentos_error_t market_discover_agents(
+agentrt_error_t market_discover_agents(
     market_service_t svc,
     const agent_query_t* query,
     agent_descriptor_t** results,
@@ -523,21 +523,21 @@ agentos_error_t market_discover_agents(
 );
 
 // 注册技能
-agentos_error_t market_register_skill(
+agentrt_error_t market_register_skill(
     market_service_t svc,
     const skill_descriptor_t* skill,
     skill_handle_t* out_handle
 );
 
 // 查询技能
-agentos_error_t market_find_skill(
+agentrt_error_t market_find_skill(
     market_service_t svc,
     const char* skill_name,
     skill_descriptor_t* out_skill
 );
 
 // 安装Agent/Skill
-agentos_error_t market_install(
+agentrt_error_t market_install(
     market_service_t svc,
     const char* package_name,
     install_options_t* options
@@ -560,20 +560,20 @@ agentos_error_t market_install(
 #include "tool_service.h"
 
 // 创建工具服务
-agentos_error_t tool_service_create(tool_service_t* svc);
+agentrt_error_t tool_service_create(tool_service_t* svc);
 
 // 注册工具
-agentos_error_t tool_register(
+agentrt_error_t tool_register(
     tool_service_t svc,
     const tool_descriptor_t* tool,
     tool_handle_t* out_handle
 );
 
 // 注销工具
-agentos_error_t tool_unregister(tool_service_t svc, tool_handle_t handle);
+agentrt_error_t tool_unregister(tool_service_t svc, tool_handle_t handle);
 
 // 执行工具
-agentos_error_t tool_execute(
+agentrt_error_t tool_execute(
     tool_service_t svc,
     tool_handle_t handle,
     const tool_input_t* input,
@@ -581,7 +581,7 @@ agentos_error_t tool_execute(
 );
 
 // 验证输入
-agentos_error_t tool_validate_input(
+agentrt_error_t tool_validate_input(
     tool_service_t svc,
     tool_handle_t handle,
     const tool_input_t* input,
@@ -589,7 +589,7 @@ agentos_error_t tool_validate_input(
 );
 
 // 列出所有已注册工具
-agentos_error_t tool_list_tools(
+agentrt_error_t tool_list_tools(
     tool_service_t svc,
     tool_descriptor_t** tools,
     size_t* count
@@ -634,14 +634,14 @@ typedef struct {
 
 ```c
 typedef enum {
-    AGENTOS_SVC_STATE_NONE = 0,
-    AGENTOS_SVC_STATE_CREATED,
-    AGENTOS_SVC_STATE_READY,      /* initialized but not started */
-    AGENTOS_SVC_STATE_RUNNING,
-    AGENTOS_SVC_STATE_STOPPED,
-    AGENTOS_SVC_STATE_ERROR,
-    AGENTOS_SVC_STATE_DEGRADED     /* running with limited functionality */
-} agentos_svc_state_t;
+    AGENTRT_SVC_STATE_NONE = 0,
+    AGENTRT_SVC_STATE_CREATED,
+    AGENTRT_SVC_STATE_READY,      /* initialized but not started */
+    AGENTRT_SVC_STATE_RUNNING,
+    AGENTRT_SVC_STATE_STOPPED,
+    AGENTRT_SVC_STATE_ERROR,
+    AGENTRT_SVC_STATE_DEGRADED     /* running with limited functionality */
+} agentrt_svc_state_t;
 
 typedef struct {
     uint64_t request_count;        /* 总请求数 */
@@ -649,14 +649,14 @@ typedef struct {
     uint64_t current_concurrent;   /* 当前并发数 */
     double   avg_time_ms;          /* 平均响应时间(ms) */
     time_t   uptime_seconds;       /* 运行时间(秒) */
-} agentos_svc_stats_t;
+} agentrt_svc_stats_t;
 ```
 
 ### 统一初始化/清理
 
 ```c
 // 所有用户态服务都需要调用此函数进行全局初始化
-agentos_error_t svc_common_init(void);
+agentrt_error_t svc_common_init(void);
 void svc_common_cleanup(void);
 
 // 日志宏 (线程安全)
@@ -708,7 +708,7 @@ int main() {
     gateway_service_start(gateway);
 
     // LLM Service
-    llm = llm_service_create("/etc/agentos/llm.conf");
+    llm = llm_service_create("/etc/agentrt/llm.conf");
 
     // Scheduler
     scheduler_config_t sched_cfg = { .strategy = SCHED_STRATEGY_PRIORITY };
@@ -725,7 +725,7 @@ int main() {
         
         // 定期打印状态
         if (gateway_service_is_running(gateway)) {
-            agentos_svc_stats_t stats;
+            agentrt_svc_stats_t stats;
             gateway_service_get_stats(gateway, &stats);
             printf("[Gateway] Requests: %llu | Errors: %llu\n",
                    stats.request_count, stats.error_count);

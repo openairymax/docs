@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）测试设计文档（airymaxos-tests-linux，极境测试）
 
-> **子仓编号**：08
-> **子仓代号**：极境测试（Airymax Tests）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：单元测试 + 集成测试 + 形式化验证 + Soak + 混沌 + 性能基准 + eBPF 验证
-> **同源 agentrt**：全模块测试
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态全模块测试通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 形式化验证/Soak/混沌/eBPF 验证实现独立
+> **子仓编号**：08\
+> **子仓代号**：极境测试（Airymax Tests）\
+> **文档版本**：v1.1（2026-07-07）\
+> **设计基准**：单元测试 + 集成测试 + 形式化验证 + Soak + 混沌 + 性能基准 + eBPF 验证\
+> **同源 agentrt**：全模块测试\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态全模块测试通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 形式化验证/Soak/混沌/eBPF 验证实现独立\
 > **横切关注点**：测试是横切关注点（cross-cutting concern），贯穿调度（调度器测试 + 形式化验证）、IPC（IPC 延迟测试 + 消息头验证）、eBPF（eBPF 可观测性验证）、记忆卷载（MemoryRovol 快照一致性验证）4 大数据流
 
 ---

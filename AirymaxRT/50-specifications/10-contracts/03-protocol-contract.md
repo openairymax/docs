@@ -29,7 +29,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **系统集成商**: 实现客户端与 Airymax 的通信对接
-2. **服务开发者**: 开发 agentos/daemon/ 用户态服务层，实现服务间通信
+2. **服务开发者**: 开发 agentrt/daemon/ 用户态服务层，实现服务间通信
 3. **内核开发者**: 实现和维护 syscall 层接口
 4. **安全审计人员**: 审查通信安全性和权限控制
 
@@ -53,7 +53,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 Airymax 采用分层架构，各层之间以及层与外部世界之间通过明确的协议通信。清晰的协议设计是系统稳定性、安全性和可维护性的基础。本规范定义了以下通信场景：
 
 1. **系统调用**: 用户态服务与内核之间的交互 (通过 syscall 层)
-2. **服务间通信**: agentos/daemon/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
+2. **服务间通信**: agentrt/daemon/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
 3. **外部网关**: 客户端 (如 CLI、SDK、Web 应用) 与 Habitat 网关的交互
 
 协议设计遵循 Airymax 的一贯思想：**层次分明、接口稳定、安全内生、可观测**。
@@ -107,19 +107,19 @@ Airymax 采用四层协议栈，自顶向下分别为：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     外部客户端 (CLI/agentos/toolkit/Web)                  │
+│                     外部客户端 (CLI/agentrt/toolkit/Web)                  │
 │                     HTTP/WebSocket/stdio                      │
 ├─────────────────────────────────────────────────────────────┤
 │                    Habitat 网关 (协议转换、认证、路由)         │
 │                    HTTP/1.1, HTTP/2, WebSocket, stdio        │
 ├─────────────────────────────────────────────────────────────┤
 │                         服务层 (JSON-RPC 2.0)                 │
-│                    agentos/daemon/ 各用户态服务之间的通信                │
+│                    agentrt/daemon/ 各用户态服务之间的通信                │
 ├─────────────────────────────────────────────────────────────┤
 │                         AirymaxSyscall 层 (C ABI)                    │
-│                    agentos/atoms/syscall/include/syscalls.h          │
+│                    agentrt/atoms/syscall/include/syscalls.h          │
 ├─────────────────────────────────────────────────────────────┤
-│                          内核 (agentos/atoms/)                       │
+│                          内核 (agentrt/atoms/)                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,7 +163,7 @@ Airymax 采用四层协议栈，自顶向下分别为：
 
 **调用方式:**
 - C ABI 兼容的函数调用
-- 通过 `agentos_syscall_invoke` 统一入口
+- 通过 `agentrt_syscall_invoke` 统一入口
 
 ---
 
@@ -235,7 +235,7 @@ X-Trace-ID: abc123def456  # 可选，用于链路追踪
     "code": -32601,
     "message": "Method not found",
     "data": {
-      "error_code": "AGENTOS_ENOENT"
+      "error_code": "AGENTRT_ENOENT"
     }
   },
   "id": 1
@@ -320,7 +320,7 @@ ws://localhost:8080/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **示例:**
 ```bash
-echo '{"jsonrpc":"2.0","method":"task.submit","params":{"input":"Hello"},"id":1}' | agentos-gateway
+echo '{"jsonrpc":"2.0","method":"task.submit","params":{"input":"Hello"},"id":1}' | agentrt-gateway
 ```
 
 **输出 (stdout):**
@@ -368,7 +368,7 @@ ws://localhost:8080/ws?token=<JWT_TOKEN>
 
 #### 3.4.3 认证策略配置
 
-认证策略由 `configs/agentos.yaml` 配置：
+认证策略由 `configs/agentrt.yaml` 配置：
 
 ```yaml
 authentication:
@@ -436,7 +436,7 @@ authentication:
 | -32601 | Method not found | 方法不存在 |
 | -32602 | Invalid params | 参数无效 |
 | -32603 | Internal error | 服务器内部错误 |
-| -32000..-32099 | Server error | 服务器自定义错误 (对应 `agentos_error_t`) |
+| -32000..-32099 | Server error | 服务器自定义错误 (对应 `agentrt_error_t`) |
 
 ### 4.3 服务方法命名规范
 
@@ -479,25 +479,25 @@ Content-Type: application/json
 
 ### 5.1 概述
 
-系统调用是用户态进入内核的唯一入口，定义在 [`agentos/atoms/syscall/include/syscalls.h`](../../AgentRT/agentos/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
+系统调用是用户态进入内核的唯一入口，定义在 [`agentrt/atoms/syscall/include/syscalls.h`](../../AgentRT/agentrt/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
 
 ### 5.2 函数签名规范
 
 #### 5.2.1 返回值类型
 
-系统调用函数返回 `agentos_error_t` 类型 (整数错误码):
+系统调用函数返回 `agentrt_error_t` 类型 (整数错误码):
 
 ```c
-typedef int32_t agentos_error_t;
+typedef int32_t agentrt_error_t;
 
 // 常见错误码
-#define AGENTOS_OK      0    // 成功
-#define AGENTOS_EINVAL      -1    // 参数无效
-#define AGENTOS_ENOMEM      -2    // 内存不足
-#define AGENTOS_EBUSY       -3    // 资源忙
-#define AGENTOS_ENOENT      -4    // 资源不存在
-#define AGENTOS_EPERM       -5    // 权限不足
-#define AGENTOS_ETIMEDOUT   -6    // 操作超时
+#define AGENTRT_OK      0    // 成功
+#define AGENTRT_EINVAL      -1    // 参数无效
+#define AGENTRT_ENOMEM      -2    // 内存不足
+#define AGENTRT_EBUSY       -3    // 资源忙
+#define AGENTRT_ENOENT      -4    // 资源不存在
+#define AGENTRT_EPERM       -5    // 权限不足
+#define AGENTRT_ETIMEDOUT   -6    // 操作超时
 ```
 
 完整错误码列表见 [第 7 章 错误码](#第 7 章 错误码)。
@@ -514,7 +514,7 @@ typedef int32_t agentos_error_t;
 // input_len: 输入长度
 // timeout_ms: 超时时间
 // out_result: 输出参数 (指针的指针，调用者需 free)
-agentos_error_t agentos_sys_task_submit(
+agentrt_error_t agentrt_sys_task_submit(
     const char* input,
     size_t input_len,
     uint32_t timeout_ms,
@@ -530,8 +530,8 @@ agentos_error_t agentos_sys_task_submit(
 
 ```c
 char* result = NULL;
-agentos_error_t err = agentos_sys_task_submit("...", 10, 30000, &result);
-if (err == AGENTOS_OK) {
+agentrt_error_t err = agentrt_sys_task_submit("...", 10, 30000, &result);
+if (err == AGENTRT_OK) {
     printf("Result: %s\n", result);
     free(result);  // 必须释放
 }
@@ -543,7 +543,7 @@ if (err == AGENTOS_OK) {
 
 ```c
 char input[] = "task description";
-agentos_error_t err = agentos_sys_task_submit(input, strlen(input), 30000, &result);
+agentrt_error_t err = agentrt_sys_task_submit(input, strlen(input), 30000, &result);
 // input 的生命周期由调用者管理，内核不会保存引用
 ```
 
@@ -556,7 +556,7 @@ agentos_error_t err = agentos_sys_task_submit(input, strlen(input), 30000, &resu
 #pragma omp parallel for
 for (int i = 0; i < 10; i++) {
     char* result;
-    agentos_sys_task_submit(task[i], strlen(task[i]), 30000, &result);
+    agentrt_sys_task_submit(task[i], strlen(task[i]), 30000, &result);
     // 处理结果...
     free(result);
 }
@@ -580,8 +580,8 @@ for (int i = 0; i < 10; i++) {
 security:
   tls:
     enabled: true
-    cert_file: /etc/agentos/ssl/server.crt
-    key_file: /etc/agentos/ssl/server.key
+    cert_file: /etc/agentrt/ssl/server.crt
+    key_file: /etc/agentrt/ssl/server.key
     min_version: TLS1.3
 ```
 
@@ -636,7 +636,7 @@ X-Trace-ID: abc123def456
 {
   "timestamp": 1701234567.890,
   "level": "info",
-  "logger": "agentos.llm_d",
+  "logger": "agentrt.llm_d",
   "trace_id": "abc123def456",
   "message": "LLM request processed"
 }
@@ -673,41 +673,41 @@ X-Trace-ID: abc123def456
 **导出格式:** Prometheus 兼容格式
 
 ```prometheus
-# HELP agentos_request_total Total number of requests
-# TYPE agentos_request_total counter
-agentos_request_total{method="llm.complete",status="success"} 1234
+# HELP agentrt_request_total Total number of requests
+# TYPE agentrt_request_total counter
+agentrt_request_total{method="llm.complete",status="success"} 1234
 ```
 
 ---
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTOS_ERR_INVALID_PARAM=-2`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTOS_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../70-project-erp/02-error-code-reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AGENTRT_ERR_INVALID_PARAM=-2`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AGENTRT_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../70-project-erp/02-error-code-reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 系统调用错误码
 
-> **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentos/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTOS_EINVAL = -2, AGENTOS_ENOMEM = -4, AGENTOS_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
+> **⚠️ 以下错误码值为协议层逻辑编号，仅用于 JSON-RPC 通信中的错误标识。C 内核代码中的权威错误码值定义于 `agentrt/commons/utils/error/include/error.h`，采用分段编码体系（如 AGENTRT_EINVAL = -2, AGENTRT_ENOMEM = -4, AGENTRT_EBUSY = -17）。协议层编号与内核值存在映射关系但不完全相同。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
 
-错误码定义在 [`agentos/commons/utils/error/include/error.h`](../../AgentRT/agentos/commons/utils/error/include/error.h) 中：
+错误码定义在 [`agentrt/commons/utils/error/include/error.h`](../../AgentRT/agentrt/commons/utils/error/include/error.h) 中：
 
 | 错误码 | 值 | 说明 |
 |--------|-----|------|
-| `AGENTOS_OK` | 0 | 成功 |
-| `AGENTOS_ERR_INVALID_PARAM` | -2 | 无效参数 |
-| `AGENTOS_ERR_OUT_OF_MEMORY` | -4 | 内存不足 |
-| `AGENTOS_ERR_BUSY` | -17 | 资源忙 |
-| `AGENTOS_ERR_NOT_FOUND` | -6 | 资源不存在 |
-| `AGENTOS_ERR_PERMISSION_DENIED` | -10 | 权限不足 |
-| `AGENTOS_ERR_TIMEOUT` | -8 | 操作超时 |
-| `AGENTOS_EEXIST` | -7 | 资源已存在 |
-| `AGENTOS_ECANCELED` | -8 | 操作取消 |
-| `AGENTOS_ENOTSUP` | -9 | 不支持 |
-| `AGENTOS_EIO` | -10 | I/O 错误 |
-| `AGENTOS_EINTR` | -11 | 被中断 |
-| `AGENTOS_EOVERFLOW` | -12 | 溢出 |
-| `AGENTOS_EBADF` | -13 | 无效状态或句柄 |
-| `AGENTOS_ENOTINIT` | -14 | 未初始化 |
-| `AGENTOS_ERESOURCE` | -15 | 资源耗尽 |
+| `AGENTRT_OK` | 0 | 成功 |
+| `AGENTRT_ERR_INVALID_PARAM` | -2 | 无效参数 |
+| `AGENTRT_ERR_OUT_OF_MEMORY` | -4 | 内存不足 |
+| `AGENTRT_ERR_BUSY` | -17 | 资源忙 |
+| `AGENTRT_ERR_NOT_FOUND` | -6 | 资源不存在 |
+| `AGENTRT_ERR_PERMISSION_DENIED` | -10 | 权限不足 |
+| `AGENTRT_ERR_TIMEOUT` | -8 | 操作超时 |
+| `AGENTRT_EEXIST` | -7 | 资源已存在 |
+| `AGENTRT_ECANCELED` | -8 | 操作取消 |
+| `AGENTRT_ENOTSUP` | -9 | 不支持 |
+| `AGENTRT_EIO` | -10 | I/O 错误 |
+| `AGENTRT_EINTR` | -11 | 被中断 |
+| `AGENTRT_EOVERFLOW` | -12 | 溢出 |
+| `AGENTRT_EBADF` | -13 | 无效状态或句柄 |
+| `AGENTRT_ENOTINIT` | -14 | 未初始化 |
+| `AGENTRT_ERESOURCE` | -15 | 资源耗尽 |
 
 ### 7.2 JSON-RPC 错误码映射
 
@@ -715,12 +715,12 @@ agentos_request_total{method="llm.complete",status="success"} 1234
 
 ```python
 # 伪代码示例
-def map_error(agentos_error):
-    if agentos_error == AGENTOS_EINVAL:
+def map_error(agentrt_error):
+    if agentrt_error == AGENTRT_EINVAL:
         return -32602  # Invalid params
-    elif agentos_error == AGENTOS_ENOENT:
+    elif agentrt_error == AGENTRT_ENOENT:
         return -32601  # Method not found
-    elif agentos_error == AGENTOS_EPERM:
+    elif agentrt_error == AGENTRT_EPERM:
         return -32003  # Permission denied
     else:
         return -32000  # Server error
@@ -742,7 +742,7 @@ int main() {
 
     // 1. 创建会话
     char* session_id = NULL;
-    if (agentos_sys_session_create("{\"user\":\"alice\"}", &session_id) != AGENTOS_OK) {
+    if (agentrt_sys_session_create("{\"user\":\"alice\"}", &session_id) != AGENTRT_OK) {
         fprintf(stderr, "Failed to create session\n");
         return 1;
     }
@@ -751,10 +751,10 @@ int main() {
 
     // 2. 提交任务
     char* result = NULL;
-    agentos_error_t err = agentos_sys_task_submit(
+    agentrt_error_t err = agentrt_sys_task_submit(
         "Develop a simple e-commerce product listing page",
         50, 30000, &result);
-    if (err == AGENTOS_OK) {
+    if (err == AGENTRT_OK) {
         printf("Task result: %s\n", result);
         free(result);
     } else {
@@ -762,7 +762,7 @@ int main() {
     }
 
     // 3. 关闭会话
-    agentos_sys_session_close(session_id);
+    agentrt_sys_session_close(session_id);
 
     return 0;
 }

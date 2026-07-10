@@ -35,8 +35,8 @@ sudo apt update && sudo apt install -y \
 
 ```bash
 # 克隆仓库
-git clone https://atomgit.com/openairymax/agentos.git
-cd agentos
+git clone https://atomgit.com/openairymax/agentrt.git
+cd agentrt
 
 # 源外构建（BAN-33 强制要求）
 cmake -B ../AgentRT-build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -54,13 +54,13 @@ cd ../AgentRT-build && ctest --output-on-failure
 
 ```bash
 # 构建镜像
-docker build -f deploy/docker/Dockerfile -t airymax/agentos:latest .
+docker build -f deploy/docker/Dockerfile -t airymax/agentrt:latest .
 
 # 启动容器
 docker run -d --name agentrt \
     -p 8080:8080 \
     -v ./config:/app/config \
-    airymax/agentos:latest
+    airymax/agentrt:latest
 ```
 
 ---
@@ -139,7 +139,7 @@ Airymax 提供多语言 SDK，支持 Python、Go、Rust、TypeScript。以下以
 ### 4.1 安装 Python SDK
 
 ```bash
-pip install agentos
+pip install agentrt
 ```
 
 ### 4.2 编写第一个 Agent
@@ -149,7 +149,7 @@ pip install agentos
 ```python
 """hello_agent.py — 你的第一个 Airymax Agent"""
 
-from agentos import AgentRT
+from agentrt import AgentRT
 
 # 连接 Airymax 运行时（通过 JSON-RPC 网关）
 client = AgentRT(endpoint="http://localhost:8080")
@@ -184,7 +184,7 @@ python hello_agent.py
 """async_agent.py — 异步 Agent 示例"""
 
 import asyncio
-from agentos import AsyncAgentRT
+from agentrt import AsyncAgentRT
 
 async def main():
     async with AsyncAgentRT(endpoint="http://localhost:8080") as client:
@@ -207,7 +207,7 @@ asyncio.run(main())
 ```python
 """framework_agent.py — 使用 Framework 层构建 Agent 应用"""
 
-from agentos.framework import Application, Plugin, Lifecycle
+from agentrt.framework import Application, Plugin, Lifecycle
 
 class MyAgent(Application):
     """自定义 Agent 应用"""
@@ -244,8 +244,8 @@ app.run()
 | [⚙️ 编译指南](https://atomgit.com/openairymax/docs/blob/main/BUILD_GUIDE.md) | 详细的构建配置与选项说明 |
 | [🧪 测试指南](https://atomgit.com/openairymax/docs/blob/main/TESTING_GUIDE.md) | 单元测试、集成测试与契约测试 |
 | [🐳 部署指南](https://atomgit.com/openairymax/docs/blob/main/DEPLOYMENT_GUIDE.md) | Docker / Kubernetes 生产部署 |
-| [🔒 安全穹顶 (Cupolas)](../AgentRT/agentos/cupolas/README.md) | 四重内生安全体系详解 |
-| [🧠 CoreLoopThree](../AgentRT/agentos/atoms/coreloopthree/README.md) | Agent 认知循环核心机制 |
+| [🔒 安全穹顶 (Cupolas)](../AgentRT/agentrt/cupolas/README.md) | 四重内生安全体系详解 |
+| [🧠 CoreLoopThree](../AgentRT/agentrt/atoms/coreloopthree/README.md) | Agent 认知循环核心机制 |
 | [📦 SDK 工具包](../../AgentRT/sdk/README.md) | Python / Go / Rust / TypeScript SDK 完整文档 |
 | [🎯 示例项目](../../AgentRT/ecosystem/examples/hello-agent/README.md) | Hello Agent 示例项目详解 |
 

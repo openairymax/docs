@@ -10,7 +10,7 @@
 ### 1.1 完全基于共享内存（CONFIRMED）
 - `daemon/common/include/service_discovery.h:6-18` 首段注释："基于共享内存的跨进程服务注册中心"
 - 设计原则第 1 条："零依赖：不依赖外部注册中心（如 etcd/consul）"
-- `#define SD_SHM_NAME "/agentos_service_registry"`
+- `#define SD_SHM_NAME "/agentrt_service_registry"`
 - 无 DNS-SD/Consul/etcd 等标准协议适配器
 
 ### 1.2 问题影响
@@ -53,7 +53,7 @@ service_discovery:
   # backend: etcd
   # backend: k8s
   shm:
-    name: /agentos_service_registry
+    name: /agentrt_service_registry
     size: 1048576
   consul:
     address: http://consul:8500

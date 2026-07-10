@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）云原生 Agent 部署设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）云原生工程体系主索引
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **优先级**: P1（0.1.1 完成 5 文档，1.0.1 实施验证）
-> **同源映射**: agentrt gateway + Linux 6.6 容器与编排（containerd / K8s / OCI）
-> **理论根基**: 云原生计算哲学 + Airymax S-4 涌现性管理 + K-3 服务隔离
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）云原生工程体系主索引\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-06\
+> **优先级**：P1（0.1.1 完成 5 文档，1.0.1 实施验证）\
+> **同源映射**：agentrt gateway + Linux 6.6 容器与编排（containerd / K8s / OCI）\
+> **理论根基**：云原生计算哲学 + Airymax S-4 涌现性管理 + K-3 服务隔离
 
 ---
 

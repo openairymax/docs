@@ -25,57 +25,57 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_core_loop_t` | `agentos_loop_create()` | `agentos_loop_destroy()` | 创建者释放 | 否（单线程访问） | 核心循环实例 |
-| `agentos_cognition_engine_t` | `agentos_cognition_create()` | `agentos_cognition_destroy()` | 创建者释放 | 否（单线程访问） | 认知引擎实例 |
-| `agentos_execution_engine_t` | `agentos_execution_create()` | `agentos_execution_destroy()` | 创建者释放 | 否（单线程访问） | 执行引擎实例 |
-| `agentos_memory_engine_t` | `agentos_memory_create()` | `agentos_memory_destroy()` | 创建者释放 | 否（单线程访问） | 记忆引擎实例 |
-| `agentos_compensation_t` | `agentos_compensation_create()` | `agentos_compensation_destroy()` | 创建者释放 | 否（单线程访问） | 补偿事务管理器 |
-| `char*` (任务ID) | `agentos_loop_submit()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `char*` (JSON结果) | `agentos_loop_wait()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `char*` (健康状态JSON) | `agentos_cognition_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `char*` (健康状态JSON) | `agentos_execution_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `char*` (健康状态JSON) | `agentos_memory_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `agentos_memory_result_t` | `agentos_memory_query()` | `agentos_memory_result_free()` | 调用者释放 | 内部互斥锁 | 记忆查询结果 |
-| `agentos_memory_record_t` | `agentos_memory_get()` | `agentos_memory_record_free()` | 调用者释放 | 内部互斥锁 | 记忆记录 |
-| `char*` (记录ID) | `agentos_memory_write()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
-| `char**` (补偿动作) | `agentos_compensation_get_human_queue()` | 调用者释放 | 调用者释放 | 否（单线程访问） | 包括数组本身和数组中的每个元素 |
+| `agentrt_core_loop_t` | `agentrt_loop_create()` | `agentrt_loop_destroy()` | 创建者释放 | 否（单线程访问） | 核心循环实例 |
+| `agentrt_cognition_engine_t` | `agentrt_cognition_create()` | `agentrt_cognition_destroy()` | 创建者释放 | 否（单线程访问） | 认知引擎实例 |
+| `agentrt_execution_engine_t` | `agentrt_execution_create()` | `agentrt_execution_destroy()` | 创建者释放 | 否（单线程访问） | 执行引擎实例 |
+| `agentrt_memory_engine_t` | `agentrt_memory_create()` | `agentrt_memory_destroy()` | 创建者释放 | 否（单线程访问） | 记忆引擎实例 |
+| `agentrt_compensation_t` | `agentrt_compensation_create()` | `agentrt_compensation_destroy()` | 创建者释放 | 否（单线程访问） | 补偿事务管理器 |
+| `char*` (任务ID) | `agentrt_loop_submit()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `char*` (JSON结果) | `agentrt_loop_wait()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `char*` (健康状态JSON) | `agentrt_cognition_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `char*` (健康状态JSON) | `agentrt_execution_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `char*` (健康状态JSON) | `agentrt_memory_health_check()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `agentrt_memory_result_t` | `agentrt_memory_query()` | `agentrt_memory_result_free()` | 调用者释放 | 内部互斥锁 | 记忆查询结果 |
+| `agentrt_memory_record_t` | `agentrt_memory_get()` | `agentrt_memory_record_free()` | 调用者释放 | 内部互斥锁 | 记忆记录 |
+| `char*` (记录ID) | `agentrt_memory_write()` | 调用者释放 | 调用者释放 | 内部互斥锁 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `char**` (补偿动作) | `agentrt_compensation_get_human_queue()` | 调用者释放 | 调用者释放 | 否（单线程访问） | 包括数组本身和数组中的每个元素 |
 
 ### 3.2 系统调用模块 (syscall)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_syscall_table_t` | `agentos_syscall_table_create()` | `agentos_syscall_table_destroy()` | 创建者释放 | 否（单线程访问） | 系统调用表 |
-| `agentos_syscall_entry_t` | `agentos_syscall_entry_create()` | `agentos_syscall_entry_destroy()` | 创建者释放 | 否（单线程访问） | 系统调用条目 |
+| `agentrt_syscall_table_t` | `agentrt_syscall_table_create()` | `agentrt_syscall_table_destroy()` | 创建者释放 | 否（单线程访问） | 系统调用表 |
+| `agentrt_syscall_entry_t` | `agentrt_syscall_entry_create()` | `agentrt_syscall_entry_destroy()` | 创建者释放 | 否（单线程访问） | 系统调用条目 |
 
 ### 3.3 记忆管理模块 (memoryrovol)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_memoryrovol_t` | `agentos_memoryrovol_create()` | `agentos_memoryrovol_destroy()` | 创建者释放 | 否（单线程访问） | 记忆卷管理实例 |
-| `agentos_memoryrovol_segment_t` | `agentos_memoryrovol_segment_create()` | `agentos_memoryrovol_segment_destroy()` | 创建者释放 | 否（单线程访问） | 记忆卷段 |
+| `agentrt_memoryrovol_t` | `agentrt_memoryrovol_create()` | `agentrt_memoryrovol_destroy()` | 创建者释放 | 否（单线程访问） | 记忆卷管理实例 |
+| `agentrt_memoryrovol_segment_t` | `agentrt_memoryrovol_segment_create()` | `agentrt_memoryrovol_segment_destroy()` | 创建者释放 | 否（单线程访问） | 记忆卷段 |
 
 ### 3.4 安全域模块 (cupolas)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_cupolas_t` | `agentos_cupolas_create()` | `agentos_cupolas_destroy()` | 创建者释放 | 内部互斥锁 | 安全穹顶实例 |
-| `agentos_cupola_t` | `agentos_cupola_create()` | `agentos_cupola_destroy()` | 创建者释放 | 内部互斥锁 | 单个安全穹顶 |
+| `agentrt_cupolas_t` | `agentrt_cupolas_create()` | `agentrt_cupolas_destroy()` | 创建者释放 | 内部互斥锁 | 安全穹顶实例 |
+| `agentrt_cupola_t` | `agentrt_cupola_create()` | `agentrt_cupola_destroy()` | 创建者释放 | 内部互斥锁 | 单个安全穹顶 |
 
 ### 3.5 动态模块 (gateway)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_dynamic_t` | `agentos_dynamic_create()` | `agentos_dynamic_destroy()` | 创建者释放 | 否（单线程访问） | 动态模块实例 |
+| `agentrt_dynamic_t` | `agentrt_dynamic_create()` | `agentrt_dynamic_destroy()` | 创建者释放 | 否（单线程访问） | 动态模块实例 |
 
 ### 3.6 用户态服务层 (daemon)
 
 | 资源类型 | 创建函数 | 释放函数 | 释放责任 | 线程安全 | 备注 |
 |---------|---------|---------|---------|---------|------|
-| `agentos_daemon_service_t` | `agentos_daemon_service_create()` | `agentos_daemon_service_destroy()` | 创建者释放 | 内部互斥锁 | 用户态服务实例 |
-| `agentos_ipc_bus_t` | `agentos_ipc_bus_create()` | `agentos_ipc_bus_destroy()` | 创建者释放 | 内部互斥锁 | IPC 服务总线 |
-| `agentos_thread_pool_t` | `agentos_thread_pool_create()` | `agentos_thread_pool_destroy()` | 创建者释放 | 内部互斥锁 | 线程池 |
-| `agentos_orchestrator_t` | `agentos_orchestrator_create()` | `agentos_orchestrator_destroy()` | 创建者释放 | 内部互斥锁 | 编排器实例 |
-| `char*` (调度结果) | `agentos_sched_schedule()` | 调用者释放 | 调用者释放 | 原子操作 | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `agentrt_daemon_service_t` | `agentrt_daemon_service_create()` | `agentrt_daemon_service_destroy()` | 创建者释放 | 内部互斥锁 | 用户态服务实例 |
+| `agentrt_ipc_bus_t` | `agentrt_ipc_bus_create()` | `agentrt_ipc_bus_destroy()` | 创建者释放 | 内部互斥锁 | IPC 服务总线 |
+| `agentrt_thread_pool_t` | `agentrt_thread_pool_create()` | `agentrt_thread_pool_destroy()` | 创建者释放 | 内部互斥锁 | 线程池 |
+| `agentrt_orchestrator_t` | `agentrt_orchestrator_create()` | `agentrt_orchestrator_destroy()` | 创建者释放 | 内部互斥锁 | 编排器实例 |
+| `char*` (调度结果) | `agentrt_sched_schedule()` | 调用者释放 | 调用者释放 | 原子操作 | 使用 `MEMORY_FREE_SAFE()` 释放 |
 
 ### 3.7 公共工具层 (commons)
 
@@ -84,8 +84,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | `config_context_t` | `config_context_create()` | `config_context_destroy()` | 创建者释放 | 否（单线程访问） | 配置上下文 |
 | `config_source_t` | `config_source_create_file()` | `config_source_destroy()` | 创建者释放 | 否（单线程访问） | 配置源 |
 | `config_validator_t` | `config_validator_create()` | `config_validator_destroy()` | 创建者释放 | 否（单线程访问） | 配置验证器 |
-| `agentos_logger_t` | `agentos_logger_create()` | `agentos_logger_destroy()` | 创建者释放 | 内部互斥锁 | 日志记录器 |
-| `char*` (日志格式化输出) | `agentos_log_format()` | 调用者释放 | 调用者释放 | 否（单线程访问） | 使用 `MEMORY_FREE_SAFE()` 释放 |
+| `agentrt_logger_t` | `agentrt_logger_create()` | `agentrt_logger_destroy()` | 创建者释放 | 内部互斥锁 | 日志记录器 |
+| `char*` (日志格式化输出) | `agentrt_log_format()` | 调用者释放 | 调用者释放 | 否（单线程访问） | 使用 `MEMORY_FREE_SAFE()` 释放 |
 
 ## 4. 资源管理最佳实践
 
@@ -123,27 +123,27 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ```c
 // 使用 goto cleanup 模式管理多个资源
-agentos_core_loop_t* loop = NULL;
+agentrt_core_loop_t* loop = NULL;
 char* task_id = NULL;
 char* result = NULL;
 
-agentos_error_t err = agentos_loop_create(NULL, &loop);
-if (err != AGENTOS_OK) {
+agentrt_error_t err = agentrt_loop_create(NULL, &loop);
+if (err != AGENTRT_OK) {
     return err;
 }
 
-err = agentos_loop_submit(loop, "Hello World", 11, &task_id);
-if (err != AGENTOS_OK) {
+err = agentrt_loop_submit(loop, "Hello World", 11, &task_id);
+if (err != AGENTRT_OK) {
     goto cleanup_loop;
 }
 
 size_t result_len = 0;
-err = agentos_loop_wait(loop, task_id, 10000, &result, &result_len);
+err = agentrt_loop_wait(loop, task_id, 10000, &result, &result_len);
 
 // 释放任务ID（不再需要）
 MEMORY_FREE_SAFE(&task_id);
 
-if (err != AGENTOS_OK) {
+if (err != AGENTRT_OK) {
     goto cleanup_loop;
 }
 
@@ -154,13 +154,13 @@ printf("Task result: %s\n", result);
 MEMORY_FREE_SAFE(&result);
 
 // 释放核心循环
-agentos_loop_destroy(loop);
-return AGENTOS_OK;
+agentrt_loop_destroy(loop);
+return AGENTRT_OK;
 
 cleanup_loop:
     MEMORY_FREE_SAFE(&task_id);
     MEMORY_FREE_SAFE(&result);
-    agentos_loop_destroy(loop);
+    agentrt_loop_destroy(loop);
     return err;
 ```
 
@@ -170,17 +170,17 @@ cleanup_loop:
 // 使用 goto cleanup 模式分配多个资源
 void* resource1 = NULL;
 void* resource2 = NULL;
-agentos_error_t err = AGENTOS_OK;
+agentrt_error_t err = AGENTRT_OK;
 
 resource1 = malloc(sizeof(*resource1));
 if (!resource1) {
-    err = AGENTOS_ENOMEM;
+    err = AGENTRT_ENOMEM;
     goto cleanup;
 }
 
 resource2 = malloc(sizeof(*resource2));
 if (!resource2) {
-    err = AGENTOS_ENOMEM;
+    err = AGENTRT_ENOMEM;
     goto cleanup;
 }
 
@@ -207,7 +207,7 @@ valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./your_appl
 valgrind --leak-check=summary ./your_application
 
 # 抑制已知的第三方库误报
-valgrind --suppressions=agentos.supp ./your_application
+valgrind --suppressions=agentrt.supp ./your_application
 ```
 
 **关键输出解读**:

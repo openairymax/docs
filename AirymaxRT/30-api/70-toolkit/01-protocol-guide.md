@@ -83,7 +83,7 @@
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| 统一接口 | `interfaces/include/agentos_protocol_interface.h` | I-L1~I-L4 接口定义 |
+| 统一接口 | `interfaces/include/agentrt_protocol_interface.h` | I-L1~I-L4 接口定义 |
 | 协议路由器 | `protocols/core/router/` | 消息路由与分发 |
 | 协议转换器 | `protocols/core/transformers/` | 双向格式转换 |
 | 协议注册中心 | `protocols/core/registry/` | 7内置协议注册/状态机/依赖追踪 |
@@ -310,7 +310,7 @@ Anthropic Claude 大语言模型 API 集成，支持 Extended Thinking 和 Tool 
 ### SDK 自动检测示例
 
 ```python
-from agentos.protocol import ProtocolClient, ProtocolType
+from agentrt.protocol import ProtocolClient, ProtocolType
 
 client = ProtocolClient.from_env()
 result = await client.detect_protocol(
@@ -330,14 +330,14 @@ print(f"置信度: {result.confidence:.1%}")
 #### 安装
 
 ```bash
-pip install agentos-toolkit
+pip install agentrt-toolkit
 ```
 
 #### 快速开始
 
 ```python
 import asyncio
-from agentos.protocol import (
+from agentrt.protocol import (
     ProtocolClient,
     ProtocolType,
     ProtocolConfig,
@@ -371,7 +371,7 @@ asyncio.run(main())
 #### 协议专用客户端（工厂函数）
 
 ```python
-from agentos.protocol import create_mcp_client, create_openai_client
+from agentrt.protocol import create_mcp_client, create_openai_client
 
 mcp_client = create_mcp_client(base_url="http://localhost:8080")
 tools = await mcp_client.list_tools()
@@ -421,7 +421,7 @@ class ProtocolType(IntEnum):
 #### 安装
 
 ```bash
-go get github.com/spharxworks/agentos-toolkit-go
+go get github.com/spharxworks/agentrt-toolkit-go
 ```
 
 #### 快速开始
@@ -434,8 +434,8 @@ import (
     "fmt"
     "log"
 
-    agentos "github.com/spharxworks/agentos-toolkit-go"
-    "github.com/spharxworks/agentos-toolkit-go/protocol"
+    agentrt "github.com/spharxworks/agentrt-toolkit-go"
+    "github.com/spharxworks/agentrt-toolkit-go/protocol"
 )
 
 func main() {
@@ -524,14 +524,14 @@ const (
 
 ```toml
 [dependencies]
-agentos-toolkit = "3.0.0"
+agentrt-toolkit = "3.0.0"
 tokio = { version = "1", features = ["full"] }
 ```
 
 #### 快速开始
 
 ```rust
-use agentos_toolkit::protocol::{
+use agentrt_toolkit::protocol::{
     ProtocolClient, ProtocolConfig, ProtocolType, DetectionResult,
 };
 use tokio;
@@ -567,7 +567,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### 流式响应与错误处理
 
 ```rust
-use agentos_toolkit::protocol::{ProtocolClient, ProtocolConfig};
+use agentrt_toolkit::protocol::{ProtocolClient, ProtocolConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -636,9 +636,9 @@ pub struct DetectionResult {
 #### 安装
 
 ```bash
-npm install @agentos/toolkit
+npm install @agentrt/toolkit
 # 或
-yarn add @agentos/toolkit
+yarn add @agentrt/toolkit
 ```
 
 #### 快速开始
@@ -650,7 +650,7 @@ import {
   createProtocolClient,
   createMCPClient,
   createOpenAIClient,
-} from '@agentos/toolkit';
+} from '@agentrt/toolkit';
 
 async function main() {
   const client = createProtocolClient({
@@ -1078,21 +1078,21 @@ printf("转换次数: %llu\n", stats.transform_count);
 
 ## 9. CLI 工具参考
 
-`agentos` CLI 工具包含协议管理命令：
+`agentrt` CLI 工具包含协议管理命令：
 
 ```bash
-agentos protocol list              # 列出所有可用协议适配器
-agentos protocol detect           # 从输入检测协议
-agentos protocol test <proto>     # 测试特定协议的连接
-agentos protocol send <proto> <method> [params]  # 发送协议消息
-agentos protocol stats            # 显示协议统计信息
-agentos protocol transform <src> <tgt> [data]    # 协议间转换
+agentrt protocol list              # 列出所有可用协议适配器
+agentrt protocol detect           # 从输入检测协议
+agentrt protocol test <proto>     # 测试特定协议的连接
+agentrt protocol send <proto> <method> [params]  # 发送协议消息
+agentrt protocol stats            # 显示协议统计信息
+agentrt protocol transform <src> <tgt> [data]    # 协议间转换
 ```
 
 ### 使用示例
 
 ```bash
-$ agentos protocol list
+$ agentrt protocol list
 协议          版本     状态      端点           类型
 ────────────  ──────   ──────    ───────────    ──────────
 JSON-RPC      2.0      active    /jsonrpc        标准
@@ -1103,7 +1103,7 @@ OpenJiuwen    1.0      active    /ojiuwen       集成
 OpenClaw      1.0      active    /openclaw      集成
 Claude API    1.0      active    /v1/messages   集成
 
-$ agentos protocol stats
+$ agentrt protocol stats
 协议统计:
   总请求数:     1,234
   按协议分布:
@@ -1133,7 +1133,7 @@ $ agentos protocol stats
 3. 在分发表中添转换器条目
 
 ```c
-#include "agentos_protocol_interface.h"
+#include "agentrt_protocol_interface.h"
 
 static int my_adapter_init(proto_adapter_t* adapter, void* config) { return 0; }
 static int my_adapter_destroy(proto_adapter_t* adapter) { return 0; }
@@ -1176,7 +1176,7 @@ static proto_adapter_vtable_t my_vtable = {
 |------|------|---------|
 | `协议未检测到` | 缺少 content-type 头 | 在请求中显式设置 `contentType` |
 | `转换失败` | 不兼容的字段类型 | 检查字段兼容性矩阵 |
-| `连接超时` | 网关未运行 | 先运行 `agentos service health` |
+| `连接超时` | 网关未运行 | 先运行 `agentrt service health` |
 | `CRC32 不匹配` | OpenJiuwen 载荷损坏 | 重新发送消息 |
 | `未知方法` | 协议处理器未注册 | 检查 `protocol list` 输出 |
 
@@ -1185,20 +1185,20 @@ static proto_adapter_vtable_t my_vtable = {
 启用详细日志：
 
 ```bash
-export AGENTOS_DEBUG=true
-export AGENTOS_LOG_LEVEL=DEBUG
-agentos protocol test jsonrpc --verbose
+export AGENTRT_DEBUG=true
+export AGENTRT_LOG_LEVEL=DEBUG
+agentrt protocol test jsonrpc --verbose
 ```
 
 ### 健康检查序列
 
 ```bash
-agentos status                    # 整体系统状态
-agentos service health            # 网关健康状态
-agentos protocol list             # 可用协议列表
-agentos protocol test jsonrpc     # 各协议连接测试
-agentos protocol test mcp
-agentos protocol test openai
+agentrt status                    # 整体系统状态
+agentrt service health            # 网关健康状态
+agentrt protocol list             # 可用协议列表
+agentrt protocol test jsonrpc     # 各协议连接测试
+agentrt protocol test mcp
+agentrt protocol test openai
 ```
 
 ---
@@ -1212,7 +1212,7 @@ agentos protocol test openai
 
 ## 相关文档
 
-- [统一接口规范](../interfaces/include/agentos_protocol_interface.h)
+- [统一接口规范](../interfaces/include/agentrt_protocol_interface.h)
 - [协议路由器设计](../protocols/core/router/include/protocol_router.h)
 - [转换器实现](../protocols/core/transformers/include/protocol_transformers.h)
 - [网关桥接 API](../gateway/include/gateway_protocol_bridge.h)

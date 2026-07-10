@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）IRON-9 v2 三层共享模型落地规范
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 [SC] 共享契约层（6 个头文件）、[SS] 语义同源层、[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 [SC] 共享契约层（6 个头文件）、[SS] 语义同源层、[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **理论根基**： Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0
 
 ---
 
@@ -535,4 +535,4 @@ static int airymax_kthread_recv(struct airymax_kthread_chan *chan,
 
 ---
 
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0

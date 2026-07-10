@@ -17,7 +17,7 @@ Desktop 桌面应用的预览素材由 `products/desktop` 仓库生成。
 **`Airymax-desktop-preview.gif` 不直接提交至本仓库**（14MB 二进制文件，历史 commit `ab49c6b` 已将其移除）。如需使用：
 
 1. 从 `products/desktop` 仓库的 `resources/` 目录获取最新预览图
-2. 或从 `devtools/scripts/resources/images/AgentOS-desktop-preview.gif` 获取历史版本
+2. 或从 `devtools/scripts/resources/images/AgentRT-desktop-preview.gif` 获取历史版本
 3. 文档构建/发布流程负责在产物中注入该资源，源码仓库保持轻量
 
 如需更新预览图，请在 desktop 仓库中重新录制。

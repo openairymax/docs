@@ -21,11 +21,11 @@
         </mxCell>
 
         <!-- 认知层 三阶段 -->
-        <mxCell id="cog1" value="Intent Parser&#xa;意图解析器&#xa;──────────&#xa;产出: agentos_intent_t&#xa;(intent_goal / flags / context)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="cog1" value="Intent Parser&#xa;意图解析器&#xa;──────────&#xa;产出: agentrt_intent_t&#xa;(intent_goal / flags / context)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="260" y="130" width="220" height="100" as="geometry" />
         </mxCell>
 
-        <mxCell id="cog2" value="Plan Generator&#xa;规划生成器&#xa;──────────&#xa;产出: agentos_task_plan_t&#xa;(DAG: nodes + entry_points)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="cog2" value="Plan Generator&#xa;规划生成器&#xa;──────────&#xa;产出: agentrt_task_plan_t&#xa;(DAG: nodes + entry_points)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="540" y="130" width="220" height="100" as="geometry" />
         </mxCell>
 
@@ -34,7 +34,7 @@
         </mxCell>
 
         <!-- 认知层 策略挂件 -->
-        <mxCell id="cog_s1" value="Plan Strategy&#xa;规划策略&#xa;(agentos_plan_func_t)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+        <mxCell id="cog_s1" value="Plan Strategy&#xa;规划策略&#xa;(agentrt_plan_func_t)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=2;" vertex="1" parent="1">
           <mxGeometry x="280" y="250" width="160" height="50" as="geometry" />
         </mxCell>
         <mxCell id="cog_s2" value="Coordinator Strategy&#xa;协同策略&#xa;(coordinate_func_t)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=2;" vertex="1" parent="1">
@@ -67,7 +67,7 @@
         </mxCell>
 
         <!-- 层间数据流标注 1 -->
-        <mxCell id="flow1" value="任务计划 DAG (agentos_task_plan_t)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#3866FA;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="flow1" value="任务计划 DAG (agentrt_task_plan_t)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#3866FA;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="500" y="325" width="300" height="20" as="geometry" />
         </mxCell>
 
@@ -76,7 +76,7 @@
           <mxGeometry x="200" y="360" width="1180" height="240" as="geometry" />
         </mxCell>
 
-        <mxCell id="exe1" value="Task Manager&#xa;任务管理器&#xa;──────────&#xa;agentos_task_t&#xa;(task_id / status / input)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="exe1" value="Task Manager&#xa;任务管理器&#xa;──────────&#xa;agentrt_task_t&#xa;(task_id / status / input)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="260" y="410" width="220" height="100" as="geometry" />
         </mxCell>
 
@@ -131,7 +131,7 @@
           <mxGeometry x="200" y="640" width="1180" height="240" as="geometry" />
         </mxCell>
 
-        <mxCell id="mem1" value="Memory Engine&#xa;记忆引擎封装&#xa;──────────&#xa;agentos_memory_engine_t&#xa;write / get / delete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="mem1" value="Memory Engine&#xa;记忆引擎封装&#xa;──────────&#xa;agentrt_memory_engine_t&#xa;write / get / delete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="260" y="690" width="220" height="100" as="geometry" />
         </mxCell>
 
@@ -195,7 +195,7 @@
         </mxCell>
 
         <!-- 主循环 API 标注 -->
-        <mxCell id="api_note" value="主循环 API: agentos_loop_create() / run() / stop() / submit() / wait()&#xa;持久化: submit_persistent() / restore_task() / create_snapshot() / restore_snapshot()&#xa;配置: agentos_loop_config_t (cognition/execution/memory_threads + checkpoint)" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;backgroundColor=#fafafa;strokeColor=#cccccc;" vertex="1" parent="1">
+        <mxCell id="api_note" value="主循环 API: agentrt_loop_create() / run() / stop() / submit() / wait()&#xa;持久化: submit_persistent() / restore_task() / create_snapshot() / restore_snapshot()&#xa;配置: agentrt_loop_config_t (cognition/execution/memory_threads + checkpoint)" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;backgroundColor=#fafafa;strokeColor=#cccccc;" vertex="1" parent="1">
           <mxGeometry x="1080" y="80" width="300" height="70" as="geometry" />
         </mxCell>
 

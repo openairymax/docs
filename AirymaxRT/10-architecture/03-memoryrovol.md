@@ -215,7 +215,7 @@ MemoryRovol 通过结构化日志实现全面可观测性：
 
 ### 2.2 目录结构
 
-> **注**: MemoryRovol 已从原 `AgentRT/agentos/atoms/memoryrovol/` 独立为 Airymax 商业化核心模块，现位于 `MemoryRovol/`。
+> **注**: MemoryRovol 已从原 `AgentRT/agentrt/atoms/memoryrovol/` 独立为 Airymax 商业化核心模块，现位于 `MemoryRovol/`。
 
 ```
 MemoryRovol/
@@ -278,7 +278,7 @@ L1 原始卷是记忆系统的基础层，负责原始数据的存储和管理�
 
 #### 元数据
 ```c
-typedef struct agentos_raw_metadata {
+typedef struct agentrt_raw_metadata {
     char* metadata_record_id;       // 记录 ID（系统生成）
     uint64_t metadata_timestamp;      // 时间戳（纳秒）
     char* metadata_source;           // 来源标识
@@ -287,27 +287,27 @@ typedef struct agentos_raw_metadata {
     uint32_t metadata_access_count;  // 访问次数
     uint64_t metadata_last_access;   // 最后访问时间
     char* metadata_tags_json;        // 扩展标签（JSON）
-} agentos_raw_metadata_t;
+} agentrt_raw_metadata_t;
 ```
 
 #### L1 层实例
 ```c
-typedef struct agentos_layer1_raw {
+typedef struct agentrt_layer1_raw {
     char* base_path;               // 存储根路径
-    agentos_mutex_t* lock;         // 线程锁
+    agentrt_mutex_t* lock;         // 线程锁
     uint64_t next_id;              // 下一个可用 ID
     write_queue_t* queue;          // 异步写入队列
     uint32_t num_workers;          // 工作线程数
     // ...
-} agentos_layer1_raw_t;
+} agentrt_layer1_raw_t;
 ```
 
 ### 3.3 核心功能
 
 #### 3.3.1 同步写入
 ```c
-agentos_error_t agentos_layer1_raw_write(
-    agentos_layer1_raw_t* layer,
+agentrt_error_t agentrt_layer1_raw_write(
+    agentrt_layer1_raw_t* layer,
     const void* data,
     size_t len,
     const char* metadata,
@@ -321,12 +321,12 @@ agentos_error_t agentos_layer1_raw_write(
 
 #### 3.3.2 异步写入
 ```c
-agentos_error_t agentos_layer1_raw_write_async(
-    agentos_layer1_raw_t* layer,
+agentrt_error_t agentrt_layer1_raw_write_async(
+    agentrt_layer1_raw_t* layer,
     const void* data,
     size_t len,
     const char* metadata,
-    void (*callback)(agentos_error_t, const char*, void*),
+    void (*callback)(agentrt_error_t, const char*, void*),
     void* userdata);
 ```
 
@@ -341,22 +341,22 @@ agentos_error_t agentos_layer1_raw_write_async(
 #### 创建 L1 层
 ```c
 // 同步模式
-agentos_error_t agentos_layer1_raw_create(
+agentrt_error_t agentrt_layer1_raw_create(
     const char* base_path,
-    agentos_layer1_raw_t** out_layer);
+    agentrt_layer1_raw_t** out_layer);
 
 // 异步模式
-agentos_error_t agentos_layer1_raw_create_async(
+agentrt_error_t agentrt_layer1_raw_create_async(
     const char* base_path,
     size_t queue_size,
     uint32_t num_workers,
-    agentos_layer1_raw_t** out_layer);
+    agentrt_layer1_raw_t** out_layer);
 ```
 
 #### 等待异步写入完成
 ```c
-agentos_error_t agentos_layer1_raw_wait_complete(
-    agentos_layer1_raw_t* layer,
+agentrt_error_t agentrt_layer1_raw_wait_complete(
+    agentrt_layer1_raw_t* layer,
     uint32_t timeout_ms);
 ```
 
@@ -376,16 +376,16 @@ L2 特征层负责将原始数据转换为向量表示，并提供高效的相�
 
 #### 特征向量
 ```c
-typedef struct agentos_feature_vector {
+typedef struct agentrt_feature_vector {
     float* vector_data;         // 向量数据
     size_t vector_dim;          // 维度
     int vector_ref_count;       // 引用计数
-} agentos_feature_vector_t;
+} agentrt_feature_vector_t;
 ```
 
 #### L2 层配置
 ```c
-typedef struct agentos_layer2_feature_config {
+typedef struct agentrt_layer2_feature_config {
     const char* config_index_path;          // 索引持久化路径
     const char* config_embedding_model;     // 嵌入模型名称
     const char* config_api_key;             // API 密钥
@@ -397,7 +397,7 @@ typedef struct agentos_layer2_feature_config {
     uint32_t config_cache_size;             // LRU 缓存大小（0 表示无限）
     const char* config_vector_store_path;   // 向量持久化路径
     uint32_t config_rebuild_interval_sec;   // 重建索引间隔（秒）
-} agentos_layer2_feature_config_t;
+} agentrt_layer2_feature_config_t;
 ```
 
 ### 4.3 核心组件
@@ -411,7 +411,7 @@ typedef struct agentos_layer2_feature_config {
 
 **接口**:
 ```c
-agentos_error_t agentos_embedder_encode(
+agentrt_error_t agentrt_embedder_encode(
     embedder_handle_t* h,
     const char* text,
     float** out_vec,
@@ -448,8 +448,8 @@ CREATE TABLE vectors (
 );
 
 // 存储向量
-agentos_error_t agentos_vector_store_put(
-    agentos_vector_store_t* store,
+agentrt_error_t agentrt_vector_store_put(
+    agentrt_vector_store_t* store,
     const char* record_id,
     const float* vector,
     size_t dim);
@@ -459,15 +459,15 @@ agentos_error_t agentos_vector_store_put(
 
 #### 创建 L2 层
 ```c
-agentos_error_t agentos_layer2_feature_create(
-    const agentos_layer2_feature_config_t* manager,
-    agentos_layer2_feature_t** out_layer);
+agentrt_error_t agentrt_layer2_feature_create(
+    const agentrt_layer2_feature_config_t* manager,
+    agentrt_layer2_feature_t** out_layer);
 ```
 
 #### 添加向量
 ```c
-agentos_error_t agentos_layer2_feature_add(
-    agentos_layer2_feature_t* layer,
+agentrt_error_t agentrt_layer2_feature_add(
+    agentrt_layer2_feature_t* layer,
     const char* record_id,
     const char* text);
 ```
@@ -480,8 +480,8 @@ agentos_error_t agentos_layer2_feature_add(
 
 #### 批量添加
 ```c
-agentos_error_t agentos_layer2_feature_add_batch(
-    agentos_layer2_feature_t* layer,
+agentrt_error_t agentrt_layer2_feature_add_batch(
+    agentrt_layer2_feature_t* layer,
     const char** record_ids,
     const char** texts,
     size_t count);
@@ -510,8 +510,8 @@ L3 结构层负责将多个记忆单元绑定为复合结构，并编码语义�
 
 **接口**:
 ```c
-agentos_error_t agentos_layer3_bind(
-    agentos_layer3_structure_t* layer,
+agentrt_error_t agentrt_layer3_bind(
+    agentrt_layer3_structure_t* layer,
     const char** member_ids,
     size_t count,
     const char* relation_type,
@@ -528,10 +528,10 @@ agentos_error_t agentos_layer3_bind(
 **示例**:
 ```c
 // 编码因果关系
-agentos_layer3_add_relation(layer, cause_id, effect_id, "CAUSES");
+agentrt_layer3_add_relation(layer, cause_id, effect_id, "CAUSES");
 
 // 编码包含关系
-agentos_layer3_add_relation(layer, whole_id, part_id, "CONTAINS");
+agentrt_layer3_add_relation(layer, whole_id, part_id, "CONTAINS");
 ```
 
 #### 5.2.3 时序编码
@@ -575,8 +575,8 @@ L4 模式层负责从大量记忆中挖掘高级模式和规则:
 
 **接口**:
 ```c
-agentos_error_t agentos_layer4_persistence_analyze(
-    agentos_layer4_pattern_t* layer,
+agentrt_error_t agentrt_layer4_persistence_analyze(
+    agentrt_layer4_pattern_t* layer,
     const float* point_cloud,
     size_t point_count,
     size_t dim,
@@ -641,8 +641,8 @@ hdbscan_cluster(
 #### 实现细节
 
 ```c
-agentos_error_t agentos_attractor_network_retrieve(
-    agentos_attractor_network_t* net,
+agentrt_error_t agentrt_attractor_network_retrieve(
+    agentrt_attractor_network_t* net,
     const float* query_vector,
     const char** candidate_ids,
     size_t candidate_count,
@@ -676,11 +676,11 @@ agentos_error_t agentos_attractor_network_retrieve(
 #### 参数配置
 
 ```c
-typedef struct agentos_retrieval_config {
+typedef struct agentrt_retrieval_config {
     uint32_t max_iterations;       // 最大迭代次数
     float tolerance;               // 收敛容差
     float beta;                    // 非线性参数
-} agentos_retrieval_config_t;
+} agentrt_retrieval_config_t;
 ```
 
 ### 7.2 检索缓存
@@ -695,13 +695,13 @@ typedef struct agentos_retrieval_config {
 
 ```c
 // 创建缓存
-agentos_error_t agentos_retrieval_cache_create(
+agentrt_error_t agentrt_retrieval_cache_create(
     size_t max_size,
-    agentos_retrieval_cache_t** out_cache);
+    agentrt_retrieval_cache_t** out_cache);
 
 // 获取缓存
-agentos_error_t agentos_retrieval_cache_get(
-    agentos_retrieval_cache_t* cache,
+agentrt_error_t agentrt_retrieval_cache_get(
+    agentrt_retrieval_cache_t* cache,
     const char* query,
     char*** out_result_ids,
     size_t* out_count);
@@ -718,8 +718,8 @@ agentos_error_t agentos_retrieval_cache_get(
 #### 接口
 
 ```c
-agentos_error_t agentos_mounter_mount(
-    agentos_mounter_t* mounter,
+agentrt_error_t agentrt_mounter_mount(
+    agentrt_mounter_t* mounter,
     const char* record_id,
     const char* context_id);
 ```
@@ -797,14 +797,14 @@ weight(t) = max(0, initial_weight - decay_rate * t)
 #### 配置
 
 ```c
-typedef struct agentos_forgetting_config {
-    agentos_forget_strategy_t strategy;   // 策略类型
+typedef struct agentrt_forgetting_config {
+    agentrt_forget_strategy_t strategy;   // 策略类型
     double lambda;                         // 衰减率（Ebbinghaus）
     double threshold;                      // 裁剪阈值
     uint32_t min_access;                   // 最小访问次数
     uint32_t check_interval_sec;           // 检查间隔（秒）
     const char* archive_path;              // 归档路径
-} agentos_forgetting_config_t;
+} agentrt_forgetting_config_t;
 ```
 
 #### 工作流程
@@ -817,9 +817,9 @@ void* forgetting_thread(void* arg) {
         
         // 执行一次修剪
         uint32_t pruned_count;
-        agentos_forgetting_prune(engine, &pruned_count);
+        agentrt_forgetting_prune(engine, &pruned_count);
         
-        AGENTOS_LOG_INFO("Pruned %u memories", pruned_count);
+        AGENTRT_LOG_INFO("Pruned %u memories", pruned_count);
     }
 }
 ```
@@ -867,18 +867,18 @@ void* forgetting_thread(void* arg) {
 ```c
 #include "memoryrovol.h"
 
-agentos_memoryrov_config_t manager = {0};
+agentrt_memoryrov_config_t manager = {0};
 manager.raw_storage_path = "/path/to/memory/raw";
 manager.index_path = "/path/to/memory/index";
 manager.index_type = 2;  // HNSW
 manager.hnsw_m = 32;
-manager.forget_strategy = AGENTOS_FORGET_EBBINGHAUS;
+manager.forget_strategy = AGENTRT_FORGET_EBBINGHAUS;
 manager.forget_lambda = 0.5;
 
-agentos_memoryrov_handle_t* handle;
-agentos_error_t err = agentos_memoryrov_init(&manager, &handle);
-if (err != AGENTOS_OK) {
-    fprintf(stderr, "Error: %s\n", agentos_strerror(err));
+agentrt_memoryrov_handle_t* handle;
+agentrt_error_t err = agentrt_memoryrov_init(&manager, &handle);
+if (err != AGENTRT_OK) {
+    fprintf(stderr, "Error: %s\n", agentrt_strerror(err));
     return err;
 }
 ```
@@ -889,10 +889,10 @@ if (err != AGENTOS_OK) {
 // L1 写入
 char* record_id;
 const char* data = "这是一条测试记忆";
-err = agentos_layer1_raw_write(layer1, data, strlen(data), NULL, &record_id);
+err = agentrt_layer1_raw_write(layer1, data, strlen(data), NULL, &record_id);
 
 // L2 添加向量
-err = agentos_layer2_feature_add(layer2, record_id, data);
+err = agentrt_layer2_feature_add(layer2, record_id, data);
 
 free(record_id);
 ```
@@ -903,7 +903,7 @@ free(record_id);
 // 使用吸引子网络
 char* best_id;
 float confidence;
-err = agentos_attractor_network_retrieve(net, query_vector, 
+err = agentrt_attractor_network_retrieve(net, query_vector, 
                                           candidate_ids, count,
                                           &best_id, &confidence);
 ```
@@ -913,7 +913,7 @@ err = agentos_attractor_network_retrieve(net, query_vector,
 #### 高性能配置
 
 ```c
-agentos_layer2_feature_config_t manager = {
+agentrt_layer2_feature_config_t manager = {
     .index_type = 2,              // HNSW
     .hnsw_m = 32,                 // 更大的 M
     .cache_size = 100000,         // 大缓存
@@ -924,7 +924,7 @@ agentos_layer2_feature_config_t manager = {
 #### 低内存配置
 
 ```c
-agentos_layer2_feature_config_t manager = {
+agentrt_layer2_feature_config_t manager = {
     .index_type = 1,              // IVF
     .ivf_nlist = 100,             // 少量聚类中心
     .cache_size = 1000,           // 小缓存
@@ -940,7 +940,7 @@ agentos_layer2_feature_config_t manager = {
 
 #### 问题：向量检索结果为空
 
-**症状**: `agentos_layer2_feature_search()` 返回 0 结果  
+**症状**: `agentrt_layer2_feature_search()` 返回 0 结果  
 **排查**:
 1. 确认 FAISS 索引已创建
 2. 检查是否有向量数据
@@ -948,7 +948,7 @@ agentos_layer2_feature_config_t manager = {
 
 #### 问题：异步写入队列满
 
-**症状**: `agentos_layer1_raw_write_async()` 返回队列满错误  
+**症状**: `agentrt_layer1_raw_write_async()` 返回队列满错误  
 **排查**:
 1. 增加队列大小 (`queue_size`)
 2. 增加工作线程数 (`num_workers`)
@@ -957,7 +957,7 @@ agentos_layer2_feature_config_t manager = {
 ### 11.2 调试技巧
 
 - 启用 Debug 日志级别
-- 使用 `agentos_memoryrov_stats()` 查看统计信息
+- 使用 `agentrt_memoryrov_stats()` 查看统计信息
 - 监控 LRU 缓存命中率
 
 ---

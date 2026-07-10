@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 系统调用 API 契约
 
-> **文档定位**: agentrt-linux（AirymaxOS）系统调用接口的契约定义，涵盖编号、签名、参数传递、返回值、错误码
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [20-contracts README](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS）系统调用接口的契约定义，涵盖编号、签名、参数传递、返回值、错误码\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [20-contracts README](README.md)
 
 ---
 

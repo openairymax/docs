@@ -23,7 +23,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 维度 | 设计原则 | 在日志格式中的体现 |
 |------|---------|------------------|
 | **系统观（S维度）** | S-1 反馈闭环原则 | 日志为系统反馈提供数据基础，通过日志分析实现系统行为的闭环优化 |
-| | S-2 层次分解原则 | 日志记录器名称采用层次结构（agentos.<module>.<submodule>），反映系统模块层次关系 |
+| | S-2 层次分解原则 | 日志记录器名称采用层次结构（agentrt.<module>.<submodule>），反映系统模块层次关系 |
 | **内核观（K维度）** | K-2 接口契约化原则 | 日志格式定义了明确的字段契约，包括必需字段、可选字段及其数据类型 |
 | | K-3 服务隔离原则 | 不同服务的日志独立存储，便于隔离分析和故障定位 |
 | **认知观（C维度）** | C-1 双思考系统协同原则 | 支持不同级别的日志记录，快速路径（t1 快思考）记录概要信息，慢速路径（t2 慢思考）记录详细诊断信息 |
@@ -48,8 +48,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 本规范适用于以下场景：
 
-1. **内核开发者**: agentos/atoms/模块的日志记录
-2. **服务开发者**: agentos/daemon/用户态服务的日志记录
+1. **内核开发者**: agentrt/atoms/模块的日志记录
+2. **服务开发者**: agentrt/daemon/用户态服务的日志记录
 3. **应用开发者**: openlab/app/应用的日志记录
 4. **运维人员**: 日志收集、聚合和分析
 5. **安全审计人员**: 审计日志审查和合规检查
@@ -145,7 +145,7 @@ Airymax 作为一个分布式多智能体操作系统，其运行涉及内核、
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"info","logger":"agentos.cognition","trace_id":"abc123","session_id":"sess_456","message":"User input received","file":"router.c","line":128,"input_preview":"开发电商应用"}
+{"timestamp":1701234567.890,"level":"info","logger":"agentrt.cognition","trace_id":"abc123","session_id":"sess_456","message":"User input received","file":"router.c","line":128,"input_preview":"开发电商应用"}
 ```
 
 **格式要求:**
@@ -163,7 +163,7 @@ Airymax 作为一个分布式多智能体操作系统，其运行涉及内核、
 | :--- | :--- | :--- | :--- | :--- |
 | `timestamp` | number | Unix 时间戳 (秒，支持小数毫秒) | `1701234567.890` | 精度至少到毫秒 |
 | `level` | string | 日志级别 (见 3.1 节) | `"info"` | 小写 |
-| `logger` | string | 日志记录器名称 | `"agentos.cognition"` | 反向域名格式 |
+| `logger` | string | 日志记录器名称 | `"agentrt.cognition"` | 反向域名格式 |
 | `trace_id` | string | 分布式追踪 ID(若存在) | `"abc123"` | 强烈推荐（生产环境必需，测试环境可选） |
 | `session_id` | string | 会话 ID(若存在) | `"sess_456"` | 强烈推荐（生产环境必需，测试环境可选） |
 | `message` | string | 人类可读的日志消息 | `"User input received"` | 简洁明了 |
@@ -205,18 +205,18 @@ timestamp = time.time()
 #### logger (记录器名称)
 
 - **类型**: string
-- **格式**: `agentos.<module>.<submodule>`
+- **格式**: `agentrt.<module>.<submodule>`
 - **说明**: 反向域名格式，反映模块层次
 
 **示例:**
 ```
-agentos.cognition              # 认知层
-agentos.cognition.planner      # 认知层 - 规划器
-agentos.execution              # 执行层
-agentos.memory                 # 记忆层
-agentos.kernel.syscall         # 内核 - 系统调用
-agentos.services.llm_d         # 服务 - LLM 用户态服务层（daemon）
-agentos.apps.ecommerce         # 应用 - 电商应用
+agentrt.cognition              # 认知层
+agentrt.cognition.planner      # 认知层 - 规划器
+agentrt.execution              # 执行层
+agentrt.memory                 # 记忆层
+agentrt.kernel.syscall         # 内核 - 系统调用
+agentrt.services.llm_d         # 服务 - LLM 用户态服务层（daemon）
+agentrt.apps.ecommerce         # 应用 - 电商应用
 ```
 
 #### trace_id (追踪 ID)
@@ -277,8 +277,8 @@ sess_user_alice_20260322
 
 **示例:**
 ```
-agentos/atoms/corekern/src/router.c
-agentos/daemon/llm_d/main.py
+agentrt/atoms/corekern/src/router.c
+agentrt/daemon/llm_d/main.py
 openlab/app/ecommerce/api.py
 ```
 
@@ -296,12 +296,12 @@ openlab/app/ecommerce/api.py
 | `span_id` | string | 当前跨度 ID | 分布式追踪 | `"span_789"` |
 | `parent_span_id` | string | 父跨度 ID | 分布式追踪 | `"span_456"` |
 | `error` | string | 错误信息 | 错误日志 | `"Connection timeout"` |
-| `error_code` | integer \| string | 错误码 | 错误日志 | `-2` (C 内核 AGENTOS_ERR_INVALID_PARAM) 或 `"0x0003"` (SDK AGENTOS_ERROR_INVALID_PARAMETER) |
+| `error_code` | integer \| string | 错误码 | 错误日志 | `-2` (C 内核 AGENTRT_ERR_INVALID_PARAM) 或 `"0x0003"` (SDK AGENTRT_ERROR_INVALID_PARAMETER) |
 
-> **双错误码体系说明**: `error_code` 字段接受两种格式：C 内核层使用负整数（如 `-2`，定义于 `agentos/commons/utils/error/include/error.h`），SDK/外部层使用十六进制字符串（如 `"0x0003"`，定义于 error_code_reference.md）。同一语义错误在两种体系中的值不同（如"参数无效"在 C 内核为 `-2`，在 SDK 为 `"0x0003"`）。日志消费者应根据值的类型（整数 vs 字符串）判断其所属体系。
+> **双错误码体系说明**: `error_code` 字段接受两种格式：C 内核层使用负整数（如 `-2`，定义于 `agentrt/commons/utils/error/include/error.h`），SDK/外部层使用十六进制字符串（如 `"0x0003"`，定义于 error_code_reference.md）。同一语义错误在两种体系中的值不同（如"参数无效"在 C 内核为 `-2`，在 SDK 为 `"0x0003"`）。日志消费者应根据值的类型（整数 vs 字符串）判断其所属体系。
 
 | `duration_ms` | number | 操作耗时 (毫秒) | 性能日志 | `125.5` |
-| `agent_id` | string | Agent ID | Agent 相关日志 | `"com.agentos.pm.v1"` |
+| `agent_id` | string | Agent ID | Agent 相关日志 | `"com.agentrt.pm.v1"` |
 | `task_id` | string | 任务 ID | 任务执行日志 | `"task_abc123"` |
 | `record_id` | string | 记忆记录 ID | 记忆操作日志 | `"mem_xyz789"` |
 | `input_preview` | string | 输入预览 (截断后) | 用户输入日志 | `"开发电商应用"` |
@@ -393,7 +393,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"debug","logger":"agentos.cognition","message":"Entering generate_plan function","file":"planner.c","line":45,"plan_type":"dag"}
+{"timestamp":1701234567.890,"level":"debug","logger":"agentrt.cognition","message":"Entering generate_plan function","file":"planner.c","line":45,"plan_type":"dag"}
 ```
 
 **⚠️ 注意**: 生产环境应关闭 DEBUG 日志，避免影响性能。
@@ -411,7 +411,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"info","logger":"agentos.services.llm_d","message":"LLM request processed successfully","trace_id":"abc123","duration_ms":1250,"tokens_used":45}
+{"timestamp":1701234567.890,"level":"info","logger":"agentrt.services.llm_d","message":"LLM request processed successfully","trace_id":"abc123","duration_ms":1250,"tokens_used":45}
 ```
 
 #### WARN (警告级别)
@@ -427,7 +427,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"warn","logger":"agentos.memory","message":"Memory search timeout, returning partial results","trace_id":"abc123","timeout_ms":1000,"results_found":3}
+{"timestamp":1701234567.890,"level":"warn","logger":"agentrt.memory","message":"Memory search timeout, returning partial results","trace_id":"abc123","timeout_ms":1000,"results_found":3}
 ```
 
 #### ERROR (错误级别)
@@ -443,7 +443,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"error","logger":"agentos.kernel.syscall","message":"Task submit failed: invalid parameters","trace_id":"abc123","error_code":-1,"error":"Input length exceeds limit"}
+{"timestamp":1701234567.890,"level":"error","logger":"agentrt.kernel.syscall","message":"Task submit failed: invalid parameters","trace_id":"abc123","error_code":-1,"error":"Input length exceeds limit"}
 ```
 
 #### CRITICAL (严重错误级别)
@@ -459,7 +459,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"critical","logger":"agentos.kernel.core","message":"Out of memory, cannot allocate task context","error_code":-2,"available_memory_mb":0}
+{"timestamp":1701234567.890,"level":"critical","logger":"agentrt.kernel.core","message":"Out of memory, cannot allocate task context","error_code":-2,"available_memory_mb":0}
 ```
 
 #### AUDIT (审计级别)
@@ -475,7 +475,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"audit","logger":"agentos.cupolas","message":"Cupola policy violation detected","trace_id":"abc123","session_id":"sess_456","event_type":"POLICY_VIOLATION","actor_id":"user_alice","target_resource":"cupola_isolation","action":"modify","result":"denied"}
+{"timestamp":1701234567.890,"level":"audit","logger":"agentrt.cupolas","message":"Cupola policy violation detected","trace_id":"abc123","session_id":"sess_456","event_type":"POLICY_VIOLATION","actor_id":"user_alice","target_resource":"cupola_isolation","action":"modify","result":"denied"}
 ```
 
 **⚠️ 注意**: AUDIT 级别日志不受日志级别配置过滤，始终输出到审计日志文件。生产环境必须保留审计日志，保留期限应符合合规要求。
@@ -512,16 +512,16 @@ logging:
 
 ### 4.1 存储路径
 
-日志文件统一存放在 `agentos/heapstore/logs/` 目录下，按模块分类：
+日志文件统一存放在 `agentrt/heapstore/logs/` 目录下，按模块分类：
 
 ```
-agentos/heapstore/logs/
-├── kernel/                 # 内核日志 (agentos/atoms/ 模块)
+agentrt/heapstore/logs/
+├── kernel/                 # 内核日志 (agentrt/atoms/ 模块)
 │   ├── core.log
 │   ├── coreloopthree.log
 │   ├── memoryrovol.log
 │   └── syscall.log
-├── services/               # 服务层日志 (agentos/daemon/)
+├── services/               # 服务层日志 (agentrt/daemon/)
 │   ├── llm_d.log
 │   ├── market_d.log
 │   ├── monit_d.log
@@ -570,7 +570,7 @@ filebeat.inputs:
 - type: log
   enabled: true
   paths:
-    - agentos/heapstore/logs/**/*.log
+    - agentrt/heapstore/logs/**/*.log
   json.keys_under_root: true
   processors:
     - add_host_metadata: ~
@@ -578,14 +578,14 @@ filebeat.inputs:
 
 output.elasticsearch:
   hosts: ["localhost:9200"]
-  index: "agentos-%{+yyyy.MM.dd}"
+  index: "agentrt-%{+yyyy.MM.dd}"
 ```
 
 #### 索引策略
 
 Elasticsearch 索引命名：
 ```
-agentos-{date}
+agentrt-{date}
 ```
 
 **生命周期管理:**
@@ -662,13 +662,13 @@ Trace: abc123def456
 **日志示例:**
 ```json
 // HTTP 网关日志
-{"timestamp":1701234567.890,"level":"info","logger":"agentos.gateway","message":"Request received","trace_id":"abc123","span_id":"span_001"}
+{"timestamp":1701234567.890,"level":"info","logger":"agentrt.gateway","message":"Request received","trace_id":"abc123","span_id":"span_001"}
 
 // LLM 服务日志
-{"timestamp":1701234568.123,"level":"info","logger":"agentos.llm_d","message":"Processing LLM request","trace_id":"abc123","span_id":"span_002","parent_span_id":"span_001"}
+{"timestamp":1701234568.123,"level":"info","logger":"agentrt.llm_d","message":"Processing LLM request","trace_id":"abc123","span_id":"span_002","parent_span_id":"span_001"}
 
 // 模型推理日志
-{"timestamp":1701234569.456,"level":"info","logger":"agentos.inference","message":"Model inference completed","trace_id":"abc123","span_id":"span_003","parent_span_id":"span_002","duration_ms":1234}
+{"timestamp":1701234569.456,"level":"info","logger":"agentrt.inference","message":"Model inference completed","trace_id":"abc123","span_id":"span_003","parent_span_id":"span_002","duration_ms":1234}
 ```
 
 ### 5.3 追踪上下文传播
@@ -788,7 +788,7 @@ logger.info(f"User email: {hash_email(user_email)}")
 {
   "timestamp": 1701234567.890,
   "level": "audit",
-  "logger": "agentos.audit",
+  "logger": "agentrt.audit",
   "trace_id": "abc123",
   "session_id": "sess_456",
   "message": "User login successful",
@@ -938,7 +938,7 @@ class BatchHandler:
 | 会话 | `session_id` | string | `"sess_456"` |
 | 性能 | `duration_ms` | number | `125.5` |
 | 错误 | `error_code` | integer \| string | `-2` 或 `"0x0003"` |
-| Agent | `agent_id` | string | `"com.agentos.pm.v1"` |
+| Agent | `agent_id` | string | `"com.agentrt.pm.v1"` |
 | 任务 | `task_id` | string | `"task_abc123"` |
 
 ---

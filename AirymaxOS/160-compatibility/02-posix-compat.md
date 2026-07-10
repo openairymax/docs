@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # POSIX 兼容性设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义 agentrt-linux 对 POSIX 标准的兼容层次、syscall 兼容性分类与语义扩展
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **同源映射**: Linux 6.6 KABI / ABI 兼容性体系（IRON-9 v2 [IND] 完全独立层）
-> **IRON-9 v2 层次**: [IND] 完全独立层（POSIX 兼容性为 agentrt-linux 作为 OS 发行版的专属设计）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义 agentrt-linux 对 POSIX 标准的兼容层次、syscall 兼容性分类与语义扩展\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
+> **同源映射**：Linux 6.6 KABI / ABI 兼容性体系（IRON-9 v2 [IND] 完全独立层）\
+> **IRON-9 v2 层次**：[IND] 完全独立层（POSIX 兼容性为 agentrt-linux 作为 OS 发行版的专属设计）
 
 ---
 

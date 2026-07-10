@@ -12,12 +12,12 @@
 
 "RT" 的命名参照了传统操作系统中的"Runtime"概念（如 Windows Runtime / WinRT），强调 Airymax 不是上层框架，而是位于操作系统层面的基础运行时。
 
-### 1.2 agentos
+### 1.2 agentrt
 
-**agentos** = **agent** + **os**（全小写，无空格），即 Airymax 内部的"操作系统层"。它是整个 Airymax 平台的核心基础设施层，提供进程管理、内存管理、IPC 通信、文件系统等底层能力。
+**agentrt** = **agent** + **os**（全小写，无空格），即 Airymax 内部的"操作系统层"。它是整个 Airymax 平台的核心基础设施层，提供进程管理、内存管理、IPC 通信、文件系统等底层能力。
 
-- 所有 C 源代码文件位于 `agentos/` 目录下
-- 代码中的命名空间前缀统一使用 `agentos_`（如 `agentos_error_t`、`agentos_log_write`）
+- 所有 C 源代码文件位于 `agentrt/` 目录下
+- 代码中的命名空间前缀统一使用 `agentrt_`（如 `agentrt_error_t`、`agentrt_log_write`）
 - **注意**：目录名与代码前缀使用小写，与代码仓库目录 `AgentRT/` 的 PascalCase 形成层次区分（产品名为 Airymax）
 
 ### 1.3 Atoms
@@ -35,7 +35,7 @@
 - 采用微核心（MicroCoreRT）架构设计
 - 负责所有 Cupolas 服务的生命周期管理
 - 实现 CoreLoopThree 认知循环的调度
-- 目录名为 `corekern/`（小写），代码前缀为 `agentos_core_*`
+- 目录名为 `corekern/`（小写），代码前缀为 `agentrt_core_*`
 - **注**: MicroCoreRT（微核心）是 CoreKern 的架构概念层名称，两者共享同一目录和代码前缀，非独立模块
 
 ### 1.5 CoreLoopThree
@@ -131,17 +131,17 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 所有 C 源文件（`.c`）和头文件（`.h`）使用 **snake_case** 命名。
 
 ```
-agentos/commons/utils/observability/src/logger.c
-agentos/commons/utils/observability/include/logger.h
-agentos/commons/platform/include/platform.h
-agentos/commons/utils/quality/agentos_quality.h
-agentos/commons/utils/config_unified/include/core_config.h
+agentrt/commons/utils/observability/src/logger.c
+agentrt/commons/utils/observability/include/logger.h
+agentrt/commons/platform/include/platform.h
+agentrt/commons/utils/quality/agentrt_quality.h
+agentrt/commons/utils/config_unified/include/core_config.h
 ```
 
 ### 3.2 目录名：PascalCase（顶层）/ snake_case（代码层）
 
 - **顶层概念目录** 使用 PascalCase：`Docs/`、`Tests/`、`Scripts/`
-- **代码层目录** 使用 snake_case：`agentos/`、`commons/`、`protocols/`、`cupolas/`、`corekern/`
+- **代码层目录** 使用 snake_case：`agentrt/`、`commons/`、`protocols/`、`cupolas/`、`corekern/`
 
 ### 3.3 配置文件：kebab-case
 
@@ -179,10 +179,10 @@ scripts/dev/utils/run_all_fixes.sh
 ### 4.2 代码示例
 
 ```c
-// agentos 模块 - 日志操作
-const char *agentos_log_set_trace_id(const char *trace_id);
-const char *agentos_log_get_trace_id(void);
-void        agentos_log_write(int level, const char *file, int line, const char *fmt, ...);
+// agentrt 模块 - 日志操作
+const char *agentrt_log_set_trace_id(const char *trace_id);
+const char *agentrt_log_get_trace_id(void);
+void        agentrt_log_write(int level, const char *file, int line, const char *fmt, ...);
 
 // config 模块 - 配置值操作
 config_value_t *config_value_create_null(void);
@@ -202,10 +202,10 @@ int heapstore_init(const heapstore_config_t *config);
 int heapstore_put(const char *key, const void *data, size_t size);
 int heapstore_get(const char *key, void **data, size_t *size);
 
-// CoreKern 模块（代码前缀 agentos_core_）
-int agentos_core_start(void);
-int agentos_core_stop(void);
-int agentos_core_register_cupola(const char *name, cupola_entry_t entry);
+// CoreKern 模块（代码前缀 agentrt_core_）
+int agentrt_core_start(void);
+int agentrt_core_stop(void);
+int agentrt_core_register_cupola(const char *name, cupola_entry_t entry);
 ```
 
 ### 4.3 常见动作动词
@@ -217,9 +217,9 @@ int agentos_core_register_cupola(const char *name, cupola_entry_t entry);
 | `get` | 获取值（不修改状态） | `config_value_get_type` |
 | `set` | 设置值 | `config_context_set` |
 | `init` | 初始化 | `heapstore_init` |
-| `start` | 启动 | `agentos_core_start` |
-| `stop` | 停止 | `agentos_core_stop` |
-| `write` | 写入 | `agentos_log_write` |
+| `start` | 启动 | `agentrt_core_start` |
+| `stop` | 停止 | `agentrt_core_stop` |
+| `write` | 写入 | `agentrt_log_write` |
 | `clone` | 克隆/深拷贝 | `config_value_clone` |
 | `has` | 检查是否存在 | `config_context_has` |
 | `delete` | 删除 | `config_context_delete` |
@@ -244,7 +244,7 @@ int agentos_core_register_cupola(const char *name, cupola_entry_t entry);
 
 ```c
 // 基础类型
-typedef int32_t agentos_error_t;       // agentos 错误码类型
+typedef int32_t agentrt_error_t;       // agentrt 错误码类型
 
 // 结构体类型
 typedef struct config_value    config_value_t;     // 配置值
@@ -280,11 +280,11 @@ typedef enum   memoryrovol_level memoryrovol_level_t;
 
 ```c
 typedef enum {
-    AGENTOS_MEM_LAYER1_RAW = 0,       // 注意：不是全大写，而是模块前缀 + 含义
-    AGENTOS_MEM_LAYER2_FEATURE = 1,
-    AGENTOS_MEM_LAYER3_EPISODIC = 2,
-    AGENTOS_MEM_LAYER4_PATTERN = 3,
-} agentos_memory_layer_t;
+    AGENTRT_MEM_LAYER1_RAW = 0,       // 注意：不是全大写，而是模块前缀 + 含义
+    AGENTRT_MEM_LAYER2_FEATURE = 1,
+    AGENTRT_MEM_LAYER3_EPISODIC = 2,
+    AGENTRT_MEM_LAYER4_PATTERN = 3,
+} agentrt_memory_layer_t;
 
 typedef enum {
     CONFIG_TYPE_NULL = 0,
@@ -309,32 +309,32 @@ typedef enum {
 
 ```c
 // 日志级别宏
-#define AGENTOS_LOG_LEVEL_DEBUG 0
-#define AGENTOS_LOG_LEVEL_INFO  1
-#define AGENTOS_LOG_LEVEL_WARN  2
-#define AGENTOS_LOG_LEVEL_ERROR 3
-#define AGENTOS_LOG_LEVEL_FATAL 4
+#define AGENTRT_LOG_LEVEL_DEBUG 0
+#define AGENTRT_LOG_LEVEL_INFO  1
+#define AGENTRT_LOG_LEVEL_WARN  2
+#define AGENTRT_LOG_LEVEL_ERROR 3
+#define AGENTRT_LOG_LEVEL_FATAL 4
 
 // 平台检测宏
-#define AGENTOS_PLATFORM_LINUX   1
-#define AGENTOS_PLATFORM_MACOS   1
-#define AGENTOS_PLATFORM_WINDOWS 1
-#define AGENTOS_PLATFORM_NAME    "Linux"
-#define AGENTOS_PLATFORM_BITS    64
-#define AGENTOS_PLATFORM_POSIX   1
+#define AGENTRT_PLATFORM_LINUX   1
+#define AGENTRT_PLATFORM_MACOS   1
+#define AGENTRT_PLATFORM_WINDOWS 1
+#define AGENTRT_PLATFORM_NAME    "Linux"
+#define AGENTRT_PLATFORM_BITS    64
+#define AGENTRT_PLATFORM_POSIX   1
 
 // 质量保证宏
-#define AGENTOS_CHECK_NULL(ptr, error_code)       ...
-#define AGENTOS_CHECK_NULL_GOTO(ptr, label, code) ...
-#define AGENTOS_CHECK_CONDITION(cond, error_code) ...
-#define AGENTOS_CHECK_RANGE(value, min, max, err) ...
+#define AGENTRT_CHECK_NULL(ptr, error_code)       ...
+#define AGENTRT_CHECK_NULL_GOTO(ptr, label, code) ...
+#define AGENTRT_CHECK_CONDITION(cond, error_code) ...
+#define AGENTRT_CHECK_RANGE(value, min, max, err) ...
 
 // 头文件保护宏
-#define AGENTOS_TYPES_H
-#define AGENTOS_UTILS_LOGGER_H
-#define AGENTOS_CORE_CONFIG_H
-#define AGENTOS_PLATFORM_H
-#define AGENTOS_QUALITY_H
+#define AGENTRT_TYPES_H
+#define AGENTRT_UTILS_LOGGER_H
+#define AGENTRT_CORE_CONFIG_H
+#define AGENTRT_PLATFORM_H
+#define AGENTRT_QUALITY_H
 ```
 
 ### 6.2 模块前缀规则
@@ -342,7 +342,7 @@ typedef enum {
 所有宏必须以模块前缀开头，避免全局命名冲突：
 
 ```
-AGENTOS_<类别>_<名称>
+AGENTRT_<类别>_<名称>
 ```
 
 ---
@@ -355,35 +355,35 @@ AGENTOS_<类别>_<名称>
 
 | 模块 | 格式 | 示例 |
 |------|------|------|
-| agentos（通用） | `AGENTOS_ERR_<CODE>` | `AGENTOS_ERR_INVALID_PARAM`、`AGENTOS_ERR_OUT_OF_MEMORY` |
+| agentrt（通用） | `AGENTRT_ERR_<CODE>` | `AGENTRT_ERR_INVALID_PARAM`、`AGENTRT_ERR_OUT_OF_MEMORY` |
 | config | `CONFIG_ERROR_<NAME>` | `CONFIG_ERROR_INVALID_ARG`、`CONFIG_ERROR_NOT_FOUND` |
 
-### 7.2 通用错误码（agentos 层）
+### 7.2 通用错误码（agentrt 层）
 
 ```c
-#define AGENTOS_OK      (0)   // 成功
-#define AGENTOS_ERR_INVALID_PARAM       (-2)  // 参数无效
-#define AGENTOS_ERR_OUT_OF_MEMORY       (-4)  // 内存不足
-#define AGENTOS_ERR_BUSY        (-17)  // 资源忙碌
-#define AGENTOS_ENOENT       (-4)  // 资源不存在
-#define AGENTOS_ERR_PERMISSION_DENIED        (-10)  // 权限不足
-#define AGENTOS_ETIMEDOUT    (-6)  // 操作超时
-#define AGENTOS_EIO          (-7)  // I/O 错误
-#define AGENTOS_EEXIST       (-8)  // 资源已存在
-#define AGENTOS_ENOTINIT     (-9)  // 引擎未初始化
-#define AGENTOS_ECANCELLED   (-10) // 操作已取消
-#define AGENTOS_ENOTSUP      (-11) // 操作不支持
-#define AGENTOS_EOVERFLOW    (-12) // 溢出错误
-#define AGENTOS_EPROTO       (-13) // 协议错误
-#define AGENTOS_ENOTCONN     (-14) // 未连接
-#define AGENTOS_ECONNRESET   (-15) // 连接重置
-#define AGENTOS_ENOSYS       (-16) // 函数未实现
-#define AGENTOS_EFAIL        (-17) // 通用失败
-#define AGENTOS_ENOTFOUND    (-18) // 资源未找到
-#define AGENTOS_EPLATFORM    (-27) // 平台未初始化
-#define AGENTOS_EPROTONOSUPPORT (-28) // 协议/命令不支持
-#define AGENTOS_ESERVICE     (-29) // 服务不可用
-#define AGENTOS_EUNKNOWN     (-99) // 未知错误
+#define AGENTRT_OK      (0)   // 成功
+#define AGENTRT_ERR_INVALID_PARAM       (-2)  // 参数无效
+#define AGENTRT_ERR_OUT_OF_MEMORY       (-4)  // 内存不足
+#define AGENTRT_ERR_BUSY        (-17)  // 资源忙碌
+#define AGENTRT_ENOENT       (-4)  // 资源不存在
+#define AGENTRT_ERR_PERMISSION_DENIED        (-10)  // 权限不足
+#define AGENTRT_ETIMEDOUT    (-6)  // 操作超时
+#define AGENTRT_EIO          (-7)  // I/O 错误
+#define AGENTRT_EEXIST       (-8)  // 资源已存在
+#define AGENTRT_ENOTINIT     (-9)  // 引擎未初始化
+#define AGENTRT_ECANCELLED   (-10) // 操作已取消
+#define AGENTRT_ENOTSUP      (-11) // 操作不支持
+#define AGENTRT_EOVERFLOW    (-12) // 溢出错误
+#define AGENTRT_EPROTO       (-13) // 协议错误
+#define AGENTRT_ENOTCONN     (-14) // 未连接
+#define AGENTRT_ECONNRESET   (-15) // 连接重置
+#define AGENTRT_ENOSYS       (-16) // 函数未实现
+#define AGENTRT_EFAIL        (-17) // 通用失败
+#define AGENTRT_ENOTFOUND    (-18) // 资源未找到
+#define AGENTRT_EPLATFORM    (-27) // 平台未初始化
+#define AGENTRT_EPROTONOSUPPORT (-28) // 协议/命令不支持
+#define AGENTRT_ESERVICE     (-29) // 服务不可用
+#define AGENTRT_EUNKNOWN     (-99) // 未知错误
 ```
 
 ### 7.3 模块级错误码（config 模块示例）
@@ -406,7 +406,7 @@ typedef enum {
 
 ### 7.4 错误码设计原则
 
-1. **通用层**（agentos）使用类 POSIX 风格的宏定义（`AGENTOS_E*`），所有错误码为负值，`0` 表示成功
+1. **通用层**（agentrt）使用类 POSIX 风格的宏定义（`AGENTRT_E*`），所有错误码为负值，`0` 表示成功
 2. **模块层**（如 config）使用枚举类型，正值表示错误类别，`0` 表示成功
 3. 错误码语义应与 POSIX errno 保持一致的直觉（如 `EINVAL` = 无效参数）
 4. 每个模块的错误码转换为字符串的函数命名为 `module_error_to_string()`
@@ -450,10 +450,10 @@ const config_value_t *config_context_get(const config_context_t *ctx, const char
  * @brief 设置跨平台线程局部存储变量
  * @param key 变量键名
  * @param value 变量值
- * @return AGENTOS_OK 成功，AGENTOS_ENOMEM 内存不足
+ * @return AGENTRT_OK 成功，AGENTRT_ENOMEM 内存不足
  * @since v0.2.0
  */
-int agentos_tls_set(const char *key, void *value);
+int agentrt_tls_set(const char *key, void *value);
 ```
 
 ### 8.3 版本号规则
@@ -469,22 +469,22 @@ int agentos_tls_set(const char *key, void *value);
 | 类别 | 规则 | 示例 |
 |------|------|------|
 | 平台名 | PascalCase | `Airymax` |
-| 操作系统层 | 全小写 | `agentos` |
+| 操作系统层 | 全小写 | `agentrt` |
 | 核心组件 | PascalCase | `CoreKern`、`CoreLoopThree`、`TaskFlow`、`HeapStore`、`MemoryRovol` |
 | 复数组件 | PascalCase（复数） | `Atoms`、`Cupolas` |
 | 用户态服务 | snake_case + `_d` | `gateway_d`、`llm_d`、`tool_d` |
 | C 源文件 | snake_case | `logger.c`、`core_config.c` |
 | 头文件 | snake_case | `logger.h`、`platform.h` |
-| 代码目录 | snake_case | `agentos/`、`commons/`、`protocols/` |
+| 代码目录 | snake_case | `agentrt/`、`commons/`、`protocols/` |
 | 顶层目录 | PascalCase | `Docs/`、`Tests/`、`Scripts/` |
 | 配置文件 | kebab-case | `.editorconfig`、`.env.example` |
 | 函数 | `module_action_object()` | `heapstore_init`、`config_value_create` |
-| 类型 | `module_type_t` | `agentos_error_t`、`config_value_t` |
-| 枚举 | `MODULE_UPPER` | `CONFIG_TYPE_INT`、`AGENTOS_MEM_LAYER1_RAW` |
-| 宏 | `UPPER_SNAKE_CASE` | `AGENTOS_LOG_LEVEL_DEBUG`、`AGENTOS_CHECK_NULL` |
-| 通用错误码 | `AGENTOS_ERR_*` | `AGENTOS_ERR_INVALID_PARAM`、`AGENTOS_ERR_OUT_OF_MEMORY` |
+| 类型 | `module_type_t` | `agentrt_error_t`、`config_value_t` |
+| 枚举 | `MODULE_UPPER` | `CONFIG_TYPE_INT`、`AGENTRT_MEM_LAYER1_RAW` |
+| 宏 | `UPPER_SNAKE_CASE` | `AGENTRT_LOG_LEVEL_DEBUG`、`AGENTRT_CHECK_NULL` |
+| 通用错误码 | `AGENTRT_ERR_*` | `AGENTRT_ERR_INVALID_PARAM`、`AGENTRT_ERR_OUT_OF_MEMORY` |
 | 模块错误码 | `MODULE_ERROR_*` | `CONFIG_ERROR_NOT_FOUND` |
-| 头文件保护 | `UPPER_SNAKE_CASE` | `AGENTOS_TYPES_H`、`AGENTOS_PLATFORM_H` |
+| 头文件保护 | `UPPER_SNAKE_CASE` | `AGENTRT_TYPES_H`、`AGENTRT_PLATFORM_H` |
 | API 版本 | `@since vX.Y.Z` | `@since v0.1.0` |
 
 ---
@@ -495,9 +495,9 @@ int agentos_tls_set(const char *key, void *value);
 
 | 反模式 | 问题 | 正确写法 |
 |--------|------|---------|
-| `agentosLogWrite` | 混用 camelCase，C 代码应使用 snake_case | `agentos_log_write` |
+| `agentrtLogWrite` | 混用 camelCase，C 代码应使用 snake_case | `agentrt_log_write` |
 | `ConfigValue` | C 类型不应使用 PascalCase | `config_value_t` |
-| `AGENTOS_log_level` | 宏不应混用大小写 | `AGENTOS_LOG_LEVEL` |
+| `AGENTRT_log_level` | 宏不应混用大小写 | `AGENTRT_LOG_LEVEL` |
 | `gatewayDaemon` | Daemon 名应使用 `_d` 后缀 | `gateway_d` |
 | `core_kern` | 组件名应使用 PascalCase | `CoreKern` |
 | `heap-store.h` | C 头文件应使用 snake_case | `heapstore.h` |

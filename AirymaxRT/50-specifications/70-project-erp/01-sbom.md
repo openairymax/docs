@@ -30,40 +30,40 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_core | 1.0.0 | MIT | 内部 | 提供基础内核功能，包括错误处理、IPC、内存管理、任务调度和时间管理 |
+| agentrt_core | 1.0.0 | MIT | 内部 | 提供基础内核功能，包括错误处理、IPC、内存管理、任务调度和时间管理 |
 
 #### 3.1.2 认知循环运行时 (CoreLoopThree)
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_cognition | 1.0.0 | MIT | 内部 | 认知引擎，负责用户输入处理和任务规划 |
-| agentos_execution | 1.0.0 | MIT | 内部 | 执行引擎，负责任务执行和监控 |
-| agentos_memory | 1.0.0 | MIT | 内部 | 记忆引擎，负责记忆存储和检索 |
-| agentos_coreloopthree | 1.0.0 | MIT | 内部 | 核心循环，集成认知、执行和记忆引擎 |
+| agentrt_cognition | 1.0.0 | MIT | 内部 | 认知引擎，负责用户输入处理和任务规划 |
+| agentrt_execution | 1.0.0 | MIT | 内部 | 执行引擎，负责任务执行和监控 |
+| agentrt_memory | 1.0.0 | MIT | 内部 | 记忆引擎，负责记忆存储和检索 |
+| agentrt_coreloopthree | 1.0.0 | MIT | 内部 | 核心循环，集成认知、执行和记忆引擎 |
 
 #### 3.1.3 系统调用 (syscall)
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_syscall | 1.0.0 | MIT | 内部 | 系统调用接口，提供任务管理、记忆管理、会话管理和可观测性功能 |
+| agentrt_syscall | 1.0.0 | MIT | 内部 | 系统调用接口，提供任务管理、记忆管理、会话管理和可观测性功能 |
 
 #### 3.1.4 记忆卷 (memoryrovol)
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_memoryrovol | 1.0.0 | MIT | 内部 | 记忆卷管理，提供分层记忆存储和检索功能 |
+| agentrt_memoryrovol | 1.0.0 | MIT | 内部 | 记忆卷管理，提供分层记忆存储和检索功能 |
 
 ### 3.2 安全域 (cupolas)
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_cupolas | 1.0.0 | MIT | 内部 | 安全穹顶，提供虚拟工位、权限裁决、审计和输入净化功能 |
+| agentrt_cupolas | 1.0.0 | MIT | 内部 | 安全穹顶，提供虚拟工位、权限裁决、审计和输入净化功能 |
 
 ### 3.3 任务流引擎 (taskflow)
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos_taskflow | 1.0.0 | MIT | 内部 | 任务流引擎，提供 Pregel BSP 图计算、工作流模式、上下文处理器和并行调度 |
+| agentrt_taskflow | 1.0.0 | MIT | 内部 | 任务流引擎，提供 Pregel BSP 图计算、工作流模式、上下文处理器和并行调度 |
 
 ### 3.4 动态模块 (gateway)
 
@@ -75,7 +75,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos-toolkit-rust | 1.0.0 | MIT | 内部 | Rust SDK，提供 Airymax 客户端库 |
+| agentrt-toolkit-rust | 1.0.0 | MIT | 内部 | Rust SDK，提供 Airymax 客户端库 |
 
 **Rust SDK 依赖**:
 
@@ -91,7 +91,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 组件名称 | 版本 | 许可证 | 来源 | 用途 |
 |---------|------|--------|------|------|
-| agentos-toolkit-go | 1.0.0 | MIT | 内部 | Go SDK，提供 Airymax 客户端库（零外部依赖） |
+| agentrt-toolkit-go | 1.0.0 | MIT | 内部 | Go SDK，提供 Airymax 客户端库（零外部依赖） |
 
 **Go SDK 依赖**: 无外部依赖（仅使用 Go 标准库）
 
@@ -116,7 +116,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 5. 组件详细信息
 
-### 5.1 agentos_core
+### 5.1 agentrt_core
 
 **描述**：Airymax 核心内核模块，提供基础系统功能。
 
@@ -131,7 +131,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `include/` - 公共头文件
 - `src/` - 源代码
 
-### 5.2 agentos_coreloopthree
+### 5.2 agentrt_coreloopthree
 
 **描述**：核心循环模块，集成认知、执行和记忆引擎。
 
@@ -147,7 +147,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `src/execution/` - 执行引擎源代码
 - `src/memory/` - 记忆引擎源代码
 
-### 5.3 agentos_syscall
+### 5.3 agentrt_syscall
 
 **描述**：系统调用模块，提供统一的系统接口。
 
@@ -162,7 +162,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `src/` - 源代码
 - `tests/` - 测试代码
 
-### 5.4 agentos_memoryrovol
+### 5.4 agentrt_memoryrovol
 
 **描述**：记忆卷模块，提供分层记忆存储和检索。
 
@@ -177,7 +177,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `src/` - 源代码
 - `tests/` - 测试代码
 
-### 5.5 agentos_cupolas
+### 5.5 agentrt_cupolas
 
 **描述**：安全域模块，提供安全隔离和权限管理。
 
@@ -192,7 +192,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `src/` - 源代码
 - `tests/` - 测试代码
 
-### 5.6 agentos_taskflow
+### 5.6 agentrt_taskflow
 
 **描述**：任务流引擎模块，提供复杂任务编排能力。
 

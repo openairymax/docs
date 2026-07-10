@@ -62,10 +62,10 @@ ChatClient  // OpenAI 兼容
 ### 2.3 跨语言一致性
 
 四语言 SDK 必须提供一致的 API 表面：
-- Rust: `agentos::cognition::CognitionClient`
-- Python: `agentos.cognition.CognitionClient`
-- Go: `agentos.CognitionClient`
-- TypeScript: `agentos.cognition.CognitionClient`
+- Rust: `agentrt::cognition::CognitionClient`
+- Python: `agentrt.cognition.CognitionClient`
+- Go: `agentrt.CognitionClient`
+- TypeScript: `agentrt.cognition.CognitionClient`
 
 ## 3. 修复任务
 

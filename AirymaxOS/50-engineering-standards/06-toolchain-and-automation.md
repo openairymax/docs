@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）工具链与自动化标准
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 6 卷——工具链与自动化。本卷规定 7 层自动化验证体系、编译期/静态/动态分析工具链、格式化与风格检查、测试框架、覆盖率门槛、CI/CD 流水线与 24 项提交检查清单。
-> **版本**: 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/dev-tools/testing-overview.rst`
-> **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
-> **SSoT 声明（C-2.6 D-06，2026-07-09）**: 本卷为 agentrt-linux **工具链与自动化规则**的唯一权威来源（SSoT）。本卷规则编号的目标体系为 **OS-STD-TOOL-NNN**（4 段前缀，TOOL = Toolchain）。本卷正文中现存的历史编号 **OS-STD-002~158**（与 05-development-process.md 共用 OS-STD-101~158 段导致 30+ 项语义冲突）将逐步迁移为 OS-STD-TOOL-002~158，迁移映射见 §0.2。迁移完成前，历史编号与 OS-STD-TOOL 编号**并存且等价**，规则效力以本卷正文为准。
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 6 卷——工具链与自动化。本卷规定 7 层自动化验证体系、编译期/静态/动态分析工具链、格式化与风格检查、测试框架、覆盖率门槛、CI/CD 流水线与 24 项提交检查清单。\
+> **版本**： 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **同源映射**： `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/dev-tools/testing-overview.rst`\
+> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
+> **SSoT 声明（C-2.6 D-06，2026-07-09）**： 本卷为 agentrt-linux **工具链与自动化规则**的唯一权威来源（SSoT）。本卷规则编号的目标体系为 **OS-STD-TOOL-NNN**（4 段前缀，TOOL = Toolchain）。本卷正文中现存的历史编号 **OS-STD-002~158**（与 05-development-process.md 共用 OS-STD-101~158 段导致 30+ 项语义冲突）将逐步迁移为 OS-STD-TOOL-002~158，迁移映射见 §0.2。迁移完成前，历史编号与 OS-STD-TOOL 编号**并存且等价**，规则效力以本卷正文为准。
 
 ---
 
@@ -716,7 +716,7 @@ agentrt-linux 的工具链配置以代码形式存放在仓库中，确保所有
 ## 14. 文档版本与维护
 
 - **当前版本**: v1.0.1（2026-07-06）
-- **维护者**: agentrt-linux 工程标准委员会（待成立，详见 07 卷）
+- **维护者**: 工程规范委员会（待成立，详见 07 卷）
 - **变更流程**: 任何本卷变更必须经过 RFC → 评审 → ACC 验收流程
 - **回顾周期**: 季度回顾 + 年度大版本
 

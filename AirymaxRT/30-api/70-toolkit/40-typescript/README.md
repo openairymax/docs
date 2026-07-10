@@ -16,7 +16,7 @@ Airymax TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 Airyma
 
 | 维度 | 原则体现 | 具体实现 |
 |------|----------|---------|
-| **系统观** | SDK 作为系统边界抽象 | 统一的 AgentOSClient 入口，封装所有子系统 |
+| **系统观** | SDK 作为系统边界抽象 | 统一的 AgentRTClient 入口，封装所有子系统 |
 | **内核观** | 接口契约化 | 完整的 TypeScript 接口定义，编译时类型检查 |
 | **认知观** | 双思考系统映射 | t1-f/t2 路径的类型安全表达 |
 | **工程观** | 可观测性集成 | 内置追踪、指标、日志的 SDK 集成 |
@@ -28,13 +28,13 @@ Airymax TypeScript SDK 提供 TypeScript/JavaScript 客户端，用于与 Airyma
 
 ```bash
 # npm
-npm install @agentos/sdk
+npm install @agentrt/sdk
 
 # yarn
-yarn add @agentos/sdk
+yarn add @agentrt/sdk
 
 # pnpm
-pnpm add @agentos/sdk
+pnpm add @agentrt/sdk
 ```
 
 ---
@@ -44,12 +44,12 @@ pnpm add @agentos/sdk
 ### 初始化客户端
 
 ```typescript
-import { AgentOSClient } from '@agentos/sdk';
+import { AgentRTClient } from '@agentrt/sdk';
 
-const client = new AgentOSClient({
+const client = new AgentRTClient({
   endpoint: 'http://localhost:8080',
   timeout: 30000,
-  apiKey: process.env.AGENTOS_API_KEY,
+  apiKey: process.env.AGENTRT_API_KEY,
 });
 
 // 健康检查
@@ -382,13 +382,13 @@ try {
 
 ```typescript
 import {
-  AgentOSError,
+  AgentRTError,
   AgentNotFoundError,
   SessionNotFoundError,
   PermissionDeniedError,
   TimeoutError,
   ValidationError,
-} from '@agentos/sdk';
+} from '@agentrt/sdk';
 
 try {
   const agent = await client.agents.get('agent_nonexistent');
@@ -399,7 +399,7 @@ try {
     console.error(`Permission denied: ${error.code}`);
   } else if (error instanceof TimeoutError) {
     console.error(`Operation timed out after ${error.timeoutMs}ms`);
-  } else if (error instanceof AgentOSError) {
+  } else if (error instanceof AgentRTError) {
     console.error(`Airymax error: ${error.code} - ${error.message}`);
   }
 }
@@ -408,12 +408,12 @@ try {
 ### 配置选项
 
 ```typescript
-const client = new AgentOSClient({
+const client = new AgentRTClient({
   endpoint: 'http://localhost:8080',
   timeout: 30000,
   maxRetries: 3,
   retryDelay: 1000,
-  apiKey: process.env.AGENTOS_API_KEY,
+  apiKey: process.env.AGENTRT_API_KEY,
   telemetry: {
     enabled: true,
     samplingRate: 0.1,
@@ -431,23 +431,23 @@ const client = new AgentOSClient({
 
 | 变量名 | 描述 | 默认值 |
 |--------|------|--------|
-| `AGENTOS_ENDPOINT` | 服务端地址 | `http://localhost:8080` |
-| `AGENTOS_API_KEY` | API 密钥 | - |
-| `AGENTOS_TIMEOUT` | 请求超时(ms) | `30000` |
-| `AGENTOS_LOG_LEVEL` | 日志级别 | `INFO` |
-| `AGENTOS_TELEMETRY_ENABLED` | 启用遥测 | `true` |
-| `AGENTOS_SAMPLING_RATE` | 追踪采样率 | `0.1` |
+| `AGENTRT_ENDPOINT` | 服务端地址 | `http://localhost:8080` |
+| `AGENTRT_API_KEY` | API 密钥 | - |
+| `AGENTRT_TIMEOUT` | 请求超时(ms) | `30000` |
+| `AGENTRT_LOG_LEVEL` | 日志级别 | `INFO` |
+| `AGENTRT_TELEMETRY_ENABLED` | 启用遥测 | `true` |
+| `AGENTRT_SAMPLING_RATE` | 追踪采样率 | `0.1` |
 
 ---
 
 ## 🧪 测试
 
 ```typescript
-import { AgentOSClient } from '@agentos/sdk';
-import { MockAgentOSClient } from '@agentos/sdk/testing';
+import { AgentRTClient } from '@agentrt/sdk';
+import { MockAgentRTClient } from '@agentrt/sdk/testing';
 
 // 使用 Mock 客户端进行单元测试
-const mockClient = new MockAgentOSClient();
+const mockClient = new MockAgentRTClient();
 mockClient.agents.create.mockResolvedValue({
   id: 'agent_test_0',
   name: 'test-agent',

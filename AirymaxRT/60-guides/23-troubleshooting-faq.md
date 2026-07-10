@@ -23,14 +23,14 @@
 lsof -i :8080 || netstat -tlnp | grep 8080
 
 # 2. 检查配置文件
-cat agentos/gateway/config/gateway.yaml
+cat agentrt/gateway/config/gateway.yaml
 
 # 3. 前台模式启动查看详细日志
 ./bin/gateway_d -h 0.0.0.0 -p 8080 -d
 
 # 4. 检查依赖服务
 curl -s http://localhost:6379/ping 2>/dev/null || echo "Redis不可达"
-psql -h localhost -U agentos -c "SELECT 1" 2>/dev/null || echo "PostgreSQL不可达"
+psql -h localhost -U agentrt -c "SELECT 1" 2>/dev/null || echo "PostgreSQL不可达"
 ```
 
 **常见原因与解决**:
@@ -158,7 +158,7 @@ redis-cli ping
 curl -v -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer test-key" \
-  -d '{"model":"agentos-default","messages":[{"role":"user","content":"test"}]}'
+  -d '{"model":"agentrt-default","messages":[{"role":"user","content":"test"}]}'
 
 # 2. 检查模型列表
 curl -s http://localhost:8080/v1/models \
@@ -190,7 +190,7 @@ curl -s -X POST http://localhost:8080/ \
 
 ```bash
 # 1. 检查IPC通道状态
-./scripts/agentos-debug ipc
+./scripts/agentrt-debug ipc
 
 # 2. 检查共享内存段
 ipcs -m
@@ -222,10 +222,10 @@ ipcs -q
 redis-cli --latency
 
 # 检查服务发现配置
-cat agentos/daemon/common/include/service_discovery.h | grep DEFAULT
+cat agentrt/daemon/common/include/service_discovery.h | grep DEFAULT
 
 # 检查心跳间隔
-grep heartbeat agentos/gateway/config/*.yaml
+grep heartbeat agentrt/gateway/config/*.yaml
 ```
 
 **优化方案**:
@@ -329,7 +329,7 @@ docker compose -f docker-compose.dev.yml exec gateway /bin/sh
 ```bash
 # 检查Docker网络
 docker network ls
-docker network inspect agentos_default
+docker network inspect agentrt_default
 
 # 检查DNS解析
 docker compose exec gateway nslookup redis
@@ -347,7 +347,7 @@ docker compose exec gateway nslookup postgres
 curl -s http://localhost:8080/metrics | head -20
 
 # 检查Prometheus配置
-cat agentos/gateway/docker/monitoring/prometheus.yml
+cat agentrt/gateway/docker/monitoring/prometheus.yml
 
 # 检查Prometheus目标状态
 # 访问 http://localhost:9090/targets
@@ -363,7 +363,7 @@ cat agentos/gateway/docker/monitoring/prometheus.yml
 curl -s 'http://localhost:9090/api/v1/query?query=up'
 
 # 重新导入仪表盘
-# 使用 agentos/gateway/docker/monitoring/grafana_agentos_dashboard.json
+# 使用 agentrt/gateway/docker/monitoring/grafana_agentrt_dashboard.json
 ```
 
 ---
@@ -398,7 +398,7 @@ curl -s 'http://localhost:9090/api/v1/query?query=up'
 **A**: 5种：Round-Robin、Weighted、Least-Connection、Random、Least-Load。
 
 ### Q10: 如何运行诊断工具？
-**A**: `./scripts/agentos-debug` 支持网关/协议/服务/IPC/熔断/告警/配置7类检查。
+**A**: `./scripts/agentrt-debug` 支持网关/协议/服务/IPC/熔断/告警/配置7类检查。
 
 ### Q11: 如何贡献代码？
 **A**: 参见 [CONTRIBUTING.md](../../CONTRIBUTING.md)，遵循Conventional Commits规范。
@@ -412,8 +412,8 @@ curl -s 'http://localhost:9090/api/v1/query?query=up'
 
 | 工具 | 路径 | 用途 |
 |------|------|------|
-| agentos CLI | `scripts/agentos` | 统一命令行管理 |
-| agentos-debug | `scripts/agentos-debug` | 7类诊断检查 |
+| agentrt CLI | `scripts/agentrt` | 统一命令行管理 |
+| agentrt-debug | `scripts/agentrt-debug` | 7类诊断检查 |
 | 协议测试 | `tests/integration/test_protocol_compatibility.py` | 10类协议测试 |
 | 性能基准 | `tests/benchmarks/benchmark_performance.py` | 8项基准测试 |
 | 一键发布 | `scripts/release.sh` | 7道质量门禁 |
@@ -516,13 +516,13 @@ could not connect to server: Connection refused
 docker ps | grep postgres
 
 # 2. 查看PostgreSQL日志
-docker logs agentos-postgres-dev 2>&1 | tail -50
+docker logs agentrt-postgres-dev 2>&1 | tail -50
 
 # 3. 手动测试连接
-docker exec -it agentos-postgres-dev psql -U agentos -d agentos -c "SELECT version();"
+docker exec -it agentrt-postgres-dev psql -U agentrt -d agentrt -c "SELECT version();"
 
 # 4. 检查网络连通性
-docker exec agentos-kernel-dev ping postgres -c 3
+docker exec agentrt-kernel-dev ping postgres -c 3
 
 # 5. 检查环境变量中的连接字符串
 grep DATABASE_URL docker/.env
@@ -535,7 +535,7 @@ grep DATABASE_URL docker/.env
 | PostgreSQL未完全启动 | 等待健康检查通过（约10-30秒） |
 | 密码错误 | 检查 `.env` 中的 `POSTGRES_PASSWORD` |
 | 网络隔离 | 确保两个容器在同一Docker网络中 |
-| 数据损坏 | 删除卷重新初始化：`docker volume rm agentos_postgres-data` |
+| 数据损坏 | 删除卷重新初始化：`docker volume rm agentrt_postgres-data` |
 
 ---
 
@@ -553,7 +553,7 @@ grep DATABASE_URL docker/.env
 providers:
   primary:
     name: openai
-    api_key: ${AGENTOS_LLM_API_KEY}
+    api_key: ${AGENTRT_LLM_API_KEY}
     base_url: https://api.openai.com/v1
     model: gpt-4-turbo
     max_tokens: 4096
@@ -587,7 +587,7 @@ cost_optimization:
 
 ```bash
 # 1. 查看记忆数据占用
-docker exec agentos-postgres-dev psql -U agentos -d agentos -c "
+docker exec agentrt-postgres-dev psql -U agentrt -d agentrt -c "
   SELECT schemaname, relname, pg_total_relation_size(relid) as size
   FROM pg_stat_user_tables
   ORDER BY size DESC
@@ -609,9 +609,9 @@ memoryrovol:
     retention_days: 30  # 保留30天数据
 
 # 3. 手动清理过期数据
-docker exec agentos-kernel-dev python3 -m agentos.tools.memory_cleanup --dry-run
+docker exec agentrt-kernel-dev python3 -m agentrt.tools.memory_cleanup --dry-run
 # 确认无误后执行：
-docker exec agentos-kernel-dev python3 -m agentos.tools.memory_cleanup
+docker exec agentrt-kernel-dev python3 -m agentrt.tools.memory_cleanup
 ```
 
 ---
@@ -626,14 +626,14 @@ docker exec agentos-kernel-dev python3 -m agentos.tools.memory_cleanup
 
 ```env
 # 开发环境（宽松模式）
-AGENTOS_PERMISSION_MODE=relaxed
-AGENTOS_SANITIZER_MODE=relaxed
-AGENTOS_AUDIT_ENABLED=false
+AGENTRT_PERMISSION_MODE=relaxed
+AGENTRT_SANITIZER_MODE=relaxed
+AGENTRT_AUDIT_ENABLED=false
 
 # 生产环境（严格模式，推荐）
-AGENTOS_PERMISSION_MODE=strict
-AGENTOS_SANITIZER_MODE=strict
-AGENTOS_AUDIT_ENABLED=true
+AGENTRT_PERMISSION_MODE=strict
+AGENTRT_SANITIZER_MODE=strict
+AGENTRT_AUDIT_ENABLED=true
 ```
 
 **各模式对比**:
@@ -663,13 +663,13 @@ AGENTOS_AUDIT_ENABLED=true
 curl http://localhost:8080/api/v1/tasks/<task_id> | jq .
 
 # 2. 查看内核实时日志
-docker logs -f agentos-kernel-dev 2>&1 | grep -E "(task_id=<task_id>|ERROR|WARN)"
+docker logs -f agentrt-kernel-dev 2>&1 | grep -E "(task_id=<task_id>|ERROR|WARN)"
 
 # 3. 检查LLM服务状态
 curl http://localhost:8001/health
 
 # 4. 检查系统资源使用
-docker stats agentos-kernel-dev --no-stream
+docker stats agentrt-kernel-dev --no-stream
 
 # 5. 取消卡住的任务
 curl -X POST http://localhost:8080/api/v1/tasks/<task_id>/cancel
@@ -679,7 +679,7 @@ curl -X POST http://localhost:8080/api/v1/tasks/<task_id>/cancel
 
 | 原因 | 现象 | 解决方案 |
 |------|------|---------|
-| LLM API超时 | 任务停在cognition/planning阶段 | 增加 `AGENTOS_LLM_TIMEOUT` |
+| LLM API超时 | 任务停在cognition/planning阶段 | 增加 `AGENTRT_LLM_TIMEOUT` |
 | 工具执行阻塞 | 任务停在action阶段 | 检查工具服务是否正常 |
 | 死锁 | CPU使用率100%，无日志输出 | 重启内核服务 |
 | 内存不足 | OOM Killer终止进程 | 增加内存限制 |
@@ -694,16 +694,16 @@ curl -X POST http://localhost:8080/api/v1/tasks/<task_id>/cancel
 
 ```bash
 # 1. 检查OpenLab容器是否能解析kernel主机名
-docker exec agentos-openlab-dev ping kernel -c 2
+docker exec agentrt-openlab-dev ping kernel -c 2
 
 # 2. 检查OpenLab的环境变量
-docker exec agentos-openlab-dev env | grep AGENTOS_IPC_URL
+docker exec agentrt-openlab-dev env | grep AGENTRT_IPC_URL
 
 # 3. 手动从OpenLab容器测试连接
-docker exec agentos-openlab-dev curl http://kernel:8080/health
+docker exec agentrt-openlab-dev curl http://kernel:8080/health
 
 # 4. 检查内核容器的端口映射
-docker port agentos-kernel-dev
+docker port agentrt-kernel-dev
 
 # 5. 如果使用host网络模式，确保防火墙允许
 sudo ufw allow 8080/tcp
@@ -713,10 +713,10 @@ sudo ufw allow 8080/tcp
 
 ```yaml
 # ❌ 错误：使用了localhost（在容器内指向自身）
-AGENTOS_IPC_URL=http://localhost:8080
+AGENTRT_IPC_URL=http://localhost:8080
 
 # ✅ 正确：使用服务名（Docker DNS解析）
-AGENTOS_IPC_URL=http://kernel:8080
+AGENTRT_IPC_URL=http://kernel:8080
 ```
 
 ---
@@ -736,13 +736,13 @@ nano docker/.env
 # 修改 POSTGRES_PASSWORD=新密码
 
 # 3. （可选）备份数据
-docker run --rm -v agentos_postgres-data:/data alpine tar czf /backup/pg-backup.tar.gz -C /data .
+docker run --rm -v agentrt_postgres-data:/data alpine tar czf /backup/pg-backup.tar.gz -C /data .
 
 # 4. 启动服务（新密码生效）
 docker compose -f docker/docker-compose.yml up -d
 
 # 5. 验证连接
-docker exec agentos-postgres-dev psql -U agentos -d agentos -c "SELECT 1;"
+docker exec agentrt-postgres-dev psql -U agentrt -d agentrt -c "SELECT 1;"
 ```
 
 ---
@@ -758,7 +758,7 @@ docker exec agentos-postgres-dev psql -U agentos -d agentos -c "SELECT 1;"
 docker stats --no-stream
 
 # 2. 查看慢查询日志
-docker logs agentos-postgres-dev 2>&1 | grep "duration:"
+docker logs agentrt-postgres-dev 2>&1 | grep "duration:"
 
 # 3. 查看LLM API延迟
 curl http://localhost:9090/metrics | grep llm_request_duration
@@ -768,7 +768,7 @@ curl http://localhost:9090/metrics | grep llm_request_duration
 # 查看 P95/P99 延迟趋势图
 
 # 5. 生成性能报告
-docker exec agentos-kernel-dev python3 -m agentos.tools.profile --output profile-report.html
+docker exec agentrt-kernel-dev python3 -m agentrt.tools.profile --output profile-report.html
 ```
 
 **常见瓶颈及优化**:
@@ -847,7 +847,7 @@ docker compose -f docker/docker-compose.yml pull
 docker compose -f docker/docker-compose.yml build
 
 # 3. 执行数据库迁移
-docker compose -f docker/docker-compose.yml exec postgres psql -U agentos -d agentos -f /migrations/v1.0.0.sql
+docker compose -f docker/docker-compose.yml exec postgres psql -U agentrt -d agentrt -f /migrations/v1.0.0.sql
 
 # 4. 滚动更新（零停机）
 docker compose -f docker/docker-compose.yml up -d --no-deps --build kernel
@@ -879,8 +879,8 @@ docker compose -f docker/docker-compose.yml up -d
 
 ### 社区支持
 
-- **GitCode Issues**: https://gitcode.com/spharx/agentos/issues
-- **讨论区**: https://gitcode.com/spharx/agentos/discussions
+- **GitCode Issues**: https://gitcode.com/spharx/agentrt/issues
+- **讨论区**: https://gitcode.com/spharx/agentrt/discussions
 
 ### 商业支持
 
@@ -891,19 +891,19 @@ docker compose -f docker/docker-compose.yml up -d
 
 为了快速定位和解决问题，请提供：
 
-1. **Airymax版本**: `agentos-kernel --version`
+1. **Airymax版本**: `agentrt-kernel --version`
 2. **操作系统**: `uname -a`
 3. **Docker版本**: `docker --version`
 4. **复现步骤**: 最小化复现代码
 5. **期望行为 vs 实际行为**
 6. **相关日志**:
    ```bash
-   docker logs agentos-kernel-dev > kernel.log 2>&1
-   docker logs agentos-postgres-dev > postgres.log 2>&1
+   docker logs agentrt-kernel-dev > kernel.log 2>&1
+   docker logs agentrt-postgres-dev > postgres.log 2>&1
    ```
 7. **环境变量**（脱敏后）:
    ```bash
-   env | grep AGENTOS > env.txt  # 删除敏感信息后附上
+   env | grep AGENTRT > env.txt  # 删除敏感信息后附上
    ```
 
 ---

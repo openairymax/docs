@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）维护者制度与治理
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 7 篇——治理层规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `MAINTAINERS`（734KB）维护者制度范本
-> **理论根基**: Linux 内核 30+ 年沉淀的 Lieutenant System（副官系统）+ Airymax 体系并行论
-> **替代关系**: 本文档替代 Linux `Documentation/process/management-style.rst`、`submitting-patches.rst`（DCO 章节）、`contribution-maturity-model.rst`、`6.Followthrough.rst` 在 agentrt-linux 场景下的适用
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 7 篇——治理层规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **同源映射**： agentrt `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `MAINTAINERS`（734KB）维护者制度范本\
+> **理论根基**： Linux 内核 30+ 年沉淀的 Lieutenant System（副官系统）+ Airymax 体系并行论\
+> **替代关系**： 本文档替代 Linux `Documentation/process/management-style.rst`、`submitting-patches.rst`（DCO 章节）、`contribution-maturity-model.rst`、`6.Followthrough.rst` 在 agentrt-linux 场景下的适用
 
 ---
 
@@ -818,7 +818,7 @@ agentrt-linux 总维护者承担 BDFL（Benevolent Dictator For Life）角色。
 ## 13. 文档版本与维护
 
 - **当前版本**: v1.0（2026-07-06）
-- **维护者**: agentrt-linux 工程标准委员会（待成立，本文档定义其任命流程）
+- **维护者**: 工程规范委员会（待成立，本文档定义其任命流程）
 - **变更流程**: 任何治理规则变更必须经过 RFC → 评审（14 天公示）→ 注册流程（第 10.6 节）
 - **回顾周期**: 季度回顾 + 年度大版本
 

@@ -182,7 +182,7 @@ Airymax 技术规范体系是项目开发、测试、部署和维护的权威标
 
 **双错误码体系**:
 Airymax 采用双错误码体系：
-- **C 负整数体系（首要）**: 定义于 `agentos/commons/utils/error/include/error.h`，C 内核和 daemon 层必须使用（如 `AGENTOS_EINVAL=-2`）
+- **C 负整数体系（首要）**: 定义于 `agentrt/commons/utils/error/include/error.h`，C 内核和 daemon 层必须使用（如 `AGENTRT_EINVAL=-2`）
 - **SDK 十六进制体系（次要）**: 定义于 `error_code_reference.md`，SDK 和外部接口使用（如 `0x0000-0x7FFF` 分段）
 
 > 详见 [10-terminology.md](10-terminology.md) 中"错误码体系"条目
@@ -311,7 +311,7 @@ Airymax 采用双错误码体系：
 **核心要求**:
 - 统一适配器接口 `are_svc_discovery_adapter_t`
 - 五种后端：SHM（高性能本地）/ DNS-SD（局域网）/ Consul（生产）/ etcd（K8s 原生）/ K8s（原生 Service）
-- 配置选择：`agentos.yaml` 的 `service_discovery.backend` 字段
+- 配置选择：`agentrt.yaml` 的 `service_discovery.backend` 字段
 
 ### 5. JSON-RPC API 规范
 
@@ -331,7 +331,7 @@ Airymax 采用双错误码体系：
 | [error_code_standard/README.md](40-error-code/README.md) | v0.1.0-draft | 📝 草案 | 统一错误码分段 + 权威源唯一性 + Cupolas 错误码完全统一 |
 
 **核心要求**:
-- 权威源唯一：`agentos/commons/utils/error/include/error.h` 为唯一定义源
+- 权威源唯一：`agentrt/commons/utils/error/include/error.h` 为唯一定义源
 - 分段规范：通用 -1~-99 / 系统 -100~-199 / 内核 -200~-299 / 服务 -300~-399 / LLM -400~-499 / 执行 -500~-599 / 记忆 -600~-699 / 安全 -700~-799 / 协议 -800~-899
 - 消除三套并行错误码系统（commons / cupolas enum / cupolas 本地 #define）
 
@@ -390,7 +390,7 @@ Airymax 采用双错误码体系：
 python scripts/validate_contract.py --contract agent_contract.json
 
 # 代码规范检查
-python scripts/lint_code.py --lang c --path agentos/atoms/
+python scripts/lint_code.py --lang c --path agentrt/atoms/
 
 # 安全扫描
 python scripts/security_scan.py --sbom sbom.json
@@ -529,14 +529,14 @@ python scripts/license_compliance.py --report
 ### 1. 问题报告
 
 - **GitHub Issues**: [规范问题报告](https://github.com/SpharxTeam/AgentRT/issues)
-- **邮件列表**: specifications@agentos.io
+- **邮件列表**: specifications@agentrt.io
 - **Discord**: #specifications 频道
 
 ### 2. 技术支持
 
-- **规范解释**: standards@agentos.io
-- **合规咨询**: compliance@agentos.io
-- **安全报告**: security@agentos.io
+- **规范解释**: standards@agentrt.io
+- **合规咨询**: compliance@agentrt.io
+- **安全报告**: security@agentrt.io
 
 ### 3. 培训资源
 

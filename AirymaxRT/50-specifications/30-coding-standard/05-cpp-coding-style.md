@@ -36,8 +36,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 模块 | 语言标准 | 编译器要求 |
 |------|----------|-----------|
-| agentos/atoms/corekern | C++17 | GCC 11+ / Clang 14+ |
-| agentos/daemon/ | C++17 | GCC 11+ / Clang 14+ |
+| agentrt/atoms/corekern | C++17 | GCC 11+ / Clang 14+ |
+| agentrt/daemon/ | C++17 | GCC 11+ / Clang 14+ |
 | openlab/ | C++17 | GCC 11+ / Clang 14+ |
 
 ### 1.4 与 Airymax 架构的关系
@@ -46,16 +46,16 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 组件 | C++ 代码位置 | 关联原则 |
 |------|------|-------------|---------|
-| 原子核心 | corekern/ | agentos/atoms/corekern/ | K-1, K-2 |
-| 认知层 | coreloopthree/ | agentos/atoms/cognition/ | C-1, C-2 |
-| 记忆层 | memoryrovol/ | agentos/atoms/memory/ | C-3, C-4 |
-| 安全层 | agentos/cupolas/ | agentos/atoms/agentos/cupolas/ | E-1, S-2 |
-| 系统调用 | syscall/ | agentos/atoms/syscall/ | K-2, K-3 |
-| 用户态服务层 | agentos/daemon/ | agentos/daemon/*_d/ | S-3, K-4 |
+| 原子核心 | corekern/ | agentrt/atoms/corekern/ | K-1, K-2 |
+| 认知层 | coreloopthree/ | agentrt/atoms/cognition/ | C-1, C-2 |
+| 记忆层 | memoryrovol/ | agentrt/atoms/memory/ | C-3, C-4 |
+| 安全层 | agentrt/cupolas/ | agentrt/atoms/agentrt/cupolas/ | E-1, S-2 |
+| 系统调用 | syscall/ | agentrt/atoms/syscall/ | K-2, K-3 |
+| 用户态服务层 | agentrt/daemon/ | agentrt/daemon/*_d/ | S-3, K-4 |
 
 **层次纪律**（原则 S-2）:
-- `agentos/atoms/` 内部模块只能通过 `corekern/` 的 IPC 机制通信
-- `agentos/daemon/` 用户态服务层只能通过 `syscalls.h` 与内核交互
+- `agentrt/atoms/` 内部模块只能通过 `corekern/` 的 IPC 机制通信
+- `agentrt/daemon/` 用户态服务层只能通过 `syscalls.h` 与内核交互
 - 禁止跨层访问，禁止循环依赖
 
 ---
@@ -69,9 +69,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **命名空间目录**：与命名空间层次对应
 
 ```
-agentos/atoms/corekern/
+agentrt/atoms/corekern/
 ├── include/
-│   ├── agentos_types.h
+│   ├── agentrt_types.h
 │   ├── memory_manager.h
 │   └── ipc_binder.h
 └── src/
@@ -84,13 +84,13 @@ agentos/atoms/corekern/
 ```cpp
 // Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-#ifndef AGENTOS_MODULE_NAME_H
-#define AGENTOS_MODULE_NAME_H
+#ifndef AGENTRT_MODULE_NAME_H
+#define AGENTRT_MODULE_NAME_H
 
-#include "agentos_base.h"
-#include "agentos_types.h"
+#include "agentrt_base.h"
+#include "agentrt_types.h"
 
-namespace agentos {
+namespace agentrt {
 
 // 外部 C 链接声明
 #ifdef __cplusplus
@@ -98,7 +98,7 @@ extern "C" {
 #endif
 
 // 常量定义
-constexpr uint32_t AGENTOS_MAX_NAME_LEN = 256;
+constexpr uint32_t AGENTRT_MAX_NAME_LEN = 256;
 
 // 类型声明
 class ModuleClass;
@@ -117,9 +117,9 @@ namespace module_internal {
     // 内部实现细节
 } // namespace module_internal
 
-} // namespace agentos
+} // namespace agentrt
 
-#endif // AGENTOS_MODULE_NAME_H
+#endif // AGENTRT_MODULE_NAME_H
 ```
 
 ### 2.3 包含顺序
@@ -144,7 +144,7 @@ namespace module_internal {
 #include <uv.h>
 
 // 5. 项目内部头文件
-#include "agentos_types.h"
+#include "agentrt_types.h"
 #include "module_base.h"
 ```
 
@@ -156,14 +156,14 @@ namespace module_internal {
 
 | 类型 | 风格 | 示例 |
 |------|------|------|
-| 命名空间 | snake_case | `agentos::corekern`, `agentos::memory_rovol` |
+| 命名空间 | snake_case | `agentrt::corekern`, `agentrt::memory_rovol` |
 | 类名 | UpperCamelCase | `class MemoryManager`, `struct TaskContext` |
 | 函数名 | snake_case | `memory_alloc()`, `task_submit()` |
 | 变量名 | snake_case | `uint32_t task_id`, `std::string config_path` |
 | 常量名 | kConstant | `kMaxRetryCount`, `kDefaultTimeout` |
-| 枚举值 | kEnumValue 或 UPPER_CASE | `kStatusIdle`, `AGENTOS_STATUS_IDLE` |
+| 枚举值 | kEnumValue 或 UPPER_CASE | `kStatusIdle`, `AGENTRT_STATUS_IDLE` |
 | 模板参数 | UpperCamelCase | `typename Allocator`, `class NodeType` |
-| 宏定义 | UPPER_CASE | `#define AGENTOS_MAX_PATH_LEN 4096` |
+| 宏定义 | UPPER_CASE | `#define AGENTRT_MAX_PATH_LEN 4096` |
 
 ### 3.2 命名前缀规则
 
@@ -178,7 +178,7 @@ namespace module_internal {
 
 ```cpp
 // 正确的命名
-namespace agentos {
+namespace agentrt {
     constexpr uint32_t kMaxTaskNameLength = 256;
     
     class TaskScheduler {
@@ -286,9 +286,9 @@ using SchedulerHandle = SchedulerImpl*;  // 不透明指针
  * @param plan 待调度计划，只读
  * @param priority 任务优先级，1-10
  * @param out_id 输出任务 ID，调用者负责释放
- * @return AGENTOS_OK (0) 成功；其他值为错误码
+ * @return AGENTRT_OK (0) 成功；其他值为错误码
  * 
- * @note 调用者负责释放 out_id（调用 agentos_task_id_free）
+ * @note 调用者负责释放 out_id（调用 agentrt_task_id_free）
  * @thread safe
  * @see cognition_wait()
  */
@@ -309,15 +309,15 @@ int cognition_submit(
     uint32_t priority,
     char** out_id
 ) {
-    // 参数验证遵循 AGENTOS_CHECK 系列宏
-    AGENTOS_CHECK_PTR(engine);
-    AGENTOS_CHECK_PTR(plan);
-    AGENTOS_CHECK_PTR(out_id);
+    // 参数验证遵循 AGENTRT_CHECK 系列宏
+    AGENTRT_CHECK_PTR(engine);
+    AGENTRT_CHECK_PTR(plan);
+    AGENTRT_CHECK_PTR(out_id);
     
     // 范围验证
     if (priority < 1 || priority > 10) {
         log_error("Invalid priority: %u, must be in [1, 10]", priority);
-        return AGENTOS_ERR_INVALID_ARG;
+        return AGENTRT_ERR_INVALID_ARG;
     }
     
     // ...
@@ -328,7 +328,7 @@ int cognition_submit(
 
 | 返回类型 | 成功条件 | 失败处理 |
 |----------|----------|----------|
-| `int` (错误码) | 返回 0 (`AGENTOS_OK`) | 返回负值错误码 |
+| `int` (错误码) | 返回 0 (`AGENTRT_OK`) | 返回负值错误码 |
 | 指针类型 | 返回非空指针 | 返回 `nullptr` |
 | `std::optional<T>` | 返回包含值 | 返回 `std::nullopt` |
 | `std::expected<T, E>` | 返回包含值 | 返回包含错误 |
@@ -581,12 +581,12 @@ private:
 };
 
 // 安全内存操作
-// 注意：volatile 指针方式不可靠（编译器仍可能优化），应使用 AGENTOS_SECURE_ZERO 宏
+// 注意：volatile 指针方式不可靠（编译器仍可能优化），应使用 AGENTRT_SECURE_ZERO 宏
 // 定义在 memory_compat.h，跨平台替代 explicit_bzero
 inline void secure_memset(void* ptr, uint8_t value, size_t size) {
-    // 生产代码应直接使用 AGENTOS_SECURE_ZERO(ptr, size)
+    // 生产代码应直接使用 AGENTRT_SECURE_ZERO(ptr, size)
     // 此处仅展示等价逻辑：
-    AGENTOS_SECURE_ZERO(ptr, size);
+    AGENTRT_SECURE_ZERO(ptr, size);
 }
 ```
 
@@ -599,16 +599,16 @@ inline void secure_memset(void* ptr, uint8_t value, size_t size) {
 ```cpp
 // 错误码命名：模块名_ERR_描述
 enum : int {
-    AGENTOS_OK = 0,
+    AGENTRT_OK = 0,
     
     // 通用错误 (1xxx)
-    AGENTOS_ERR_GENERAL = -1000,
-    AGENTOS_ERR_INVALID_ARG = -1001,
-    AGENTOS_ERR_OUT_OF_MEMORY = -1002,
-    AGENTOS_ERR_TIMEOUT = -1003,
-    AGENTOS_ERR_NOT_FOUND = -1004,
-    AGENTOS_ERR_ALREADY_EXISTS = -1005,
-    AGENTOS_ERR_PERMISSION_DENIED = -1006,
+    AGENTRT_ERR_GENERAL = -1000,
+    AGENTRT_ERR_INVALID_ARG = -1001,
+    AGENTRT_ERR_OUT_OF_MEMORY = -1002,
+    AGENTRT_ERR_TIMEOUT = -1003,
+    AGENTRT_ERR_NOT_FOUND = -1004,
+    AGENTRT_ERR_ALREADY_EXISTS = -1005,
+    AGENTRT_ERR_PERMISSION_DENIED = -1006,
     
     // 调度器错误 (2xxx)
     COG_ERR_SCHEDULER_CLOSED = -2001,
@@ -622,11 +622,11 @@ enum : int {
 };
 
 // 错误码转字符串
-constexpr const char* agentos_strerror(int err) {
+constexpr const char* agentrt_strerror(int err) {
     switch (err) {
-        case AGENTOS_OK: return "Success";
-        case AGENTOS_ERR_INVALID_ARG: return "Invalid argument";
-        case AGENTOS_ERR_OUT_OF_MEMORY: return "Out of memory";
+        case AGENTRT_OK: return "Success";
+        case AGENTRT_ERR_INVALID_ARG: return "Invalid argument";
+        case AGENTRT_ERR_OUT_OF_MEMORY: return "Out of memory";
         // ...
         default: return "Unknown error";
     }
@@ -637,10 +637,10 @@ constexpr const char* agentos_strerror(int err) {
 
 ```cpp
 // 错误日志宏，包含上下文信息
-#define AGENTOS_LOG_ERROR(fmt, ...) \
+#define AGENTRT_LOG_ERROR(fmt, ...) \
     log_error("[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 
-#define AGENTOS_LOG_ERROR_WITH_TRACE(fmt, ...) \
+#define AGENTRT_LOG_ERROR_WITH_TRACE(fmt, ...) \
     log_error("[%s:%d] [trace_id=%s] " fmt, \
         __FILE__, __LINE__, get_current_trace_id(), ##__VA_ARGS__)
 
@@ -648,12 +648,12 @@ constexpr const char* agentos_strerror(int err) {
 int memory_alloc(size_t size, void** out_ptr) {
     void* ptr = allocate_from_pool(size);
     if (!ptr) {
-        AGENTOS_LOG_ERROR_WITH_TRACE(
+        AGENTRT_LOG_ERROR_WITH_TRACE(
             "Memory allocation failed: size=%zu", size);
-        return AGENTOS_ERR_OUT_OF_MEMORY;
+        return AGENTRT_ERR_OUT_OF_MEMORY;
     }
     *out_ptr = ptr;
-    return AGENTOS_OK;
+    return AGENTRT_OK;
 }
 ```
 
@@ -663,7 +663,7 @@ int memory_alloc(size_t size, void** out_ptr) {
 // Airymax C++ 代码中，公共 API 禁止抛出异常
 // ⚠️ 澄清：公共 C API 边界（extern "C" 函数）禁止异常逃逸；C++ 内部 API 可使用异常但必须捕获并转换为错误码。
 // 具体规则：
-//   1. extern "C" 函数：异常不得跨越 C 链接边界，必须 try-catch 全包并返回 agentos_error_t
+//   1. extern "C" 函数：异常不得跨越 C 链接边界，必须 try-catch 全包并返回 agentrt_error_t
 //   2. C++ 内部 API（命名空间内）：可使用异常，但调用链最终到达 C 边界时必须转换
 //   3. @throws 文档标注仅适用于 C++ 内部 API，不适用于 extern "C" 函数
 
@@ -722,7 +722,7 @@ extern "C" {
  * @param config 配置参数
  * @return 调度器句柄，失败返回 NULL
  */
-agentos_error_t module_scheduler_create(const SchedulerConfig* config,
+agentrt_error_t module_scheduler_create(const SchedulerConfig* config,
                                          SchedulerHandle* out_handle);
 
 /**
@@ -745,11 +745,11 @@ void module_scheduler_destroy(SchedulerHandle handle);
 
 extern "C" {
 
-agentos_error_t module_scheduler_create(const SchedulerConfig* config,
+agentrt_error_t module_scheduler_create(const SchedulerConfig* config,
                                          SchedulerHandle* out_handle) {
     // 规则1：入口参数验证
     if (!config || !out_handle) {
-        return AGENTOS_ERR_INVALID_PARAM;
+        return AGENTRT_ERR_INVALID_PARAM;
     }
     
     try {
@@ -761,18 +761,18 @@ agentos_error_t module_scheduler_create(const SchedulerConfig* config,
         
         // 规则4：C++ 对象 → 不透明 C 句柄
         *out_handle = scheduler.release();
-        return AGENTOS_OK;
+        return AGENTRT_OK;
         
     } catch (const std::bad_alloc&) {
-        return AGENTOS_ERR_OUT_OF_MEMORY;
+        return AGENTRT_ERR_OUT_OF_MEMORY;
     } catch (const std::invalid_argument& e) {
-        return AGENTOS_ERR_INVALID_PARAM;
+        return AGENTRT_ERR_INVALID_PARAM;
     } catch (const std::exception& e) {
-        AGENTOS_LOG_ERROR("Unexpected exception in module_scheduler_create: %s", e.what());
-        return AGENTOS_ERR_GENERAL;
+        AGENTRT_LOG_ERROR("Unexpected exception in module_scheduler_create: %s", e.what());
+        return AGENTRT_ERR_GENERAL;
     } catch (...) {
-        AGENTOS_LOG_ERROR("Unknown exception in module_scheduler_create");
-        return AGENTOS_ERR_GENERAL;
+        AGENTRT_LOG_ERROR("Unknown exception in module_scheduler_create");
+        return AGENTRT_ERR_GENERAL;
     }
 }
 
@@ -791,11 +791,11 @@ void module_scheduler_destroy(SchedulerHandle handle) {
 
 | 规则 | 说明 |
 |------|------|
-| 异常不得跨越 C 边界 | 所有 `extern "C"` 函数必须 `try-catch` 全包，将异常转换为 `agentos_error_t` |
+| 异常不得跨越 C 边界 | 所有 `extern "C"` 函数必须 `try-catch` 全包，将异常转换为 `agentrt_error_t` |
 | 内存所有权明确 | C 侧分配的内存由 C 侧释放，C++ 侧分配的内存由 C++ 侧释放；跨边界传递使用不透明句柄 |
 | 禁止跨边界传递 STL | 不得在 `extern "C"` 函数签名中使用 `std::string`、`std::vector` 等 STL 类型 |
 | 禁止跨边界传递异常类 | 不得将 C++ 异常对象传递给 C 调用者 |
-| POD 类型安全传递 | 跨边界仅传递 POD 类型或 `agentos_error_t`、不透明指针 |
+| POD 类型安全传递 | 跨边界仅传递 POD 类型或 `agentrt_error_t`、不透明指针 |
 
 ---
 
@@ -873,9 +873,9 @@ public:
     }
     
 private:
-    // ⚠️ 注意：static std::mutex 仅作示例。生产代码应使用 agentos_mutex_t
+    // ⚠️ 注意：static std::mutex 仅作示例。生产代码应使用 agentrt_mutex_t
     // （定义在 platform.h），以确保跨平台兼容性（参见 CROSS-01）。
-    // 示例：static agentos_mutex_t FAST_LOCK;
+    // 示例：static agentrt_mutex_t FAST_LOCK;
     static std::mutex FAST_LOCK;
 };
 
@@ -918,7 +918,7 @@ private:
  * @version 1.6
  * 
  * @note 线程安全：所有公共接口均为线程安全
- * @see agentos/atoms/corekern/memory/
+ * @see agentrt/atoms/corekern/memory/
  */
 
 /**
@@ -939,8 +939,8 @@ private:
  * void* ptr = nullptr;
  * uint32_t block_id = 0;
  * int err = memory_pool_alloc(pool, &block_id, &ptr);
- * if (err != AGENTOS_OK) {
- *     log_error("Allocation failed: %s", agentos_strerror(err));
+ * if (err != AGENTRT_OK) {
+ *     log_error("Allocation failed: %s", agentrt_strerror(err));
  *     return err;
  * }
  * // 使用 ptr...
@@ -1108,11 +1108,11 @@ TEST_F(MemoryPoolTest, AllocateAndFree) {
     uint32_t block_id = 0;
     
     int err = pool_->allocate(&block_id, &ptr);
-    ASSERT_EQ(AGENTOS_OK, err);
+    ASSERT_EQ(AGENTRT_OK, err);
     ASSERT_NE(nullptr, ptr);
     
     err = pool_->free(block_id);
-    ASSERT_EQ(AGENTOS_OK, err);
+    ASSERT_EQ(AGENTRT_OK, err);
 }
 
 TEST_F(MemoryPoolTest, ExhaustPool) {
@@ -1122,7 +1122,7 @@ TEST_F(MemoryPoolTest, ExhaustPool) {
         void* ptr = nullptr;
         uint32_t block_id = 0;
         int err = pool_->allocate(&block_id, &ptr);
-        if (err == AGENTOS_ERR_OUT_OF_MEMORY) {
+        if (err == AGENTRT_ERR_OUT_OF_MEMORY) {
             break;
         }
         allocations.emplace_back(block_id, ptr);
@@ -1174,20 +1174,20 @@ public:
                         AllocFlags flags = AllocFlags::kDefault) {
         // 规则3-1：内存申请校验
         if (size == 0 || size > kMaxNumaAllocSize) {
-            AGENTOS_LOG_ERROR("Invalid NUMA allocation size: %zu", size);
+            AGENTRT_LOG_ERROR("Invalid NUMA allocation size: %zu", size);
             return nullptr;
         }
         
         // 规则2-3：防止整数溢出（对齐计算）
         size_t aligned_size = align_up(size, kHugepageSize);
         if (aligned_size < size) {
-            AGENTOS_LOG_ERROR("Alignment overflow: size=%zu", size);
+            AGENTRT_LOG_ERROR("Alignment overflow: size=%zu", size);
             return nullptr;
         }
         
         // NUMA节点信任边界验证
         if (numa_node < -1 || numa_node >= numa::num_configured_nodes()) {
-            AGENTOS_LOG_ERROR("Invalid NUMA node: %d", numa_node);
+            AGENTRT_LOG_ERROR("Invalid NUMA node: %d", numa_node);
             return nullptr;
         }
         
@@ -1239,7 +1239,7 @@ public:
                                  SystemSelection selection = SystemSelection::kAuto) {
         // 参数验证（规则2-1）
         if (!task.valid()) {
-            AGENTOS_LOG_ERROR("Invalid task submission");
+            AGENTRT_LOG_ERROR("Invalid task submission");
             return std::nullopt;
         }
         
@@ -1290,7 +1290,7 @@ public:
     process_message(const IpcMessage& message) {
         // 层次1：消息格式验证
         if (!validate_message_format(message)) {
-            AGENTOS_LOG_ERROR("Invalid IPC message format");
+            AGENTRT_LOG_ERROR("Invalid IPC message format");
             return std::unexpected(ErrorCode::kInvalidFormat);
         }
         

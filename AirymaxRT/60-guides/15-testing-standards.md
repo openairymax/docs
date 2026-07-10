@@ -109,10 +109,10 @@ def test_task_submit_with_valid_input_returns_task_id(self):
     agent_id = create_test_agent(config)
 
     # Act - 执行被测操作
-    result = agentos_task_submit(agent_id, "process data", 30000)
+    result = agentrt_task_submit(agent_id, "process data", 30000)
 
     # Assert - 验证结果
-    assert result.error_code == AGENTOS_OK
+    assert result.error_code == AGENTRT_OK
     assert result.task_id is not None
     assert result.task_id.startswith("task_")
 ```
@@ -159,15 +159,15 @@ def sample_agent_config():
     }
 
 @pytest.fixture
-def mock_agentos_client(mocker):
+def mock_agentrt_client(mocker):
     client = mocker.MagicMock()
     client.agent_create.return_value = {"agent_id": "agent_0"}
     return client
 
 # 测试文件中使用
 class TestAgentCreation:
-    def test_create_with_valid_config(self, sample_agent_config, mock_agentos_client):
-        result = mock_agentos_client.agent_create(sample_agent_config)
+    def test_create_with_valid_config(self, sample_agent_config, mock_agentrt_client):
+        result = mock_agentrt_client.agent_create(sample_agent_config)
         assert result["agent_id"] == "agent_0"
 ```
 
@@ -183,20 +183,20 @@ async def test_async_memory_query():
 async def test_concurrent_task_submission():
     tasks = [submit_task(f"task_{i}") for i in range(10)]
     results = await asyncio.gather(*tasks)
-    assert all(r.error_code == AGENTOS_OK for r in results)
+    assert all(r.error_code == AGENTRT_OK for r in results)
 ```
 
 ### 参数化测试
 
 ```python
 @pytest.mark.parametrize("input_data,expected_status", [
-    ("valid input", AGENTOS_OK),
-    ("", AGENTOS_EINVAL),
-    (None, AGENTOS_EINVAL),
-    ("a" * 10001, AGENTOS_EINVAL),
+    ("valid input", AGENTRT_OK),
+    ("", AGENTRT_EINVAL),
+    (None, AGENTRT_EINVAL),
+    ("a" * 10001, AGENTRT_EINVAL),
 ])
 def test_task_submit_input_validation(input_data, expected_status):
-    result = agentos_task_submit(input_data, len(input_data) if input_data else 0, 30000)
+    result = agentrt_task_submit(input_data, len(input_data) if input_data else 0, 30000)
     assert result == expected_status
 
 @pytest.mark.parametrize("level,expected_min_severity", [
@@ -216,21 +216,21 @@ def test_log_level_severity(level, expected_min_severity):
 ```python
 # 使用 pytest-mock（推荐）
 def test_agent_invoke_with_mock(mocker):
-    mock_execute = mocker.patch("agentos.cupolas.cupolas_execute_command")
-    mock_execute.return_value = AGENTOS_OK
+    mock_execute = mocker.patch("agentrt.cupolas.cupolas_execute_command")
+    mock_execute.return_value = AGENTRT_OK
 
-    result = agentos_agent_invoke("agent_0", "test input", 10, None)
-    assert result == AGENTOS_OK
+    result = agentrt_agent_invoke("agent_0", "test input", 10, None)
+    assert result == AGENTRT_OK
     mock_execute.assert_called_once()
 
 # Mock 上下文管理器
 def test_session_with_mock_persistence(mocker):
     mock_persist = mocker.patch(
-        "agentos.syscall.session.persist_session_with_retry"
+        "agentrt.syscall.session.persist_session_with_retry"
     )
-    mock_persist.return_value = AGENTOS_OK
+    mock_persist.return_value = AGENTRT_OK
 
-    session_id = agentos_session_create(None)
+    session_id = agentrt_session_create(None)
     mock_persist.assert_called_once()
 ```
 
@@ -238,7 +238,7 @@ def test_session_with_mock_persistence(mocker):
 
 ```python
 # 推荐：使用明确的断言消息
-assert result.error_code == AGENTOS_OK, \
+assert result.error_code == AGENTRT_OK, \
     f"Expected SUCCESS, got {result.error_code}"
 
 # 推荐：使用 pytest.approx 处理浮点数
@@ -286,20 +286,20 @@ static void test_memory_write_with_valid_data_returns_record_id(void **state);
 ```c
 static void test_ipc_channel_create_with_valid_params(void **state) {
     // Arrange
-    agentos_ipc_config_t config = {
+    agentrt_ipc_config_t config = {
         .type = IPC_CHANNEL_BUFFERED,
         .buffer_size = 4096
     };
 
     // Act
-    agentos_ipc_channel_t* ch = agentos_ipc_channel_create(&config);
+    agentrt_ipc_channel_t* ch = agentrt_ipc_channel_create(&config);
 
     // Assert
     assert_non_null(ch);
-    assert_int_equal(agentos_ipc_channel_get_type(ch), IPC_CHANNEL_BUFFERED);
+    assert_int_equal(agentrt_ipc_channel_get_type(ch), IPC_CHANNEL_BUFFERED);
 
     // Cleanup
-    agentos_ipc_channel_destroy(ch);
+    agentrt_ipc_channel_destroy(ch);
 }
 ```
 
@@ -320,7 +320,7 @@ int main(void) {
 
 ```cmake
 add_executable(test_ipc test_ipc.c)
-target_link_libraries(test_ipc agentos_ipc cmocka)
+target_link_libraries(test_ipc agentrt_ipc cmocka)
 add_test(NAME ipc CHANNEL COMMAND test_ipc)
 ```
 
@@ -410,10 +410,10 @@ def test_with_generated_data():
 
 ```python
 @pytest.fixture
-def temp_agent(agentos_client):
-    agent_id = agentos_client.create({"name": "temp"})
+def temp_agent(agentrt_client):
+    agent_id = agentrt_client.create({"name": "temp"})
     yield agent_id
-    agentos_client.destroy(agent_id)
+    agentrt_client.destroy(agent_id)
 ```
 
 ---

@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）驱动模型设计
 
-> **文档定位**: agentrt-linux（AirymaxOS）驱动子系统工程设计主索引
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`
-> **理论根基**: Linux device/driver/bus 三元组解耦 + Airymax K-3 服务隔离
+> **文档定位**： agentrt-linux（AirymaxOS）驱动子系统工程设计主索引
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`
+> **理论根基**： Linux device/driver/bus 三元组解耦 + Airymax K-3 服务隔离
 
 ---
 

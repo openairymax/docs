@@ -4,12 +4,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **⚠️ 本文档已废弃（2026-07-09）**：本卷的许可证策略矩阵与合规执行内容已合并至 [110-spdx-license-compliance.md](./110-spdx-license-compliance.md)。请以 110 卷为权威来源。本卷保留仅作为历史参考，不再维护更新。
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 9 卷——SPDX 许可证策略。本卷明确 agentrt-linux 全部 8 子仓中各类文件的许可证标识，消解历史三套策略并存且边界未声明的合规风险。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **父文档**: [工程标准规范 README](README.md)
-> **配套文档**: [00-engineering-standards-handbook.md](./00-engineering-standards-handbook.md)（SSoT 索引）、[08-compliance-checklist.md](./08-compliance-checklist.md)（合规检查 STD-CODE-01）
-> **理论根基**: Linux 6.6 内核基线 `COPYING`（GPL-2.0 WITH Linux-syscall-note）+ SPDX 规范
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 9 卷——SPDX 许可证策略。本卷明确 agentrt-linux 全部 8 子仓中各类文件的许可证标识，消解历史三套策略并存且边界未声明的合规风险。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **父文档**： [工程标准规范 README](README.md)\
+> **配套文档**： [00-engineering-standards-handbook.md](./00-engineering-standards-handbook.md)（SSoT 索引）、[08-compliance-checklist.md](./08-compliance-checklist.md)（合规检查 STD-CODE-01）\
+> **理论根基**： Linux 6.6 内核基线 `COPYING`（GPL-2.0 WITH Linux-syscall-note）+ SPDX 规范
 
 ---
 

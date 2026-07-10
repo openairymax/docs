@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 7. [网络安全](#7-网络安全)
 8. [资源管理](#8-资源管理)
 9. [审计与可观测性](#9-审计与可观测性)
-10. [Airymax 模块安全编码示例](#10-agentos-模块安全编码示例)
+10. [Airymax 模块安全编码示例](#10-agentrt-模块安全编码示例)
 
 ---
 
@@ -120,7 +120,7 @@ func (sm *SessionManager) Get(ctx context.Context, sessionID string) (*types.Ses
 ```go
 func (sm *SessionManager) Get(ctx context.Context, sessionID string) (*types.Session, error) {
     if sessionID == "" {
-        return nil, agentos.NewError(agentos.CodeMissingParameter, "会话ID不能为空", nil)
+        return nil, agentrt.NewError(agentrt.CodeMissingParameter, "会话ID不能为空", nil)
     }
     resp, err := sm.api.Get(ctx, fmt.Sprintf("/api/v1/sessions/%s", sessionID))
     // ...
@@ -188,7 +188,7 @@ func (tm *TaskManager) Submit(ctx context.Context, description string) (*types.T
 ```go
 func (tm *TaskManager) Submit(ctx context.Context, description string) (*types.Task, error) {
     if err := utils.ValidateRequiredString(description, "任务描述"); err != nil {
-        return nil, agentos.NewError(agentos.CodeMissingParameter, err.Error(), nil)
+        return nil, agentrt.NewError(agentrt.CodeMissingParameter, err.Error(), nil)
     }
     resp, err := tm.api.Post(ctx, "/api/v1/tasks", map[string]interface{}{
         "description": description,
@@ -226,8 +226,8 @@ func (c *Config) Validate() error {
 ❌ **错误**：构造配置后不验证
 
 ```go
-func NewClient(opts ...agentos.ConfigOption) (*Client, error) {
-    config := agentos.NewConfig(opts...)
+func NewClient(opts ...agentrt.ConfigOption) (*Client, error) {
+    config := agentrt.NewConfig(opts...)
     // 未调用 config.Validate()
     return newClientWithConfig(config)
 }
@@ -236,8 +236,8 @@ func NewClient(opts ...agentos.ConfigOption) (*Client, error) {
 ✅ **正确**：构造后立即验证
 
 ```go
-func NewClient(opts ...agentos.ConfigOption) (*Client, error) {
-    config := agentos.NewConfig(opts...)
+func NewClient(opts ...agentrt.ConfigOption) (*Client, error) {
+    config := agentrt.NewConfig(opts...)
     if err := config.Validate(); err != nil {
         return nil, err
     }
@@ -291,10 +291,10 @@ return &apiResp, nil // 可能返回 Success=false 的响应
 ```go
 var apiResp types.APIResponse
 if err := json.Unmarshal(respBody, &apiResp); err != nil {
-    return nil, agentos.WrapError(agentos.CodeParseError, "解析响应失败", err)
+    return nil, agentrt.WrapError(agentrt.CodeParseError, "解析响应失败", err)
 }
 if !apiResp.Success {
-    return nil, agentos.NewError(agentos.CodeInvalidResponse, apiResp.Message, nil)
+    return nil, agentrt.NewError(agentrt.CodeInvalidResponse, apiResp.Message, nil)
 }
 return &apiResp, nil
 ```
@@ -401,7 +401,7 @@ rand.Read(b) // 忽略了错误返回值
 ```go
 b := make([]byte, 16)
 if _, err := rand.Read(b); err != nil {
-    return "", agentos.WrapError(agentos.CodeInternal, "生成随机数失败", err)
+    return "", agentrt.WrapError(agentrt.CodeInternal, "生成随机数失败", err)
 }
 ```
 
@@ -480,23 +480,23 @@ if config.Debug {
 
 **规则 3.3.1** — API Key 不得硬编码在源代码中
 
-SDK 通过 `Config.APIKey` 和环境变量 `AGENTOS_API_KEY` 传递密钥。
+SDK 通过 `Config.APIKey` 和环境变量 `AGENTRT_API_KEY` 传递密钥。
 
 ❌ **错误**：硬编码密钥
 
 ```go
-config := agentos.NewConfig(
-    agentos.WithAPIKey("sk-abc123def456"), // 硬编码
+config := agentrt.NewConfig(
+    agentrt.WithAPIKey("sk-abc123def456"), // 硬编码
 )
 ```
 
 ✅ **正确**：从环境变量读取
 
 ```go
-config, err := agentos.NewConfigFromEnv()
+config, err := agentrt.NewConfigFromEnv()
 // 或
-config := agentos.NewConfig(
-    agentos.WithAPIKey(os.Getenv("AGENTOS_API_KEY")),
+config := agentrt.NewConfig(
+    agentrt.WithAPIKey(os.Getenv("AGENTRT_API_KEY")),
 )
 ```
 
@@ -752,7 +752,7 @@ func (tm *TaskManager) Submit(description string) (*types.Task, error) {
 ```go
 func (tm *TaskManager) Submit(ctx context.Context, description string) (*types.Task, error) {
     if err := utils.ValidateRequiredString(description, "任务描述"); err != nil {
-        return nil, agentos.NewError(agentos.CodeMissingParameter, err.Error(), nil)
+        return nil, agentrt.NewError(agentrt.CodeMissingParameter, err.Error(), nil)
     }
     resp, err := tm.api.Post(ctx, "/api/v1/tasks", map[string]interface{}{
         "description": description,
@@ -807,7 +807,7 @@ return nil, fmt.Errorf("database query failed: SELECT * FROM users WHERE id='%s'
 ✅ **正确**：使用 SDK 错误码分类，仅返回通用描述
 
 ```go
-return nil, agentos.NewError(agentos.CodeServerError, "服务端错误", nil)
+return nil, agentrt.NewError(agentrt.CodeServerError, "服务端错误", nil)
 // 内部错误通过结构化日志记录，不返回给调用方
 ```
 
@@ -817,7 +817,7 @@ return nil, agentos.NewError(agentos.CodeServerError, "服务端错误", nil)
 
 ### 5.2 错误码分类
 
-**规则 5.2.1** — 所有错误必须使用 `AgentOSError` 体系，按十六进制分类体系分配错误码
+**规则 5.2.1** — 所有错误必须使用 `AgentRTError` 体系，按十六进制分类体系分配错误码
 
 SDK 定义的错误码分类：
 
@@ -837,10 +837,10 @@ SDK 定义的错误码分类：
 return nil, fmt.Errorf("plugin '%s' not found", pluginID)
 ```
 
-✅ **正确**：使用 `AgentOSError` 体系
+✅ **正确**：使用 `AgentRTError` 体系
 
 ```go
-return nil, agentos.NewErrorf(agentos.CodeNotFound, "插件 '%s' 未找到", pluginID)
+return nil, agentrt.NewErrorf(agentrt.CodeNotFound, "插件 '%s' 未找到", pluginID)
 ```
 
 **执行机制**: CI 中通过 linter 禁止在公共 API 中使用 `fmt.Errorf` 返回错误（测试代码除外）。
@@ -864,7 +864,7 @@ if err.Error() == "not found" {
 ✅ **正确**：使用 `errors.Is` 匹配哨兵错误
 
 ```go
-if errors.Is(err, agentos.ErrNotFound) {
+if errors.Is(err, agentrt.ErrNotFound) {
     // 类型安全的错误匹配
 }
 ```
@@ -876,13 +876,13 @@ if errors.Is(err, agentos.ErrNotFound) {
 ❌ **错误**：丢弃原始错误
 
 ```go
-return nil, agentos.NewError(agentos.CodeNetworkError, "请求失败", nil) // Cause 丢失
+return nil, agentrt.NewError(agentrt.CodeNetworkError, "请求失败", nil) // Cause 丢失
 ```
 
 ✅ **正确**：包装原始错误
 
 ```go
-return nil, agentos.WrapError(agentos.CodeNetworkError, "请求执行失败", err) // 保留 Cause
+return nil, agentrt.WrapError(agentrt.CodeNetworkError, "请求执行失败", err) // 保留 Cause
 ```
 
 **执行机制**: 代码审查检查 `NewError` 的第三个参数是否为 `nil`（当存在原始错误时）。
@@ -905,7 +905,7 @@ if resp.StatusCode >= 400 {
 
 ```go
 if resp.StatusCode >= 400 {
-    lastErr = agentos.HTTPStatusToError(resp.StatusCode, string(body))
+    lastErr = agentrt.HTTPStatusToError(resp.StatusCode, string(body))
     if !shouldRetry(resp.StatusCode) {
         return nil, lastErr
     }
@@ -926,7 +926,7 @@ if resp.StatusCode >= 400 {
 当前 `go.mod` 验证：
 
 ```
-module github.com/spharx/agentos/toolkit/go
+module github.com/spharx/agentrt/toolkit/go
 
 go 1.22
 // 无 require 块 — 零外部依赖
@@ -976,7 +976,7 @@ replace (
 ✅ **正确**：无 replace 指令
 
 ```
-module github.com/spharx/agentos/toolkit/go
+module github.com/spharx/agentrt/toolkit/go
 go 1.22
 // 无 replace 块
 ```
@@ -1008,7 +1008,7 @@ go 1.22
 **规则 6.3.2** — 模块路径必须与仓库路径一致
 
 ```
-module github.com/spharx/agentos/toolkit/go
+module github.com/spharx/agentrt/toolkit/go
 ```
 
 **执行机制**: CI 检查 `module` 路径与仓库 URL 匹配。
@@ -1096,7 +1096,7 @@ body, _ := io.ReadAll(resp.Body) // 恶意服务器可返回无限大响应
 ```go
 body, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodySize))
 if err != nil {
-    return nil, agentos.WrapError(agentos.CodeParseError, "读取响应失败", err)
+    return nil, agentrt.WrapError(agentrt.CodeParseError, "读取响应失败", err)
 }
 ```
 
@@ -1115,7 +1115,7 @@ if err != nil {
 ```go
 select {
 case <-ctx.Done():
-    return nil, agentos.WrapError(agentos.CodeTimeout, "请求在重试等待中被取消", ctx.Err())
+    return nil, agentrt.WrapError(agentrt.CodeTimeout, "请求在重试等待中被取消", ctx.Err())
 case <-time.After(delay):
 }
 ```
@@ -1204,7 +1204,7 @@ for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
 
 ```go
 if resp.StatusCode >= 400 {
-    lastErr = agentos.HTTPStatusToError(resp.StatusCode, string(respBody))
+    lastErr = agentrt.HTTPStatusToError(resp.StatusCode, string(respBody))
     if !shouldRetry(resp.StatusCode) {
         return nil, lastErr // 4xx 不重试
     }
@@ -1223,7 +1223,7 @@ if resp.StatusCode >= 400 {
 ```go
 if seeker, ok := req.Body.(io.Seeker); ok && req.Body != nil {
     if _, seekErr := seeker.Seek(0, io.SeekStart); seekErr != nil {
-        return nil, agentos.WrapError(agentos.CodeNetworkError, "重置请求体失败", seekErr)
+        return nil, agentrt.WrapError(agentrt.CodeNetworkError, "重置请求体失败", seekErr)
     }
 }
 ```
@@ -1241,7 +1241,7 @@ req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(jsonData)
 ```go
 if seeker, ok := req.Body.(io.Seeker); ok && req.Body != nil {
     if _, seekErr := seeker.Seek(0, io.SeekStart); seekErr != nil {
-        return nil, agentos.WrapError(agentos.CodeNetworkError, "重置请求体失败", seekErr)
+        return nil, agentrt.WrapError(agentrt.CodeNetworkError, "重置请求体失败", seekErr)
     }
 }
 ```
@@ -1383,7 +1383,7 @@ select {
 case result := <-resultCh:
     return result, nil
 case <-done:
-    return nil, agentos.NewError(agentos.CodeTaskFailed, "所有任务已完成但无结果", nil)
+    return nil, agentrt.NewError(agentrt.CodeTaskFailed, "所有任务已完成但无结果", nil)
 case <-ctx.Done():
     return nil, ctx.Err()
 }
@@ -1583,7 +1583,7 @@ log.Printf("Task cancelled")
 ✅ **正确**：完整的审计记录
 
 ```go
-agentos.GetLogger().Printf("[AUDIT] operation=task.cancel, task_id=%s, result=%v, timestamp=%s",
+agentrt.GetLogger().Printf("[AUDIT] operation=task.cancel, task_id=%s, result=%v, timestamp=%s",
     taskID, err, time.Now().Format(time.RFC3339))
 ```
 
@@ -1612,21 +1612,21 @@ import (
     "net/http"
     "time"
 
-    "github.com/spharx/agentos/toolkit/go/agentos"
-    "github.com/spharx/agentos/toolkit/go/agentos/types"
-    "github.com/spharx/agentos/toolkit/go/agentos/utils"
+    "github.com/spharx/agentrt/toolkit/go/agentrt"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/types"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/utils"
 )
 
 const SecureMaxResponseBodySize = 10 * 1024 * 1024
 
 type SecureClient struct {
-    config     *agentos.Config
+    config     *agentrt.Config
     httpClient *http.Client
     telemetry  *TelemetryWrapper
 }
 
-func NewSecureClient(opts ...agentos.ConfigOption) (*SecureClient, error) {
-    config := agentos.NewConfig(opts...)
+func NewSecureClient(opts ...agentrt.ConfigOption) (*SecureClient, error) {
+    config := agentrt.NewConfig(opts...)
     if err := config.Validate(); err != nil { // D3: 输入验证
         return nil, err
     }
@@ -1661,7 +1661,7 @@ func (c *SecureClient) DoRequest(ctx context.Context, method, path string,
     if body != nil {
         jsonData, err := json.Marshal(body)
         if err != nil {
-            return nil, agentos.WrapError(agentos.CodeParseError, "序列化请求体失败", err) // 5.3.2: 保留原始错误
+            return nil, agentrt.WrapError(agentrt.CodeParseError, "序列化请求体失败", err) // 5.3.2: 保留原始错误
         }
         reqBody = bytes.NewReader(jsonData)
     }
@@ -1670,7 +1670,7 @@ func (c *SecureClient) DoRequest(ctx context.Context, method, path string,
     fullURL := c.config.Endpoint + path
     req, err := http.NewRequestWithContext(ctx, method, fullURL, reqBody)
     if err != nil {
-        return nil, agentos.WrapError(agentos.CodeNetworkError, "创建请求失败", err)
+        return nil, agentrt.WrapError(agentrt.CodeNetworkError, "创建请求失败", err)
     }
 
     // 7.5.1: 通过 Header 传递认证
@@ -1688,23 +1688,23 @@ func (c *SecureClient) DoRequest(ctx context.Context, method, path string,
             delay := calculateSecureBackoff(c.config.RetryDelay, attempt) // 7.4.1: 指数退避+抖动
             select {
             case <-ctx.Done(): // 7.3.1: 监听取消信号
-                return nil, agentos.WrapError(agentos.CodeTimeout, "请求在重试等待中被取消", ctx.Err())
+                return nil, agentrt.WrapError(agentrt.CodeTimeout, "请求在重试等待中被取消", ctx.Err())
             case <-time.After(delay):
             }
 
             // 7.4.3: 重置请求体
             if seeker, ok := req.Body.(io.Seeker); ok && req.Body != nil {
                 if _, seekErr := seeker.Seek(0, io.SeekStart); seekErr != nil {
-                    return nil, agentos.WrapError(agentos.CodeNetworkError, "重置请求体失败", seekErr)
+                    return nil, agentrt.WrapError(agentrt.CodeNetworkError, "重置请求体失败", seekErr)
                 }
             }
         }
 
         resp, err := c.httpClient.Do(req)
         if err != nil {
-            lastErr = agentos.WrapError(agentos.CodeNetworkError, "请求执行失败", err)
+            lastErr = agentrt.WrapError(agentrt.CodeNetworkError, "请求执行失败", err)
             if ctx.Err() != nil {
-                return nil, agentos.WrapError(agentos.CodeTimeout, "请求被取消", ctx.Err())
+                return nil, agentrt.WrapError(agentrt.CodeTimeout, "请求被取消", ctx.Err())
             }
             continue
         }
@@ -1715,13 +1715,13 @@ func (c *SecureClient) DoRequest(ctx context.Context, method, path string,
         resp.Body.Close()
 
         if readErr != nil {
-            lastErr = agentos.WrapError(agentos.CodeParseError, "读取响应失败", readErr)
+            lastErr = agentrt.WrapError(agentrt.CodeParseError, "读取响应失败", readErr)
             continue
         }
 
         if resp.StatusCode >= 400 {
             // 5.4.1: HTTP 状态码映射
-            lastErr = agentos.HTTPStatusToError(resp.StatusCode, string(respBody))
+            lastErr = agentrt.HTTPStatusToError(resp.StatusCode, string(respBody))
             // 7.4.2: 仅重试可重试错误
             if !shouldSecureRetry(resp.StatusCode) {
                 return nil, lastErr
@@ -1732,7 +1732,7 @@ func (c *SecureClient) DoRequest(ctx context.Context, method, path string,
         var apiResp types.APIResponse
         // 2.2.2: 验证反序列化结果
         if err := json.Unmarshal(respBody, &apiResp); err != nil {
-            return nil, agentos.WrapError(agentos.CodeParseError, "解析响应失败", err)
+            return nil, agentrt.WrapError(agentrt.CodeParseError, "解析响应失败", err)
         }
 
         return &apiResp, nil
@@ -1785,9 +1785,9 @@ import (
     "sync"
     "time"
 
-    "github.com/spharx/agentos/toolkit/go/agentos"
-    "github.com/spharx/agentos/toolkit/go/agentos/plugin"
-    "github.com/spharx/agentos/toolkit/go/agentos/syscall"
+    "github.com/spharx/agentrt/toolkit/go/agentrt"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/plugin"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/syscall"
 )
 
 // SecurePluginManager 安全的插件管理器封装
@@ -1809,24 +1809,24 @@ func (m *SecurePluginManager) LoadPluginSafely(pluginID string,
 
     // D1: 验证沙箱资源限制
     if manifest.MaxMemoryMB <= 0 {
-        return nil, agentos.NewError(agentos.CodeInvalidParameter,
+        return nil, agentrt.NewError(agentrt.CodeInvalidParameter,
             "插件必须设置 MaxMemoryMB", nil)
     }
     if manifest.MaxCPUPercent <= 0 || manifest.MaxCPUPercent > 100 {
-        return nil, agentos.NewError(agentos.CodeInvalidParameter,
+        return nil, agentrt.NewError(agentrt.CodeInvalidParameter,
             "插件 MaxCPUPercent 必须在 (0, 100] 范围内", nil)
     }
     if manifest.TimeoutSeconds <= 0 {
-        return nil, agentos.NewError(agentos.CodeInvalidParameter,
+        return nil, agentrt.NewError(agentrt.CodeInvalidParameter,
             "插件必须设置 TimeoutSeconds", nil)
     }
 
     // D3: 净化插件 ID
-    pluginID = agentos.GetLogger().Prefix() // 示例：实际应使用 SanitizeString
+    pluginID = agentrt.GetLogger().Prefix() // 示例：实际应使用 SanitizeString
 
     info, err := m.inner.LoadPlugin(pluginID, manifest)
     if err != nil {
-        return nil, agentos.WrapError(agentos.CodeInternal, "插件加载失败", err)
+        return nil, agentrt.WrapError(agentrt.CodeInternal, "插件加载失败", err)
     }
 
     return info, nil
@@ -1843,7 +1843,7 @@ func (m *SecurePluginManager) ExecuteInSandbox(ctx context.Context,
         Params:    params,
     })
     if err != nil {
-        return nil, agentos.WrapError(agentos.CodePermissionDenied,
+        return nil, agentrt.WrapError(agentrt.CodePermissionDenied,
             fmt.Sprintf("插件 %s 操作 %s 被拒绝", pluginID, operation), err)
     }
 
@@ -1861,10 +1861,10 @@ import (
     "fmt"
     "sync"
 
-    "github.com/spharx/agentos/toolkit/go/agentos"
-    "github.com/spharx/agentos/toolkit/go/agentos/syscall"
-    "github.com/spharx/agentos/toolkit/go/agentos/types"
-    "github.com/spharx/agentos/toolkit/go/agentos/utils"
+    "github.com/spharx/agentrt/toolkit/go/agentrt"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/syscall"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/types"
+    "github.com/spharx/agentrt/toolkit/go/agentrt/utils"
 )
 
 // AuditedSyscallBinding 带审计的系统调用绑定
@@ -1896,10 +1896,10 @@ func (b *AuditedSyscallBinding) Invoke(ctx context.Context,
 
     // D3: 验证请求参数
     if request.Namespace == "" {
-        return nil, agentos.NewError(agentos.CodeMissingParameter, "命名空间不能为空", nil)
+        return nil, agentrt.NewError(agentrt.CodeMissingParameter, "命名空间不能为空", nil)
     }
     if err := utils.ValidateRequiredString(request.Operation, "操作名"); err != nil {
-        return nil, agentos.NewError(agentos.CodeMissingParameter, err.Error(), nil)
+        return nil, agentrt.NewError(agentrt.CodeMissingParameter, err.Error(), nil)
     }
 
     // D4: 记录审计日志
@@ -1961,7 +1961,7 @@ func (b *AuditedSyscallBinding) Invoke(ctx context.Context,
 | 4.4.1 | Context 作为第一个参数 | — | 高 | go vet |
 | 4.4.2 | 禁止结构体存储 Context | — | 高 | go vet |
 | 5.1.1 | 错误信息脱敏 | — | 高 | 代码审查 |
-| 5.2.1 | 使用 AgentOSError 体系 | — | 高 | Linter |
+| 5.2.1 | 使用 AgentRTError 体系 | — | 高 | Linter |
 | 5.3.1 | 哨兵错误 + errors.Is | — | 中 | 代码审查 |
 | 5.3.2 | WrapError 保留原始错误 | — | 高 | 代码审查 |
 | 5.4.1 | HTTP 状态码映射 | — | 中 | 代码审查 |

@@ -243,7 +243,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'AgentRT/agentos/cupolas/**'
+      - 'AgentRT/agentrt/cupolas/**'
 
 jobs:
   docs:
@@ -262,7 +262,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./AgentRT/agentos/cupolas/docs/api/html
+          publish_dir: ./AgentRT/agentrt/cupolas/docs/api/html
 ```
 
 ### GitLab CI 示例
@@ -278,7 +278,7 @@ generate-docs:
     - doxygen Doxyfile
   artifacts:
     paths:
-      - AgentRT/agentos/cupolas/docs/api/html
+      - AgentRT/agentrt/cupolas/docs/api/html
     expire_in: 30 days
   only:
     - main

@@ -13,7 +13,7 @@
 - 定义 `IPC_BUS_MESSAGE_MAGIC 0x49534200`、`IPC_BUS_MESSAGE_VERSION 1`
 
 ### 1.2 内核层 IPC 未规范化
-- `atoms/corekern/include/ipc.h:92-98` 的 `agentos_kernel_ipc_message_t` 仅 5 字段（`code/data/size/fd/msg_id`）
+- `atoms/corekern/include/ipc.h:92-98` 的 `agentrt_kernel_ipc_message_t` 仅 5 字段（`code/data/size/fd/msg_id`）
 - 无 magic/version/trace_id，注释明确"轻量级，40 字节"
 
 ### 1.3 未推动为开放标准
@@ -52,7 +52,7 @@ typedef struct are_ipc_message_header {
 | v1.0.0 | 标准正式发布，第三方可实现兼容运行时 |
 
 ### 2.3 兼容性策略
-- 内核层 IPC 保留轻量级 `agentos_kernel_ipc_message_t`（性能优先）
+- 内核层 IPC 保留轻量级 `agentrt_kernel_ipc_message_t`（性能优先）
 - 应用层 IPC 统一采用 `are_ipc_message_header_t`（规范优先）
 - 内核↔应用层通过桥接层转换
 

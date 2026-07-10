@@ -92,13 +92,13 @@ global:
   evaluation_interval: 15s  # 规则评估间隔
 
 scrape_configs:
-  - job_name: 'agentos-kernel'
+  - job_name: 'agentrt-kernel'
     static_configs:
       - targets: ['kernel:9090']
     metrics_path: '/metrics'
     scrape_interval: 10s     # 内核指标高频采集
 
-  - job_name: 'agentos-daemon'
+  - job_name: 'agentrt-daemon'
     static_configs:
       - targets: ['daemon:8001', 'daemon:8002', ..., 'daemon:8006']
     scrape_interval: 15s
@@ -139,7 +139,7 @@ docker compose -f docker/docker-compose.prod.yml --profile monitoring up -d prom
 
 ```promql
 # CPU使用率（最近5分钟）
-rate(process_cpu_seconds_total{job="agentos-kernel"}[5m]) * 100
+rate(process_cpu_seconds_total{job="agentrt-kernel"}[5m]) * 100
 
 # 内存使用率
 (go_memstats_heap_inuse_bytes / go_memstats_sys_bytes) * 100
@@ -154,28 +154,28 @@ process_open_fds / process_max_fds * 100
 
 | 指标名 | 类型 | 说明 | 正常范围 |
 |--------|------|------|---------|
-| `agentos_ipc_requests_total` | Counter | IPC请求总数 | 持续增长 |
-| `agentos_ipc_request_duration_seconds` | Histogram | IPC请求延迟分布 | P99<50ms |
-| `agentos_ipc_errors_total` | Counter | IPC错误总数 | 错误率<0.1% |
-| `agentos_ipc_queue_length` | Gauge | 消息队列长度 | <1000 |
+| `agentrt_ipc_requests_total` | Counter | IPC请求总数 | 持续增长 |
+| `agentrt_ipc_request_duration_seconds` | Histogram | IPC请求延迟分布 | P99<50ms |
+| `agentrt_ipc_errors_total` | Counter | IPC错误总数 | 错误率<0.1% |
+| `agentrt_ipc_queue_length` | Gauge | 消息队列长度 | <1000 |
 
 **关键查询**:
 
 ```promql
 # IPC请求QPS（每秒请求数）
-sum(rate(agentos_ipc_requests_total[1m])) by (method, target)
+sum(rate(agentrt_ipc_requests_total[1m])) by (method, target)
 
 # IPC P99延迟
 histogram_quantile(0.99,
-  sum(rate(agentos_ipc_request_duration_seconds_bucket[5m])) by (le)
+  sum(rate(agentrt_ipc_request_duration_seconds_bucket[5m])) by (le)
 )
 
 # IPC错误率
-sum(rate(agentos_ipc_errors_total[5m])) /
-sum(rate(agentos_ipc_requests_total[5m])) * 100
+sum(rate(agentrt_ipc_errors_total[5m])) /
+sum(rate(agentrt_ipc_requests_total[5m])) * 100
 
 # 消息队列积压情况
-agentos_ipc_queue_length
+agentrt_ipc_queue_length
 ```
 
 ---
@@ -184,28 +184,28 @@ agentos_ipc_queue_length
 
 | 指标名 | 类型 | 说明 | 告警阈值 |
 |--------|------|------|---------|
-| `agentos_memory_allocated_bytes` | Gauge | 已分配内存总量 | >80%池大小 |
-| `agentos_memory_free_bytes` | Gauge | 可用内存量 | <20%池大小 |
-| `agentos_memory_allocations_total` | Counter | 分配次数 | - |
-| `agentos_memory_deallocations_total` | Counter | 释放次数 | - |
-| `agentos_memory_leak_detected` | Gauge | 检测到泄漏 | =1时告警 |
+| `agentrt_memory_allocated_bytes` | Gauge | 已分配内存总量 | >80%池大小 |
+| `agentrt_memory_free_bytes` | Gauge | 可用内存量 | <20%池大小 |
+| `agentrt_memory_allocations_total` | Counter | 分配次数 | - |
+| `agentrt_memory_deallocations_total` | Counter | 释放次数 | - |
+| `agentrt_memory_leak_detected` | Gauge | 检测到泄漏 | =1时告警 |
 
 **关键查询**:
 
 ```promql
 # 内存利用率
-agentos_memory_allocated_bytes /
-(agentos_memory_allocated_bytes + agentos_memory_free_bytes) * 100
+agentrt_memory_allocated_bytes /
+(agentrt_memory_allocated_bytes + agentrt_memory_free_bytes) * 100
 
 # 分配/释放比率（接近1表示正常）
-sum(rate(agentos_memory_allocations_total[5m])) /
-sum(rate(agentos_memory_deallocations_total[5m]))
+sum(rate(agentrt_memory_allocations_total[5m])) /
+sum(rate(agentrt_memory_deallocations_total[5m]))
 
 # 内存碎片率
-1 - (agentos_memory_largest_free_block / agentos_memory_free_bytes)
+1 - (agentrt_memory_largest_free_block / agentrt_memory_free_bytes)
 
 # 泄漏检测
-agentos_memory_leak_detected == 1
+agentrt_memory_leak_detected == 1
 ```
 
 ---
@@ -214,27 +214,27 @@ agentos_memory_leak_detected == 1
 
 | 指标名 | 类型 | 说明 | 告警阈值 |
 |--------|------|------|---------|
-| `agentos_tasks_created_total` | Counter | 创建任务总数 | - |
-| `agentos_tasks_completed_total` | Counter | 完成任务总数 | - |
-| `agentos_tasks_failed_total` | Counter | 失败任务总数 | 失败率>5% |
-| `agentos_tasks_active` | Gauge | 当前活跃任务数 | >最大并发*0.9 |
-| `agentos_task_queue_length` | Gauge | 任务队列长度 | >5000 |
+| `agentrt_tasks_created_total` | Counter | 创建任务总数 | - |
+| `agentrt_tasks_completed_total` | Counter | 完成任务总数 | - |
+| `agentrt_tasks_failed_total` | Counter | 失败任务总数 | 失败率>5% |
+| `agentrt_tasks_active` | Gauge | 当前活跃任务数 | >最大并发*0.9 |
+| `agentrt_task_queue_length` | Gauge | 任务队列长度 | >5000 |
 
 **关键查询**:
 
 ```promql
 # 任务吞吐量（完成速率）
-sum(rate(agentos_tasks_completed_total[5m]))
+sum(rate(agentrt_tasks_completed_total[5m]))
 
 # 任务失败率
-sum(rate(agentos_tasks_failed_total[5m])) /
-sum(rate(agentos_tasks_created_total[5m])) * 100
+sum(rate(agentrt_tasks_failed_total[5m])) /
+sum(rate(agentrt_tasks_created_total[5m])) * 100
 
 # 平均任务执行时间
-avg(agentos_task_duration_seconds) by (priority)
+avg(agentrt_task_duration_seconds) by (priority)
 
 # 队列积压时间估算
-agentos_task_queue_length / sum(rate(agentos_tasks_completed_total[5m]))
+agentrt_task_queue_length / sum(rate(agentrt_tasks_completed_total[5m]))
 ```
 
 ---
@@ -243,27 +243,27 @@ agentos_task_queue_length / sum(rate(agentos_tasks_completed_total[5m]))
 
 | 指标名 | 类型 | 说明 | 告警阈值 |
 |--------|------|------|---------|
-| `agentos_cupolas_permission_checks_total` | Counter | 权限检查总次数 | - |
-| `agentos_cupolas_permission_denied_total` | Counter | 权限拒绝次数 | 拒绝率突然升高 |
-| `agentos_cupolas_sanitization_blocked_total` | Counter | 净化拦截次数 | 异常增高 |
-| `agentos_cupolas_audit_events_total` | Counter | 审计事件总数 | - |
-| `agentos_cupolas_sandbox_violations_total` | Counter | 沙箱违规次数 | >0即告警 |
+| `agentrt_cupolas_permission_checks_total` | Counter | 权限检查总次数 | - |
+| `agentrt_cupolas_permission_denied_total` | Counter | 权限拒绝次数 | 拒绝率突然升高 |
+| `agentrt_cupolas_sanitization_blocked_total` | Counter | 净化拦截次数 | 异常增高 |
+| `agentrt_cupolas_audit_events_total` | Counter | 审计事件总数 | - |
+| `agentrt_cupolas_sandbox_violations_total` | Counter | 沙箱违规次数 | >0即告警 |
 
 **安全事件查询**:
 
 ```promql
 # 权限拒绝率
-sum(rate(agentos_cupolas_permission_denied_total[5m])) /
-sum(rate(agentos_cupolas_permission_checks_total[5m])) * 100
+sum(rate(agentrt_cupolas_permission_denied_total[5m])) /
+sum(rate(agentrt_cupolas_permission_checks_total[5m])) * 100
 
 # 输入净化拦截率（按类型）
-sum(rate(agentos_cupolas_sanitization_blocked_total[5m])) by (attack_type)
+sum(rate(agentrt_cupolas_sanitization_blocked_total[5m])) by (attack_type)
 
 # 最近1小时的沙箱违规事件
-increase(agentos_cupolas_sandbox_violations_total[1h])
+increase(agentrt_cupolas_sandbox_violations_total[1h])
 
 # 审计事件趋势（检测异常活动）
-sum(rate(agentos_cupolas_audit_events_total[5m])) by (event_type, severity)
+sum(rate(agentrt_cupolas_audit_events_total[5m])) by (event_type, severity)
 ```
 
 ---
@@ -272,28 +272,28 @@ sum(rate(agentos_cupolas_audit_events_total[5m])) by (event_type, severity)
 
 | 指标名 | 类型 | 说明 | 告警阈值 |
 |--------|------|------|---------|
-| `agentos_llm_requests_total` | Counter | LLM API请求总数 | - |
-| `agentos_llm_request_duration_seconds` | Histogram | LLM推理延迟 | P99>30s |
-| `agentos_llm_tokens_used_total` | Counter | Token消耗总量 | 超预算 |
-| `agentos_llm_errors_total` | Counter | LLM调用错误 | 错误率>1% |
-| `agentos_llm_cost_usd_total` | Counter | 累计成本(USD) | 日预算超限 |
+| `agentrt_llm_requests_total` | Counter | LLM API请求总数 | - |
+| `agentrt_llm_request_duration_seconds` | Histogram | LLM推理延迟 | P99>30s |
+| `agentrt_llm_tokens_used_total` | Counter | Token消耗总量 | 超预算 |
+| `agentrt_llm_errors_total` | Counter | LLM调用错误 | 错误率>1% |
+| `agentrt_llm_cost_usd_total` | Counter | 累计成本(USD) | 日预算超限 |
 
 **LLM相关查询**:
 
 ```promql
 # 平均推理延迟（按模型）
-avg(agentos_llm_request_duration_seconds) by (model)
+avg(agentrt_llm_request_duration_seconds) by (model)
 
 # Token使用效率（输出Token/输入Token）
-sum(rate(agentos_llm_output_tokens_total[1h])) /
-sum(rate(agentos_llm_input_tokens_total[1h]))
+sum(rate(agentrt_llm_output_tokens_total[1h])) /
+sum(rate(agentrt_llm_input_tokens_total[1h]))
 
 # 成本追踪
-sum(increase(agentos_llm_cost_usd_total[1d]))
+sum(increase(agentrt_llm_cost_usd_total[1d]))
 
 # 缓存命中率
-agentos_llm_cache_hits_total /
-(agentos_llm_cache_hits_total + agentos_llm_cache_misses_total) * 100
+agentrt_llm_cache_hits_total /
+(agentrt_llm_cache_hits_total + agentrt_llm_cache_misses_total) * 100
 ```
 
 ---
@@ -306,14 +306,14 @@ agentos_llm_cache_hits_total /
 
 ```yaml
 groups:
-  - name: agentos-critical
+  - name: agentrt-critical
     interval: 30s
     rules:
 
       # === 系统健康 ===
 
-      - alert: AgentOSDown
-        expr: up{job="agentos-kernel"} == 0
+      - alert: AgentRTDown
+        expr: up{job="agentrt-kernel"} == 0
         for: 1m
         labels:
           severity: critical
@@ -342,7 +342,7 @@ groups:
       # === IPC通信 ===
 
       - alert: IPCHighLatency
-        expr: histogram_quantile(0.99, sum(rate(agentos_ipc_request_duration_seconds_bucket[5m])) by (le)) > 1
+        expr: histogram_quantile(0.99, sum(rate(agentrt_ipc_request_duration_seconds_bucket[5m])) by (le)) > 1
         for: 5m
         labels:
           severity: warning
@@ -351,7 +351,7 @@ groups:
           description: "IPC请求P99延迟达到{{ $value }}秒，超过1秒阈值"
 
       - alert: IPCQueueBacklog
-        expr: agentos_ipc_queue_length > 5000
+        expr: agentrt_ipc_queue_length > 5000
         for: 3m
         labels:
           severity: critical
@@ -363,8 +363,8 @@ groups:
 
       - alert: TaskFailureRateHigh
         expr: |
-          sum(rate(agentos_tasks_failed_total[5m])) /
-          sum(rate(agentos_tasks_created_total[5m])) * 100 > 10
+          sum(rate(agentrt_tasks_failed_total[5m])) /
+          sum(rate(agentrt_tasks_created_total[5m])) * 100 > 10
         for: 5m
         labels:
           severity: critical
@@ -373,7 +373,7 @@ groups:
           description: "任务失败率达到{{ $value }}%，超过10%阈值"
 
       - alert: TaskQueueBacklog
-        expr: agentos_task_queue_length > 3000
+        expr: agentrt_task_queue_length > 3000
         for: 5m
         labels:
           severity: warning
@@ -385,8 +385,8 @@ groups:
 
       - alert: PermissionDeniedSpike
         expr: |
-          sum(rate(agentos_cupolas_permission_denied_total[5m])) /
-          sum(rate(agentos_cupolas_permission_checks_total[5m])) * 100 > 5
+          sum(rate(agentrt_cupolas_permission_denied_total[5m])) /
+          sum(rate(agentrt_cupolas_permission_checks_total[5m])) * 100 > 5
         for: 2m
         labels:
           severity: warning
@@ -395,7 +395,7 @@ groups:
           description: "权限拒绝率达到{{ $value }}%，可能存在攻击或误配置"
 
       - alert: SanitizationBlockSpike
-        expr: rate(agentos_cupolas_sanitization_blocked_total[5m]) > 10
+        expr: rate(agentrt_cupolas_sanitization_blocked_total[5m]) > 10
         for: 2m
         labels:
           severity: critical
@@ -404,7 +404,7 @@ groups:
           description: "输入净化拦截速率达到{{ $value }}/秒，可能遭受攻击"
 
       - alert: SandboxViolation
-        expr: increase(agentos_cupolas_sandbox_violations_total[5m]) > 0
+        expr: increase(agentrt_cupolas_sandbox_violations_total[5m]) > 0
         for: 0m
         labels:
           severity: critical
@@ -521,14 +521,14 @@ Airymax提供以下预配置仪表盘JSON文件：
 {
   "dashboard": {
     "title": "Airymax System Health",
-    "uid": "agentos-health",
+    "uid": "agentrt-health",
     "panels": [
       {
         "title": "Service Uptime",
         "type": "stat",
         "targets": [
           {
-            "expr": "up{job=\"agentos-kernel\"}",
+            "expr": "up{job=\"agentrt-kernel\"}",
             "legendFormat": "{{job}}"
           }
         ],
@@ -555,7 +555,7 @@ Airymax提供以下预配置仪表盘JSON文件：
         "type": "graph",
         "targets": [
           {
-            "expr": "sum(rate(agentos_ipc_requests_total[5m])) by (method)",
+            "expr": "sum(rate(agentrt_ipc_requests_total[5m])) by (method)",
             "legendFormat": "{{method}}"
           }
         ],
@@ -566,7 +566,7 @@ Airymax提供以下预配置仪表盘JSON文件：
         "type": "gauge",
         "targets": [
           {
-            "expr": "histogram_quantile(0.99, sum(rate(agentos_ipc_request_duration_seconds_bucket[5m])) by (le))"
+            "expr": "histogram_quantile(0.99, sum(rate(agentrt_ipc_request_duration_seconds_bucket[5m])) by (le))"
           }
         ],
         "fieldConfig": {
@@ -620,25 +620,25 @@ curl -s http://localhost:9091/api/v1/targets | jq '.data.activeTargets[] | {job:
 
 # 5. 关键指标快照
 echo "=== IPC QPS ==="
-curl -s 'http://localhost:9090/api/v1/query?query=sum(rate(agentos_ipc_requests_total[1m]))' | jq '.data.result[0].value[1]'
+curl -s 'http://localhost:9090/api/v1/query?query=sum(rate(agentrt_ipc_requests_total[1m]))' | jq '.data.result[0].value[1]'
 
 echo "=== Memory Usage % ==="
-curl -s 'http://localhost:9090/api/v1/query?query=(agentos_memory_allocated_bytes/(agentos_memory_allocated_bytes+agentos_memory_free_bytes))*100' | jq '.data.result[0].value[1]'
+curl -s 'http://localhost:9090/api/v1/query?query=(agentrt_memory_allocated_bytes/(agentrt_memory_allocated_bytes+agentrt_memory_free_bytes))*100' | jq '.data.result[0].value[1]'
 
 echo "=== Active Tasks ==="
-curl -s 'http://localhost:9090/api/v1/query?query=agentos_tasks_active' | jq '.data.result[0].value[1]'
+curl -s 'http://localhost:9090/api/v1/query?query=agentrt_tasks_active' | jq '.data.result[0].value[1]'
 
 # 6. 数据库连接检查
-docker exec agentos-postgres-prod psql -U agentos -d agentos -c "
+docker exec agentrt-postgres-prod psql -U agentrt -d agentrt -c "
   SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
 "
 
 # 7. Redis内存检查
-docker exec agentos-redis-prod redis-cli -a $REDIS_PASSWORD INFO memory | grep used_memory_human
+docker exec agentrt-redis-prod redis-cli -a $REDIS_PASSWORD INFO memory | grep used_memory_human
 
 # 8. 网络连通性测试
-docker exec agentos-kernel-prod curl -sf http://postgres:5432 && echo "PostgreSQL OK" || echo "PostgreSQL FAIL"
-docker exec agentos-kernel-prod curl -sf http://redis:6379 && echo "Redis OK" || echo "Redis FAIL"
+docker exec agentrt-kernel-prod curl -sf http://postgres:5432 && echo "PostgreSQL OK" || echo "PostgreSQL FAIL"
+docker exec agentrt-kernel-prod curl -sf http://redis:6379 && echo "Redis OK" || echo "Redis FAIL"
 ```
 
 ---

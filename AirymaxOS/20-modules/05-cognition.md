@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）认知设计文档（airymaxos-cognition，极境认知）
 
-> **子仓编号**：05
-> **子仓代号**：极境认知（Airymax Cognition）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：CoreLoopThree kthread + Thinkdual 双思考 + Wasm 3.0 + LLM 推理感知调度
-> **同源 agentrt**：coreloopthree + frameworks（CoreLoopThree + Thinkdual）
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 coreloopthree 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 kthread 加速、Wasm runtime、GPU/NPU 驱动实现独立
+> **子仓编号**：05\
+> **子仓代号**：极境认知（Airymax Cognition）\
+> **文档版本**：v1.1（2026-07-07）\
+> **设计基准**：CoreLoopThree kthread + Thinkdual 双思考 + Wasm 3.0 + LLM 推理感知调度\
+> **同源 agentrt**：coreloopthree + frameworks（CoreLoopThree + Thinkdual）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 coreloopthree 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 kthread 加速、Wasm runtime、GPU/NPU 驱动实现独立\
 > **横切关注点**：认知循环贯穿调度（阶段通知）、IPC（推理提交）、eBPF（推理追踪）、记忆卷载（快照迁移）4 大数据流
 
 ---

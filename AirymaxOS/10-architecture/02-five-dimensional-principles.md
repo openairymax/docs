@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）五维正交 24 原则与落地映射
 
-> **文档定位**: agentrt-linux（AirymaxOS）架构设计原则的完整定义与落地映射
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **父文档**: [架构设计](README.md)
-> **原则来源**: [00-architectural-principles.md](../../AirymaxRT/00-architectural-principles.md)
+> **文档定位**：agentrt-linux（AirymaxOS）架构设计原则的完整定义与落地映射\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-06\
+> **父文档**：[架构设计](README.md)\
+> **原则来源**：[00-architectural-principles.md](../../AirymaxRT/00-architectural-principles.md)
 
 ---
 
@@ -142,7 +142,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | airymaxos-kernel 时间服务 | 时钟、定时器、事件 | 超时策略、重试逻辑 |
 
 **实施规则**：
-1. airymaxos-kernel 新增接口必须通过架构委员会审批
+1. airymaxos-kernel 新增接口必须通过工程规范委员会审批
 2. 新功能优先考虑作为 airymaxos-services 用户态守护进程实现
 3. 内核接口必须是泛化的，不包含任何业务语义
 4. 严格遵循 Liedtke minimality：可移到用户态的功能必须移到用户态
@@ -539,8 +539,8 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 原则本身也需要演进：
 
 1. **提案**：社区或团队成员提出新原则或修改建议
-2. **讨论**：架构委员会组织讨论，评估影响
-3. **投票**：架构委员会投票决定是否采纳
+2. **讨论**：工程规范委员会组织讨论，评估影响
+3. **投票**：工程规范委员会投票决定是否采纳
 4. **文档化**：更新 00-architectural-principles.md 和本文档
 5. **公告**：向社区公告原则变更
 6. **实施**：在代码库中实施新原则
@@ -564,6 +564,88 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 |------|------|------|
 | 0.1.1 | 2026-07-06 | 初始版本（含 24 原则 + agentrt-linux 落地映射） |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步验证） |
+
+## 10. IRON-9 v2 三层共享模型
+
+> **OS-ARCH-003**： 五维正交 24 原则在 agentrt（用户态）与 agentrt-linux（内核态）间遵循 IRON-9 v2 三层共享模型——S 系统观 / K 内核观 / C 认知观 / E 工程观 / A 设计美学跨态同源，认知观契约经 [SC] 共享，内核观实现经 [IND] 各自独立，禁止为五维原则引入双端适配别名层。
+
+### 10.1 三层模型概览
+
+| 层次 | 共享程度 | 五维原则映射 |
+|------|---------|-------------|
+| **[SC] 共享契约层** | 完全共享代码 | C 认知观（`cognition_types.h` 三阶段）+ E 工程观编码契约经 6 头文件共享，物理宿主 `kernel/include/airymax/`，子仓经 `-I` 引用 |
+| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | S 系统观 + A 设计美学在 agentrt 5 维模块 ↔ agentrt-linux 8 子仓的同源映射 |
+| **[IND] 完全独立层** | 完全独立 | K 内核观（agentrt-linux sched_ext / eBPF 独有）+ E 工程观实现（CMake vs Kbuild） |
+
+### 10.2 [SC] 共享契约层——6 个头文件在五维原则中的角色
+
+| 头文件 | 对应维度 | 在五维原则中的角色 | 消费方 |
+|--------|---------|-------------------|--------|
+| `sched.h` | S 系统观 | magic 0x41475453 'AGTS' + SCHED_EXT=7（禁用 SCHED_AGENT 宏）+ MAC_MAX_AGENTS=1024 | kernel / cognition |
+| `ipc.h` | S 系统观 | magic 0x41524531 'ARE1' + 128B 消息头（`agentrt_ipc_msg_hdr_t`）契约 | kernel / services |
+| `bpf_struct_ops.h` | K 内核观 | struct_ops 4 状态机（INIT/INUSE/TOBEFREE/READY）+ common_value 16B | kernel / cognition |
+| `security_types.h` | E 工程观 | 38 capability + 254 LSM 钩子 + Cupolas blob 布局 | kernel / security |
+| `memory_types.h` | E 工程观 | MemoryRovol L1-L4 + GFP 掩码语义 + PMEM 接口 | kernel / memory |
+| `cognition_types.h` | C 认知观 | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 | kernel / cognition |
+
+### 10.3 [SS] 语义同源层——五维原则 agentrt ↔ agentrt-linux 映射
+
+| 维度 | agentrt 实现（用户态） | agentrt-linux 实现（内核态） | 同源 API |
+|------|----------------------|---------------------------|---------|
+| S 系统观 | MicroCoreRT atoms + AgentsIPC | airymaxos-kernel + services | sched_ext 17 项 + io_uring 8 项 |
+| K 内核观 | 用户态 priority queue | sched_ext + BPF struct_ops | 调度类编号同源（SCHED_EXT=7） |
+| C 认知观 | CoreLoopThree 协程 | cognition kthread + EEVDF | 三阶段枚举 + Thinkdual |
+| E 工程观 | CMake + libc/POSIX | Kbuild + Kconfig + Linux 6.6 | OLK-6.6 编码契约 |
+| A 设计美学 | 五维正交命名 | 五维正交命名 | 24 原则命名同源 |
+
+### 10.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| 调度原语 | 用户态协程 + event loop | BPF struct_ops + sched_ext | 跨平台约束（macOS/Windows 无 sched_ext） |
+| IPC 传输 | POSIX MQ + mmap | io_uring + SQPOLL（用户态-内核态）；kfifo + wait_event_interruptible（kthread 间） | 内核态性能与 kthread 通信约束 |
+| 构建工具链 | CMake | Kbuild + Kconfig | 工具链差异 |
+| 平台适配 | libc/POSIX 跨三平台 | Linux 6.6 内核 API | IRON-1 二进制兼容约束 |
+
+### 10.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态（五维原则落地）"
+        RT_S[S 系统观<br/>MicroCoreRT + AgentsIPC]
+        RT_K[K 内核观<br/>priority queue]
+        RT_C[C 认知观<br/>CoreLoopThree]
+        RT_E[E 工程观<br/>CMake + libc]
+    end
+
+    subgraph "agentrt-linux 内核态（五维原则落地）"
+        OS_S[S 系统观<br/>kernel + services]
+        OS_K[K 内核观<br/>sched_ext + eBPF]
+        OS_C[C 认知观<br/>cognition kthread]
+        OS_E[E 工程观<br/>Kbuild + Linux 6.6]
+    end
+
+    subgraph "[SC] 共享契约层（6 头文件）"
+        SC[cognition_types.h + sched.h + ipc.h<br/>security_types.h + memory_types.h + bpf_struct_ops.h]
+    end
+
+    RT_S -.->|"API 同源 [SS]"| OS_S
+    RT_K -.->|"API 同源 [SS]"| OS_K
+    RT_C -.->|"API 同源 [SS]"| OS_C
+    RT_E -.->|"API 同源 [SS]"| OS_E
+
+    RT_S ==>|"共享代码 [SC]"| SC
+    RT_C ==>|"共享代码 [SC]"| SC
+    OS_S ==>|"共享代码 [SC]"| SC
+    OS_K ==>|"共享代码 [SC]"| SC
+    OS_C ==>|"共享代码 [SC]"| SC
+
+    style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_S fill:#e3f2fd,stroke:#1565c0
+    style OS_K fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-ARCH-004**： 五维原则跨态同源遵循"零适配层天然契合"——A 设计美学与 C 认知观经 [SC] 6 头文件直接对接，不生成 `five_dim_compat.h` 或任何兼容别名层；K 内核观因平台差异落入 [IND]，两端各自演进。
 
 ---
 

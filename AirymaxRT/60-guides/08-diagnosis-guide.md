@@ -49,7 +49,7 @@ Airymax 采用**分层诊断方法论**，从外到内逐层定位问题：
 
 ```bash
 #!/bin/bash
-# agentos_diagnose.sh - 全自动诊断脚本
+# agentrt_diagnose.sh - 全自动诊断脚本
 
 set -e
 
@@ -86,11 +86,11 @@ echo ""
 echo "--- [Layer 5] Data Layer Checks ---"
 
 # PostgreSQL 检查
-if pg_isready -h localhost -p 5432 -U agentos 2>/dev/null | grep -q "accepting connections"; then
+if pg_isready -h localhost -p 5432 -U agentrt 2>/dev/null | grep -q "accepting connections"; then
     check_pass "PostgreSQL is running and accepting connections"
 
     # 连接数检查
-    CONN_COUNT=$(psql -U agentos -d agentos -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null | tr -d ' ')
+    CONN_COUNT=$(psql -U agentrt -d agentrt -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null | tr -d ' ')
     if [ "$CONN_COUNT" -lt 100 ]; then
         check_pass "PostgreSQL connection count: $CONN_COUNT (healthy)"
     else
@@ -98,7 +98,7 @@ if pg_isready -h localhost -p 5432 -U agentos 2>/dev/null | grep -q "accepting c
     fi
 
     # 慢查询检查
-    SLOW_QUERIES=$(psql -U agentos -d agentos -t -c "
+    SLOW_QUERIES=$(psql -U agentrt -d agentrt -t -c "
         SELECT count(*) FROM pg_stat_statements WHERE mean_exec_time > 1000;
     " 2>/dev/null | tr -d ' ')
     if [ "$SLOW_QUERIES" -eq 0 ]; then
@@ -238,7 +238,7 @@ fi
 
 echo ""
 echo "--- Recent Error Logs (Last 10 lines) ---"
-docker logs agentos-kernel-1 2>&1 | grep -i error | tail -10 || echo "(No recent errors)"
+docker logs agentrt-kernel-1 2>&1 | grep -i error | tail -10 || echo "(No recent errors)"
 
 echo ""
 echo "=========================================="
@@ -376,7 +376,7 @@ class MetricPoint:
     timestamp: datetime
 
 class PerformanceBaseline:
-    def __init__(self, baseline_file: str = "/var/log/agentos/performance_baseline.json"):
+    def __init__(self, baseline_file: str = "/var/log/agentrt/performance_baseline.json"):
         self.baseline_file = baseline_file
         self.baseline = self._load_baseline()
 
@@ -527,7 +527,7 @@ if __name__ == "__main__":
 
 ```bash
 # 查看内核启动日志
-journalctl -u agentos-kernel --since "1 hour ago" | head -100
+journalctl -u agentrt-kernel --since "1 hour ago" | head -100
 
 # 查看 IPC 统计
 curl -s http://localhost:8080/api/v1/kernel/stats/ipc | jq .
@@ -563,7 +563,7 @@ curl -s -X POST http://localhost:8080/ \
   -d '{"jsonrpc":"2.0","method":"memory.stats","params":{"layer":"all"},"id":1}' | jq .
 
 # 查看记忆存储目录使用量
-du -sh /var/lib/agentos/memory/
+du -sh /var/lib/agentrt/memory/
 ```
 
 ---
@@ -577,7 +577,7 @@ du -sh /var/lib/agentos/memory/
 # incident_response.sh - 应急响应脚本
 
 INCIDENT_ID=$(date +%Y%m%d_%H%M%S)
-LOG_DIR="/var/log/agentos/incidents/$INCIDENT_ID"
+LOG_DIR="/var/log/agentrt/incidents/$INCIDENT_ID"
 mkdir -p "$LOG_DIR"
 
 echo "=== Incident Response Started ==="
@@ -603,8 +603,8 @@ for container in $(docker ps --format '{{.Names}}'); do
 done
 
 # 应用日志
-journalctl -u agentos-kernel --since "30 min ago" > "$LOG_DIR/journal_kernel.log"
-journalctl -u agentos-daemon --since "30 min ago" > "$LOG_DIR/journal_daemon.log"
+journalctl -u agentrt-kernel --since "30 min ago" > "$LOG_DIR/journal_kernel.log"
+journalctl -u agentrt-daemon --since "30 min ago" > "$LOG_DIR/journal_daemon.log"
 
 # Step 2: 尝试快速恢复
 echo "[Step 2/6] Attempting quick recovery..."
@@ -635,7 +635,7 @@ else
     send_alert "P0 Incident $INCIDENT_ID: Quick recovery failed. Manual intervention required."
 
     # 导出完整诊断包
-    tar czf "/tmp/incident_${INCIDENT_ID}.tar.gz" -C /var/log/agentos/incidents "$INCIDENT_ID"
+    tar czf "/tmp/incident_${INCIDENT_ID}.tar.gz" -C /var/log/agentrt/incidents "$INCIDENT_ID"
 
     # 生成事件报告
     cat > "$LOG_DIR/incident_report.md" << EOF
@@ -666,7 +666,7 @@ send_alert "Incident $INCIDENT_ID response completed. Status: $HEALTH_STATUS"
 
 # Step 6: 创建后续行动项
 echo "[Step 6/6] Creating follow-up actions..."
-cat >> /var/log/agentos/post_incident_actions.txt << EOF
+cat >> /var/log/agentrt/post_incident_actions.txt << EOF
 
 [$(date)] Incident $INCIDENT_ID
 - [ ] Conduct root cause analysis

@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 系统调用接口
 
-> **文档定位**: agentrt-linux（AirymaxOS） 内核系统调用的分类、编号、C 接口、清单、性能约束与错误码
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **父文档**: [接口设计](README.md)
+> **文档定位**： agentrt-linux（AirymaxOS） 内核系统调用的分类、编号、C 接口、清单、性能约束与错误码\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **父文档**： [接口设计](README.md)
 
 ---
 
@@ -359,6 +359,87 @@ if (ret < 0) {
 - [内核设计](../20-modules/01-kernel.md)
 - [安全设计](../20-modules/03-security.md)
 - [非功能性需求](../00-requirements/03-non-functional-requirements.md)（NFR-P-001）
+
+---
+
+## 8. IRON-9 v2 三层共享模型
+
+> **OS-IFACE-001**： 系统调用接口遵循 IRON-9 v2 三层共享模型——agentrt 用户态 `syscalls.h` 与 agentrt-linux 内核 `agentrt_syscalls.h` 的编号、签名、错误码通过 [SC] 共享契约层头文件同源；syscall 表注册、`SYSCALL_DEFINE*` 宏、capability 守卫实现各自独立。禁止在用户态与内核态之间引入 syscall 号映射表或编号转换层。
+
+### 8.1 三层模型概览
+
+| 层次 | 共享程度 | 本接口涉及内容 |
+|------|---------|---------------|
+| **[SC] 共享契约层** | 完全共享代码 | `sched.h`（任务描述符 magic 0x41475453 'AGTS'、SCHED_EXT=7、`SCHED_AGENT` 宏禁用、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`agentrt_ipc_msg_hdr_t`）+ `security_types.h`（capability 38 ID）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举） |
+| **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | agentrt `syscalls.h`（用户态 libc syscall 包装）↔ agentrt-linux `agentrt_syscalls.h`（内核 `SYSCALL_DEFINE*`）6 类 120 调用同源 |
+| **[IND] 完全独立层** | 完全独立 | agentrt 跨平台 syscall 封装（Linux/macOS/Windows 三平台）↔ agentrt-linux 内核 syscall 表注册（`arch/x86/entry/syscalls/syscall_64.tbl` 512-631 段） |
+
+### 8.2 [SC] 共享契约层——头文件在系统调用接口中的角色
+
+| 头文件 | 在系统调用中的角色 | 消费方 |
+|--------|-------------------|--------|
+| `sched.h` | `agentrt_task_desc_t` 任务描述符（magic 0x41475453 'AGTS' 校验）+ SCHED_EXT=7 调度类编号 + `SCHED_AGENT` 宏禁用 + 优先级范围 0-139 + MAC_MAX_AGENTS=1024 | `agentrt_sys_task_submit` / `agentrt_sys_sched_set_policy` |
+| `ipc.h` | `agentrt_ipc_msg_hdr_t` 128B 消息头（magic 0x41524531 'ARE1' 校验）+ 5 种 payload type + flags 位 | `agentrt_sys_ipc_send` / `agentrt_sys_ipc_recv` |
+| `security_types.h` | capability 38 ID 枚举 + capability 令牌结构 + mint/revoke/derive/copy 签名 | `agentrt_sys_capability_request` / `agentrt_sys_capability_revoke` |
+| `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `agentrt_sys_rovol_snapshot` / `agentrt_sys_rovol_restore` |
+| `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPTION/THINKING/ACTION）+ phase notify 参数 | `agentrt_sys_clt_phase_notify` |
+
+### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux 系统调用映射
+
+| agentrt 用户态（syscalls.h） | agentrt-linux 内核（SYSCALL_DEFINE） | 同源签名 | 实现差异 |
+|------------------------------|--------------------------------------|---------|---------|
+| `agentrt_sys_task_submit()` | `SYSCALL_DEFINE2(agentrt_task_submit, ...)` | `(const agentrt_task_desc_t *, uint32_t) -> int` | 用户态 libc syscall() vs 内核 sched_ext 提交 |
+| `agentrt_sys_ipc_send()` | `SYSCALL_DEFINE3(agentrt_ipc_send, ...)` | `(const agentrt_ipc_msg_hdr_t *, const void *, size_t) -> int` | 用户态 POSIX MQ vs 内核 io_uring SQE |
+| `agentrt_sys_ipc_recv()` | `SYSCALL_DEFINE3(agentrt_ipc_recv, ...)` | `(agentrt_ipc_msg_hdr_t *, void *, size_t) -> int` | 用户态 mq_receive vs 内核 io_uring CQE |
+| `agentrt_sys_capability_request()` | `SYSCALL_DEFINE3(agentrt_capability_request, ...)` | `(const char *, const char *, uint32_t *) -> int` | 用户态 Cupolas vs 内核 LSM + CNode |
+| `agentrt_sys_rovol_snapshot()` | `SYSCALL_DEFINE3(agentrt_rovol_snapshot, ...)` | `(uint32_t, uint64_t *, uint32_t *) -> int` | 用户态 mmap+msync vs 内核 PMEM |
+| `agentrt_sys_clt_phase_notify()` | `SYSCALL_DEFINE2(agentrt_clt_phase_notify, ...)` | `(uint32_t, uint32_t) -> int` | 用户态 event loop vs 内核 kthread |
+
+### 8.4 [IND] 完全独立层
+
+| 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
+|--------|-------------|-------------------|---------|
+| syscall 表注册 | 无（用户态直接 libc syscall()） | `syscall_64.tbl` 512-631 段 120 项 | 跨平台约束 |
+| ABI 稳定性 | 编译期符号绑定 | 内核 syscall 号绑定（MAJOR 锁定） | 工具链差异 |
+| 错误码返回 | `AGENTRT_E*` 负值（用户态 errno 互转） | `AGENTRT_E*` 负值（内核 IS_ERR_VALUE） | errno 语义差异 |
+| 调用入口 | `agentrt_syscalls.h`（CMake 安装） | `uapi/agentrt_syscalls.h`（Kbuild 导出） | 构建系统差异 |
+
+### 8.5 跨态协作流
+
+```mermaid
+graph TB
+    subgraph "agentrt 用户态"
+        RT_USR[syscalls.h<br/>libc syscall 包装]
+    end
+
+    subgraph "agentrt-linux 内核态"
+        OS_TBL[syscall_64.tbl<br/>512-631 段]
+        OS_DEF[SYSCALL_DEFINE*<br/>6 类 120 调用]
+    end
+
+    subgraph "[SC] 共享契约层"
+        SC1[sched.h<br/>AGTS magic + SCHED_EXT=7]
+        SC2[ipc.h<br/>ARE1 magic + 128B hdr]
+        SC3[security_types.h<br/>38 cap ID]
+    end
+
+    RT_USR -.->|"编号同源 [SS] 512-631"| OS_TBL
+    OS_TBL --> OS_DEF
+    RT_USR ==>|"共享代码 [SC]"| SC1
+    RT_USR ==>|"共享代码 [SC]"| SC2
+    RT_USR ==>|"共享代码 [SC]"| SC3
+    OS_DEF ==>|"共享代码 [SC]"| SC1
+    OS_DEF ==>|"共享代码 [SC]"| SC2
+    OS_DEF ==>|"共享代码 [SC]"| SC3
+
+    style SC1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style SC2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style SC3 fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style RT_USR fill:#e3f2fd,stroke:#1565c0
+    style OS_DEF fill:#fff3e0,stroke:#e65100
+```
+
+> **OS-IFACE-002**： 系统调用编号 512-631 段在 agentrt 用户态（`syscalls.h` 宏定义）与 agentrt-linux 内核态（`syscall_64.tbl` 表项）保持二进制一致——同一编号在两侧语义完全相同，禁止在用户态引入编号重映射。`AGENTRT_E*` 错误码在两侧同源，用户态通过 `agentrt_errno_to_linux()` 互转，但 syscall 返回值本身不转换。
 
 ---
 

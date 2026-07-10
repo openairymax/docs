@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）kernel-doc 注释规范
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）内核态 C 代码的 kernel-doc 注释强制规范。定义 `/** */` 注释格式、`@arg:`/`Return:`/`Context:` 等字段模板，以及 `struct`/`enum`/`function`/`typedef` 等结构的文档模板。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）内核态 C 代码的 kernel-doc 注释强制规范。定义 `/** */` 注释格式、`@arg:`/`Return:`/`Context:` 等字段模板，以及 `struct`/`enum`/`function`/`typedef` 等结构的文档模板。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **理论根基**： Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0
 
 ---
 
@@ -544,4 +544,4 @@ struct agentrt_ipc_msg_hdr {
 
 ---
 
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0

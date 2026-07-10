@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 与 agentrt 的集成规范
 
-> **文档定位**: agentrt-linux（AirymaxOS）与 agentrt（AirymaxAgentRT）的详细集成规范，定义集成架构、IRON-9 v2 三层集成点、ABI 兼容性、版本对齐、集成测试与性能基准
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [集成标准总览](README.md)
-> **关联规范**: IRON-9 v2 工程铁律（内部工程标准规范） / [架构设计](../../10-architecture/01-system-architecture.md) / [五维正交 24 原则](../../10-architecture/02-five-dimensional-principles.md) / [工程基线](../../10-architecture/04-engineering-baseline.md)
+> **文档定位**： agentrt-linux（AirymaxOS）与 agentrt（AirymaxAgentRT）的详细集成规范，定义集成架构、IRON-9 v2 三层集成点、ABI 兼容性、版本对齐、集成测试与性能基准\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [集成标准总览](README.md)\
+> **关联规范**： IRON-9 v2 工程铁律（内部工程标准规范） / [架构设计](../../10-architecture/01-system-architecture.md) / [五维正交 24 原则](../../10-architecture/02-five-dimensional-principles.md) / [工程基线](../../10-architecture/04-engineering-baseline.md)
 
 ---
 
@@ -21,7 +21,7 @@ agentrt（AirymaxAgentRT）与 agentrt-linux（AirymaxOS）的集成基于 **IRO
 | **无适配层** | agentrt 在 agentrt-linux 上原生运行，无需任何适配层或转换层 |
 | **同源天然契合** | 两者共享 Airymax 设计理念（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），设计假设和实现假设一致 |
 | **契约共享** | [SC] 共享契约层代码完全共享，通过 `include/airymax/` 头文件库同步 |
-| **语义同源** | [SS] 语义同源层 API 签名同源，实现各自独立 |
+| **语义同源** | [SS] 语义同源层高层 API 语义同源，签名因抽象层级不同而独立演进 |
 | **完全独立** | [IND] 完全独立层各自独立演进，不互相依赖 |
 | **可选使用** | agentrt 在 agentrt-linux 上运行时，可选使用 OS 原生能力（同源红利），非强制 |
 
@@ -397,7 +397,7 @@ typedef struct __attribute__((aligned(64))) {
 
 ### 3.1 语义同源层定义
 
-[SS] 语义同源层是 IRON-9 v2 的第二层，包含 agentrt 和 agentrt-linux 语义一致但实现独立的模块。API 签名同源，但具体实现各自独立。
+[SS] 语义同源层是 IRON-9 v2 的第二层，包含 agentrt 和 agentrt-linux 语义一致但实现独立的模块。高层 API 语义同源（概念操作一致）；SDK 层签名同源（同一份源码两端编译），其他层签名因抽象层级不同而独立演进。
 
 ### 3.2 调度语义集成
 
@@ -505,7 +505,7 @@ agentrt-linux（AirymaxOS）对 agentrt 提供以下 ABI 兼容性保证：
 | **系统调用 ABI** | 长期稳定 | Linux 6.6 基线的系统调用 ABI 在 LTS 周期内保持稳定 |
 | **libc ABI** | 长期稳定 | glibc 2.38+ 的 ABI 在 LTS 周期内保持稳定 |
 | **io_uring ABI** | 长期稳定 | io_uring 的 ABI 在 LTS 周期内保持稳定 |
-| **[SS] 层 API** | 语义稳定 | API 签名保持稳定，实现可优化 |
+| **[SS] 层 API** | 语义稳定 | SDK 层 API 签名保持稳定（同一份源码两端编译），其他层语义保持稳定，实现可优化 |
 
 ### 4.2 ABI 破坏性变更处理
 

@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）补丁生命周期 6 阶段详解
 
-> **文档定位**: agentrt-linux（AirymaxOS）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）
-> **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化
-> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 agentrt-linux 内核发行版规范并行演进，通过同源 API 保持互操作）
+> **文档定位**： agentrt-linux（AirymaxOS）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）
+> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化
+> **核心约束**： IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 agentrt-linux 内核发行版规范并行演进，通过同源 API 保持互操作）
 
 ---
 
@@ -74,7 +74,7 @@ flowchart LR
 | 1. Design | 需求/问题 | RFC issue | 贡献者 | 无强约束 | RFC 模板 |
 | 2. Early Review | RFC + PR | 审查意见 | 子系统维护者 | 1 周 | CODEOWNERS + DCO bot |
 | 3. Wider Review | 修订 PR | develop 集成 | 顶级子系统维护者 | 2 周 | nightly build + 7 层验证前 4 层 |
-| 4. Mainline | PR + Reviewed-by | main 提交 | 总维护者 | Merge Window 内 | CI 全绿 + 协议委员会签字 |
+| 4. Mainline | PR + Reviewed-by | main 提交 | 总维护者 | Merge Window 内 | CI 全绿 + 工程规范委员会签字 |
 | 5. Stable Release | main 提交 | release/* | 稳定版团队 | 48 小时 ACK | -rc 验证 |
 | 6. Long-term | stable 反馈 | Fixes 补丁 | 原作者 + LTS 维护者 | 12 个月响应 | telemetry + bisect |
 
@@ -201,7 +201,7 @@ agentrt-linux 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge
 ### 6.2 规则编号
 
 - **OS-DEV-131**：合并入 `main` 的补丁必须包含至少 1 个 `Reviewed-by:` 标签（来自非作者维护者）。
-- **OS-DEV-132**：合并入 `main` 的补丁若修改 AgentsIPC 128B 消息头布局，必须由 agentrt-linux 协议委员会额外签字。
+- **OS-DEV-132**：合并入 `main` 的补丁若修改 AgentsIPC 128B 消息头布局，必须由 agentrt-linux 工程规范委员会额外签字。
 - **OS-DEV-133**：合并入 `main` 的补丁若修改 MicroCoreRT 同源语义，必须通过 agentrt 兼容性测试。
 - **OS-DEV-134**：合并入 `main` 必须通过 GitHub Actions 全部检查；任一检查失败禁止合并。
 
@@ -217,7 +217,7 @@ agentrt-linux 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge
 ### 审查状态
 - [x] 子系统维护者 Reviewed-by
 - [x] develop nightly build 通过 + 7 层验证全绿
-- [ ] 协议委员会签字（仅 ABI 改动需要）
+- [ ] 工程规范委员会签字（仅 ABI 改动需要）
 
 ### Conflict 解决说明
 <如有冲突，说明解决方式>
@@ -246,7 +246,7 @@ agentrt-linux 采用 2 周 Merge Window + 6 周 RC 周期的发布节奏：Merge
 ### 7.3 规则编号
 
 - **OS-DEV-141**：使用 Option 2/3 时必须确保修复已存在于所有更新的稳定版分支。
-- **OS-DEV-142**：稳定版补丁审查委员会有 48 小时给出 ACK 或 NAK。
+- **OS-DEV-142**：工程规范委员会有 48 小时给出 ACK 或 NAK。
 - **OS-DEV-143**：regression 报告必须在 48 小时内响应，7 天内提供修复或回滚方案。
 - **OS-DEV-144**：稳定版发布后 30 天内，相关补丁作者需主动监控 telemetry 指标。
 
@@ -358,7 +358,7 @@ stateDiagram-v2
     note right of STABLE
         STABLE → LTS 转换条件：
         需 stable kernel team 审批
-        稳定版审查委员会 48 小时
+        工程规范委员会 48 小时
         给出 ACK 或 NAK（OS-DEV-142）
         补丁不超过 100 行含上下文
     end note
@@ -449,7 +449,7 @@ gh pr create --base develop --title "kernel: consume agentsipc agent_priority fi
 
 - **OS-DEV-171**：跨仓 PR 必须在描述中标注所有依赖的下游仓 PR。
 - **OS-DEV-172**：跨仓 PR 的 CI 必须触发上下游仓的兼容性测试。
-- **OS-DEV-173**：AgentsIPC 协议变更的跨仓 PR 必须由协议委员会同步签字所有相关仓的 PR。
+- **OS-DEV-173**：AgentsIPC 协议变更的跨仓 PR 必须由工程规范委员会同步签字所有相关仓的 PR。
 
 ---
 
@@ -503,7 +503,7 @@ Reviewed-by: Reviewer Name <reviewer@example.com>
 |------|------|--------------|
 | **S-1 反馈闭环** | 感知-决策-执行-反馈闭环 | 6 阶段生命周期构成完整反馈闭环，develop nightly build 是关键反馈点 |
 | **S-4 涌现性管理** | 简单规则引导有益整体行为 | 渐进式开发模型 + Merge Window + RC 管理涌现性 |
-| **K-2 接口契约化** | 双层稳定性哲学 | L1-L4 接口分级 + AgentsIPC 128B 改动需协议委员会签字（OS-DEV-132） |
+| **K-2 接口契约化** | 双层稳定性哲学 | L1-L4 接口分级 + AgentsIPC 128B 改动需工程规范委员会签字（OS-DEV-132） |
 | **C-2 增量演化** | 渐进式演进每步可验证 | 补丁序列中点可编译 + git bisect 友好 |
 | **E-6 错误可追溯** | 错误可溯源可追踪 | Fixes/Closes/Link 标签 + 12 字符 SHA + Signed-off-by DCO 链 |
 | **E-7 文档即代码** | 文档与代码同源同审 | RFC issue + 五维原则映射小节（OS-DEV-102） |
@@ -593,6 +593,85 @@ graph LR
 
 补丁协作流：agentrt 用户态使用单一仓库的 GitHub PR 流程提交补丁，补丁格式（git format-patch）、review 标签（Reviewed-by/Tested-by）、DCO 签名（Signed-off-by）由 [SS] 语义同源层两端共享。agentrt-linux 将这些语义落地为 8 子仓的分布式补丁流转（[IND] 完全独立——kernel→services→security→memory→cognition→cloudnative→system→tests-linux 的依赖链合入顺序、submodule 更新、umbrella repo 统一发布），每仓独立 PR/review/merge 但遵循同源补丁格式。两端通过 [SS] 层的补丁格式同源实现开发者经验的平滑迁移，同源 API 变更（MicroCoreRT/AgentsIPC）通过 §13.1 的双向同步机制确保两端一致性。
 
+### 13.3 8 子仓补丁流转路径与跨仓依赖排序
+
+agentrt-linux 的 8 子仓补丁流转存在严格的跨仓依赖排序问题：下层子仓（如 kernel）的补丁必须先 merge 到 develop 分支，上层子仓（如 services/cognition）依赖下层 commit SHA 的 submodule 指针更新后方可提交 PR；违反排序将导致上层 PR 的 CI 拉取到旧版下层产物，触发虚假的符号缺失或 ABI 断裂失败。
+
+#### 13.3.1 8 子仓补丁流转路径图
+
+```mermaid
+graph TD
+    K["kernel 补丁<br/>阶段 0：先 merge"]
+    L1A["services 补丁<br/>阶段 1"]
+    L1B["security 补丁<br/>阶段 1"]
+    L1C["memory 补丁<br/>阶段 1"]
+    SY["system 补丁<br/>阶段 2：依赖 kernel+services"]
+    CO["cognition 补丁<br/>阶段 2：依赖 services+memory"]
+    CL["cloudnative 补丁<br/>阶段 3：依赖 services+system"]
+    T["tests-linux 补丁<br/>阶段 4：最后验证全部"]
+
+    K -->|submodule SHA 更新| L1A
+    K -->|submodule SHA 更新| L1B
+    K -->|submodule SHA 更新| L1C
+    L1A -->|services SHA 就绪| SY
+    K -->|kernel SHA 就绪| SY
+    L1A -->|services SHA 就绪| CO
+    L1C -->|memory SHA 就绪| CO
+    L1A -->|services SHA 就绪| CL
+    SY -->|system SHA 就绪| CL
+    K -->|产物签名就绪| T
+    L1A -->|产物签名就绪| T
+    L1B -->|产物签名就绪| T
+    L1C -->|产物签名就绪| T
+    SY -->|产物签名就绪| T
+    CO -->|产物签名就绪| T
+    CL -->|产物签名就绪| T
+
+    style K fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    style L1A fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style L1B fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style L1C fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style SY fill:#fff8e1,stroke:#f57f17,color:#000
+    style CO fill:#fff8e1,stroke:#f57f17,color:#000
+    style CL fill:#e0f7fa,stroke:#006064,color:#000
+    style T fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#000
+```
+
+**流转路径说明**：kernel 补丁率先 merge 到 develop → 阶段 1 的 services/security/memory 检测到 kernel submodule 指针更新后并行 merge → 阶段 2 的 system 等待 services merge 完成、cognition 等待 services 与 memory 双双 merge 完成 → 阶段 3 的 cloudnative 等待 services 与 system 双双 merge 完成 → 阶段 4 的 tests-linux 最后 merge 并对全部 7 仓产物执行 KUnit/kselftest 验证。
+
+#### 13.3.2 跨仓依赖排序算法表
+
+| 子仓 | 依赖子仓 | 补丁必须先 merge 的子仓 | 可并行 merge 的子仓 | merge 阶段 |
+|------|---------|---------------------|-------------------|-----------|
+| kernel | （无） | （无） | 无（必须最先） | 阶段 0 |
+| services | kernel | kernel | security / memory | 阶段 1 |
+| security | kernel | kernel | services / memory | 阶段 1 |
+| memory | kernel | kernel | services / security | 阶段 1 |
+| system | kernel + services | kernel, services（双双就绪） | cognition | 阶段 2 |
+| cognition | services + memory | services, memory（双双就绪） | system | 阶段 2 |
+| cloudnative | services + system | services, system（双双就绪） | 无（须独占） | 阶段 3 |
+| tests-linux | 全部 7 仓 | kernel/services/security/memory/system/cognition/cloudnative | 无（必须最后） | 阶段 4 |
+
+**排序算法**：依赖排序采用拓扑排序（topological sort）——以子仓为节点、依赖关系为有向边，`make build-order` 目标输出合法 merge 序列。同阶段（如阶段 1）的子仓无相互依赖，可并行触发 PR merge；跨阶段必须严格串行，下一阶段子仓的 PR 在上一阶段全部 merge 前 develop 分支 CI 标记为 `blocked`。该排序与 §10.1 的 8 子仓依赖图同源，但聚焦补丁 merge 时序而非静态构建依赖。
+
+#### 13.3.3 跨仓 PR 的 submodule 更新触发机制
+
+agentrt-linux 的 umbrella repo 通过 `.gitmodules` 引用 8 子仓的 commit SHA。当某一子仓的 PR 合并到 `develop` 后，GitHub Actions 自动触发上游子仓的 submodule 更新 PR：
+
+1. **下游仓 merge 触发**：`airymaxos-kernel` 仓 PR 合并后，CI 调用 `git submodule update --remote airymaxos-kernel` 更新 `services`/`security`/`memory` 仓的 `.gitmodules` 指针。
+2. **自动 PR 创建**：CI 为每个上游子仓自动创建 `chore: bump airymaxos-kernel submodule to <sha>` 的 PR，目标分支为 `develop`，PR 描述必须引用下游仓的 commit SHA（12 字符）。
+3. **上游仓 CI 验证**：上游子仓 PR 触发本地 CI，拉取新版下游产物后执行编译 + 7 层验证前 4 层（OS-DEV-121）；通过后方可 merge。
+4. **阶段推进**：当某一阶段（如阶段 1）的全部子仓 submodule PR merge 完成，CI 自动解锁阶段 2 子仓（system/cognition）的 PR 队列。
+
+该机制确保跨仓依赖始终以 commit SHA 显式锚定，而非依赖分支名或 tag——这与 §8.3 `Fixes:` 标签使用 12 字符 SHA 的溯源约束同源（E-6 错误可追溯）。
+
+#### 13.3.4 规则编号
+
+- **OS-DEV-191**：跨仓 PR 必须先 merge 下游仓再 merge 上游仓——下游仓（如 kernel）的 PR 合并并产出 commit SHA 后，上游仓（如 services）的 PR 方可提交；上游仓 PR 必须在描述中引用下游仓的 12 字符 commit SHA 作为依赖证据，禁止引用分支名或 tag（对齐 E-6 错误可追溯 + §10.3 OS-DEV-171）。
+- **OS-DEV-192**：submodule 更新 PR 的 commit message 必须包含 `Bump: <下游仓名> to <12 字符 SHA>` 格式的锚定行，且 SHA 必须与下游仓 develop 分支的最新 merge commit 一致；CI 自动校验 SHA 一致性，不一致则 PR 标记为 `blocked` 禁止 merge（对齐 E-3 资源确定性）。
+- **OS-DEV-193**：跨仓 CI 必须在全部依赖仓 merge 后方可触发——cognition 仓的 CI 必须等待 services 与 memory 仓的 submodule PR 双双 merge；tests-linux 仓的 CI 必须等待全部 7 仓 merge 完成后方可运行 KUnit/kselftest，禁止对未就绪依赖仓执行集成测试（对齐 §13.3.1 流转路径 + OS-DEV-121 7 层验证前 4 层）。
+- **OS-DEV-194**：跨仓补丁回退必须按依赖逆序回滚——若 cognition 仓的补丁需回退，必须先回退 cognition 仓的 PR，再回退触发其 submodule 更新的 services/memory 仓 PR，最后回退 kernel 仓 PR；禁止只回退上层仓而保留下层仓的新 commit，否则 submodule 指针将指向悬空 SHA（对齐 §9.2 OS-DEV-161 回退原则 + IRON-9 v2 同源一致性）。
+
 ---
 
 ## 14. 相关文档与参考材料
@@ -619,7 +698,7 @@ graph LR
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集补丁生命周期 6 阶段所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核开发流程（`Documentation/process/`）、git format-patch 补丁格式规范、DCO 1.1 标准，以及 agentrt-linux GitHub PR 工作流专属契约（`include/airymax/patch_types.h`）。
+> **附录定位**： 本附录汇集补丁生命周期 6 阶段所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核开发流程（`Documentation/process/`）、git format-patch 补丁格式规范、DCO 1.1 标准，以及 agentrt-linux GitHub PR 工作流专属契约（`include/airymax/patch_types.h`）。
 
 ### A.1 核心数据结构
 
@@ -737,7 +816,7 @@ struct pr_template {
     bool        subsystem_reviewed; /* @field: 子系统维护者 Reviewed-by（OS-DEV-131） */
     bool        develop_nightly_pass;/* @field: develop nightly build 通过（OS-DEV-121） */
     bool        ci_all_green;    /* @field: GitHub Actions 全绿（OS-DEV-134） */
-    bool        protocol_signed; /* @field: 协议委员会签字（仅 ABI 改动需要，OS-DEV-132） */
+    bool        protocol_signed; /* @field: 工程规范委员会签字（仅 ABI 改动需要，OS-DEV-132） */
     bool        agentrt_compat_test; /* @field: agentrt 兼容性测试通过（OS-DEV-133） */
 
     /* 跨仓依赖 */
@@ -813,7 +892,7 @@ struct stage_transition {
     int          rule_count;     /* @field: 规则数量 */
     const char *failure_fallback;/* @field: 失败回退目标阶段 */
     uint32_t    max_retries;    /* @field: 最大重试次数（超过则回退到 Design，OS-DEV-162） */
-    bool        requires_protocol_sign; /* @field: 是否需要协议委员会签字（ABI 改动） */
+    bool        requires_protocol_sign; /* @field: 是否需要工程规范委员会签字（ABI 改动） */
     bool        requires_agentrt_compat; /* @field: 是否需要 agentrt 兼容性测试 */
 };
 ```
@@ -854,7 +933,7 @@ int patch_validate(const struct patch_metadata *metadata);
  * 创建流程：(1) 校验所有补丁通过 patch_validate()；
  *           (2) 基于 template 填充 PR 描述；
  *           (3) 若涉及 L1/L2 接口，校验 RFC 已获 ACK（OS-DEV-101）；
- *           (4) 若涉及 AgentsIPC/MicroCoreRT，标记需协议委员会签字（OS-DEV-132）；
+ *           (4) 若涉及 AgentsIPC/MicroCoreRT，标记需工程规范委员会签字（OS-DEV-132）；
  *           (5) 调用 gh pr create 创建 PR。
  *
  * @return: PR 编号（>0 成功），<0 失败
@@ -955,7 +1034,7 @@ int review_add(const char *patch_sha,
  *
  * 回溯规则（§7.1）：补丁必须已存在于 main；必须显然正确且已测试；
  * 不超过 100 行（含上下文）；必须修复真实 bug 或新增设备 ID。
- * 稳定版审查委员会有 48 小时给出 ACK 或 NAK（OS-DEV-142）。
+ * 工程规范委员会有 48 小时给出 ACK 或 NAK（OS-DEV-142）。
  *
  * @return: 0 成功，<0 失败（见 PATCH_* 错误码）
  * @since 0.1.1（文档体系）/ 1.0.1（代码实施）
@@ -1097,7 +1176,7 @@ int stable_backport(const char *patch_sha,
  */
 #define SLA_EARLY_REVIEW_HOURS    (7 * 24)   /* 早期审查 1 周反馈 */
 #define SLA_WIDER_REVIEW_HOURS    (14 * 24)  /* 广泛审查 2 周集成 */
-#define SLA_STABLE_ACK_HOURS      48          /* 稳定版委员会 48 小时 ACK（OS-DEV-142） */
+#define SLA_STABLE_ACK_HOURS      48          /* 工程规范委员会 48 小时 ACK（OS-DEV-142） */
 #define SLA_REGRESSION_RESP_HOURS 48          /* regression 48 小时响应（OS-DEV-143） */
 #define SLA_LTS_RESPONSE_MONTHS   12          /* LTS 12 个月响应（OS-DEV-151） */
 #define SLA_MAINTAINER_NOTIFY_MONTHS 6        /* 维护者离职提前 6 个月通知（OS-DEV-261） */

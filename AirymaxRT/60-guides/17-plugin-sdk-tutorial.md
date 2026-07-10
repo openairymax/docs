@@ -39,15 +39,15 @@ Airymax 定义了四种插件基类，分别对应不同的扩展场景：
 
 | 插件类型 | 基类 | 用途 | 典型场景 |
 |:---------|:-----|:-----|:---------|
-| **AgentPlugin** | `agentos.plugin_types.AgentPlugin` | 自定义 Agent 推理策略 | RAG Agent、反思 Agent |
-| **ToolPlugin** | `agentos.plugin_types.ToolPlugin` | 注册可调用工具 | 搜索引擎、计算器、天气查询 |
-| **HookPlugin** | `agentos.plugin_types.HookPlugin` | 生命周期事件拦截 | 日志审计、成本追踪、权限检查 |
-| **SkillPlugin** | `agentos.plugin_types.SkillPlugin` | 封装可复用技能 | 代码审查、文档生成、安全扫描 |
+| **AgentPlugin** | `agentrt.plugin_types.AgentPlugin` | 自定义 Agent 推理策略 | RAG Agent、反思 Agent |
+| **ToolPlugin** | `agentrt.plugin_types.ToolPlugin` | 注册可调用工具 | 搜索引擎、计算器、天气查询 |
+| **HookPlugin** | `agentrt.plugin_types.HookPlugin` | 生命周期事件拦截 | 日志审计、成本追踪、权限检查 |
+| **SkillPlugin** | `agentrt.plugin_types.SkillPlugin` | 封装可复用技能 | 代码审查、文档生成、安全扫描 |
 
 ### 1.3 安装 SDK
 
 ```bash
-pip install agentos
+pip install agentrt
 ```
 
 ---
@@ -80,7 +80,7 @@ DISCOVERED  →  LOADED  →  ACTIVATING  →  ACTIVE  →  DEACTIVATING  →  I
 插件基类 `BasePlugin` 提供以下生命周期回调方法，子类可按需覆写：
 
 ```python
-from agentos.framework.plugin import BasePlugin
+from agentrt.framework.plugin import BasePlugin
 
 class MyPlugin(BasePlugin):
 
@@ -152,7 +152,7 @@ permissions:
 
 # 依赖声明
 dependencies:
-  - plugin_id: agentos.core
+  - plugin_id: agentrt.core
     version_range: ">=0.1.0"
     optional: false
 
@@ -174,7 +174,7 @@ license: MIT
 
 ```python
 # main.py — Hello World Tool Plugin
-from agentos.plugin_types import ToolPlugin, ToolMetadata, ToolParameter
+from agentrt.plugin_types import ToolPlugin, ToolMetadata, ToolParameter
 
 
 class HelloWorldTool(ToolPlugin):
@@ -476,7 +476,7 @@ permissions:
   - network.outbound
 
 dependencies:
-  - plugin_id: agentos.core
+  - plugin_id: agentrt.core
     version_range: ">=0.1.0"
     optional: false
 
@@ -507,7 +507,7 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 
-from agentos.plugin_types import ToolPlugin, ToolMetadata, ToolParameter
+from agentrt.plugin_types import ToolPlugin, ToolMetadata, ToolParameter
 
 
 class WebSearchTool(ToolPlugin):
@@ -693,7 +693,7 @@ capabilities:
   - observability
 
 dependencies:
-  - plugin_id: agentos.core
+  - plugin_id: agentrt.core
     version_range: ">=0.1.0"
     optional: false
 
@@ -719,7 +719,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from agentos.plugin_types import HookPlugin
+from agentrt.plugin_types import HookPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -1038,7 +1038,7 @@ pytest tests/ -v
 import asyncio
 import pytest
 
-from agentos.framework.plugin import PluginRegistry, PluginState
+from agentrt.framework.plugin import PluginRegistry, PluginState
 from web_search_plugin.web_search import WebSearchTool
 
 

@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Agent 编排设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义多 Agent 协作模型、DAG 工作流编排与 TaskFlow 引擎在 OS 层的应用
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **同源映射**: agentrt 用户态运行时 MAC 框架 + TaskFlow 引擎（IRON-9 v2 [SS] 语义同源层）
-> **IRON-9 v2 层次**: [SS] 语义同源层（协作模式 API 签名同源，编排实现独立——agentrt-linux 基于内核 kthread + SCHED_AGENT，agentrt 基于用户态线程）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义多 Agent 协作模型、DAG 工作流编排与 TaskFlow 引擎在 OS 层的应用\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
+> **同源映射**：agentrt 用户态运行时 MAC 框架 + TaskFlow 引擎（IRON-9 v2 [SS] 语义同源层）\
+> **IRON-9 v2 层次**：[SS] 语义同源层（协作模式高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进——agentrt-linux 基于内核 kthread + SCHED_AGENT，agentrt 基于用户态线程）
 
 ---
 
@@ -557,7 +557,7 @@ agentrt 用户态运行时的 MAC 框架与 agentrt-linux 的内核态 TaskFlow 
 
 ### 8.2 API 同源保证
 
-由于 IRON-9 v2 [SS] 层 API 签名同源，编排代码可跨运行时迁移：
+由于 IRON-9 v2 [SS] 层高层 API 语义同源，编排代码可跨运行时迁移：
 
 ```python
 # 编排代码无需修改即可在两端运行

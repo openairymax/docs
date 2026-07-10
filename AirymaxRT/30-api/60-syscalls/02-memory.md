@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 概述
 
-记忆管理系统调用提供 MemoryRovol 记忆系统的写入、搜索、获取和删除接口。记忆系统采用四层渐进抽象架构（L1→L4），使用 HNSW 索引进行语义检索。所有函数使用 `agentos_sys_memory_*` 前缀。
+记忆管理系统调用提供 MemoryRovol 记忆系统的写入、搜索、获取和删除接口。记忆系统采用四层渐进抽象架构（L1→L4），使用 HNSW 索引进行语义检索。所有函数使用 `agentrt_sys_memory_*` 前缀。
 
 ### 五维正交原则体现
 
@@ -29,16 +29,16 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 函数 | 描述 |
 |------|------|
-| `agentos_sys_memory_write()` | 写入记忆数据 |
-| `agentos_sys_memory_search()` | 语义搜索记忆 |
-| `agentos_sys_memory_get()` | 获取记忆记录 |
-| `agentos_sys_memory_delete()` | 删除记忆记录 |
+| `agentrt_sys_memory_write()` | 写入记忆数据 |
+| `agentrt_sys_memory_search()` | 语义搜索记忆 |
+| `agentrt_sys_memory_get()` | 获取记忆记录 |
+| `agentrt_sys_memory_delete()` | 删除记忆记录 |
 
 ---
 
 ## API 详细说明
 
-### `agentos_sys_memory_write()`
+### `agentrt_sys_memory_write()`
 
 ```c
 /**
@@ -47,13 +47,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  * @param len 数据长度
  * @param metadata 元数据（JSON 格式）
  * @param out_record_id 输出参数，返回记录 ID
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_record_id，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_record_id，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_memory_write(const void *data,
+AGENTRT_API agentrt_error_t agentrt_sys_memory_write(const void *data,
                                                       size_t len,
                                                       const char *metadata,
                                                       char **out_record_id);
@@ -63,17 +63,17 @@ AGENTOS_API agentos_error_t agentos_sys_memory_write(const void *data,
 ```c
 char *record_id = NULL;
 const char *content = "用户反馈：产品体验良好";
-agentos_error_t err = agentos_sys_memory_write(
+agentrt_error_t err = agentrt_sys_memory_write(
     content, strlen(content),
     "{\"type\": \"feedback\", \"rating\": 5}",
     &record_id);
-if (err == AGENTOS_OK) {
+if (err == AGENTRT_OK) {
     printf("Record ID: %s\n", record_id);
-    agentos_sys_free(record_id);
+    agentrt_sys_free(record_id);
 }
 ```
 
-### `agentos_sys_memory_search()`
+### `agentrt_sys_memory_search()`
 
 ```c
 /**
@@ -83,13 +83,13 @@ if (err == AGENTOS_OK) {
  * @param out_record_ids 输出参数，返回记录 ID 数组
  * @param out_scores 输出参数，返回相似度分数数组
  * @param out_count 输出参数，返回结果数量
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_record_ids、*out_scores，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_record_ids、*out_scores，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTOS_API agentos_error_t agentos_sys_memory_search(const char *query,
+AGENTRT_API agentrt_error_t agentrt_sys_memory_search(const char *query,
                                                        uint32_t limit,
                                                        char ***out_record_ids,
                                                        float **out_scores,
@@ -101,18 +101,18 @@ AGENTOS_API agentos_error_t agentos_sys_memory_search(const char *query,
 char **record_ids = NULL;
 float *scores = NULL;
 size_t count = 0;
-agentos_error_t err = agentos_sys_memory_search(
+agentrt_error_t err = agentrt_sys_memory_search(
     "用户体验反馈", 10, &record_ids, &scores, &count);
-if (err == AGENTOS_OK) {
+if (err == AGENTRT_OK) {
     for (size_t i = 0; i < count; i++) {
         printf("[%zu] %s (score: %.2f)\n", i, record_ids[i], scores[i]);
     }
-    agentos_sys_free(record_ids);
-    agentos_sys_free(scores);
+    agentrt_sys_free(record_ids);
+    agentrt_sys_free(scores);
 }
 ```
 
-### `agentos_sys_memory_get()`
+### `agentrt_sys_memory_get()`
 
 ```c
 /**
@@ -120,29 +120,29 @@ if (err == AGENTOS_OK) {
  * @param record_id 记录 ID
  * @param out_data 输出参数，返回数据指针
  * @param out_len 输出参数，返回数据长度
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_data，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_data，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTOS_API agentos_error_t agentos_sys_memory_get(const char *record_id,
+AGENTRT_API agentrt_error_t agentrt_sys_memory_get(const char *record_id,
                                                     void **out_data,
                                                     size_t *out_len);
 ```
 
-### `agentos_sys_memory_delete()`
+### `agentrt_sys_memory_delete()`
 
 ```c
 /**
  * @brief 删除记忆记录
  * @param record_id 记录 ID
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_memory_delete(const char *record_id);
+AGENTRT_API agentrt_error_t agentrt_sys_memory_delete(const char *record_id);
 ```
 
 ---
@@ -150,9 +150,9 @@ AGENTOS_API agentos_error_t agentos_sys_memory_delete(const char *record_id);
 ## 注意事项
 
 1. **记忆索引**：语义搜索基于 HNSW 索引（非 FAISS）。详见 [MemoryRovol 架构](../../10-architecture/03-memoryrovol.md)。
-2. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentos_sys_free()` 释放。
-3. **错误码**：返回值使用 [error.h](../../AgentRT/agentos/commons/utils/error/include/error.h) 定义的负整数错误码。
-4. **系统调用初始化**：使用记忆相关 API 前需调用 `agentos_syscalls_init()`。
+2. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentrt_sys_free()` 释放。
+3. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+4. **系统调用初始化**：使用记忆相关 API 前需调用 `agentrt_syscalls_init()`。
 
 ---
 
@@ -162,7 +162,7 @@ AGENTOS_API agentos_error_t agentos_sys_memory_delete(const char *record_id);
 - [任务管理系统调用](task.md)
 - [会话管理系统调用](session.md)
 - [架构设计：MemoryRovol 记忆系统](../../10-architecture/03-memoryrovol.md)
-- [错误码体系](../../AgentRT/agentos/commons/utils/error/include/error.h)
+- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
 
 ---
 

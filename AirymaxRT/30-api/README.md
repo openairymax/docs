@@ -126,47 +126,47 @@
 ### 创建并运行一个完整的Agent循环
 
 ```c
-#include "agentos.h"
+#include "agentrt.h"
 #include "loop.h"
 
 int main() {
     // 1. 初始化核心系统
-    agentos_error_t err = agentos_core_init();
-    if (err != AGENTOS_OK) {
+    agentrt_error_t err = agentrt_core_init();
+    if (err != AGENTRT_OK) {
         return -1;
     }
 
     // 2. 创建三层循环
-    agentos_core_loop_t* loop = NULL;
-    err = agentos_loop_create(NULL, &loop);
-    if (err != AGENTOS_OK) {
-        agentos_core_shutdown();
+    agentrt_core_loop_t* loop = NULL;
+    err = agentrt_loop_create(NULL, &loop);
+    if (err != AGENTRT_OK) {
+        agentrt_core_shutdown();
         return -1;
     }
 
     // 3. 启动循环（后台线程）
-    agentos_loop_run(loop);
+    agentrt_loop_run(loop);
 
     // 4. 提交任务
     char* task_id = NULL;
     const char* input = "分析这段文本的情感倾向";
-    err = agentos_loop_submit(loop, input, strlen(input), &task_id);
+    err = agentrt_loop_submit(loop, input, strlen(input), &task_id);
     
     // 5. 等待结果
     char* result = NULL;
     size_t result_len = 0;
-    err = agentos_loop_wait(loop, task_id, 30000, &result, &result_len);
+    err = agentrt_loop_wait(loop, task_id, 30000, &result, &result_len);
     
-    if (err == AGENTOS_OK && result) {
+    if (err == AGENTRT_OK && result) {
         printf("Agent响应: %.*s\n", (int)result_len, result);
-        AGENTOS_FREE(result);
+        AGENTRT_FREE(result);
     }
     
-    AGENTOS_FREE(task_id);
+    AGENTRT_FREE(task_id);
 
     // 6. 清理资源
-    agentos_loop_destroy(loop);
-    agentos_core_shutdown();
+    agentrt_loop_destroy(loop);
+    agentrt_core_shutdown();
     
     return 0;
 }
@@ -178,21 +178,21 @@ int main() {
 #include "memoryrovol.h"
 
 // 创建四层记忆系统
-agentos_memoryrov_handle_t* memory = agentos_memoryrov_create();
+agentrt_memoryrov_handle_t* memory = agentrt_memoryrov_create();
 
 // 写入记忆
 const char* content = "用户偏好：喜欢简洁的回复风格";
-agentos_error_t err = agentos_memoryrov_add_memory(memory, content, strlen(content));
+agentrt_error_t err = agentrt_memoryrov_add_memory(memory, content, strlen(content));
 
 // 相似性检索
-agentos_memory_query_t query = {
+agentrt_memory_query_t query = {
     .memory_query_text = "用户喜欢什么样的回复？",
     .memory_query_limit = 5,
     .memory_query_include_raw = 1
 };
 
-agentos_memory_result_ext_t* result = NULL;
-err = agentos_memoryrov_query(memory, &query, &result);
+agentrt_memory_result_ext_t* result = NULL;
+err = agentrt_memoryrov_query(memory, &query, &result);
 
 if (result && result->memory_result_count > 0) {
     for (size_t i = 0; i < result->memory_result_count; i++) {
@@ -202,8 +202,8 @@ if (result && result->memory_result_count > 0) {
 }
 
 // 清理
-agentos_memory_result_free(result);
-agentos_memoryrov_destroy(memory);
+agentrt_memory_result_free(result);
+agentrt_memoryrov_destroy(memory);
 ```
 
 ### 使用协议栈发送消息
@@ -246,18 +246,18 @@ if (mcp->encode) {
 ## 📖 API设计原则
 
 ### 1. 错误处理约定
-所有API函数返回 `agentos_error_t` 类型：
-- `AGENTOS_OK` (0): 成功
-- `AGENTOS_EINVAL` (-1): 无效参数
-- `AGENTOS_ENOMEM` (-2): 内存不足
-- `AGENTOS_ENOTINIT` (-3): 未初始化
-- `AGENTOS_ETIMEDOUT` (-4): 操作超时
-- `AGENTOS_EBUSY` (-5): 资源忙
-- `AGENTOS_ENOENT` (-6): 不存在
+所有API函数返回 `agentrt_error_t` 类型：
+- `AGENTRT_OK` (0): 成功
+- `AGENTRT_EINVAL` (-1): 无效参数
+- `AGENTRT_ENOMEM` (-2): 内存不足
+- `AGENTRT_ENOTINIT` (-3): 未初始化
+- `AGENTRT_ETIMEDOUT` (-4): 操作超时
+- `AGENTRT_EBUSY` (-5): 资源忙
+- `AGENTRT_ENOENT` (-6): 不存在
 
 ### 2. 内存管理约定
-- **分配**: 使用 `AGENTOS_MALLOC`, `AGENTOS_CALLOC`, `AGENTOS_STRDUP`
-- **释放**: 使用 `AGENTOS_FREE`
+- **分配**: 使用 `AGENTRT_MALLOC`, `AGENTRT_CALLOC`, `AGENTRT_STRDUP`
+- **释放**: 使用 `AGENTRT_FREE`
 - **规则**: 谁分配谁释放（除非文档明确说明转移所有权）
 
 ### 3. 线程安全约定
@@ -266,9 +266,9 @@ if (mcp->encode) {
 - 回调函数会在独立的线程上下文中调用
 
 ### 4. 命名规范
-- 函数: `module_action_object` (如 `agentos_loop_create`)
-- 类型: `module_object_t` (如 `agentos_core_loop_t`)
-- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTOS_OK`)
+- 函数: `module_action_object` (如 `agentrt_loop_create`)
+- 类型: `module_object_t` (如 `agentrt_core_loop_t`)
+- 常量: `MODULE_CONSTANT_NAME` (如 `AGENTRT_OK`)
 - 枚举: `MODULE_TYPE_VALUE` (如 `TASK_STATUS_PENDING`)
 
 ---

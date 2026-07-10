@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）调度性能工程设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）调度子系统性能工程详细设计
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）调度子系统性能工程详细设计\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0
 
 ---
 
@@ -617,7 +617,7 @@ out_free_obj:
 
 | 组件 | agentrt-linux（[SS]） | agentrt（[SS]） | 共享（[SC]） |
 |------|------------------------|------------------|--------------|
-| 调度语义 | SCHED_AGENT（sched_ext） | MicroCoreRT 用户态调度 | 调度语义 API 签名 |
+| 调度语义 | SCHED_AGENT（sched_ext） | MicroCoreRT 用户态调度 | 调度语义（概念同源，签名独立演进） |
 | vtime 公式 | Q16.16 内核态 | Q16.16 用户态 | `airymax_q16_t` 头文件 |
 | 权重因子 | stage + token | stage + token | 权重枚举定义 |
 | 错误码 | AGENTRT_E_SCHED_* | AGENTRT_E_SCHED_* | `error.h` 错误码段 |

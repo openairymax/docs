@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）兼容性设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系主索引
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **优先级**: P1（0.1.1 完成 5 文档，1.0.1 实施验证）
-> **同源映射**: agentrt ABI 稳定性 + Linux 6.6 KABI / ABI 兼容性体系
-> **理论根基**: Linux 内核兼容性哲学 + Airymax K-2 接口契约化 + C-2 增量演化
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系主索引\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-06\
+> **优先级**：P1（0.1.1 完成 5 文档，1.0.1 实施验证）\
+> **同源映射**：agentrt ABI 稳定性 + Linux 6.6 KABI / ABI 兼容性体系\
+> **理论根基**：Linux 内核兼容性哲学 + Airymax K-2 接口契约化 + C-2 增量演化
 
 ---
 

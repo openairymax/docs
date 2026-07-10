@@ -258,13 +258,13 @@ _owner:
 
 ```bash
 # 查看配置历史
-agentos config history <config_file>
+agentrt config history <config_file>
 
 # 回滚到指定版本
-agentos config rollback <config_file> --version <version>
+agentrt config rollback <config_file> --version <version>
 
 # 回滚到上一个版本
-agentos config rollback <config_file> --last
+agentrt config rollback <config_file> --last
 ```
 
 ---
@@ -283,7 +283,7 @@ agentos config rollback <config_file> --last
 ### 6.2 权限配置
 
 ```yaml
-# agentos/manager/security/permission_rules.yaml
+# agentrt/manager/security/permission_rules.yaml
 config_change:
   permissions:
     - role: "owner"
@@ -343,13 +343,13 @@ config_change:
 | environment/*.yaml | Manager | Manager |
 | monitoring/alerts/cupolas-alerts.yml | cupolas | Manager |
 | monitoring/dashboards/cupolas-dashboard.json | cupolas | Manager |
-| deployment/agentos/cupolas/environments.yaml | cupolas | Manager |
+| deployment/agentrt/cupolas/environments.yaml | cupolas | Manager |
 | service/tool_d/tool.yaml | tool_d | Manager |
 
 ### 8.2 相关文档
 
 - 00-architectural-principles.md - 架构原则
-- agentos/manager/README.md - Manager 模块说明
+- agentrt/manager/README.md - Manager 模块说明
 - specifications/30-coding-standard/15-security-design.md - 安全设计规范
 
 ---

@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）C 语言编码风格规范
 
-> **文档定位**: agentrt-linux（AirymaxOS）内核态 C 语言编码风格规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [编码规范总览](README.md)
-> **同源参考**: Linux 6.6 内核基线 `Documentation/process/coding-style.rst`
-> **理论根基**: Linux 内核工程思想 + Airymax 五维正交 24 原则
-> **SSoT 声明（C-2.6 D-03，2026-07-09）**: 本文件为 C 内核开发者导航参考。**格式规则**（§2）的唯一权威来源为 [02-code-format.md](../02-code-format.md)；**语义规则**（§3-§6）的唯一权威来源为 [01-coding-standards.md](../01-coding-standards.md)。本文件 §2 中的历史编号（OS-KER-011~014）与 02 冲突，已由 §0 映射表对齐；§7-§10（goto/GFP/锁/RCU/[SC][SS]）为内核态专属权威内容，保留独立规则效力。本文件与 SSoT 的任何冲突，以 SSoT 为准。
+> **文档定位**： agentrt-linux（AirymaxOS）内核态 C 语言编码风格规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [编码规范总览](README.md)\
+> **同源参考**： Linux 6.6 内核基线 `Documentation/process/coding-style.rst`\
+> **理论根基**： Linux 内核工程思想 + Airymax 五维正交 24 原则\
+> **SSoT 声明（C-2.6 D-03，2026-07-09）**： 本文件为 C 内核开发者导航参考。**格式规则**（§2）的唯一权威来源为 [02-code-format.md](../02-code-format.md)；**语义规则**（§3-§6）的唯一权威来源为 [01-coding-standards.md](../01-coding-standards.md)。本文件 §2 中的历史编号（OS-KER-011~014）与 02 冲突，已由 §0 映射表对齐；§7-§10（goto/GFP/锁/RCU/[SC][SS]）为内核态专属权威内容，保留独立规则效力。本文件与 SSoT 的任何冲突，以 SSoT 为准。
 
 ---
 
@@ -292,7 +292,7 @@ bool agentrt_task_is_pending(const struct agentrt_task *task); /* 谓词式 */
  * @len:    消息体字节数
  *
  * 阻塞发送，直到对端读取或超时。消息头由 AgentsIPC 128B 协议自动填充。
- * 此函数属于 [SS] 语义同源层——与 agentrt 用户态 agentrt_ipc_send() 签名一致。
+ * 此函数属于 [SS] 语义同源层——与 agentrt 用户态 agentrt_ipc_send() 签名一致（SDK 层，同一份源码两端编译）。
  *
  * Return: 0 成功；-EAGAIN 通道满；-EMSGSIZE 超长；-ETIMEDOUT 超时。
  *
@@ -626,10 +626,10 @@ struct agentrt_ipc_msg_hdr {
 
 ### 10.3 [SS] 语义同源层代码编写规则（OS-KER-022）
 
-> **OS-KER-022**：[SS] 语义同源层 API 签名必须与 agentrt 同源 API 一致（函数名、参数类型、返回值），但实现独立。agentrt-linux（AirymaxOS）可使用内核原语（`kmalloc`、`spinlock`、`kthread`）实现，agentrt 使用用户态原语（`malloc`、`pthread_mutex`、`pthread_create`）实现。
+> **OS-KER-022**：[SS] 语义同源层：SDK 层 API 签名应与 agentrt 同源 API 一致（同一份源码两端编译）；系统调用层签名因抽象层级不同而独立演进（agentrt JSON-RPC ↔ agentrt-linux 编号 syscall），仅要求概念操作语义同源。agentrt-linux（AirymaxOS）可使用内核原语（`kmalloc`、`spinlock`、`kthread`）实现，agentrt 使用用户态原语（`malloc`、`pthread_mutex`、`pthread_create`）实现。
 
 ```c
-/* [SS] 语义同源层：签名与 agentrt 一致，实现使用内核原语 */
+/* [SS] 语义同源层：SDK 层签名与 agentrt 一致（同一份源码两端编译），实现使用内核原语 */
 int agentrt_ipc_send(u32 channel, const void *msg, size_t len)
 {
         struct agentrt_ipc_channel *chan;
@@ -660,7 +660,7 @@ int agentrt_ipc_send(u32 channel, const void *msg, size_t len)
  * agentrt-linux（AirymaxOS）简单 IPC 通道模块
  *
  * 此模块演示 agentrt-linux C 编码风格规范的综合应用。
- * [SS] 语义同源层：API 签名与 agentrt 用户态 agentrt_ipc_channel 一致。
+ * [SS] 语义同源层：API 签名与 agentrt 用户态 agentrt_ipc_channel 一致（SDK 层，同一份源码两端编译）。
  *
  * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  */

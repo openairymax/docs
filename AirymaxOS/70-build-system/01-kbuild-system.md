@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）Kbuild 递归构建系统详解
 
-> **文档定位**: agentrt-linux（AirymaxOS）构建系统第 1 卷——Kbuild 递归构建机制详解。本卷剖析顶层 `Kbuild` descending 机制、`obj-y`/`obj-m`/`obj-n` 三态门控、子系统 Makefile 编写规范、`if_changed` 增量构建原理、`filechk` 版本注入与 `Makefile.airymaxos` 供应商扩展，并给出 agentrt-linux 构建依赖图。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统（`Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib`）
-> **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）
-> **核心约束**: IRON-9 v2 同源且部分代码共享——agentrt-linux 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
+> **文档定位**： agentrt-linux（AirymaxOS）构建系统第 1 卷——Kbuild 递归构建机制详解。本卷剖析顶层 `Kbuild` descending 机制、`obj-y`/`obj-m`/`obj-n` 三态门控、子系统 Makefile 编写规范、`if_changed` 增量构建原理、`filechk` 版本注入与 `Makefile.airymaxos` 供应商扩展，并给出 agentrt-linux 构建依赖图。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统（`Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib`）
+> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）
+> **核心约束**： IRON-9 v2 同源且部分代码共享——agentrt-linux 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
 
 ---
 
@@ -535,6 +535,83 @@ graph LR
 
 **协作说明**：agentrt 用户态通过 CMake/Ninja 构建可执行文件与共享库，agentrt-linux 内核态通过 Kbuild + `if_changed` 构建内核镜像与模块。两端在 **[SS] 语义同源层** 共享"声明式构建描述"的设计模式（目标模式 / 目录递归 / 条件编译 / 增量构建），使开发者在两端的心智模型可复用；但在 **[IND] 完全独立层** 各自维护工具链配置、产物格式、版本注入路径。最终通过**二进制契约**解耦：agentrt 用户态产物（可执行文件）运行于 agentrt-linux 内核态产物（vmlinux）之上，二者无源码层依赖，无 [SC] 共享头文件。这正是 **IRON-9 v2 同源且部分代码共享** 在构建系统层的落地——同源思想，独立演进，无共享契约。
 
+### 8.2 8 子仓构建依赖与交叉构建矩阵
+
+agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）在构建层存在严格的依赖闭包：kernel 是基础，上层子仓的构建必须等待下层子仓产物就绪后方可触发 descending，违反依赖顺序将导致符号缺失或 ABI 断裂。
+
+#### 8.2.1 8 子仓构建依赖图
+
+```mermaid
+graph TD
+    K["kernel 子仓<br/>MicroCoreRT 内核 + vmlinux"]
+    S["services 子仓<br/>12 daemons"]
+    SE["security 子仓<br/>Cupolas 安全穹顶"]
+    M["memory 子仓<br/>MemoryRovol 四层记忆"]
+    SY["system 子仓<br/>AgentsIPC 128B 协议"]
+    CO["cognition 子仓<br/>CoreLoopThree"]
+    CL["cloudnative 子仓<br/>云原生 Agent"]
+    T["tests-linux 子仓<br/>KUnit / kselftest"]
+
+    K --> S
+    K --> SE
+    K --> M
+    K --> SY
+    S --> SY
+    S --> CO
+    M --> CO
+    S --> CL
+    SY --> CL
+    K --> T
+    S --> T
+    SE --> T
+    M --> T
+    SY --> T
+    CO --> T
+    CL --> T
+
+    style K fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    style S fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style SE fill:#fbe9e7,stroke:#bf360c,color:#000
+    style M fill:#f3e5f5,stroke:#6a1b9a,color:#000
+    style SY fill:#fce4ec,stroke:#ad1457,color:#000
+    style CO fill:#fff8e1,stroke:#f57f17,color:#000
+    style CL fill:#e0f7fa,stroke:#006064,color:#000
+    style T fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000
+```
+
+**依赖分层说明**（`A --> B` 表示 A 是 B 的构建先决）：
+- **L0 基础层**：`kernel` 子仓产出 `vmlinux` 与 `built-in.a`，是全部上层子仓的构建先决。
+- **L1 内核态扩展层**：`services`/`security`/`memory` 仅依赖 `kernel` 的头文件与 `obj-$(CONFIG_*)` 门控，三者可并行构建。
+- **L2 组合层**：`system` 依赖 `kernel` + `services`（AgentsIPC 协议栈消费 services daemon 接口）；`cognition` 依赖 `services` + `memory`（CoreLoopThree 消费记忆四层与 daemon 服务）。二者无相互依赖，可并行构建。
+- **L3 云原生层**：`cloudnative` 依赖 `services` + `system`（云原生 Agent 经 AgentsIPC 协议与 services daemon 通信），须等待 L2 的 `system` 就绪。
+- **L4 验证层**：`tests-linux` 依赖全部 7 仓的构建产物，最后触发 KUnit/kselftest。
+
+#### 8.2.2 交叉构建配置矩阵
+
+agentrt-linux 的 8 子仓跨越 C（kernel/services/security/memory/system 的内核态）、Rust（cognition 的 CoreLoopThree）、Go（cloudnative 的云原生 Agent）、Python（tests-linux 的测试脚本）四种语言生态，对应四套构建系统。下表给出目标平台 × 编译器 × 构建系统的完整交叉构建矩阵：
+
+| 目标平台 | 编译器 | 构建系统 | 适用子仓 | 关键环境变量 | 产物 |
+|---------|--------|---------|---------|-------------|------|
+| x86_64 | GCC 13.x | Kbuild | kernel/services/security/memory/system | `ARCH=x86_64 CC=gcc` | `vmlinux` + `.ko` |
+| x86_64 | Clang 17.x | Kbuild | kernel/services/security/memory/system | `ARCH=x86_64 LLVM=1 CC=clang` | `vmlinux` + `.ko` |
+| x86_64 | GCC 13.x | Meson | services（用户态 daemon） | `meson setup build` | ELF 可执行文件 |
+| x86_64 | Rust 1.75 | Cargo | cognition | `cargo build --release` | `.so` / 可执行文件 |
+| x86_64 | Go 1.22 | Go Modules | cloudnative | `go build ./...` | 容器镜像 |
+| aarch64 | GCC 13.x | Kbuild | kernel/services/security/memory/system | `ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-` | `vmlinux` + `.ko` |
+| aarch64 | Clang 17.x | Kbuild | kernel/services/security/memory/system | `ARCH=arm64 LLVM=1 CROSS_COMPILE=aarch64-linux-gnu- CC=clang` | `vmlinux` + `.ko` |
+| aarch64 | GCC 13.x | Meson | services（用户态 daemon） | `meson setup build --cross-file aarch64.ini` | ELF 可执行文件 |
+| aarch64 | Rust 1.75 | Cargo | cognition | `cargo build --target aarch64-unknown-linux-gnu` | `.so` / 可执行文件 |
+| aarch64 | Go 1.22 | Go Modules | cloudnative | `GOARCH=arm64 go build ./...` | 容器镜像 |
+
+**矩阵约束**：`LLVM=1` 与 `CROSS_COMPILE` 在 Clang 构建下需配合 `CROSS_COMPILE` 提供 sysroot 前缀（Clang 本身是交叉编译器，但 `ar`/`ld` 仍需 GNU binutils 前缀）。Meson 与 Cargo 的交叉构建通过各自的 cross-file / target triple 配置，与 Kbuild 的 `CROSS_COMPILE` 机制独立——这正是 §8.1.4 [IND] 完全独立层"交叉编译工具链配置"项的体现。
+
+#### 8.2.3 规则编号
+
+- **OS-BUILD-013**：8 子仓构建必须按依赖分层顺序触发——L0（kernel）先于 L1（services/security/memory），L1 先于 L2（system/cognition），L2 先于 L3（cloudnative），L3 先于 L4（tests-linux）；同层子仓可并行构建。CI 编排脚本必须显式声明分层依赖，违反顺序导致符号缺失的构建失败由编排脚本承担责任（对齐 S-2 层次分解）。
+- **OS-BUILD-014**：同一目标平台下，全部子仓的交叉编译工具链版本必须一致——GCC/Clang 主版本号与 binutils 版本号由顶层 `toolchain.lock` 文件锁定，禁止子仓各自声明工具链版本；工具链版本漂移会导致 ABI 不一致（对齐 E-3 资源确定性 + IRON-9 v2 工具链独立演进约束）。
+- **OS-BUILD-015**：8 子仓构建产物（`vmlinux`/`.ko`/ELF/`.so`/容器镜像）必须经 `sha256sum` 签名并写入 `build-manifest.json`；`tests-linux` 子仓的 KUnit/kselftest 必须校验 manifest 签名后再运行，禁止对未签名产物执行测试（对齐 E-6 错误可追溯 + E-3 资源确定性）。
+- **OS-BUILD-016**：交叉构建配置矩阵的任一组合（平台 × 编译器 × 构建系统）变更必须经构建系统评审，并在 CI 矩阵中同步增减；新增目标平台必须同时提供该平台下全部 4 种构建系统的配置，禁止只覆盖部分子仓（对齐 OS-STD-032 CI 矩阵 + A-4 完美主义）。
+
 ---
 
 ## 9. OS-KER / OS-BUILD 规则编号汇总
@@ -606,7 +683,7 @@ graph LR
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集 Kbuild 递归构建系统所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与构建规则对齐 Linux 6.6 `Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib` 及 `include/airymax/build_types.h`（[SC] 共享契约层）。Kbuild 本质为 Make 宏与规则体系，故 A.1 以 C 结构体建模构建目标内部表示，A.2/A.3 以 Make 宏签名与变量定义为主。
+> **附录定位**： 本附录汇集 Kbuild 递归构建系统所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与构建规则对齐 Linux 6.6 `Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib` 及 `include/airymax/build_types.h`（[SC] 共享契约层）。Kbuild 本质为 Make 宏与规则体系，故 A.1 以 C 结构体建模构建目标内部表示，A.2/A.3 以 Make 宏签名与变量定义为主。
 
 ### A.1 核心数据结构
 

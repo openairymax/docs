@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）安全设计文档（airymaxos-security，极境安全）
 
-> **子仓编号**：03
-> **子仓代号**：极境安全（Airymax Security）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：capability 安全 + LSM 框架 + Landlock 沙箱 + 机密计算
-> **同源 agentrt**：cupolas（Cupolas 安全穹顶）
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 cupolas 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 LSM/Landlock/capability 实现独立
+> **子仓编号**：03\
+> **子仓代号**：极境安全（Airymax Security）\
+> **文档版本**：v1.1（2026-07-07）\
+> **设计基准**：capability 安全 + LSM 框架 + Landlock 沙箱 + 机密计算\
+> **同源 agentrt**：cupolas（Cupolas 安全穹顶）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 cupolas 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态 LSM/Landlock/capability 实现独立\
 > **横切关注点**：安全是横切关注点（cross-cutting concern），贯穿调度、IPC、eBPF、记忆卷载 4 大数据流，不作为独立数据流
 
 ---

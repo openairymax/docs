@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）数据流程设计
 
-> **文档定位**: agentrt-linux（AirymaxOS）数据流程设计层的总览与索引
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [agentrt-linux 总览](../README.md)
-> **核心约束**: IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
+> **文档定位**： agentrt-linux（AirymaxOS）数据流程设计层的总览与索引\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [agentrt-linux 总览](../README.md)\
+> **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（bpf_struct_ops.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
 
 ---
 
@@ -153,7 +153,7 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
-| 0.1.1 | 2026-07-06 | 初始版本，定义 4 大数据流分类矩阵与索引 | Airymax 架构委员会 |
+| 0.1.1 | 2026-07-06 | 初始版本，定义 4 大数据流分类矩阵与索引 | 工程规范委员会 |
 
 ---
 

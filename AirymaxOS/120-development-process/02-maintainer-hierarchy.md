@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）维护者层级制度
 
-> **文档定位**: agentrt-linux（AirymaxOS）120-development-process 模块第 2 卷——维护者层级制度（Lieutenant System）。本文档详述从普通贡献者到总维护者的信任链、MAINTAINERS 文件格式、8 子仓维护者分配、DCO 签名链条、6 级贡献者成熟度模型与维护者接班机制，是补丁生命周期（01 卷）在治理维度的展开。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt 维护者层级 + Linux 6.6 内核 MAINTAINERS 文件与 Lieutenant System
-> **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-3 总体设计部 + A-3 人文关怀
-> **核心约束**: IRON-9 v2 同源且部分代码共享（agentrt 用户态维护者层级与 agentrt-linux 内核发行版维护者层级并行，通过同源 API 变更评审保持协同）
+> **文档定位**： agentrt-linux（AirymaxOS）120-development-process 模块第 2 卷——维护者层级制度（Lieutenant System）。本文档详述从普通贡献者到总维护者的信任链、MAINTAINERS 文件格式、8 子仓维护者分配、DCO 签名链条、6 级贡献者成熟度模型与维护者接班机制，是补丁生命周期（01 卷）在治理维度的展开。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt 维护者层级 + Linux 6.6 内核 MAINTAINERS 文件与 Lieutenant System
+> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-3 总体设计部 + A-3 人文关怀
+> **核心约束**： IRON-9 v2 同源且部分代码共享（agentrt 用户态维护者层级与 agentrt-linux 内核发行版维护者层级并行，通过同源 API 变更评审保持协同）
 
 ---
 
@@ -159,7 +159,7 @@ K:	\b(microcorert_init|microcorert_dispatch)\b
 
 ### 4.2 跨子仓会签规则
 
-- **OS-DEV-221**：影响 AgentsIPC 128B 消息头的补丁，必须由 system 子仓顶级维护者会签，并经协议委员会额外签字。
+- **OS-DEV-221**：影响 AgentsIPC 128B 消息头的补丁，必须由 system 子仓顶级维护者会签，并经工程规范委员会额外签字。
 - **OS-DEV-222**：影响 MicroCoreRT 同源语义的补丁，必须由 kernel 子仓顶级维护者会签，并通知 agentrt 端同步评审。
 - **OS-DEV-223**：跨 3 个及以上子仓的变更，必须由总维护者指派协调人，协调人负责跨仓 PR 的依赖排序。
 - **OS-KER-211**：kernel 子仓的 ABI 改动必须同步知会 system 子仓维护者，因 AgentsIPC 协议依赖内核 syscall 语义。
@@ -313,9 +313,9 @@ stateDiagram-v2
     L2_REVIEWER --> L1_CONTRIBUTOR: 超过 6 个月无 Review 活动
 
     L3_SUBMAINTAINER --> L4_MAINTAINER: 子系统贡献突出，获 MAINTAINERS 文件提名
-    L3_SUBMAINTAINER --> L2_REVIEWER: 主动卸任或 PSC 表决降级
+    L3_SUBMAINTAINER --> L2_REVIEWER: 主动卸任或工程规范委员会表决降级
 
-    L4_MAINTAINER --> L5_LIEUTENANT: 核心子系统首席维护者，由 PSC 任命
+    L4_MAINTAINER --> L5_LIEUTENANT: 核心子系统首席维护者，由工程规范委员会任命
 
     L5_LIEUTENANT --> [*]: 荣誉退休（emeritus）
 
@@ -330,7 +330,7 @@ stateDiagram-v2
 
     note right of L5_LIEUTENANT
         L4 → L5 晋升条件：
-        需要 PSC（项目指导委员会）
+        需要 工程规范委员会
         2/3 多数表决通过
         （OS-DEV-254）
         总维护者提名
@@ -351,8 +351,8 @@ stateDiagram-v2
 | L2_REVIEWER | L3_SUBMAINTAINER | 现有子系统维护者推荐 + ≥1 年持续贡献 + ≥20 个合并 PR + 通过维护者面试 | 获得子模块分支维护权限，负责子模块 PR 审查与合并（OS-DEV-252） |
 | L2_REVIEWER | L1_CONTRIBUTOR | 超过 6 个月无 Review 活动（自动降级） | 撤销 Review 权限，降级为普通贡献者 |
 | L3_SUBMAINTAINER | L4_MAINTAINER | 子系统贡献突出，获 MAINTAINERS 文件 `M:` 字段提名 + 维护子模块 ≥1 年 + 无重大事故 | 获得子系统分支维护权限，管理子系统 PR 审查与合并（OS-DEV-253） |
-| L3_SUBMAINTAINER | L2_REVIEWER | 主动卸任或 PSC 表决降级 | 撤销子模块分支维护权限，降级为可信贡献者 |
-| L4_MAINTAINER | L5_LIEUTENANT | 核心子系统首席维护者，PSC 2/3 多数表决通过 + 总维护者提名 + 3 名 Level 5 ACK + 社区公示 2 周 | 获得 8 子仓之一 develop 分支维护权限，成为顶级子系统维护者（OS-DEV-254） |
+| L3_SUBMAINTAINER | L2_REVIEWER | 主动卸任或工程规范委员会表决降级 | 撤销子模块分支维护权限，降级为可信贡献者 |
+| L4_MAINTAINER | L5_LIEUTENANT | 核心子系统首席维护者，工程规范委员会 2/3 多数表决通过 + 总维护者提名 + 3 名 Level 5 ACK + 社区公示 2 周 | 获得 8 子仓之一 develop 分支维护权限，成为顶级子系统维护者（OS-DEV-254） |
 | L5_LIEUTENANT | —（终态） | 荣誉退休（emeritus），提前 6 个月通知离职 | 保留 GitHub read 权限与 issue/PR 评论权限，撤销合并权限，转为 emeritus 身份（OS-DEV-261） |
 
 ---
@@ -414,7 +414,7 @@ emeritus（荣誉维护者）是已卸任但仍保留咨询身份的维护者：
 | **S-1 反馈闭环** | 感知-决策-执行-反馈闭环 | 维护者层级构成反馈闭环，下层 PR 反馈到上层 merge 决策 |
 | **S-3 总体设计部** | 统筹系统整体设计 | 总维护者 + 8 子仓顶级子系统维护者构成总体设计部 |
 | **S-4 涌现性管理** | 简单规则引导有益整体行为 | Lieutenant System 通过简单信任传递规则引导社区涌现 |
-| **K-2 接口契约化** | 双层稳定性哲学 | AgentsIPC 128B 改动需协议委员会签字 + 会签（OS-DEV-221） |
+| **K-2 接口契约化** | 双层稳定性哲学 | AgentsIPC 128B 改动需工程规范委员会签字 + 会签（OS-DEV-221） |
 | **C-2 增量演化** | 渐进式演进每步可验证 | 6 级成熟度模型增量晋升 + Signed-off-by 链条逐层背书 |
 | **E-6 错误可追溯** | 错误可溯源可追踪 | Signed-off-by 链条 + DCO 1.1 溯源每层维护者 |
 | **E-7 文档即代码** | 文档与代码同源同审 | MAINTAINERS.md 14 字段 + 子系统手册（P: 字段） |
@@ -513,7 +513,7 @@ graph LR
 - `120-development-process/README.md`（模块主索引）/ `01-patch-lifecycle.md`（补丁生命周期 6 阶段）
 - `50-engineering-standards/05-development-process.md`（开发流程规范层，OS-STD-XXX）/ `07-maintainers-and-governance.md`（维护者治理规则）
 - `50-engineering-standards/06-toolchain-and-automation.md`（7 层验证、CI 门禁）/ `04-engineering-philosophy.md`（双层稳定性、S-3 总体设计部）
-- `30-interfaces/`（AgentsIPC 128B 协议、4 层接口分级、协议委员会）
+- `30-interfaces/`（AgentsIPC 128B 协议、4 层接口分级、工程规范委员会）
 - 参考材料：Linux 6.6 `MAINTAINERS`（维护者文件 14 字段范本）、`Documentation/process/developing-process.rst`（Lieutenant System）、`Documentation/maintainer/maintainer-entry-profile.rst`（子系统手册）
 
 ---
@@ -533,7 +533,7 @@ graph LR
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集维护者层级制度所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核 `MAINTAINERS` 文件格式（14 字段）、Lieutenant System 信任链模型、DCO 1.1 标准，以及 agentrt-linux 8 子仓维护者分配专属契约（`include/airymax/maintainer_types.h`）。
+> **附录定位**： 本附录汇集维护者层级制度所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核 `MAINTAINERS` 文件格式（14 字段）、Lieutenant System 信任链模型、DCO 1.1 标准，以及 agentrt-linux 8 子仓维护者分配专属契约（`include/airymax/maintainer_types.h`）。
 
 ### A.1 核心数据结构
 
@@ -754,7 +754,7 @@ struct subrepo_maintainer {
     bool        requires_cross_sign; /* @field: 是否需要跨仓会签（OS-DEV-221/222） */
     const char **cosign_subrepos;  /* @field: 需会签的子仓列表 */
     int          cosign_count;    /* @field: 会签子仓数量 */
-    bool        requires_protocol_committee; /* @field: 是否需协议委员会签字 */
+    bool        requires_protocol_committee; /* @field: 是否需工程规范委员会签字 */
 
     /* 分支信息 */
     const char *develop_branch;   /* @field: develop 分支 URL */
@@ -1063,7 +1063,7 @@ int emeritus_mark(const char *maintainer_name,
 #define MAINTAINER_E_DCO_MISSING   (-510)   /* 缺少 DCO 签名（OS-DEV-231） */
 #define MAINTAINER_E_DCO_IDENTITY  (-511)   /* DCO 身份不一致（OS-DEV-234） */
 #define MAINTAINER_E_COSIGN_MISSING (-512)  /* 跨仓会签缺失（OS-DEV-221/222） */
-#define MAINTAINER_E_PROTOCOL_SIGN (-513)   /* 协议委员会签字缺失（OS-DEV-132/221） */
+#define MAINTAINER_E_PROTOCOL_SIGN (-513)   /* 工程规范委员会签字缺失（OS-DEV-132/221） */
 #define MAINTAINER_E_RUBBER_STAMP  (-514)   /* 橡皮图章审查（OS-DEV-241） */
 #define MAINTAINER_E_NAK_NO_REASON (-515)   /* NAK 无技术理由（OS-DEV-242） */
 ```

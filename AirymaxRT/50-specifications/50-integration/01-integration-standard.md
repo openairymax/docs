@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 集成目标
 
-建立 manager 模块（配置管理中心）与 `agentos/commons/utils/config_unified` 统一配置库之间的标准化集成机制，实现：
+建立 manager 模块（配置管理中心）与 `agentrt/commons/utils/config_unified` 统一配置库之间的标准化集成机制，实现：
 
 1. **统一的配置加载**: 所有模块使用相同的 API 加载 manager 配置
 2. **标准化的配置路径**: 通过环境变量定义配置根目录
@@ -32,12 +32,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 │                      │ 统一调用                       │
 │  ┌───────────────────┴────────────────────────────┐  │
 │  │        config_unified API                       │  │
-│  │   (agentos/commons/utils/config_unified)       │  │
+│  │   (agentrt/commons/utils/config_unified)       │  │
 │  └───────────────────┬────────────────────────────┘  │
 │                      │                               │
 │  ┌───────────────────┴────────────────────────────┐  │
 │  │        Manager 配置存储                         │  │
-│  │      ($AGENTOS_CONFIG_DIR)                     │  │
+│  │      ($AGENTRT_CONFIG_DIR)                     │  │
 │  └────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
@@ -48,13 +48,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 环境变量规范
 
-#### AGENTOS_CONFIG_DIR（必需）
+#### AGENTRT_CONFIG_DIR（必需）
 
 ```bash
 # 定义 Manager 配置的根目录路径
-export AGENTOS_CONFIG_DIR="/etc/agentos"          # Linux 生产环境
-export AGENTOS_CONFIG_DIR="./AgentRT/manager"     # 开发环境
-export AGENTOS_CONFIG_DIR="C:\\agentos\\config"   # Windows 环境
+export AGENTRT_CONFIG_DIR="/etc/agentrt"          # Linux 生产环境
+export AGENTRT_CONFIG_DIR="./AgentRT/manager"     # 开发环境
+export AGENTRT_CONFIG_DIR="C:\\agentrt\\config"   # Windows 环境
 ```
 
 **用途**: 
@@ -63,17 +63,17 @@ export AGENTOS_CONFIG_DIR="C:\\agentos\\config"   # Windows 环境
 - 支持多环境部署（开发/预发/生产）
 
 **默认值**: 如果未设置，使用以下回退策略：
-1. Linux: `/etc/agentos`
-2. Windows: `%APPDATA%\agentos`
-3. macOS: `~/Library/Application Support/agentos`
+1. Linux: `/etc/agentrt`
+2. Windows: `%APPDATA%\agentrt`
+3. macOS: `~/Library/Application Support/agentrt`
 4. 开发环境: `./AgentRT/manager`
 
 ### 2.2 配置子目录结构
 
-在 `$AGENTOS_CONFIG_DIR` 下，遵循 manager 模块的目录结构：
+在 `$AGENTRT_CONFIG_DIR` 下，遵循 manager 模块的目录结构：
 
 ```
-$AGENTOS_CONFIG_DIR/
+$AGENTRT_CONFIG_DIR/
 ├── kernel/
 │   └── settings.yaml           # 内核配置
 ├── model/
@@ -126,7 +126,7 @@ $AGENTOS_CONFIG_DIR/
 
 /* 获取标准配置路径 */
 static const char* get_config_dir(void) {
-    const char* config_dir = getenv("AGENTOS_CONFIG_DIR");
+    const char* config_dir = getenv("AGENTRT_CONFIG_DIR");
     if (!config_dir) {
 #ifdef _WIN32
         config_dir = ".\\Airymax\\manager";
@@ -172,7 +172,7 @@ int load_kernel_config(config_context_t* ctx) {
 /* 主函数示例 */
 int main(void) {
     /* 创建配置上下文 */
-    config_context_t* ctx = config_context_create("agentos");
+    config_context_t* ctx = config_context_create("agentrt");
     if (!ctx) {
         fprintf(stderr, "创建配置上下文失败\n");
         return EXIT_FAILURE;
@@ -205,7 +205,7 @@ int main(void) {
 #define MAX_SOURCES 16
 
 typedef struct {
-    const char* relative_path;  /* 相对于 $AGENTOS_CONFIG_DIR 的路径 */
+    const char* relative_path;  /* 相对于 $AGENTRT_CONFIG_DIR 的路径 */
     const char* format;         /* 文件格式 ("yaml", "json") */
     bool required;              /* 是否必须存在 */
 } config_source_info_t;
@@ -362,7 +362,7 @@ database:
 ```c
 /* 在配置源创建时启用环境变量展开 */
 config_env_source_options_t env_opts = {
-    .prefix = "AGENTOS_",
+    .prefix = "AGENTRT_",
     .case_sensitive = false,
     .separator = "_",
     .expand_vars = true  /* 启用 ${VAR} 展开 */
@@ -385,7 +385,7 @@ void setup_hot_reload(config_context_t* ctx) {
         .user_data = NULL,
         .debounce_ms = 1000,
         .validate_on_reload = true,
-        .schema_path = "$AGENTOS_CONFIG_DIR/schema/"
+        .schema_path = "$AGENTRT_CONFIG_DIR/schema/"
     };
     
     config_hot_reload_manager_t* hot_reload = 
@@ -478,8 +478,8 @@ void test_full_system_config_load(void) {
 /* test_schema_validation.c - Schema 验证测试 */
 void test_valid_kernel_config_passes_validation(void) {
     int result = load_and_validate_config(
-        "../AgentRT/agentos/manager/kernel/settings.yaml",
-        "../AgentRT/agentos/manager/schema/kernel-settings.schema.json"
+        "../AgentRT/agentrt/manager/kernel/settings.yaml",
+        "../AgentRT/agentrt/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_EQ(result, 0);
 }
@@ -489,7 +489,7 @@ void test_invalid_config_fails_validation(void) {
     
     int result = load_and_validate_config(
         "temp_invalid_config.yaml",
-        "../AgentRT/agentos/manager/schema/kernel-settings.schema.json"
+        "../AgentRT/agentrt/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_NEQ(result, 0);
     
@@ -503,7 +503,7 @@ void test_invalid_config_fails_validation(void) {
 
 ### 7.1 开发阶段
 
-- [ ] 使用 `AGENTOS_CONFIG_DIR` 环境变量指向开发目录
+- [ ] 使用 `AGENTRT_CONFIG_DIR` 环境变量指向开发目录
 - [ ] 所有新配置文件添加对应的 JSON Schema
 - [ ] 配置文件使用 UTF-8 编码，无 BOM
 - [ ] 环境变量引用使用 `${VARIABLE}` 格式
@@ -511,7 +511,7 @@ void test_invalid_config_fails_validation(void) {
 
 ### 7.2 部署阶段
 
-- [ ] 设置生产环境的 `AGENTOS_CONFIG_DIR`
+- [ ] 设置生产环境的 `AGENTRT_CONFIG_DIR`
 - [ ] 敏感配置字段使用加密或环境变量引用
 - [ ] 启用配置热更新（可选）
 - [ ] 配置备份到版本控制系统
@@ -534,7 +534,7 @@ void test_invalid_config_fails_validation(void) {
 
 ```
 解决方案:
-1. 检查 AGENTOS_CONFIG_DIR 环境变量是否正确设置
+1. 检查 AGENTRT_CONFIG_DIR 环境变量是否正确设置
 2. 确认配置文件存在于指定路径
 3. 检查文件权限是否允许读取
 ```
@@ -562,7 +562,7 @@ void test_invalid_config_fails_validation(void) {
 
 ```bash
 # 检查配置目录结构
-ls -la $AGENTOS_CONFIG_DIR/
+ls -la $AGENTRT_CONFIG_DIR/
 
 # 验证 YAML 语法
 python -c "import yaml; yaml.safe_load(open('settings.yaml'))"
@@ -571,7 +571,7 @@ python -c "import yaml; yaml.safe_load(open('settings.yaml'))"
 ajv validate -s schema.json -d data.json --spec=draft2020-12
 
 # 测试配置加载
-export AGENTOS_DEBUG=1
+export AGENTRT_DEBUG=1
 ./your_application
 ```
 
@@ -582,7 +582,7 @@ export AGENTOS_DEBUG=1
 | 版本 | 日期 | 变更说明 |
 |------|------|---------|
 | v1.0.0 | 2026-04-01 | 初始版本，定义集成标准和最佳实践 |
-| v1.0.1 | 2026-04-03 | 文档迁移至 agentos/docs/specifications/integration_standards/ |
+| v1.0.1 | 2026-04-03 | 文档迁移至 agentrt/docs/specifications/integration_standards/ |
 | v1.0.2 | 2026-04-09 | 修复编码问题，迁移至 docs/50-specifications/ |
 
 ---
@@ -590,27 +590,27 @@ export AGENTOS_DEBUG=1
 ## 十、参考文档
 
 - [00-architectural-principles.md](../../00-architectural-principles.md)
-- [config_unified README.md](../../../AgentRT/agentos/commons/utils/config_unified/README.md) ✅
-- [CONFIG_CHANGE_PROCESS.md](../../../AgentRT/agentos/manager/CONFIG_CHANGE_PROCESS.md) ✅
+- [config_unified README.md](../../../AgentRT/agentrt/commons/utils/config_unified/README.md) ✅
+- [CONFIG_CHANGE_PROCESS.md](../../../AgentRT/agentrt/manager/CONFIG_CHANGE_PROCESS.md) ✅
 - [error_code_reference.md](../70-project-erp/02-error-code-reference.md) ✅
-- [error.h (C 内核错误码定义)](../../../AgentRT/agentos/commons/utils/error/include/error.h) ✅
+- [error.h (C 内核错误码定义)](../../../AgentRT/agentrt/commons/utils/error/include/error.h) ✅
 - [Integration Standards README](./README.md) ✅
 
 ---
 
 ### 环境变量一致性检查
 
-在集成过程中，必须确保 `AGENTOS_CONFIG_DIR` 环境变量在所有模块中的一致性：
+在集成过程中，必须确保 `AGENTRT_CONFIG_DIR` 环境变量在所有模块中的一致性：
 
-1. **启动时校验**: 各模块在初始化时应通过 `getenv("AGENTOS_CONFIG_DIR")` 获取配置目录，并与核心循环注册的值进行比对
+1. **启动时校验**: 各模块在初始化时应通过 `getenv("AGENTRT_CONFIG_DIR")` 获取配置目录，并与核心循环注册的值进行比对
 2. **跨模块传播**: 环境变量应在进程启动前统一设置，禁止运行时动态修改
 3. **默认值对齐**: 所有模块的回退策略必须一致（参见 2.1 节默认值定义）
-4. **校验工具**: 使用 `agentos-config-check` 工具验证所有活跃模块的 `AGENTOS_CONFIG_DIR` 值是否一致
+4. **校验工具**: 使用 `agentrt-config-check` 工具验证所有活跃模块的 `AGENTRT_CONFIG_DIR` 值是否一致
 
 ```bash
 # 一致性检查示例
-agentos-config-check --verify-env AGENTOS_CONFIG_DIR
-# 输出: [OK] All modules report AGENTOS_CONFIG_DIR=/etc/agentos
+agentrt-config-check --verify-env AGENTRT_CONFIG_DIR
+# 输出: [OK] All modules report AGENTRT_CONFIG_DIR=/etc/agentrt
 ```
 
 ---
@@ -619,5 +619,5 @@ agentos-config-check --verify-env AGENTOS_CONFIG_DIR
 
 | 日期 | 操作 | 原位置 | 新位置 |
 |------|------|--------|--------|
-| 2026-04-03 | 移动文档 | `agentos/manager/INTEGRATION_STANDARD.md` | `agentos/docs/specifications/integration_standards/INTEGRATION_STANDARD.md` |
-| 2026-04-09 | 编码修复 | `agentos/docs/specifications/integration_standards/` | `docs/50-specifications/50-integration/` |
+| 2026-04-03 | 移动文档 | `agentrt/manager/INTEGRATION_STANDARD.md` | `agentrt/docs/specifications/integration_standards/INTEGRATION_STANDARD.md` |
+| 2026-04-09 | 编码修复 | `agentrt/docs/specifications/integration_standards/` | `docs/50-specifications/50-integration/` |

@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）SPDX 许可证策略与合规规范
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）的 SPDX 许可证策略矩阵与合规强制规范。本卷合并原 09-license-strategy.md（策略矩阵）与 110-spdx-license-compliance.md（合规执行），消解两文档间许可证字符串不一致的合规风险，建立统一的 5 类文件许可证分类体系。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **父文档**: [工程标准规范 README](README.md)
-> **配套文档**: [00-engineering-standards-handbook.md](./00-engineering-standards-handbook.md)（SSoT 索引）、[08-compliance-checklist.md](./08-compliance-checklist.md)（合规检查 STD-CODE-01）
-> **理论根基**: Linux 6.6 内核基线 `COPYING`（GPL-2.0 WITH Linux-syscall-note）+ SPDX 规范
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）的 SPDX 许可证策略矩阵与合规强制规范。本卷合并原 09-license-strategy.md（策略矩阵）与 110-spdx-license-compliance.md（合规执行），消解两文档间许可证字符串不一致的合规风险，建立统一的 5 类文件许可证分类体系。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **父文档**： [工程标准规范 README](README.md)\
+> **配套文档**： [00-engineering-standards-handbook.md](./00-engineering-standards-handbook.md)（SSoT 索引）、[08-compliance-checklist.md](./08-compliance-checklist.md)（合规检查 STD-CODE-01）\
+> **理论根基**： Linux 6.6 内核基线 `COPYING`（GPL-2.0 WITH Linux-syscall-note）+ SPDX 规范\
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0
 
 ---
 
@@ -94,8 +94,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）文档标题
 
-> **文档定位**: ...
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**： ...
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0
 ```
 
 #### D 构建脚本
@@ -487,4 +487,4 @@ agentrt-linux CI 同时运行：
 
 ---
 
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0

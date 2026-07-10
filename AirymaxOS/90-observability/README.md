@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）可观测性设计
 
-> **文档定位**: agentrt-linux（AirymaxOS）可观测性工程体系主索引
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt E-2 可观测性原则 + Linux 6.6 ftrace/eBPF/perf
-> **理论根基**: Linux 内核可观测性 + Airymax E-2 可观测性 + C-3 记忆卷载
+> **文档定位**： agentrt-linux（AirymaxOS）可观测性工程体系主索引
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt E-2 可观测性原则 + Linux 6.6 ftrace/eBPF/perf
+> **理论根基**： Linux 内核可观测性 + Airymax E-2 可观测性 + C-3 记忆卷载
 
 ---
 

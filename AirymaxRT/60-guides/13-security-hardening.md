@@ -139,8 +139,8 @@ tool_d:
 ```yaml
 authentication:
   jwt:
-    issuer: "agentos-auth"
-    audience: "agentos-services"
+    issuer: "agentrt-auth"
+    audience: "agentrt-services"
     secret_key: "${JWT_SECRET_KEY}"  # 从环境变量读取
     algorithm: "HS256"
     token_expiry: "24h"
@@ -174,15 +174,15 @@ rbac:
 ```bash
 # 生成自签名证书 (开发环境)
 openssl req -x509 -newkey rsa:4096 \
-  -keyout agentos.key \
-  -out agentos.crt \
+  -keyout agentrt.key \
+  -out agentrt.crt \
   -days 365 \
   -nodes \
-  -subj "/C=CN/ST=Beijing/L=Beijing/O=SPHARX/CN=agentos.local"
+  -subj "/C=CN/ST=Beijing/L=Beijing/O=SPHARX/CN=agentrt.local"
 
 # 设置证书权限
-chmod 600 agentos.key
-chmod 644 agentos.crt
+chmod 600 agentrt.key
+chmod 644 agentrt.crt
 ```
 
 #### HTTPS 服务器配置
@@ -190,8 +190,8 @@ chmod 644 agentos.crt
 gateway:
   ssl:
     enabled: true
-    certificate: "/etc/agentos/ssl/agentos.crt"
-    private_key: "/etc/agentos/ssl/agentos.key"
+    certificate: "/etc/agentrt/ssl/agentrt.crt"
+    private_key: "/etc/agentrt/ssl/agentrt.key"
     protocols:
       - "TLSv1.2"
       - "TLSv1.3"
@@ -248,9 +248,9 @@ iptables-save > /etc/iptables/rules.v4
 database:
   ssl:
     enabled: true
-    ca_cert: "/etc/agentos/ssl/ca.crt"
-    client_cert: "/etc/agentos/ssl/client.crt"
-    client_key: "/etc/agentos/ssl/client.key"
+    ca_cert: "/etc/agentrt/ssl/ca.crt"
+    client_cert: "/etc/agentrt/ssl/client.crt"
+    client_key: "/etc/agentrt/ssl/client.key"
     verify_cert: true
     verify_identity: true
 ```
@@ -276,10 +276,10 @@ decrypted_data = cipher.decrypt(encrypted_data)
 #### PostgreSQL 安全配置
 ```sql
 -- 创建只读用户
-CREATE ROLE agentos_readonly WITH LOGIN PASSWORD 'secure_password';
-GRANT CONNECT ON DATABASE agentos TO agentos_readonly;
-GRANT USAGE ON SCHEMA public TO agentos_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO agentos_readonly;
+CREATE ROLE agentrt_readonly WITH LOGIN PASSWORD 'secure_password';
+GRANT CONNECT ON DATABASE agentrt TO agentrt_readonly;
+GRANT USAGE ON SCHEMA public TO agentrt_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO agentrt_readonly;
 
 -- 启用 SSL
 ALTER SYSTEM SET ssl = 'on';
@@ -349,8 +349,8 @@ REST_FRAMEWORK = {
 #### 请求安全配置
 ```typescript
 // 启用 HTTPS
-const agentos = new AgentOSClient({
-    baseURL: 'https://api.agentos.local',
+const agentrt = new AgentRTClient({
+    baseURL: 'https://api.agentrt.local',
     https: {
         rejectUnauthorized: true,  // 拒绝无效证书
         cert: fs.readFileSync('client.crt'),
@@ -365,7 +365,7 @@ const signature = crypto.createHmac('sha256', secretKey)
     .digest('hex');
 
 // 添加安全头部
-agentos.setDefaultHeaders({
+agentrt.setDefaultHeaders({
     'X-API-Key': apiKey,
     'X-Request-Signature': signature,
     'X-Timestamp': Date.now()
@@ -385,15 +385,15 @@ logging:
     format: "json"
     destinations:
       - type: "file"
-        path: "/var/log/agentos/security.log"
+        path: "/var/log/agentrt/security.log"
         rotation: "daily"
         retention: "30d"
       - type: "syslog"
         facility: "auth"
-        tag: "agentos"
+        tag: "agentrt"
       - type: "elasticsearch"
         hosts: ["http://elasticsearch:9200"]
-        index: "agentos-security-%{+YYYY.MM.dd}"
+        index: "agentrt-security-%{+YYYY.MM.dd}"
 ```
 
 #### 关键安全事件
@@ -474,7 +474,7 @@ incident_response:
 iptables -A INPUT -s $ATTACKER_IP -j DROP
 
 # 禁用受影响账户
-agentos-cli user disable $COMPROMISED_USER
+agentrt-cli user disable $COMPROMISED_USER
 
 # 回滚可疑变更
 git revert $SUSPICIOUS_COMMIT
@@ -500,8 +500,8 @@ recovery:
 #### 加密备份策略
 ```bash
 # 创建加密备份
-backup_file="agentos-backup-$(date +%Y%m%d).tar.gz.gpg"
-tar -czf - /etc/agentos /var/lib/agentos | \
+backup_file="agentrt-backup-$(date +%Y%m%d).tar.gz.gpg"
+tar -czf - /etc/agentrt /var/lib/agentrt | \
   gpg --symmetric --cipher-algo AES256 --output "$backup_file"
 
 # 验证备份完整性

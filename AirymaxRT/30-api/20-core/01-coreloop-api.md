@@ -46,10 +46,10 @@ CoreLoopThree 是 Airymax 的核心运行时，实现了**认知-执行-记忆**
 
 ### 数据结构
 
-#### `agentos_core_loop_t`
+#### `agentrt_core_loop_t`
 三层认知循环的主句柄（不透明指针）。
 
-#### `agentos_loop_config_t`
+#### `agentrt_loop_config_t`
 ```c
 typedef struct {
     uint32_t loop_config_cognition_threads;    /* 认知线程数 (默认4) */
@@ -65,56 +65,56 @@ typedef struct {
     void*    loop_config_plan_strategy;         /* 规划策略 (可选) */
     void*    loop_config_coord_strategy;         /* 协调策略 (可选) */
     void*    loop_config_disp_strategy;          /* 分发策略 (可选) */
-} agentos_loop_config_t;
+} agentrt_loop_config_t;
 ```
 
 ### 函数接口
 
-#### `agentos_loop_create`
+#### `agentrt_loop_create`
 创建三层认知循环实例。
 
 ```c
-AGENTOS_API agentos_error_t agentos_loop_create(
-    const agentos_loop_config_t* config,   /* [in] 配置参数，NULL使用默认值 */
-    agentos_core_loop_t** out_loop        /* [out] 输出循环句柄 */
+AGENTRT_API agentrt_error_t agentrt_loop_create(
+    const agentrt_loop_config_t* config,   /* [in] 配置参数，NULL使用默认值 */
+    agentrt_core_loop_t** out_loop        /* [out] 输出循环句柄 */
 );
 ```
 
 **返回值**:
-- `AGENTOS_OK`: 成功创建
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTRT_OK`: 成功创建
+- `AGENTRT_EINVAL`: 参数无效
+- `AGENTRT_ENOMEM`: 内存不足
 
 **示例**:
 ```c
-agentos_core_loop_t* loop = NULL;
-agentos_error_t err = agentos_loop_create(NULL, &loop);
-if (err != AGENTOS_OK) {
+agentrt_core_loop_t* loop = NULL;
+agentrt_error_t err = agentrt_loop_create(NULL, &loop);
+if (err != AGENTRT_OK) {
     // 处理错误
 }
 ```
 
 ---
 
-#### `agentos_loop_destroy`
+#### `agentrt_loop_destroy`
 销毁循环实例并释放所有资源。
 
 ```c
-AGENTOS_API void agentos_loop_destroy(
-    agentos_core_loop_t* loop  /* [in] 循环句柄 */
+AGENTRT_API void agentrt_loop_destroy(
+    agentrt_core_loop_t* loop  /* [in] 循环句柄 */
 );
 ```
 
-**注意**: 如果循环正在运行，会先调用 `agentos_loop_stop`。
+**注意**: 如果循环正在运行，会先调用 `agentrt_loop_stop`。
 
 ---
 
-#### `agentos_loop_run`
+#### `agentrt_loop_run`
 启动主事件循环（阻塞当前线程）。
 
 ```c
-AGENTOS_API agentos_error_t agentos_loop_run(
-    agentos_core_loop_t* loop  /* [in] 循环句柄 */
+AGENTRT_API agentrt_error_t agentrt_loop_run(
+    agentrt_core_loop_t* loop  /* [in] 循环句柄 */
 );
 ```
 
@@ -124,16 +124,16 @@ AGENTOS_API agentos_error_t agentos_loop_run(
 3. 每50ms检查一次条件变量
 4. 收到停止信号后退出
 
-**线程安全**: 此函数应在独立线程中调用，或使用 `agentos_loop_submit` 提交任务后在另一个线程中等待。
+**线程安全**: 此函数应在独立线程中调用，或使用 `agentrt_loop_submit` 提交任务后在另一个线程中等待。
 
 ---
 
-#### `agentos_loop_stop`
+#### `agentrt_loop_stop`
 请求停止运行中的循环。
 
 ```c
-AGENTOS_API void agentos_loop_stop(
-    agentos_core_loop_t* loop  /* [in] 循环句柄 */
+AGENTRT_API void agentrt_loop_stop(
+    agentrt_core_loop_t* loop  /* [in] 循环句柄 */
 );
 ```
 
@@ -146,12 +146,12 @@ AGENTOS_API void agentos_loop_stop(
 
 ---
 
-#### `agentos_loop_submit`
+#### `agentrt_loop_submit`
 提交用户输入到循环处理。
 
 ```c
-AGENTOS_API agentos_error_t agentos_loop_submit(
-    agentos_core_loop_t* loop,      /* [in] 循环句柄 */
+AGENTRT_API agentrt_error_t agentrt_loop_submit(
+    agentrt_core_loop_t* loop,      /* [in] 循环句柄 */
     const char* input,              /* [in] 用户输入文本 */
     size_t input_len,               /* [in] 输入长度 */
     char** out_task_id              /* [out] 任务ID (需调用者释放) */
@@ -168,30 +168,30 @@ AGENTOS_API agentos_error_t agentos_loop_submit(
 ```
 
 **返回值**:
-- `AGENTOS_OK`: 任务已提交
-- `AGENTOS_EINVAL`: 参数无效或引擎未初始化
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTRT_OK`: 任务已提交
+- `AGENTRT_EINVAL`: 参数无效或引擎未初始化
+- `AGENTRT_ENOMEM`: 内存不足
 
 **示例**:
 ```c
 char* task_id = NULL;
-err = agentos_loop_submit(loop, "你好", 2, &task_id);
-if (err == AGENTOS_OK) {
+err = agentrt_loop_submit(loop, "你好", 2, &task_id);
+if (err == AGENTRT_OK) {
     printf("任务ID: %s\n", task_id);
     // 后续使用 task_id 等待结果
 }
 // 使用后释放
-AGENTOS_FREE(task_id);
+AGENTRT_FREE(task_id);
 ```
 
 ---
 
-#### `agentos_loop_wait`
+#### `agentrt_loop_wait`
 等待指定任务完成并获取结果。
 
 ```c
-AGENTOS_API agentos_error_t agentos_loop_wait(
-    agentos_core_loop_t* loop,      /* [in] 循环句柄 */
+AGENTRT_API agentrt_error_t agentrt_loop_wait(
+    agentrt_core_loop_t* loop,      /* [in] 循环句柄 */
     const char* task_id,            /* [in] 任务ID */
     uint32_t timeout_ms,            /* [in] 超时时间(毫秒), 0=无限等待 */
     char** out_result,              /* [out] 结果字符串 (需调用者释放) */
@@ -200,11 +200,11 @@ AGENTOS_API agentos_error_t agentos_loop_wait(
 ```
 
 **返回值**:
-- `AGENTOS_OK`: 任务完成，结果可用
-- `AGENTOS_ETIMEDOUT`: 超时
-- `AGENTOS_EINVAL**: 参数无效
-- `AGENTOS_ENOENT`: 任务不存在
-- `AGENTOS_ENOMEM`: 内存不足
+- `AGENTRT_OK`: 任务完成，结果可用
+- `AGENTRT_ETIMEDOUT`: 超时
+- `AGENTRT_EINVAL**: 参数无效
+- `AGENTRT_ENOENT`: 任务不存在
+- `AGENTRT_ENOMEM`: 内存不足
 
 **副作用**: 成功后会自动将结果写入记忆系统。
 
@@ -212,24 +212,24 @@ AGENTOS_API agentos_error_t agentos_loop_wait(
 ```c
 char* result = NULL;
 size_t result_len = 0;
-err = agentos_loop_wait(loop, task_id, 30000, &result, &result_len);
-if (err == AGENTOS_OK && result) {
+err = agentrt_loop_wait(loop, task_id, 30000, &result, &result_len);
+if (err == AGENTRT_OK && result) {
     printf("响应: %.*s\n", (int)result_len, result);
-    AGENTOS_FREE(result);
+    AGENTRT_FREE(result);
 }
 ```
 
 ---
 
-#### `agentos_loop_get_engines`
+#### `agentrt_loop_get_engines`
 获取三个引擎的句柄（用于高级用法）。
 
 ```c
-AGENTOS_API void agentos_loop_get_engines(
-    agentos_core_loop_t* loop,           /* [in] 循环句柄 */
-    agentos_cognition_engine_t** out_cognition,  /* [out] 认知引擎 */
-    agentos_execution_engine_t** out_execution,  /* [out] 执行引擎 */
-    agentos_memory_engine_t** out_memory        /* [out] 记忆引擎 */
+AGENTRT_API void agentrt_loop_get_engines(
+    agentrt_core_loop_t* loop,           /* [in] 循环句柄 */
+    agentrt_cognition_engine_t** out_cognition,  /* [out] 认知引擎 */
+    agentrt_execution_engine_t** out_execution,  /* [out] 执行引擎 */
+    agentrt_memory_engine_t** out_memory        /* [out] 记忆引擎 */
 );
 ```
 
@@ -241,33 +241,33 @@ AGENTOS_API void agentos_loop_get_engines(
 
 ### 数据结构
 
-#### `agentos_cognition_engine_t`
+#### `agentrt_cognition_engine_t`
 认知引擎句柄（不透明指针）。
 
-#### `agentos_cognition_config_t`
+#### `agentrt_cognition_config_t`
 ```c
 typedef struct {
     uint32_t cognition_default_timeout_ms;   /* 默认超时 (30000ms) */
     uint32_t cognition_max_retries;          /* 最大重试次数 (3) */
     
     /* 回调函数 */
-    agentos_feedback_callback_t feedback_callback;
+    agentrt_feedback_callback_t feedback_callback;
     void* feedback_user_data;
-} agentos_cognition_config_t;
+} agentrt_cognition_config_t;
 ```
 
-#### `agentos_task_plan_t`
+#### `agentrt_task_plan_t`
 任务计划（DAG结构）。
 ```c
 typedef struct {
     char* task_plan_id;                    /* 计划唯一ID */
-    agentos_task_node_t** task_plan_nodes; /* 计划节点数组 */
+    agentrt_task_node_t** task_plan_nodes; /* 计划节点数组 */
     size_t task_plan_node_count;           /* 节点数量 */
     char** task_plan_entry_points;         /* 入口点列表 */
-} agentos_task_plan_t;
+} agentrt_task_plan_t;
 ```
 
-#### `agentos_task_node_t`
+#### `agentrt_task_node_t`
 计划节点。
 ```c
 typedef struct {
@@ -279,35 +279,35 @@ typedef struct {
     size_t task_node_depends_count;       /* 依赖数量 */
     uint32_t task_node_timeout_ms;        /* 超时时间 */
     uint8_t task_node_priority;           /* 优先级 (0-255) */
-} agentos_task_node_t;
+} agentrt_task_node_t;
 ```
 
 ### 函数接口
 
-#### `agentos_cognition_create`
+#### `agentrt_cognition_create`
 创建认知引擎（基础版本）。
 
 ```c
-agentos_error_t agentos_cognition_create(
-    agentos_plan_strategy_t* plan_strategy,      /* [in] 规划策略 (可选) */
-    agentos_coordinator_strategy_t* coord_strategy, /* [in] 协调策略 (可选) */
-    agentos_dispatching_strategy_t* disp_strategy, /* [in] 分发策略 (可选) */
-    agentos_cognition_engine_t** out_engine       /* [out] 输出引擎 */
+agentrt_error_t agentrt_cognition_create(
+    agentrt_plan_strategy_t* plan_strategy,      /* [in] 规划策略 (可选) */
+    agentrt_coordinator_strategy_t* coord_strategy, /* [in] 协调策略 (可选) */
+    agentrt_dispatching_strategy_t* disp_strategy, /* [in] 分发策略 (可选) */
+    agentrt_cognition_engine_t** out_engine       /* [out] 输出引擎 */
 );
 ```
 
 ---
 
-#### `agentos_cognition_create_ex`
+#### `agentrt_cognition_create_ex`
 创建认知引擎（扩展版本，支持完整配置）。
 
 ```c
-agentos_error_t agentos_cognition_create_ex(
-    const agentos_cognition_config_t* config,    /* [in] 完整配置 (可选) */
-    agentos_plan_strategy_t* plan_strategy,
-    agentos_coordinator_strategy_t* coord_strategy,
-    agentos_dispatching_strategy_t* disp_strategy,
-    agentos_cognition_engine_t** out_engine
+agentrt_error_t agentrt_cognition_create_ex(
+    const agentrt_cognition_config_t* config,    /* [in] 完整配置 (可选) */
+    agentrt_plan_strategy_t* plan_strategy,
+    agentrt_coordinator_strategy_t* coord_strategy,
+    agentrt_dispatching_strategy_t* disp_strategy,
+    agentrt_cognition_engine_t** out_engine
 );
 ```
 
@@ -318,23 +318,23 @@ agentos_error_t agentos_cognition_create_ex(
 
 ---
 
-#### `agentos_cognition_destroy`
+#### `agentrt_cognition_destroy`
 销毁认知引擎。
 ```c
-void agentos_cognition_destroy(agentos_cognition_engine_t* engine);
+void agentrt_cognition_destroy(agentrt_cognition_engine_t* engine);
 ```
 
 ---
 
-#### `agentos_cognition_process`
+#### `agentrt_cognition_process`
 核心处理函数：将输入转换为任务计划。
 
 ```c
-agentos_error_t agentos_cognition_process(
-    agentos_cognition_engine_t* engine,   /* [in] 引擎句柄 */
+agentrt_error_t agentrt_cognition_process(
+    agentrt_cognition_engine_t* engine,   /* [in] 引擎句柄 */
     const char* input,                   /* [in] 输入文本 */
     size_t input_len,                    /* [in] 输入长度 */
-    agentos_task_plan_t** out_plan       /* [out] 输出计划 (需调用者释放) */
+    agentrt_task_plan_t** out_plan       /* [out] 输出计划 (需调用者释放) */
 );
 ```
 
@@ -353,37 +353,37 @@ agentos_error_t agentos_cognition_process(
 - **Metacognition**: 元认知评估，自动纠错
 
 **返回值**:
-- `AGENTOS_OK`: 计划生成成功
-- `AGENTOS_EINVAL`: 参数无效
-- `AGENTOS_ENOTSUP`: 无可用规划策略
+- `AGENTRT_OK`: 计划生成成功
+- `AGENTRT_EINVAL`: 参数无效
+- `AGENTRT_ENOTSUP`: 无可用规划策略
 
 **示例**:
 ```c
-agentos_task_plan_t* plan = NULL;
-err = agentos_cognition_process(engine, "帮我写一份报告", strlen("帮我写一份报告"), &plan);
+agentrt_task_plan_t* plan = NULL;
+err = agentrt_cognition_process(engine, "帮我写一份报告", strlen("帮我写一份报告"), &plan);
 
-if (err == AGENTOS_OK && plan) {
+if (err == AGENTRT_OK && plan) {
     printf("计划ID: %s\n", plan->task_plan_id);
     printf("节点数: %zu\n", plan->task_plan_node_count);
     
     // 遍历计划节点
     for (size_t i = 0; i < plan->task_plan_node_count; i++) {
-        agentos_task_node_t* node = plan->task_plan_nodes[i];
+        agentrt_task_node_t* node = plan->task_plan_nodes[i];
         printf("  [%zu] 角色: %s\n", i, node->task_node_agent_role);
     }
     
     // 释放计划
-    agentos_task_plan_free(plan);
+    agentrt_task_plan_free(plan);
 }
 ```
 
 ---
 
-#### `agentos_task_plan_free`
+#### `agentrt_task_plan_free`
 释放任务计划及其所有子资源。
 
 ```c
-void agentos_task_plan_free(agentos_task_plan_t* plan);
+void agentrt_task_plan_free(agentrt_task_plan_t* plan);
 ```
 
 **释放内容**:
@@ -393,12 +393,12 @@ void agentos_task_plan_free(agentos_task_plan_t* plan);
 
 ---
 
-#### `agentos_cognition_stats`
+#### `agentrt_cognition_stats`
 获取认知引擎统计信息。
 
 ```c
-agentos_error_t agentos_cognition_stats(
-    agentos_cognition_engine_t* engine,
+agentrt_error_t agentrt_cognition_stats(
+    agentrt_cognition_engine_t* engine,
     char** out_stats,      /* [out] JSON格式统计数据 (需释放) */
     size_t* out_len        /* [out] 数据长度 */
 );
@@ -416,12 +416,12 @@ agentos_error_t agentos_cognition_stats(
 
 ---
 
-#### `agentos_cognition_health_check`
+#### `agentrt_cognition_health_check`
 健康检查（JSON格式）。
 
 ```c
-agentos_error_t agentos_cognition_health_check(
-    agentos_cognition_engine_t* engine,
+agentrt_error_t agentrt_cognition_health_check(
+    agentrt_cognition_engine_t* engine,
     char** out_json        /* [out] JSON格式健康状态 (需释放) */
 );
 ```
@@ -430,13 +430,13 @@ agentos_error_t agentos_cognition_health_check(
 
 ### 高级配置API
 
-#### `agentos_cognition_set_fallback_plan`
+#### `agentrt_cognition_set_fallback_plan`
 设置备用规划策略。
 
 ```c
-void agentos_cognition_set_fallback_plan(
-    agentos_cognition_engine_t* engine,
-    agentos_plan_strategy_t* fallback
+void agentrt_cognition_set_fallback_plan(
+    agentrt_cognition_engine_t* engine,
+    agentrt_plan_strategy_t* fallback
 );
 ```
 
@@ -444,12 +444,12 @@ void agentos_cognition_set_fallback_plan(
 
 ---
 
-#### `agentos_cognition_set_context`
+#### `agentrt_cognition_set_context`
 设置认知上下文（如对话历史）。
 
 ```c
-void agentos_cognition_set_context(
-    agentos_cognition_engine_t* engine,
+void agentrt_cognition_set_context(
+    agentrt_cognition_engine_t* engine,
     void* context,
     void (*destroy)(void*)  /* 上下文销毁函数 */
 );
@@ -457,13 +457,13 @@ void agentos_cognition_set_context(
 
 ---
 
-#### `agentos_cognition_set_memory`
+#### `agentrt_cognition_set_memory`
 关联记忆引擎（用于上下文预填充）。
 
 ```c
-void agentos_cognition_set_memory(
-    agentos_cognition_engine_t* engine,
-    agentos_memory_engine_t* memory
+void agentrt_cognition_set_memory(
+    agentrt_cognition_engine_t* engine,
+    agentrt_memory_engine_t* memory
 );
 ```
 
@@ -473,10 +473,10 @@ void agentos_cognition_set_memory(
 
 ### 数据结构
 
-#### `agentos_execution_engine_t`
+#### `agentrt_execution_engine_t`
 执行引擎句柄（不透明指针）。
 
-#### `agentos_task_t`
+#### `agentrt_task_t`
 任务描述。
 ```c
 typedef struct {
@@ -488,11 +488,11 @@ typedef struct {
     size_t task_output_size;   /* 输出大小 */
     uint64_t task_timeout_ms;  /* 超时时间 */
     uint32_t task_priority;    /* 优先级 */
-    agentos_task_status_t task_status; /* 当前状态 */
-} agentos_task_t;
+    agentrt_task_status_t task_status; /* 当前状态 */
+} agentrt_task_t;
 ```
 
-#### `agentos_task_status_t`
+#### `agentrt_task_status_t`
 任务状态枚举。
 ```c
 typedef enum {
@@ -502,33 +502,33 @@ typedef enum {
     TASK_STATUS_FAILED = 3,    /* 执行失败 */
     TASK_STATUS_CANCELLED = 4, /* 已取消 */
     TASK_STATUS_TIMEOUT = 5    /* 超时 */
-} agentos_task_status_t;
+} agentrt_task_status_t;
 ```
 
-#### `agentos_execution_unit_t`
+#### `agentrt_execution_unit_t`
 执行单元（注册到引擎的工作器）。
 ```c
 typedef struct {
     char* unit_name;                          /* 单元名称 */
-    agentos_error_t (*execution_unit_execute)( /* 执行函数 */
-        struct agentos_execution_unit_s* self,
+    agentrt_error_t (*execution_unit_execute)( /* 执行函数 */
+        struct agentrt_execution_unit_s* self,
         const void* input,
         void** output
     );
     void* context;                             /* 用户上下文 */
-    void (*destroy)(struct agentos_execution_unit_s*); /* 销毁函数 */
-} agentos_execution_unit_t;
+    void (*destroy)(struct agentrt_execution_unit_s*); /* 销毁函数 */
+} agentrt_execution_unit_t;
 ```
 
 ### 函数接口
 
-#### `agentos_execution_create`
+#### `agentrt_execution_create`
 创建执行引擎。
 
 ```c
-agentos_error_t agentos_execution_create(
+agentrt_error_t agentrt_execution_create(
     uint32_t max_concurrency,          /* [in] 最大并发任务数 */
-    agentos_execution_engine_t** out_engine /* [out] 输出引擎 */
+    agentrt_execution_engine_t** out_engine /* [out] 输出引擎 */
 );
 ```
 
@@ -551,11 +551,11 @@ agentos_error_t agentos_execution_create(
 
 ---
 
-#### `agentos_execution_destroy`
+#### `agentrt_execution_destroy`
 销毁执行引擎。
 
 ```c
-void agentos_execution_destroy(agentos_execution_engine_t* engine);
+void agentrt_execution_destroy(agentrt_execution_engine_t* engine);
 ```
 
 **清理顺序**:
@@ -568,13 +568,13 @@ void agentos_execution_destroy(agentos_execution_engine_t* engine);
 
 ---
 
-#### `agentos_execution_submit`
+#### `agentrt_execution_submit`
 提交任务到执行引擎。
 
 ```c
-agentos_error_t agentos_execution_submit(
-    agentos_execution_engine_t* engine,  /* [in] 引擎 */
-    const agentos_task_t* task,          /* [in] 任务描述 */
+agentrt_error_t agentrt_execution_submit(
+    agentrt_execution_engine_t* engine,  /* [in] 引擎 */
+    const agentrt_task_t* task,          /* [in] 任务描述 */
     char** out_task_id                   /* [out] 生成的任务ID (需释放) */
 );
 ```
@@ -582,23 +582,23 @@ agentos_error_t agentos_execution_submit(
 **处理流程**:
 1. 深拷贝任务描述（防止外部修改）
 2. 创建TCB（Task Control Block）
-3. 生成唯一任务ID（使用 `agentos_generate_task_id`）
+3. 生成唯一任务ID（使用 `agentrt_generate_task_id`）
 4. 初始化同步原语（mutex, cond）
 5. 入队并插入哈希表
 6. signal 通知工作线程
 
-**返回的任务ID**: 使用 `AGENTOS_FREE` 释放。
+**返回的任务ID**: 使用 `AGENTRT_FREE` 释放。
 
 ---
 
-#### `agentos_execution_query`
+#### `agentrt_execution_query`
 查询任务状态（非阻塞）。
 
 ```c
-agentos_error_t agentos_execution_query(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_query(
+    agentrt_execution_engine_t* engine,
     const char* task_id,
-    agentos_task_status_t* out_status  /* [out] 当前状态 */
+    agentrt_task_status_t* out_status  /* [out] 当前状态 */
 );
 ```
 
@@ -606,15 +606,15 @@ agentos_error_t agentos_execution_query(
 
 ---
 
-#### `agentos_execution_wait`
+#### `agentrt_execution_wait`
 等待任务完成（阻塞）。
 
 ```c
-agentos_error_t agentos_execution_wait(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_wait(
+    agentrt_execution_engine_t* engine,
     const char* task_id,
     uint32_t timeout_ms,            /* [in] 超时(ms), 0=无限 */
-    agentos_task_t** out_result    /* [out] 结果副本 (需释放) */
+    agentrt_task_t** out_result    /* [out] 结果副本 (需释放) */
 );
 ```
 
@@ -625,16 +625,16 @@ agentos_error_t agentos_execution_wait(
 4. 超时检查
 5. 深拷贝结果（如果需要）
 
-**结果释放**: 使用 `agentos_task_free`。
+**结果释放**: 使用 `agentrt_task_free`。
 
 ---
 
-#### `agentos_execution_cancel`
+#### `agentrt_execution_cancel`
 取消等待中的任务。
 
 ```c
-agentos_error_t agentos_execution_cancel(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_cancel(
+    agentrt_execution_engine_t* engine,
     const char* task_id
 );
 ```
@@ -643,14 +643,14 @@ agentos_error_t agentos_execution_cancel(
 
 ---
 
-#### `agentos_execution_get_result`
+#### `agentrt_execution_get_result`
 获取已完成任务的结果（非阻塞）。
 
 ```c
-agentos_error_t agentos_execution_get_result(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_get_result(
+    agentrt_execution_engine_t* engine,
     const char* task_id,
-    agentos_task_t** out_result  /* [out] 结果 (需释放) */
+    agentrt_task_t** out_result  /* [out] 结果 (需释放) */
 );
 ```
 
@@ -658,21 +658,21 @@ agentos_error_t agentos_execution_get_result(
 
 ---
 
-#### `agentos_task_free`
+#### `agentrt_task_free`
 释放任务结构体。
 
 ```c
-void agentos_task_free(agentos_task_t* task);
+void agentrt_task_free(agentrt_task_t* task);
 ```
 
 ---
 
-#### `agentos_execution_health_check`
+#### `agentrt_execution_health_check`
 健康检查（JSON格式）。
 
 ```c
-agentos_error_t agentos_execution_health_check(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_health_check(
+    agentrt_execution_engine_t* engine,
     char** out_json  /* [out] JSON统计信息 */
 );
 ```
@@ -695,10 +695,10 @@ agentos_error_t agentos_execution_health_check(
 
 ### 数据结构
 
-#### `agentos_memory_engine_t`
+#### `agentrt_memory_engine_t`
 记忆引擎句柄（不透明指针）。
 
-#### `agentos_memory_record_t`
+#### `agentrt_memory_record_t`
 记忆记录。
 ```c
 typedef struct {
@@ -708,10 +708,10 @@ typedef struct {
     float memory_record_importance;   /* 重要性 (0.0-1.0) */
     uint64_t memory_record_timestamp; /* 时间戳 */
     uint32_t memory_record_access_count; /* 访问次数 */
-} agentos_memory_record_t;
+} agentrt_memory_record_t;
 ```
 
-#### `agentos_memory_query_t`
+#### `agentrt_memory_query_t`
 查询参数。
 ```c
 typedef struct {
@@ -720,48 +720,48 @@ typedef struct {
     uint32_t memory_query_limit;      /* 返回数量限制 */
     uint8_t memory_query_include_raw;  /* 是否包含原始数据 */
     float memory_query_min_similarity;/* 最小相似度阈值 */
-} agentos_memory_query_t;
+} agentrt_memory_query_t;
 ```
 
-#### `agentos_memory_result_ext_t`
+#### `agentrt_memory_result_ext_t`
 查询结果。
 ```c
 typedef struct {
-    agentos_memory_result_item_t** memory_result_items; /* 结果项数组 */
+    agentrt_memory_result_item_t** memory_result_items; /* 结果项数组 */
     size_t memory_result_count;                         /* 结果数量 */
     uint64_t memory_result_query_time_ns;               /* 查询耗时 */
-} agentos_memory_result_ext_t;
+} agentrt_memory_result_ext_t;
 ```
 
 ### 函数接口
 
-#### `agentos_memory_create`
+#### `agentrt_memory_create`
 创建记忆引擎。
 
 ```c
-agentos_error_t agentos_memory_create(
-    const agentos_memory_config_t* config,  /* [in] 配置 (可选, NULL用默认值) */
-    agentos_memory_engine_t** out_memory    /* [out] 输出引擎 */
+agentrt_error_t agentrt_memory_create(
+    const agentrt_memory_config_t* config,  /* [in] 配置 (可选, NULL用默认值) */
+    agentrt_memory_engine_t** out_memory    /* [out] 输出引擎 */
 );
 ```
 
 ---
 
-#### `agentos_memory_destroy`
+#### `agentrt_memory_destroy`
 销毁记忆引擎。
 ```c
-void agentos_memory_destroy(agentos_memory_engine_t* memory);
+void agentrt_memory_destroy(agentrt_memory_engine_t* memory);
 ```
 
 ---
 
-#### `agentos_memory_write`
+#### `agentrt_memory_write`
 写入一条记忆记录。
 
 ```c
-agentos_error_t agentos_memory_write(
-    agentos_memory_engine_t* memory,
-    const agentos_memory_record_t* record,  /* [in] 记录数据 */
+agentrt_error_t agentrt_memory_write(
+    agentrt_memory_engine_t* memory,
+    const agentrt_memory_record_t* record,  /* [in] 记录数据 */
     char** out_record_id                    /* [out] 生成的记录ID (需释放) */
 );
 ```
@@ -774,7 +774,7 @@ agentos_error_t agentos_memory_write(
 
 **示例**:
 ```c
-agentos_memory_record_t record = {
+agentrt_memory_record_t record = {
     .memory_record_data = "用户喜欢Python",
     .memory_record_data_len = strlen("用户喜欢Python"),
     .memory_record_type = "preference",
@@ -782,21 +782,21 @@ agentos_memory_record_t record = {
 };
 
 char* record_id = NULL;
-err = agentos_memory_write(memory, &record, &record_id);
+err = agentrt_memory_write(memory, &record, &record_id);
 printf("记录ID: %s\n", record_id);
-AGENTOS_FREE(record_id);
+AGENTRT_FREE(record_id);
 ```
 
 ---
 
-#### `agentos_memory_query`
+#### `agentrt_memory_query`
 语义相似性检索。
 
 ```c
-agentos_error_t agentos_memory_query(
-    agentos_memory_engine_t* memory,
-    const agentos_memory_query_t* query,      /* [in] 查询参数 */
-    agentos_memory_result_ext_t** out_result  /* [out] 结果 (需释放) */
+agentrt_error_t agentrt_memory_query(
+    agentrt_memory_engine_t* memory,
+    const agentrt_memory_query_t* query,      /* [in] 查询参数 */
+    agentrt_memory_result_ext_t** out_result  /* [out] 结果 (需释放) */
 );
 ```
 
@@ -807,40 +807,40 @@ agentos_error_t agentos_memory_query(
 4. 截断到 limit 数量
 5. 可选：包含原始数据
 
-**结果释放**: 使用 `agentos_memory_result_free`。
+**结果释放**: 使用 `agentrt_memory_result_free`。
 
 ---
 
-#### `agentos_memory_read`
+#### `agentrt_memory_read`
 按ID读取记录。
 
 ```c
-agentos_error_t agentos_memory_read(
-    agentos_memory_engine_t* memory,
+agentrt_error_t agentrt_memory_read(
+    agentrt_memory_engine_t* memory,
     const char* record_id,
-    agentos_memory_record_t** out_record  /* [out] 记录 (需释放) */
+    agentrt_memory_record_t** out_record  /* [out] 记录 (需释放) */
 );
 ```
 
 ---
 
-#### `agentos_memory_delete`
+#### `agentrt_memory_delete`
 删除记录。
 
 ```c
-agentos_error_t agentos_memory_delete(
-    agentos_memory_engine_t* memory,
+agentrt_error_t agentrt_memory_delete(
+    agentrt_memory_engine_t* memory,
     const char* record_id
 );
 ```
 
 ---
 
-#### `agentos_memory_result_free`
+#### `agentrt_memory_result_free`
 释放查询结果。
 
 ```c
-void agentos_memory_result_free(agentos_memory_result_ext_t* result);
+void agentrt_memory_result_free(agentrt_memory_result_ext_t* result);
 ```
 
 ---
@@ -850,16 +850,16 @@ void agentos_memory_result_free(agentos_memory_result_ext_t* result);
 ### 示例1: 简单问答Agent
 
 ```c
-#include "agentos.h"
+#include "agentrt.h"
 #include "loop.h"
 
 int main() {
     // 1. 初始化
-    agentos_core_init();
+    agentrt_core_init();
     
     // 2. 创建循环（使用默认配置）
-    agentos_core_loop_t* loop = NULL;
-    agentos_loop_create(NULL, &loop);
+    agentrt_core_loop_t* loop = NULL;
+    agentrt_loop_create(NULL, &loop);
     
     // 3. 启动后台线程
     // 注意：实际应用中应该在独立线程中调用 run
@@ -868,25 +868,25 @@ int main() {
     // 4. 提交问题
     char* task_id = NULL;
     const char* question = "什么是量子计算？";
-    agentos_loop_submit(loop, question, strlen(question), &task_id);
+    agentrt_loop_submit(loop, question, strlen(question), &task_id);
     
     // 5. 等待回答（30秒超时）
     char* answer = NULL;
     size_t answer_len = 0;
-    agentos_error_t err = agentos_loop_wait(loop, task_id, 30000, &answer, &answer_len);
+    agentrt_error_t err = agentrt_loop_wait(loop, task_id, 30000, &answer, &answer_len);
     
-    if (err == AGENTOS_OK) {
+    if (err == AGENTRT_OK) {
         printf("Q: %s\n", question);
         printf("A: %.*s\n", (int)answer_len, answer);
-        AGENTOS_FREE(answer);
+        AGENTRT_FREE(answer);
     } else {
         printf("错误: %d\n", err);
     }
     
     // 6. 清理
-    AGENTOS_FREE(task_id);
-    agentos_loop_destroy(loop);
-    agentos_core_shutdown();
+    AGENTRT_FREE(task_id);
+    agentrt_loop_destroy(loop);
+    agentrt_core_shutdown();
     
     return 0;
 }
@@ -899,8 +899,8 @@ int main() {
 #include "agent_registry.h"
 
 // 自定义执行单元：文本分析器
-static agentos_error_t text_analyzer_execute(
-    agentos_execution_unit_t* unit,
+static agentrt_error_t text_analyzer_execute(
+    agentrt_execution_unit_t* unit,
     const void* input,
     void** output) {
     
@@ -923,18 +923,18 @@ static agentos_error_t text_analyzer_execute(
     asprintf(&result, "{\"word_count\":%d}", word_count);
     *output = result;
     
-    return AGENTOS_OK;
+    return AGENTRT_OK;
 }
 
 // 注册执行单元
 void register_text_analyzer() {
-    agentos_execution_unit_t* unit = AGENTOS_CALLOC(1, sizeof(*unit));
+    agentrt_execution_unit_t* unit = AGENTRT_CALLOC(1, sizeof(*unit));
     unit->unit_name = "text_analyzer";
     unit->execution_unit_execute = text_analyzer_execute;
     unit->context = NULL;
     unit->destroy = free;
     
-    agentos_registry_register_unit(unit);
+    agentrt_registry_register_unit(unit);
 }
 ```
 
@@ -948,9 +948,9 @@ void register_text_analyzer() {
 - ⚠️ 不要在回调函数中调用可能阻塞的API
 
 ### 内存管理
-- ✅ 使用 `AGENTOS_*` 系列宏进行内存操作
+- ✅ 使用 `AGENTRT_*` 系列宏进行内存操作
 - ✅ 文档中标明"需调用者释放"的返回值必须手动释放
-- ❌ 不要混用 `malloc/free` 和 `AGENTOS_MALLOC/AGENTOS_FREE`
+- ❌ 不要混用 `malloc/free` 和 `AGENTRT_MALLOC/AGENTRT_FREE`
 
 ### 性能建议
 - **高并发场景**: 增加 `execution_threads` 数量（建议 CPU核心数 * 2）
@@ -959,15 +959,15 @@ void register_text_analyzer() {
 
 ### 错误处理最佳实践
 ```c
-agentos_error_t err = agentos_loop_submit(loop, input, len, &task_id);
+agentrt_error_t err = agentrt_loop_submit(loop, input, len, &task_id);
 switch (err) {
-    case AGENTOS_OK:
+    case AGENTRT_OK:
         // 正常处理
         break;
-    case AGENTOS_EINVAL:
+    case AGENTRT_EINVAL:
         fprintf(stderr, "无效参数\n");
         break;
-    case AGENTOS_ENOMEM:
+    case AGENTRT_ENOMEM:
         fprintf(stderr, "内存不足\n");
         break;
     default:

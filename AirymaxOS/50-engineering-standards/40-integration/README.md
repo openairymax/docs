@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 集成标准总览
 
-> **文档定位**: agentrt-linux（AirymaxOS）集成标准的顶层入口，定义内核层→服务层→应用层的集成层次、与 agentrt 的集成规范、与 主流 Linux 发行版标准的兼容性集成、生态合作规范与第三方模块集成标准
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [工程标准规范手册](../00-engineering-standards-handbook.md)
-> **关联规范**: IRON-9 v2 工程铁律（内部工程标准规范） / [工程基线](../../10-architecture/04-engineering-baseline.md) / [五维正交 24 原则](../../10-architecture/02-five-dimensional-principles.md)
+> **文档定位**： agentrt-linux（AirymaxOS）集成标准的顶层入口，定义内核层→服务层→应用层的集成层次、与 agentrt 的集成规范、与 主流 Linux 发行版标准的兼容性集成、生态合作规范与第三方模块集成标准\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **关联规范**： IRON-9 v2 工程铁律（内部工程标准规范） / [工程基线](../../10-architecture/04-engineering-baseline.md) / [五维正交 24 原则](../../10-architecture/02-five-dimensional-principles.md)
 
 ---
 

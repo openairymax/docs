@@ -120,10 +120,10 @@ Airymax 是一个多 daemon 协作的智能 Agent 运行时平台，采用分层
 
 | 组件 | CPU Limit | Memory Limit | 副本数 |
 |------|-----------|-------------|--------|
-| agentos-atoms (内核) | 4.0 | 8 GB | 2 |
-| agentos-gateway (网关) | 2.0 | 4 GB | 3 |
-| agentos-daemon (服务层) | 4.0 | 8 GB | 2 |
-| agentos-openlab (API) | 2.0 | 4 GB | 3 |
+| agentrt-atoms (内核) | 4.0 | 8 GB | 2 |
+| agentrt-gateway (网关) | 2.0 | 4 GB | 3 |
+| agentrt-daemon (服务层) | 4.0 | 8 GB | 2 |
+| agentrt-openlab (API) | 2.0 | 4 GB | 3 |
 | Redis | 1.0 | 3 GB | 1 |
 | PostgreSQL | 2.0 | 8 GB | 1 |
 | Jaeger | 1.0 | 2 GB | 1 |
@@ -188,12 +188,12 @@ ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
 POSTGRES_PASSWORD=your_secure_password
 
 # 日志级别
-AGENTOS_LOG_LEVEL=INFO
-AGENTOS_LOG_FORMAT=text
+AGENTRT_LOG_LEVEL=INFO
+AGENTRT_LOG_FORMAT=text
 
 # 追踪
-AGENTOS_ENABLE_TRACING=true
-AGENTOS_TELEMETRY_ENDPOINT=http://otel-collector:4317
+AGENTRT_ENABLE_TRACING=true
+AGENTRT_TELEMETRY_ENDPOINT=http://otel-collector:4317
 ```
 
 **Step 2: 构建镜像**
@@ -250,8 +250,8 @@ make logs
 
 ```yaml
 services:
-  agentos-atoms:
-    image: ghcr.io/spharx/agentos-atoms:0.1.0
+  agentrt-atoms:
+    image: ghcr.io/spharx/agentrt-atoms:0.1.0
     restart: always
     deploy:
       resources:
@@ -263,12 +263,12 @@ services:
           memory: 4G
       replicas: 2
     environment:
-      - AGENTOS_ENV=production
-      - AGENTOS_LOG_LEVEL=WARN
-      - AGENTOS_LOG_FORMAT=json
-      - AGENTOS_ENABLE_TRACING=true
-      - AGENTOS_ENABLE_METRICS=true
-      - AGENTOS_SECURITY_LEVEL=high
+      - AGENTRT_ENV=production
+      - AGENTRT_LOG_LEVEL=WARN
+      - AGENTRT_LOG_FORMAT=json
+      - AGENTRT_ENABLE_TRACING=true
+      - AGENTRT_ENABLE_METRICS=true
+      - AGENTRT_SECURITY_LEVEL=high
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
       interval: 30s
@@ -285,8 +285,8 @@ services:
     cap_drop:
       - ALL
 
-  agentos-gateway:
-    image: ghcr.io/spharx/agentos-gateway:0.1.0
+  agentrt-gateway:
+    image: ghcr.io/spharx/agentrt-gateway:0.1.0
     restart: always
     deploy:
       replicas: 3
@@ -318,15 +318,15 @@ services:
       -c min_wal_size=1GB
       -c max_wal_size=4GB
     environment:
-      - POSTGRES_DB=agentos_prod
-      - POSTGRES_USER=agentos
+      - POSTGRES_DB=agentrt_prod
+      - POSTGRES_USER=agentrt
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C
     volumes:
       - postgres-prod-data:/var/lib/postgresql/data
       - postgres-backups:/var/lib/postgresql/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentos -d agentos_prod"]
+      test: ["CMD-SHELL", "pg_isready -U agentrt -d agentrt_prod"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -358,8 +358,8 @@ services:
       - ./ecosystem/manager/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ecosystem/manager/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - agentos-gateway
-      - agentos-openlab
+      - agentrt-gateway
+      - agentrt-openlab
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -385,12 +385,12 @@ volumes:
   nginx-logs:         { driver: local }
 
 networks:
-  agentos-production-network:
+  agentrt-production-network:
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.0.0/16
-  agentos-internal-network:
+  agentrt-internal-network:
     driver: bridge
     internal: false
     ipam:
@@ -584,8 +584,8 @@ kind: ConfigMap
 metadata:
   name: agentrt-config
 data:
-  agentos.yaml: |
-    agentos:
+  agentrt.yaml: |
+    agentrt:
       version: "0.1.1"
       log_level: "INFO"
       deploy_env: "production"
@@ -675,14 +675,14 @@ Airymax 通过环境变量进行主要配置。完整的变量列表参考 `conf
 
 | 变量 | 说明 | 默认值 | 生产建议 |
 |------|------|--------|---------|
-| `AGENTOS_ENV` | 运行环境 | `development` | `production` |
-| `AGENTOS_LOG_LEVEL` | 日志级别 | `INFO` | `WARN` |
-| `AGENTOS_LOG_FORMAT` | 日志格式 | `text` | `json` |
-| `AGENTOS_ENABLE_TRACING` | 启用追踪 | `true` | `true` |
-| `AGENTOS_ENABLE_METRICS` | 启用指标 | `true` | `true` |
-| `AGENTOS_TELEMETRY_ENDPOINT` | OTLP 端点 | `http://otel-collector:4317` | 同左 |
-| `AGENTOS_DEPLOYMENT_TYPE` | 部署类型 | - | `production` |
-| `AGENTOS_SECURITY_LEVEL` | 安全级别 | - | `high` |
+| `AGENTRT_ENV` | 运行环境 | `development` | `production` |
+| `AGENTRT_LOG_LEVEL` | 日志级别 | `INFO` | `WARN` |
+| `AGENTRT_LOG_FORMAT` | 日志格式 | `text` | `json` |
+| `AGENTRT_ENABLE_TRACING` | 启用追踪 | `true` | `true` |
+| `AGENTRT_ENABLE_METRICS` | 启用指标 | `true` | `true` |
+| `AGENTRT_TELEMETRY_ENDPOINT` | OTLP 端点 | `http://otel-collector:4317` | 同左 |
+| `AGENTRT_DEPLOYMENT_TYPE` | 部署类型 | - | `production` |
+| `AGENTRT_SECURITY_LEVEL` | 安全级别 | - | `high` |
 | `TZ` | 时区 | `UTC` | `Asia/Shanghai` |
 
 #### API 密钥
@@ -697,9 +697,9 @@ Airymax 通过环境变量进行主要配置。完整的变量列表参考 `conf
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `POSTGRES_PASSWORD` | PostgreSQL 密码 | `agentos_dev`（开发） |
-| `POSTGRES_DB` | 数据库名 | `agentos` |
-| `POSTGRES_USER` | 数据库用户 | `agentos` |
+| `POSTGRES_PASSWORD` | PostgreSQL 密码 | `agentrt_dev`（开发） |
+| `POSTGRES_DB` | 数据库名 | `agentrt` |
+| `POSTGRES_USER` | 数据库用户 | `agentrt` |
 | `REDIS_HOST` | Redis 主机 | `redis` |
 | `REDIS_PORT` | Redis 端口 | `6379` |
 
@@ -717,9 +717,9 @@ Airymax 通过环境变量进行主要配置。完整的变量列表参考 `conf
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `AGENTOS_MAX_WORKERS` | 8 | 最大工作进程数 |
+| `AGENTRT_MAX_WORKERS` | 8 | 最大工作进程数 |
 | `LLM_REQUEST_TIMEOUT` | 120 | LLM 请求超时（秒） |
-| `AGENTOS_CACHE_SIZE_MB` | 512 | 缓存大小（MB） |
+| `AGENTRT_CACHE_SIZE_MB` | 512 | 缓存大小（MB） |
 | `MEMORY_LRU_CACHE_SIZE` | 10000 | LRU 缓存条目数 |
 | `MEMORY_BATCH_SIZE` | 100 | 记忆写入批处理大小 |
 
@@ -727,7 +727,7 @@ Airymax 通过环境变量进行主要配置。完整的变量列表参考 `conf
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `AGENTOS_JWT_SECRET` | - | JWT 密钥（生产必须修改） |
+| `AGENTRT_JWT_SECRET` | - | JWT 密钥（生产必须修改） |
 | `API_RATE_LIMIT` | 100 | 每分钟请求数限制 |
 | `ENABLE_CORS` | true | 启用 CORS |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | 允许的 CORS 源 |
@@ -881,7 +881,7 @@ sudo cp deploy/systemd/agentrt.target /etc/systemd/system/
 
 # 替换占位符
 sudo sed -i 's|@CMAKE_INSTALL_PREFIX@|/usr/local|g' /etc/systemd/system/agentrt-*.service
-sudo sed -i 's|@AGENTOS_RUNTIME_DIR@|/var/run/agentos|g' /etc/systemd/system/agentrt-*.service
+sudo sed -i 's|@AGENTRT_RUNTIME_DIR@|/var/run/agentrt|g' /etc/systemd/system/agentrt-*.service
 
 # 重载并启用
 sudo systemctl daemon-reload
@@ -900,8 +900,8 @@ bash scripts/ops/agentrt-bootstrap.sh
 # 指定二进制目录和配置
 bash scripts/ops/agentrt-bootstrap.sh \
   -b ./build/bin \
-  -r /var/run/agentos \
-  -c /etc/agentos/agentos.yaml \
+  -r /var/run/agentrt \
+  -c /etc/agentrt/agentrt.yaml \
   -t 120
 
 # Dry-run 模式（仅打印启动计划）
@@ -940,7 +940,7 @@ healthcheck:
 
 # PostgreSQL
 healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U agentos -d agentos_prod"]
+  test: ["CMD-SHELL", "pg_isready -U agentrt -d agentrt_prod"]
   interval: 10s
   timeout: 5s
   retries: 5
@@ -988,17 +988,17 @@ Airymax 使用 PostgreSQL 15 作为 heapstore 元数据存储。
 ```yaml
 postgres:
   image: postgres:15-alpine
-  container_name: agentos-postgres
+  container_name: agentrt-postgres
   restart: unless-stopped
   environment:
-    - POSTGRES_DB=agentos
-    - POSTGRES_USER=agentos
+    - POSTGRES_DB=agentrt
+    - POSTGRES_USER=agentrt
     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
   volumes:
     - postgres-data:/var/lib/postgresql/data
-    - ./agentos/heapstore/registry/sessions.db:/docker-entrypoint-initdb.d/sessions.db:ro
+    - ./agentrt/heapstore/registry/sessions.db:/docker-entrypoint-initdb.d/sessions.db:ro
   healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U agentos"]
+    test: ["CMD-SHELL", "pg_isready -U agentrt"]
     interval: 10s
     timeout: 5s
     retries: 5
@@ -1042,8 +1042,8 @@ postgres-prod:
 | `postgres-data` | `/var/lib/postgresql/data` | PostgreSQL 主数据 |
 | `postgres-backups` | `/var/lib/postgresql/backups` | 备份目录 |
 | `redis-data` | `/data` | Redis AOF 持久化 |
-| `prod-atoms-data` | `/var/lib/agentos` | 内核运行时数据 |
-| `prod-daemon-data` | `/var/lib/agentos` | daemon 运行时数据 |
+| `prod-atoms-data` | `/var/lib/agentrt` | 内核运行时数据 |
+| `prod-daemon-data` | `/var/lib/agentrt` | daemon 运行时数据 |
 | `jaeger-data` | `/var/lib/jaeger` | Jaeger 追踪数据 |
 | `prometheus-data` | `/var/lib/prometheus` | Prometheus 时序数据 |
 | `grafana-data` | `/var/lib/grafana` | Grafana 配置数据 |
@@ -1054,7 +1054,7 @@ postgres-prod:
 
 ```yaml
 volumes:
-  - ./agentos/heapstore/registry/sessions.db:/docker-entrypoint-initdb.d/sessions.db:ro
+  - ./agentrt/heapstore/registry/sessions.db:/docker-entrypoint-initdb.d/sessions.db:ro
 ```
 
 PostgreSQL 容器首次启动时会自动执行该目录下的 `.sql` 和 `.db` 文件。
@@ -1063,10 +1063,10 @@ PostgreSQL 容器首次启动时会自动执行该目录下的 `.sql` 和 `.db` 
 
 ```bash
 # 进入 PostgreSQL 容器
-docker-compose exec postgres psql -U agentos -d agentos
+docker-compose exec postgres psql -U agentrt -d agentrt
 
 # 执行迁移脚本
-psql -U agentos -d agentos -f /path/to/migration.sql
+psql -U agentrt -d agentrt -f /path/to/migration.sql
 ```
 
 ### 7.4 Redis 配置
@@ -1112,7 +1112,7 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    monitor: 'agentos-gateway'
+    monitor: 'agentrt-gateway'
     environment: 'production'
 
 rule_files:
@@ -1126,7 +1126,7 @@ alerting:
 
 scrape_configs:
   # Airymax 自身指标
-  - job_name: 'agentos-gateway'
+  - job_name: 'agentrt-gateway'
     static_configs:
       - targets: ['gateway:9090']
     metrics_path: /metrics
@@ -1142,7 +1142,7 @@ scrape_configs:
       - role: pod
         namespaces:
           names:
-            - agentos
+            - agentrt
     relabel_configs:
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
         action: keep
@@ -1175,11 +1175,11 @@ podAnnotations:
 
 ```yaml
 groups:
-  - name: agentos-gateway.availability
+  - name: agentrt-gateway.availability
     interval: 30s
     rules:
       - alert: InstanceDown
-        expr: up{job="agentos-gateway"} == 0
+        expr: up{job="agentrt-gateway"} == 0
         for: 1m
         labels:
           severity: critical
@@ -1187,7 +1187,7 @@ groups:
           summary: "Gateway 实例宕机"
           description: "实例 {{ $labels.instance }} 已宕机超过 1 分钟"
 
-  - name: agentos-gateway.performance
+  - name: agentrt-gateway.performance
     interval: 30s
     rules:
       - alert: HighLatency
@@ -1246,25 +1246,25 @@ Airymax 支持结构化日志（JSON）和普通文本格式：
 
 ```bash
 # 环境变量
-AGENTOS_LOG_LEVEL=INFO      # DEBUG, INFO, WARNING, ERROR, CRITICAL
-AGENTOS_LOG_FORMAT=json     # json 或 text
-AGENTOS_STRUCTURED_LOGGING=false
+AGENTRT_LOG_LEVEL=INFO      # DEBUG, INFO, WARNING, ERROR, CRITICAL
+AGENTRT_LOG_FORMAT=json     # json 或 text
+AGENTRT_STRUCTURED_LOGGING=false
 ```
 
 **开发环境日志**：
 
 ```yaml
 environment:
-  - AGENTOS_LOG_LEVEL=INFO
-  - AGENTOS_LOG_FORMAT=text
+  - AGENTRT_LOG_LEVEL=INFO
+  - AGENTRT_LOG_FORMAT=text
 ```
 
 **生产环境日志**：
 
 ```yaml
 environment:
-  - AGENTOS_LOG_LEVEL=WARN
-  - AGENTOS_LOG_FORMAT=json
+  - AGENTRT_LOG_LEVEL=WARN
+  - AGENTRT_LOG_FORMAT=json
 ```
 
 ### 9.2 Docker 日志驱动
@@ -1295,9 +1295,9 @@ logging:
 ```yaml
 volumes:
   # 内核日志
-  - ./agentos/heapstore/logs:/var/log/agentos:rw
+  - ./agentrt/heapstore/logs:/var/log/agentrt:rw
   # 服务日志
-  - ./agentos/heapstore/logs/services:/var/log/agentos/services:rw
+  - ./agentrt/heapstore/logs/services:/var/log/agentrt/services:rw
 ```
 
 ### 9.4 分布式追踪 (Tracing)
@@ -1352,9 +1352,9 @@ jaeger:
 **环境变量启用追踪**：
 
 ```bash
-AGENTOS_ENABLE_TRACING=true
-AGENTOS_TELEMETRY_ENDPOINT=http://otel-collector:4317
-AGENTOS_TRACING_SAMPLE_RATE=1.0    # 生产环境建议 0.1
+AGENTRT_ENABLE_TRACING=true
+AGENTRT_TELEMETRY_ENDPOINT=http://otel-collector:4317
+AGENTRT_TRACING_SAMPLE_RATE=1.0    # 生产环境建议 0.1
 ```
 
 ---
@@ -1377,15 +1377,15 @@ make backup
 
 ```bash
 # 备份 PostgreSQL 数据库
-docker exec agentos-postgres-prod pg_dump -U agentos -d agentos_prod \
+docker exec agentrt-postgres-prod pg_dump -U agentrt -d agentrt_prod \
   > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 压缩备份
-docker exec agentos-postgres-prod pg_dump -U agentos -d agentos_prod \
+docker exec agentrt-postgres-prod pg_dump -U agentrt -d agentrt_prod \
   | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 
 # 使用 pg_dumpall 备份全部数据库
-docker exec agentos-postgres-prod pg_dumpall -U agentos \
+docker exec agentrt-postgres-prod pg_dumpall -U agentrt \
   | gzip > full_backup_$(date +%Y%m%d_%H%M%S).sql.gz
 ```
 
@@ -1393,11 +1393,11 @@ docker exec agentos-postgres-prod pg_dumpall -U agentos \
 
 ```bash
 # 添加到 crontab（每天凌晨 2 点执行）
-0 2 * * * docker exec agentos-postgres-prod pg_dump -U agentos -d agentos_prod \
-  | gzip > /backup/agentos_$(date +\%Y\%m\%d).sql.gz
+0 2 * * * docker exec agentrt-postgres-prod pg_dump -U agentrt -d agentrt_prod \
+  | gzip > /backup/agentrt_$(date +\%Y\%m\%d).sql.gz
 
 # 保留最近 30 天的备份
-0 3 * * * find /backup -name "agentos_*.sql.gz" -mtime +30 -delete
+0 3 * * * find /backup -name "agentrt_*.sql.gz" -mtime +30 -delete
 ```
 
 #### Redis 备份
@@ -1405,10 +1405,10 @@ docker exec agentos-postgres-prod pg_dumpall -U agentos \
 ```bash
 # Redis 已启用 AOF 持久化，数据文件位于 /data/appendonly.aof
 # 手动触发 RDB 快照
-docker exec agentos-redis-prod redis-cli BGSAVE
+docker exec agentrt-redis-prod redis-cli BGSAVE
 
 # 备份 Redis 数据
-docker cp agentos-redis-prod:/data/appendonly.aof ./redis_backup_$(date +%Y%m%d).aof
+docker cp agentrt-redis-prod:/data/appendonly.aof ./redis_backup_$(date +%Y%m%d).aof
 ```
 
 #### 数据卷备份
@@ -1416,9 +1416,9 @@ docker cp agentos-redis-prod:/data/appendonly.aof ./redis_backup_$(date +%Y%m%d)
 ```bash
 # 备份所有数据卷
 docker run --rm \
-  -v $(docker volume ls -q -f name=agentos | tr '\n' ' ') \
+  -v $(docker volume ls -q -f name=agentrt | tr '\n' ' ') \
   -v $(pwd)/backup:/backup \
-  alpine tar czf /backup/agentos-full-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+  alpine tar czf /backup/agentrt-full-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
   /var/lib/postgresql/data /data
 ```
 
@@ -1428,18 +1428,18 @@ docker run --rm \
 
 ```bash
 # 1. 停止应用服务（保留数据库）
-docker-compose stop agentos-gateway agentos-daemon agentos-atoms
+docker-compose stop agentrt-gateway agentrt-daemon agentrt-atoms
 
 # 2. 恢复数据库
-docker exec -i agentos-postgres-prod psql -U agentos -d agentos_prod \
+docker exec -i agentrt-postgres-prod psql -U agentrt -d agentrt_prod \
   < backup_20260618_020000.sql
 
 # 或从压缩文件恢复
 gunzip -c backup_20260618_020000.sql.gz | \
-  docker exec -i agentos-postgres-prod psql -U agentos -d agentos_prod
+  docker exec -i agentrt-postgres-prod psql -U agentrt -d agentrt_prod
 
 # 3. 重启应用服务
-docker-compose start agentos-atoms agentos-daemon agentos-gateway
+docker-compose start agentrt-atoms agentrt-daemon agentrt-gateway
 ```
 
 #### Redis 恢复
@@ -1449,7 +1449,7 @@ docker-compose start agentos-atoms agentos-daemon agentos-gateway
 docker-compose stop redis-prod
 
 # 替换 AOF 文件
-docker cp redis_backup_20260618.aof agentos-redis-prod:/data/appendonly.aof
+docker cp redis_backup_20260618.aof agentrt-redis-prod:/data/appendonly.aof
 
 # 重启 Redis
 docker-compose start redis-prod
@@ -1476,16 +1476,16 @@ echo "=== 灾难恢复演练 ==="
 
 # 1. 验证备份完整性
 echo "[1/4] 验证备份文件..."
-ls -lh /backup/agentos_$(date +%Y%m%d).sql.gz
+ls -lh /backup/agentrt_$(date +%Y%m%d).sql.gz
 
 # 2. 在隔离环境恢复
 echo "[2/4] 恢复数据库到测试实例..."
-gunzip -c /backup/agentos_$(date +%Y%m%d).sql.gz | \
-  docker exec -i test-postgres psql -U agentos -d agentos_recovery_test
+gunzip -c /backup/agentrt_$(date +%Y%m%d).sql.gz | \
+  docker exec -i test-postgres psql -U agentrt -d agentrt_recovery_test
 
 # 3. 验证数据完整性
 echo "[3/4] 验证数据完整性..."
-docker exec test-postgres psql -U agentos -d agentos_recovery_test \
+docker exec test-postgres psql -U agentrt -d agentrt_recovery_test \
   -c "SELECT count(*) FROM sessions;"
 
 # 4. 启动服务冒烟测试
@@ -1527,7 +1527,7 @@ server {
     ssl_ciphers         HIGH:!aNULL:!MD5;
 
     location / {
-        proxy_pass http://agentos-gateway:8080;
+        proxy_pass http://agentrt-gateway:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -1592,13 +1592,13 @@ iptables -A INPUT -j DROP
 
 ```yaml
 networks:
-  agentos-production-network:   # 外部网络（Nginx + Gateway）
+  agentrt-production-network:   # 外部网络（Nginx + Gateway）
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.0.0/16
 
-  agentos-internal-network:     # 内部网络（daemon + 数据库）
+  agentrt-internal-network:     # 内部网络（daemon + 数据库）
     driver: bridge
     internal: false
     ipam:
@@ -1625,10 +1625,10 @@ cap_add:
 **非 root 用户运行**（Dockerfile）：
 
 ```dockerfile
-RUN addgroup -g 1000 agentos && \
-    adduser -u 1000 -G agentos -s /bin/sh -D agentos
+RUN addgroup -g 1000 agentrt && \
+    adduser -u 1000 -G agentrt -s /bin/sh -D agentrt
 
-USER agentos
+USER agentrt
 ```
 
 **Kubernetes SecurityContext**：
@@ -1682,7 +1682,7 @@ kubectl create secret generic agentrt-api-keys \
 openssl rand -hex 32
 
 # 设置环境变量
-AGENTOS_JWT_SECRET=<generated-secret>
+AGENTRT_JWT_SECRET=<generated-secret>
 ```
 
 ### 11.6 速率限制
@@ -1700,10 +1700,10 @@ CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
 
 ```bash
 # 定期扫描镜像漏洞
-docker scan ghcr.io/spharx/agentos-gateway:0.1.0
+docker scan ghcr.io/spharx/agentrt-gateway:0.1.0
 
 # 使用 Trivy 扫描
-trivy image ghcr.io/spharx/agentos-gateway:0.1.0
+trivy image ghcr.io/spharx/agentrt-gateway:0.1.0
 
 # 最小化基础镜像
 # 使用 Alpine 而非 Ubuntu（减小攻击面）
@@ -1718,7 +1718,7 @@ FROM alpine:3.19 AS runtime
 
 - [ ] 所有 API 密钥已配置且非默认值
 - [ ] `POSTGRES_PASSWORD` 已修改为强密码
-- [ ] `AGENTOS_JWT_SECRET` 已生成并配置
+- [ ] `AGENTRT_JWT_SECRET` 已生成并配置
 - [ ] `.env` 文件已排除出 Git 版本控制
 - [ ] 运行 `check_config.sh` 通过所有检查项
 - [ ] 端口 80/443/8080 等无冲突
@@ -1796,10 +1796,10 @@ curl http://localhost:9090/metrics
 curl http://localhost:16686/api/services
 
 # 5. 验证数据库连接
-docker exec agentos-postgres-prod pg_isready -U agentos -d agentos_prod
+docker exec agentrt-postgres-prod pg_isready -U agentrt -d agentrt_prod
 
 # 6. 验证 Redis 连接
-docker exec agentos-redis-prod redis-cli ping
+docker exec agentrt-redis-prod redis-cli ping
 
 # 7. 测试基本 API 请求
 curl -X POST http://localhost:8080/v1/chat/completions \

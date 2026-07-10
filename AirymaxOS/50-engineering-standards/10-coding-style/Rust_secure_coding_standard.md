@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）Rust 安全编码规范
 
-> **文档定位**: agentrt-linux（AirymaxOS）内核模块 Rust 语言安全编码规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [编码规范总览](README.md)
-> **同源参考**: Rust Secure Code Guidelines + seL4 形式化验证方法论
-> **理论根基**: Airymax 五维正交 24 原则 E-1 安全内生 + Rust 类型系统安全保证
+> **文档定位**： agentrt-linux（AirymaxOS）内核模块 Rust 语言安全编码规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [编码规范总览](README.md)\
+> **同源参考**： Rust Secure Code Guidelines + seL4 形式化验证方法论\
+> **理论根基**： Airymax 五维正交 24 原则 E-1 安全内生 + Rust 类型系统安全保证
 
 ---
 

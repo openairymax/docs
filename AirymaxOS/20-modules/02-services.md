@@ -1,14 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux（AirymaxOS）服务设计文档（airymaxos-services，极境服务）
+# agentrt-linux 服务设计文档（Airymax Services 极境服务）
 
-> **子仓编号**：02
-> **子仓代号**：极境服务（Airymax Services）
-> **文档版本**：v1.1（2026-07-07）
-> **设计基准**：用户态系统服务 + 消息传递通信 + systemd 集成 + io_uring 零拷贝 IPC
-> **同源 agentrt**：daemons（12 daemons）
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 daemons 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 用户态 VFS/网络栈/驱动框架/systemd 集成实现独立
-> **横切关注点**：服务是横切关注点（cross-cutting concern），贯穿调度（daemon 生命周期）、IPC（io_uring 通道）、eBPF（服务观测）、记忆卷载（VFS 持久化）4 大数据流
+> **子仓编号**：02\
+> **子仓代号**：极境服务（Airymax Services）\
+> **文档版本**：v1.1 2026-07-07\
+> **设计基准**：用户态系统服务 + 消息传递通信 + systemd 集成 + io_uring 零拷贝 IPC\
+> **同源 agentrt**：daemons（12 daemons）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 daemons 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 用户态 VFS/网络栈/驱动框架/systemd 集成实现独立\
+> **横切关注点**：服务是横切关注点（cross-cutting concern），贯穿调度（daemon 生命周期）、IPC（io_uring 通道）、eBPF（服务观测）、记忆卷载（VFS 持久化）4 大数据流  
 
 ---
 

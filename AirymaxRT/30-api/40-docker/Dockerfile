@@ -1,5 +1,5 @@
 # ============================================================
-# AgentOS v0.0.4 - Production Dockerfile
+# AgentRT v0.0.4 - Production Dockerfile
 # Multi-stage build for optimal image size
 # Base: Ubuntu 22.04 LTS (for maximum compatibility)
 # ============================================================
@@ -8,8 +8,8 @@ FROM ubuntu:22.04 AS builder
 
 LABEL maintainer="SPHARX Ltd. <dev@spharx.com>"
 LABEL version="0.1.0"
-LABEL description="AgentOS - AI Agent Operating System Foundation Release"
-LABEL org.opencontainers.image.source="https://github.com/spharx/AgentOS"
+LABEL description="AgentRT - AI Agent Operating System Foundation Release"
+LABEL org.opencontainers.image.source="https://github.com/spharx/AgentRT"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -40,7 +40,7 @@ RUN cmake -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
     -DBUILD_TESTING=OFF \
-    -DAGENTOS_ENABLE_EXAMPLES=ON \
+    -DAGENTRT_ENABLE_EXAMPLES=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # Build the project
@@ -69,35 +69,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
-    && groupadd -r agentos \
-    && useradd -r -g agentos -d /home/agentos -m -s /bin/bash agentos
+    && groupadd -r agentrt \
+    && useradd -r -g agentrt -d /home/agentrt -m -s /bin/bash agentrt
 
 # Copy installed files from builder
 COPY --from=builder /usr/local /usr/local
 
 # Create required directories
-RUN mkdir -p /etc/agentos \
-             /var/log/agentos \
-             /var/lib/agentos/data \
-             /var/lib/agentos/cache \
-             /var/run/agentos \
-    && chown -R agentos:agentos /etc/agentos \
-                          /var/log/agentos \
-                          /var/lib/agentos \
-                          /var/run/agentos
+RUN mkdir -p /etc/agentrt \
+             /var/log/agentrt \
+             /var/lib/agentrt/data \
+             /var/lib/agentrt/cache \
+             /var/run/agentrt \
+    && chown -R agentrt:agentrt /etc/agentrt \
+                          /var/log/agentrt \
+                          /var/lib/agentrt \
+                          /var/run/agentrt
 
 # Copy default configuration files
-COPY docker/config/*.conf /etc/agentos/ 2>/dev/null || true
+COPY docker/config/*.conf /etc/agentrt/ 2>/dev/null || true
 
 # Switch to non-root user
-USER agentos
+USER agentrt
 
 # Set environment variables
-ENV AGENTOS_HOME=/usr/local \
-    AGENTOS_CONFIG_DIR=/etc/agentos \
-    AGENTOS_DATA_DIR=/var/lib/agentos/data \
-    AGENTOS_LOG_DIR=/var/log/agentos \
-    AGENTOS_CACHE_DIR=/var/lib/agentos/cache \
+ENV AGENTRT_HOME=/usr/local \
+    AGENTRT_CONFIG_DIR=/etc/agentrt \
+    AGENTRT_DATA_DIR=/var/lib/agentrt/data \
+    AGENTRT_LOG_DIR=/var/log/agentrt \
+    AGENTRT_CACHE_DIR=/var/lib/agentrt/cache \
     LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/static:${LD_LIBRARY_PATH} \
     PATH=/usr/local/bin:${PATH}
 
@@ -109,8 +109,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Volume mount points for persistent data
-VOLUME ["/var/lib/agentos/data", "/var/log/agentos", "/etc/agentos"]
+VOLUME ["/var/lib/agentrt/data", "/var/log/agentrt", "/etc/agentrt"]
 
 # Default entrypoint
 ENTRYPOINT ["gateway_d"]
-CMD ["-c", "/etc/agentos/gateway.conf"]
+CMD ["-c", "/etc/agentrt/gateway.conf"]

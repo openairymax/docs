@@ -9,14 +9,14 @@
 
 Airymax 采用**双层测试架构**，结合了 C/C++ 和 Python 项目的最佳实践：
 
-1. **模块自测层** - `agentos/*/tests/`（C/C++ 单元测试，与源码相邻）
+1. **模块自测层** - `agentrt/*/tests/`（C/C++ 单元测试，与源码相邻）
 2. **集中测试层** - `tests/`（统一测试入口，Python 集成/契约/性能测试）
 
 ---
 
 ## 🏗️ 双层测试架构
 
-### 第一层：模块自测（agentos/*/tests/）
+### 第一层：模块自测（agentrt/*/tests/）
 
 **位置**: 各子模块内的 `tests/` 目录
 
@@ -28,7 +28,7 @@ Airymax 采用**双层测试架构**，结合了 C/C++ 和 Python 项目的最�
 
 **示例**:
 ```
-agentos/atoms/corekern/
+agentrt/atoms/corekern/
 ├── src/              # 内核源码
 ├── include/          # 头文件
 ├── tests/            # 模块自测
@@ -39,7 +39,7 @@ agentos/atoms/corekern/
 
 **运行方式**:
 ```bash
-cd agentos/atoms/corekern/tests
+cd agentrt/atoms/corekern/tests
 make test
 # 或使用 CTest
 ctest --verbose
@@ -62,7 +62,7 @@ cd tests
 python run_tests.py              # 统一运行器
 pytest unit/                     # 仅运行单元测试
 pytest integration/              # 仅运行集成测试
-pytest -v --cov=agentos          # 带覆盖率
+pytest -v --cov=agentrt          # 带覆盖率
 ```
 
 ---
@@ -71,7 +71,7 @@ pytest -v --cov=agentos          # 带覆盖率
 
 ### 模块级测试映射
 
-| Airymax 模块 | agentos/*/tests/ | tests/unit/ | 测试类型 |
+| Airymax 模块 | agentrt/*/tests/ | tests/unit/ | 测试类型 |
 |--------------|------------------|-------------|----------|
 | **CoreKern** | `atoms/corekern/tests/` (7 文件) | `unit/atoms/corekern/` (6 文件) | C 单元 + Python 集成 |
 | **CoreLoopThree** | `atoms/coreloopthree/tests/` (8 文件) | `unit/atoms/coreloopthree/` (9 文件) | C 单元 + Python 集成 |
@@ -92,7 +92,7 @@ pytest -v --cov=agentos          # 带覆盖率
 
 | 测试类型 | 位置 | 框架 | 文件数 |
 |----------|------|------|--------|
-| **C 单元测试** | `agentos/*/tests/` | CMockery2/CTest | 100+ |
+| **C 单元测试** | `agentrt/*/tests/` | CMockery2/CTest | 100+ |
 | **Python 单元测试** | `tests/unit/` | pytest | 80+ |
 | **Python 集成测试** | `tests/integration/` | pytest | 15+ |
 | **契约测试** | `tests/contract/` | pytest | 2 |
@@ -113,7 +113,7 @@ cd tests
 python run_tests.py
 
 # 2. 运行 C 单元测试
-cd agentos
+cd agentrt
 mkdir -p build && cd build
 cmake -DBUILD_TESTS=ON ..
 make test
@@ -126,7 +126,7 @@ pytest unit/ -v
 pytest integration/ -v
 
 # 5. 运行完整测试套件（含覆盖率）
-pytest --cov=agentos --cov-report=html
+pytest --cov=agentrt --cov-report=html
 ```
 
 ### CI/CD 运行
@@ -136,7 +136,7 @@ pytest --cov=agentos --cov-report=html
 - name: Run Tests
   run: |
     # 编译 C 测试
-    cd agentos && mkdir -p build && cd build
+    cd agentrt && mkdir -p build && cd build
     cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug ..
     make -j$(nproc)
     ctest --output-on-failure
@@ -144,7 +144,7 @@ pytest --cov=agentos --cov-report=html
     # 运行 Python 测试
     cd ../../../tests
     pip install -r requirements.txt
-    pytest --cov=agentos --cov-report=xml -v
+    pytest --cov=agentrt --cov-report=xml -v
 ```
 
 ---
@@ -214,9 +214,9 @@ tests/
 
 ### 新增模块测试
 
-当新增 agentos 子模块时：
+当新增 agentrt 子模块时：
 
-1. 在 `agentos/<module>/tests/` 创建 C 单元测试
+1. 在 `agentrt/<module>/tests/` 创建 C 单元测试
 2. 在 `tests/unit/<module>/` 创建 Python 集成测试
 3. 更新 `ARCHITECTURE.md` 中的映射表
 

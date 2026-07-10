@@ -30,7 +30,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 二、范围与术语
 
-- **agentos_error_t：** 统一错误码类型（int32_t）；提供 `agentos_strerror()` 输出可读字符串。
+- **agentrt_error_t：** 统一错误码类型（int32_t）；提供 `agentrt_strerror()` 输出可读字符串。
 - **公共头（public headers）：** 位于 `module/include/`，仅包含稳定对外 API。
 - **私有实现：** 位于 `module/src/` 或 `module/src/internal/`。
 - **Trace/Span：** 遵循 OpenTelemetry 与 W3C Trace Context（`traceparent`）规范。
@@ -74,7 +74,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **单一职责且短小：** 必须 ≤80 行；推荐 ≤50 行。若 >80 行必须重构并添加单元测试。
 - **参数数量：** 不超过 5 个，若超过请封装成结构体。
 - **文档要求：** 公共 API 必须使用 Doxygen 风格注释，且明确 ownership（谁释放）、线程语义与错误语义。
-- **返回约定：** 优先使用 `agentos_error_t`（int32_t），或返回指针（失败返回 NULL 并记录日志）。提供常用错误定义与辅助宏。
+- **返回约定：** 优先使用 `agentrt_error_t`（int32_t），或返回指针（失败返回 NULL 并记录日志）。提供常用错误定义与辅助宏。
 
 **示例：**
 
@@ -84,7 +84,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  * @param engine [in] 引擎句柄（非 NULL）。
  * @param plan   [in] 待调度计划（只读）。
  * @param out_id [out] 输出任务 ID（调用者负责 free）。
- * @return AGENTOS_OK (0) 成功；其他值为错误码。
+ * @return AGENTRT_OK (0) 成功；其他值为错误码。
  */
 int cognition_schedule(cognition_engine_t* engine,
                        const task_plan_t* plan,
@@ -95,7 +95,7 @@ int cognition_schedule(cognition_engine_t* engine,
 
 ## 七、错误处理与诊断
 
-- 使用统一错误类型 `agentos_error_t`，并提供 `agentos_strerror()`。
+- 使用统一错误类型 `agentrt_error_t`，并提供 `agentrt_strerror()`。
 - 错误码命名带模块前缀（例如 `COG_ERR_OUT_OF_MEMORY`）。
 - 每条错误路径至少记录 WARN/ERROR 级别日志，日志中须包含 `trace_id` 及关键信息（不可包含敏感数据）。
 - 在测试构建中保留 fault-injection 钩子，用以验证错误路径与降级策略。
@@ -127,11 +127,11 @@ ptr = tmp;
 - **并发合约：** 为每个 API 明确并发合约：线程安全/不可重入/需外部同步等。
 - **锁顺序：** 避免锁嵌套；若必须嵌套，定义并文档化全局锁顺序。
 - **跨平台线程抽象：** 禁止直接使用 `pthread.h` API（违反 CROSS-01）。必须通过 `platform.h` 抽象层使用：
-  - `agentos_thread_create()` 替代 `pthread_create()`
-  - `agentos_mutex_lock()` 替代 `pthread_mutex_lock()`
-  - `agentos_cond_wait()` 替代 `pthread_cond_wait()`
-  - `agentos_tls_get/set()` 替代 `pthread_key_t` 保存 per-request 上下文（如 `trace_id`/`request_id`）
-- **线程局部存储：** 使用 `AGENTOS_THREAD_LOCAL` 宏（`platform.h` 提供跨平台实现），禁止直接使用 `__thread` 或 `pthread_key_t`。
+  - `agentrt_thread_create()` 替代 `pthread_create()`
+  - `agentrt_mutex_lock()` 替代 `pthread_mutex_lock()`
+  - `agentrt_cond_wait()` 替代 `pthread_cond_wait()`
+  - `agentrt_tls_get/set()` 替代 `pthread_key_t` 保存 per-request 上下文（如 `trace_id`/`request_id`）
+- **线程局部存储：** 使用 `AGENTRT_THREAD_LOCAL` 宏（`platform.h` 提供跨平台实现），禁止直接使用 `__thread` 或 `pthread_key_t`。
 
 ---
 
@@ -248,29 +248,29 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 ### CROSS-01：禁止直接使用 POSIX 线程 API
 
 **违规示例**: `pthread_create()`, `pthread_mutex_lock()`, `pthread_cond_wait()`
-**正确做法**: 全部替换为 `platform.h` 提供的 `agentos_thread_create()`, `agentos_mutex_lock()`, `agentos_cond_wait()`
+**正确做法**: 全部替换为 `platform.h` 提供的 `agentrt_thread_create()`, `agentrt_mutex_lock()`, `agentrt_cond_wait()`
 
 ### CROSS-02：禁止使用 C99 VLA 变长数组
 
 **违规示例**: `int arr[n]`
-**正确做法**: `int* arr = AGENTOS_MALLOC(n * sizeof(int))` + 对应 `AGENTOS_FREE`
+**正确做法**: `int* arr = AGENTRT_MALLOC(n * sizeof(int))` + 对应 `AGENTRT_FREE`
 
 > **Airymax 内存宏完整列表**（定义在 `memory_compat.h`）：
-> - `AGENTOS_MALLOC(size)` —— 带返回值检查的 malloc
-> - `AGENTOS_CALLOC(nmemb, size)` —— 带返回值检查的 calloc（零初始化）
-> - `AGENTOS_REALLOC(ptr, size)` —— 安全 realloc（使用临时指针，避免原指针丢失）
-> - `AGENTOS_STRDUP(s)` —— 带返回值检查的 strdup
-> - `AGENTOS_STRNDUP(s, n)` —— 带返回值检查的 strndup
-> - `AGENTOS_FREE(ptr)` —— 安全释放（释放后置 NULL）
-> - `AGENTOS_STRNCPY_TERM(dst, src, dst_size)` —— 安全字符串拷贝（保证 null 终止）
-> - `AGENTOS_MEMCPY_SAFE(dst, dst_size, src, src_size)` —— 安全内存拷贝（带边界检查）
+> - `AGENTRT_MALLOC(size)` —— 带返回值检查的 malloc
+> - `AGENTRT_CALLOC(nmemb, size)` —— 带返回值检查的 calloc（零初始化）
+> - `AGENTRT_REALLOC(ptr, size)` —— 安全 realloc（使用临时指针，避免原指针丢失）
+> - `AGENTRT_STRDUP(s)` —— 带返回值检查的 strdup
+> - `AGENTRT_STRNDUP(s, n)` —— 带返回值检查的 strndup
+> - `AGENTRT_FREE(ptr)` —— 安全释放（释放后置 NULL）
+> - `AGENTRT_STRNCPY_TERM(dst, src, dst_size)` —— 安全字符串拷贝（保证 null 终止）
+> - `AGENTRT_MEMCPY_SAFE(dst, dst_size, src, src_size)` —— 安全内存拷贝（带边界检查）
 > - `SAFE_MALLOC_ARRAY(type, count)` —— 安全数组分配（带整数溢出检查）
-> - `AGENTOS_SECURE_ZERO(ptr, size)` —— 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`）
+> - `AGENTRT_SECURE_ZERO(ptr, size)` —— 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`）
 
-> **安全释放宏**（定义在 `agentos_memory.h`）：
-> - `MEMORY_FREE_SAFE(pptr)` —— 安全释放宏，接受**指针的指针**，释放后自动将原指针置 NULL。相比 `AGENTOS_FREE`（接受指针本身），`MEMORY_FREE_SAFE` 通过二级指针彻底消除悬垂指针风险：
+> **安全释放宏**（定义在 `agentrt_memory.h`）：
+> - `MEMORY_FREE_SAFE(pptr)` —— 安全释放宏，接受**指针的指针**，释放后自动将原指针置 NULL。相比 `AGENTRT_FREE`（接受指针本身），`MEMORY_FREE_SAFE` 通过二级指针彻底消除悬垂指针风险：
 >   ```c
->   char* buf = AGENTOS_MALLOC(1024);
+>   char* buf = AGENTRT_MALLOC(1024);
 >   MEMORY_FREE_SAFE(&buf);  // 释放并置 buf = NULL
 >   // 此时 buf 一定为 NULL，不会误用
 >   ```
@@ -278,24 +278,24 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 > **禁止函数清单**（定义在 `banned_functions.h`）：
 > Airymax 在严格模式下禁止使用以下 30 个不安全函数，编译时由 `banned_functions.h` 触发编译错误：
 > - 字符串操作：`strcpy`, `strcat`, `sprintf`, `vsprintf`, `gets`, `scanf`, `sscanf` 等
-> - 内存操作：直接使用 `malloc`/`free`/`realloc`/`calloc`/`strdup`（必须使用 `AGENTOS_*` 宏替代）
-> - 格式化输出：`printf`（生产代码应使用日志宏 `AGENTOS_LOG_*` / `SVC_LOG_*`）
+> - 内存操作：直接使用 `malloc`/`free`/`realloc`/`calloc`/`strdup`（必须使用 `AGENTRT_*` 宏替代）
+> - 格式化输出：`printf`（生产代码应使用日志宏 `AGENTRT_LOG_*` / `SVC_LOG_*`）
 > - 时间函数：`localtime`, `ctime`, `asctime`（非线程安全）
 > - 其他：`rand`, `strtok`, `tmpnam` 等
 >
 > **BAN 规则交叉引用**：
 > | BAN 编号 | 禁止模式 | 对应宏/替代方案 |
 > |----------|---------|---------------|
-> | BAN-70 | 禁止使用 `printf` 系列直接输出 | 使用 `AGENTOS_LOG_*` 或 `SVC_LOG_*` 日志宏 |
-> | BAN-71 | 禁止直接使用 `malloc`/`free` | 使用 `AGENTOS_MALLOC`/`AGENTOS_FREE`（memory_compat.h） |
-> | BAN-72 | 禁止直接使用 `realloc` | 使用 `AGENTOS_REALLOC`（使用临时指针，避免原指针丢失） |
-> | BAN-73 | 禁止使用 `strcpy`/`strcat`/`sprintf` | 使用 `AGENTOS_STRNCPY_TERM`/`AGENTOS_MEMCPY_SAFE`（memory_compat.h） |
-> | BAN-74 | 禁止使用 `memset` 清零敏感数据 | 使用 `AGENTOS_SECURE_ZERO`（memory_compat.h） |
+> | BAN-70 | 禁止使用 `printf` 系列直接输出 | 使用 `AGENTRT_LOG_*` 或 `SVC_LOG_*` 日志宏 |
+> | BAN-71 | 禁止直接使用 `malloc`/`free` | 使用 `AGENTRT_MALLOC`/`AGENTRT_FREE`（memory_compat.h） |
+> | BAN-72 | 禁止直接使用 `realloc` | 使用 `AGENTRT_REALLOC`（使用临时指针，避免原指针丢失） |
+> | BAN-73 | 禁止使用 `strcpy`/`strcat`/`sprintf` | 使用 `AGENTRT_STRNCPY_TERM`/`AGENTRT_MEMCPY_SAFE`（memory_compat.h） |
+> | BAN-74 | 禁止使用 `memset` 清零敏感数据 | 使用 `AGENTRT_SECURE_ZERO`（memory_compat.h） |
 
 ### CROSS-03：禁止直接使用 POSIX 时间函数
 
 **违规示例**: `clock_gettime(CLOCK_MONOTONIC, &ts)`
-**正确做法**: 使用 `agentos_time_ns()`, `agentos_time_ms()`
+**正确做法**: 使用 `agentrt_time_ns()`, `agentrt_time_ms()`
 
 ### CROSS-04：禁止使用 GCC 扩展语法
 
@@ -319,7 +319,7 @@ CI 在发现高危安全问题或格式/静态分析回归时应阻止合并。
 
 | 编号 | 禁止模式 | 检测命令 |
 |------|---------|----------|
-| BAN-01 | `return AGENTOS_OK` 占位返回 | `grep -rn "return AGENTOS_OK" --include="*.c"` |
+| BAN-01 | `return AGENTRT_OK` 占位返回 | `grep -rn "return AGENTRT_OK" --include="*.c"` |
 | BAN-02 | `(void)param` 忽略参数 | `grep -rn "(void)" --include="*.c"` |
 | BAN-03 | 空函数体 `{}` | 代码审查 |
 | BAN-04 | TODO/FIXME 无关联 Issue | `grep -rn "TODO\|FIXME" --include="*.c"` |
@@ -419,14 +419,14 @@ char* module_health_check(void) {
 
 ## 附录 C — 常用错误码（示例）
 
-> 错误码权威定义见 agentos/commons/utils/error/include/error.h，以下仅为示例。
+> 错误码权威定义见 agentrt/commons/utils/error/include/error.h，以下仅为示例。
 
 ```c
-#define AGENTOS_OK                       0
-#define AGENTOS_ERR_INVALID_PARAM       -2
-#define AGENTOS_ERR_OUT_OF_MEMORY       -4
-#define AGENTOS_ERR_BUSY                -17
-#define AGENTOS_ERR_TIMEOUT             -8
+#define AGENTRT_OK                       0
+#define AGENTRT_ERR_INVALID_PARAM       -2
+#define AGENTRT_ERR_OUT_OF_MEMORY       -4
+#define AGENTRT_ERR_BUSY                -17
+#define AGENTRT_ERR_TIMEOUT             -8
 ```
 
 ---

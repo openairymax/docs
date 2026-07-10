@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）Rust 语言编码风格规范
 
-> **文档定位**: agentrt-linux（AirymaxOS）内核模块 Rust 语言编码风格规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **父文档**: [编码规范总览](README.md)
-> **同源参考**: Rust for Linux 社区编码约定 + `rust/kernel/` 目录代码风格
-> **理论根基**: Airymax 五维正交 24 原则 + Rust 所有权模型
+> **文档定位**： agentrt-linux（AirymaxOS）内核模块 Rust 语言编码风格规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **父文档**： [编码规范总览](README.md)\
+> **同源参考**： Rust for Linux 社区编码约定 + `rust/kernel/` 目录代码风格\
+> **理论根基**： Airymax 五维正交 24 原则 + Rust 所有权模型
 
 ---
 
@@ -129,11 +129,11 @@ const AGENTRT_IPC_MSG_HDR_SIZE: usize = 128;
 ### 3.2 agentrt_ / airymaxos_ 前缀隔离（OS-STD-034）
 
 > **OS-STD-034**：Rust 代码同样遵循 `agentrt_` / `airymaxos_` 前缀隔离规范：
-> - `agentrt_*` 前缀：同源 API（[SS] 语义同源层），与 agentrt 用户态 API 签名一致
+> - `agentrt_*` 前缀：同源 API（[SS] 语义同源层），SDK 层与 agentrt 用户态 API 签名一致（同一份源码两端编译），其他层语义同源
 > - `airymaxos_*` 前缀：agentrt-linux（AirymaxOS）专属 API（[IND] 完全独立层）
 
 ```rust
-/// [SS] 语义同源层：与 agentrt 用户态 agentrt_ipc_send() 签名一致
+/// [SS] 语义同源层：与 agentrt 用户态 agentrt_ipc_send() 签名一致（SDK 层，同一份源码两端编译）
 pub fn agentrt_ipc_send(channel: u32, msg: &[u8]) -> Result<()> { ... }
 
 /// [IND] 完全独立层：agentrt-linux（AirymaxOS）内核专属
@@ -441,7 +441,7 @@ pub unsafe extern "C" fn agentrt_ipc_channel_create(
 // SPDX-License-Identifier: GPL-2.0
 //! agentrt-linux（AirymaxOS）IPC 通道内核模块（Rust 实现）
 //!
-//! [SS] 语义同源层：API 签名与 agentrt 用户态 AgentrtIpcChannel 一致。
+//! [SS] 语义同源层：API 签名与 agentrt 用户态 AgentrtIpcChannel 一致（SDK 层，同一份源码两端编译）。
 //!
 //! Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 

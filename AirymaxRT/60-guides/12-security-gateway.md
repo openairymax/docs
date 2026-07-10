@@ -362,11 +362,11 @@ curl http://localhost:8080/metrics | grep active_connections
 
 ```bash
 # 调整速率限制（更严格）
-docker exec agentos-gateway sh -c \
+docker exec agentrt-gateway sh -c \
   "export GATEWAY_RATE_LIMIT_RPS=50 && export GATEWAY_RATE_LIMIT_RPM=3000"
 
 # 或临时禁用 CORS（紧急情况）
-docker exec agentos-gateway sh -c \
+docker exec agentrt-gateway sh -c \
   "export GATEWAY_CORS_MODE=prod && export GATEWAY_CORS_ORIGINS=''"
 
 # 重启服务使配置生效
@@ -466,8 +466,8 @@ clang-tidy src/**/*.c -- -Iinclude
 ### 联系支持
 
 - **安全漏洞报告**: security@spharx.io
-- **GitCode Issues**: https://gitcode.com/spharx/agentos/issues
-- **社区论坛**: https://community.agentos.io
+- **GitCode Issues**: https://gitcode.com/spharx/agentrt/issues
+- **社区论坛**: https://community.agentrt.io
 
 ---
 

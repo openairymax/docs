@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）配置管理
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）运维体系第 2 卷——配置工程。本文档规定从内核运行时参数到 Agent 级配置的完整配置栈：sysctl 内核运行时参数、`/etc/sysctl.d/` 组织、`/etc/agentrt/` 配置目录、systemd 单元配置、12 daemons 配置文件、环境变量、配置验证、配置版本控制、agentrt-linux 三级配置分层（系统级 / 用户级 / Agent 级）。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt daemons（12 个用户态服务配置）+ Linux 6.6 sysctl + systemd 单元配置
-> **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 五维正交 24 原则 + S-1 反馈闭环
-> **核心约束**: IRON-9 v2 同源且部分代码共享——与 agentrt 同源配置语义，agentrt-linux 独立承担内核与系统级配置责任
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）运维体系第 2 卷——配置工程。本文档规定从内核运行时参数到 Agent 级配置的完整配置栈：sysctl 内核运行时参数、`/etc/sysctl.d/` 组织、`/etc/agentrt/` 配置目录、systemd 单元配置、12 daemons 配置文件、环境变量、配置验证、配置版本控制、agentrt-linux 三级配置分层（系统级 / 用户级 / Agent 级）。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt daemons（12 个用户态服务配置）+ Linux 6.6 sysctl + systemd 单元配置
+> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 五维正交 24 原则 + S-1 反馈闭环
+> **核心约束**： IRON-9 v2 同源且部分代码共享——与 agentrt 同源配置语义，agentrt-linux 独立承担内核与系统级配置责任
 
 ---
 
@@ -427,7 +427,7 @@ agentrt-linux 推崇"配置即代码"（E-7 文档即代码的延伸）：`/etc/
 
 ### 9.3 配置与 MicroCoreRT 契约一致性
 
-**OS-KER-203**：配置仓库中 `sysctl/99-airymaxos-microcorert.conf` 的任何变更必须经协议委员会签字（与 01-deployment §15 的变更流程一致），因 MicroCoreRT 契约变更影响内核态行为，不可随意调整（K-1 内核极简 + IRON-9 同源约束）。
+**OS-KER-203**：配置仓库中 `sysctl/99-airymaxos-microcorert.conf` 的任何变更必须经工程规范委员会签字（与 01-deployment §15 的变更流程一致），因 MicroCoreRT 契约变更影响内核态行为，不可随意调整（K-1 内核极简 + IRON-9 同源约束）。
 
 ---
 
@@ -578,7 +578,7 @@ struct agentsipc_config {
 };
 ```
 
-**约束**：`agent_sched_config.prio` 必须在 `[AGENT_SCHED_PRIO_MIN, AGENT_SCHED_PRIO_MAX]` 范围内，`agentsipc_config.header_size` 必须等于 `AGENTSIPC_HDR_SIZE`（128）；任何 [SC] 参数边界的变更必须经协议委员会签字，且两端同步升级头文件版本。
+**约束**：`agent_sched_config.prio` 必须在 `[AGENT_SCHED_PRIO_MIN, AGENT_SCHED_PRIO_MAX]` 范围内，`agentsipc_config.header_size` 必须等于 `AGENTSIPC_HDR_SIZE`（128）；任何 [SC] 参数边界的变更必须经工程规范委员会签字，且两端同步升级头文件版本。
 
 #### 12.3.3 [SS] 语义同源层
 
@@ -643,15 +643,15 @@ graph LR
 
 - **当前版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
 - **最后更新**: 2026-07-06
-- **维护者**: agentrt-linux 运维工程委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
-- **变更流程**: 任何配置规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议参数或 MicroCoreRT 契约的 sysctl 变更需额外经协议委员会签字
+- **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
+- **变更流程**: 任何配置规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议参数或 MicroCoreRT 契约的 sysctl 变更需额外经工程规范委员会签字
 - **回顾周期与不变性**: 季度回顾 + 每次大版本升级后回顾；本文档所依据的 Linux 6.6 内核基线工程思想与 Airymax 五维正交 24 原则不随版本变更，具体规则编号（OS-OPS / OS-STD / OS-KER）可随版本演进并通过规则编号注册表追溯
 
 ---
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集配置管理所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 sysctl 接口、systemd（v254+）单元配置、openEuler 配置管理工程实践，以及 agentrt-linux 三级配置分层专属契约（`include/airymax/config_types.h`）。
+> **附录定位**： 本附录汇集配置管理所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 sysctl 接口、systemd（v254+）单元配置、openEuler 配置管理工程实践，以及 agentrt-linux 三级配置分层专属契约（`include/airymax/config_types.h`）。
 
 ### A.1 核心数据结构
 

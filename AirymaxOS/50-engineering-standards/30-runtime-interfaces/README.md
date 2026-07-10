@@ -3,12 +3,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux ARE Standards 总览
 
-**最新**: 2026-07-07  
-**版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）  
-**状态**: 草案  
-**路径**: OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/README.md  
-**父文档**: [工程标准规范手册](../00-engineering-standards-handbook.md)  
-**理论根基**: 体系并行论、五维正交24原则、IRON-9 v2 同源且部分代码共享  
+> **最新**： 2026-07-07\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **状态**： 草案\
+> **路径**： OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/README.md\
+> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **理论根基**： 体系并行论、五维正交24原则、IRON-9 v2 同源且部分代码共享  
 
 ---
 
@@ -93,7 +93,7 @@ ARE Standards 的三个层级在 OS 栈中的位置各不相同：
 | 安全模型 | SELinux/AppArmor | Cupolas 能力派生 + LSM |
 | 沙箱 | 容器/namespace | 五级沙箱模型 |
 | 供应链 | RPM 签名 | SBOM + 签名 |
-| 治理 | 社区主导 | 开放治理 + 技术委员会 |
+| 治理 | 社区主导 | 开放治理 + 工程规范委员会 |
 
 agentrt-linux（AirymaxOS）在继承参考发行版工程基线的基础上，针对智能体工作负载进行了深度定制，ARE Standards 正是这一定制化的形式化表达。
 
@@ -259,7 +259,7 @@ ARE Standards 采用语义版本命名：
 
 1. **跨项目引用**：agentrt、agentrt-linux、第三方项目都可以引用同一套标准，避免分叉
 2. **版本独立**：标准可以独立于实现版本化演进
-3. **社区治理**：标准可以成立独立的技术委员会进行治理
+3. **社区治理**：标准可以成立独立的工程规范委员会进行治理
 4. **清晰边界**：标准与实现分离，更符合开放标准的惯例
 
 ### 5.2 独立仓库的挑战

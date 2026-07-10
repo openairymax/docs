@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # SDK 集成设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义 Python/Rust/Go/TypeScript 四语言 SDK 与 agentrt-linux 内核通信的集成设计
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **同源映射**: agentrt 四语言 SDK（IRON-9 v2 [SC] 共享契约层共享头文件 + [SS] 语义同源层 API 签名）
-> **IRON-9 v2 层次**: [SC] 共享契约层（IPC 消息头结构、syscall 编号、错误码完全共享）+ [SS] 语义同源层（API 签名同源，传输实现独立）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义 Python/Rust/Go/TypeScript 四语言 SDK 与 agentrt-linux 内核通信的集成设计\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
+> **同源映射**：agentrt 四语言 SDK（IRON-9 v2 [SC] 共享契约层共享头文件 + [SS] 语义同源层 SDK 层签名同源）\
+> **IRON-9 v2 层次**：[SC] 共享契约层（IPC 消息头结构、syscall 编号、错误码完全共享）+ [SS] 语义同源层（SDK 层签名同源，同一份源码两端编译，构建期条件编译切换传输层；其他层语义同源）
 
 ---
 
@@ -20,7 +20,7 @@ agentrt-linux（AirymaxOS）提供四语言 SDK（Python / Rust / Go / TypeScrip
 
 1. **零拷贝高性能**：通过 io_uring 提交队列与内核共享内存，避免数据拷贝
 2. **FFI 边界安全**：四语言与 C ABI 边界严格类型检查，杜绝内存安全漏洞
-3. **同源 API 一致性**：四语言 SDK API 签名完全一致，遵循 IRON-9 v2 [SS] 层
+3. **同源 API 一致性**：四语言 SDK（SDK 层）API 签名完全一致，遵循 IRON-9 v2 [SS] 层
 4. **运行时环境感知**：SDK 自动检测宿主为 agentrt-linux 或 agentrt，切换通信路径
 5. **统一错误码**：四语言共享 `include/airymax/error.h` 错误码（[SC] 层）
 
@@ -50,7 +50,7 @@ agentrt-linux（AirymaxOS）提供四语言 SDK（Python / Rust / Go / TypeScrip
 | 层次 | 共享内容 | agentrt-linux SDK | agentrt SDK |
 |------|----------|-------------------|-------------|
 | [SC] | IPC 消息头结构、syscall 编号、错误码、规则编号体系 | 完全共享 | 完全共享 |
-| [SS] | CognitionClient/SafetyClient 等 16 客户端 API 签名 | 签名同源，实现独立 | 签名同源，实现独立 |
+| [SS] | CognitionClient/SafetyClient 等 16 客户端 API 签名 | SDK 层签名同源，实现独立 | SDK 层签名同源，实现独立 |
 | [IND] | FFI 绑定层、语言特定包装 | 各自独立 | 各自独立 |
 
 ---
@@ -378,7 +378,7 @@ import { addon, AgentrtError } from './binding';
 
 /**
  * SDK 客户端（封装 libagentrt.so 调用）
- * API 签名与 Python/Rust/Go 完全一致（[SS] 语义同源层）
+ * API 签名与 Python/Rust/Go 完全一致（[SS] 语义同源层，SDK 层签名同源）
  */
 export class Client {
 	private handle: Buffer;
@@ -555,7 +555,7 @@ class CognitionClient:
 
 ## 6. 16 嵌套客户端清单
 
-四语言 SDK 各提供 4 大客户端，共 16 嵌套客户端（API 签名 [SS] 同源）：
+四语言 SDK 各提供 4 大客户端，共 16 嵌套客户端（SDK 层 API 签名 [SS] 同源）：
 
 | 客户端 | 子客户端 | 主要方法 | 目标 daemon |
 |--------|----------|----------|-------------|
@@ -647,7 +647,7 @@ def call_with_retry(client, dst, method, payload, max_retries=3):
 
 | 测试维度 | 验证方法 | 通过标准 |
 |----------|----------|----------|
-| API 签名 | golden 文件对比 | 四语言签名完全一致 |
+| SDK API 签名 | golden 文件对比 | 四语言签名完全一致 |
 | 错误码映射 | 错误码矩阵测试 | 全部错误码正确穿透 |
 | 128B 消息头 | 字节级对比 | magic/version/trace_id 一致 |
 | 流式分片 | 顺序完整性 | 分片顺序与顺序一致 |

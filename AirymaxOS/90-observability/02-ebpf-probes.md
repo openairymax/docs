@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）eBPF 可编程探针
 
-> **文档定位**: agentrt-linux（AirymaxOS）可观测性体系 L2 层——可编程内核探针 eBPF 的工程规范
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-07
-> **同源映射**: agentrt E-2 可观测性 + Linux 6.6 eBPF/BTF/kfunc/struct_ops
-> **理论根基**: Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-2 可观测性
-> **核心约束**: IRON-9 v2 同源且部分代码共享——与 agentrt 用户态可观测性通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态实现独立
+> **文档定位**： agentrt-linux（AirymaxOS）可观测性体系 L2 层——可编程内核探针 eBPF 的工程规范\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-07\
+> **同源映射**： agentrt E-2 可观测性 + Linux 6.6 eBPF/BTF/kfunc/struct_ops\
+> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-2 可观测性\
+> **核心约束**： IRON-9 v2 同源且部分代码共享——与 agentrt 用户态可观测性通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态实现独立
 
 ---
 
@@ -535,7 +535,7 @@ IRON-9 v2 将 agentrt 与 agentrt-linux 的 eBPF 协作划分为三层：
 | 层次 | 共享程度 | eBPF 内容 |
 |------|---------|----------|
 | **[SC] 共享契约层** | 完全共享代码 | `include/airymax/bpf_struct_ops.h`：struct_ops 状态枚举 + common_value 结构 |
-| **[SS] 语义同源层** | API 签名同源，实现独立 | struct_ops 注册宏模式、bpf_prog 生命周期、ringbuf reserve/submit、kfunc 注册模式、bpf() cmd ABI |
+| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | struct_ops 注册宏模式、bpf_prog 生命周期、ringbuf reserve/submit、kfunc 注册模式、bpf() cmd ABI |
 | **[IND] 完全独立层** | 完全独立 | JIT 后端、trampoline 本机码生成、verifier 实现、自定义 kfunc |
 
 ### 13.2 [SC] 共享契约层
@@ -568,7 +568,7 @@ struct airymax_struct_ops_common_value {
 | struct_ops 状态机 | 4 状态（INIT/INUSE/TOBEFREE/READY） | 4 状态 | 枚举值同源（[SC]） |
 | bpf_prog 生命周期 | load→attach→run→detach→unload | 同 | 5 阶段同源 |
 | bpf_link 生命周期 | create→update→detach | 同 | 3 阶段同源 |
-| ringbuf reserve/submit | 策略引擎 ringbuf 客户端 | 内核 ringbuf 实现 | API 签名同源 |
+| ringbuf reserve/submit | 策略引擎 ringbuf 客户端 | 内核 ringbuf 实现 | API 语义同源 |
 | kfunc 注册模式 | 策略引擎导出函数 | `__bpf_kfunc` + BTF_KFUNCS | 宏模式同源 |
 | bpf() cmd | 策略引擎调用 bpf() | 内核实现 bpf() | ABI 同源 |
 

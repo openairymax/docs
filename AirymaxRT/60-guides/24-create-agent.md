@@ -16,7 +16,7 @@ Agent 是 Airymax 的核心执行实体。每一个 Agent 都是一个自主运�
 
 ```
 ┌─────────────────────────────────────────────┐
-│              agentos/daemon/ 用户态服务                │
+│              agentrt/daemon/ 用户态服务                │
 │          ┌─────────────────────┐            │
 │          │   your_agent_d      │ ← 你要创建的 Agent
 │          └─────────┬───────────┘            │
@@ -24,7 +24,7 @@ Agent 是 Airymax 的核心执行实体。每一个 Agent 都是一个自主运�
 │            syscall/ 系统调用接口              │
 │     task · memory · session · telemetry     │
 ├────────────────────┼────────────────────────┤
-│            agentos/cupolas/ 安全穹顶                   │
+│            agentrt/cupolas/ 安全穹顶                   │
 │     workbench · permission · sanitizer      │
 ├────────────────────┴────────────────────────┤
 │         corekern/ 微核心基础                 │
@@ -146,7 +146,7 @@ Agent 的创建过程实际上是 MCIS 系统的构建过程：
 
 ```bash
 # 创建新 Agent 项目
-agentos-cli agent create --name my_agent --template daemon
+agentrt-cli agent create --name my_agent --template daemon
 
 # 生成的目录结构
 my_agent/
@@ -168,7 +168,7 @@ Agent Contract 是 Agent 的身份声明和能力描述。创建 `agent_contract
 
 ```json
 {
-  "$schema": "https://agentos.io/schemas/agent_contract_v1.2.0.json",
+  "$schema": "https://agentrt.io/schemas/agent_contract_v1.2.0.json",
   "name": "my_agent",
   "version": "1.0.0",
   "description": "示例 Agent — 数据分析",
@@ -221,7 +221,7 @@ target_include_directories(my_agent_d PRIVATE include)
 target_link_libraries(my_agent_d PRIVATE Airymax::syscall)
 
 # 安装为用户态服务
-install(TARGETS my_agent_d DESTINATION lib/agentos/daemon)
+install(TARGETS my_agent_d DESTINATION lib/agentrt/daemon)
 ```
 
 ---
@@ -234,15 +234,15 @@ install(TARGETS my_agent_d DESTINATION lib/agentos/daemon)
 #ifndef MY_AGENT_H
 #define MY_AGENT_H
 
-#include <agentos/agent.h>
-#include <agentos/syscall.h>
-#include <agentos/memory.h>
+#include <agentrt/agent.h>
+#include <agentrt/syscall.h>
+#include <agentrt/memory.h>
 
 #define MY_AGENT_VERSION "1.0.0"
 #define MY_AGENT_MAX_TASKS 128
 
 typedef struct {
-    agentos_agent_t base;
+    agentrt_agent_t base;
     char*            data_dir;
     int              max_concurrent;
     atomic_int       active_tasks;
@@ -258,7 +258,7 @@ typedef struct {
  * @param manager 配置参数
  * @return 0 成功；负值 错误码
  */
-int my_agent_init(my_agent_t* agent, const agentos_config_t* manager);
+int my_agent_init(my_agent_t* agent, const agentrt_config_t* manager);
 
 /**
  * @brief 处理接收到的任务
@@ -270,7 +270,7 @@ int my_agent_init(my_agent_t* agent, const agentos_config_t* manager);
  * @param result 输出执行结果
  * @return 0 成功；负值 错误码
  */
-int my_agent_handle_task(my_agent_t* agent, const agentos_task_t* task, agentos_result_t* result);
+int my_agent_handle_task(my_agent_t* agent, const agentrt_task_t* task, agentrt_result_t* result);
 
 /**
  * @brief 关闭 Agent，释放资源
@@ -295,37 +295,37 @@ int my_agent_shutdown(my_agent_t* agent);
 /**
  * @brief 初始化 Agent
  */
-int my_agent_init(my_agent_t* agent, const agentos_config_t* manager)
+int my_agent_init(my_agent_t* agent, const agentrt_config_t* manager)
 {
     int ret = 0;
 
     // 初始化基类
-    ret = agentos_agent_init(&agent->base, "my_agent", MY_AGENT_VERSION);
+    ret = agentrt_agent_init(&agent->base, "my_agent", MY_AGENT_VERSION);
     if (ret != 0) return ret;
 
     // 解析配置
-    agent->data_dir = config_get_string(manager, "data_dir", "/var/lib/agentos/my_agent");
+    agent->data_dir = config_get_string(manager, "data_dir", "/var/lib/agentrt/my_agent");
     agent->max_concurrent = config_get_int(manager, "max_concurrent", 8);
     atomic_store(&agent->active_tasks, 0);
 
     // 注册记忆层 — 启用 L1 原始卷和 L2 特征层
-    ret = agentos_memory_init(&agent->base.memory, MEMORY_ROVOL, agent->data_dir);
+    ret = agentrt_memory_init(&agent->base.memory, MEMORY_ROVOL, agent->data_dir);
     if (ret != 0) {
-        agentos_log_error("my_agent", "记忆初始化失败: %s", agentos_strerror(ret));
+        agentrt_log_error("my_agent", "记忆初始化失败: %s", agentrt_strerror(ret));
         return ret;
     }
 
-    agentos_memory_enable_layer(&agent->base.memory, MEMORY_LAYER_L1);
-    agentos_memory_enable_layer(&agent->base.memory, MEMORY_LAYER_L2);
+    agentrt_memory_enable_layer(&agent->base.memory, MEMORY_LAYER_L1);
+    agentrt_memory_enable_layer(&agent->base.memory, MEMORY_LAYER_L2);
 
-    agentos_log_info("my_agent", "Agent 初始化完成, version=%s", MY_AGENT_VERSION);
+    agentrt_log_info("my_agent", "Agent 初始化完成, version=%s", MY_AGENT_VERSION);
     return 0;
 }
 
 /**
  * @brief 双思考路径选择器
  */
-static int classify_task_complexity(const agentos_task_t* task)
+static int classify_task_complexity(const agentrt_task_t* task)
 {
     size_t desc_len = strlen(task->description);
 
@@ -338,20 +338,20 @@ static int classify_task_complexity(const agentos_task_t* task)
 /**
  * @brief 处理任务 — t1 快思考路径
  */
-static int handle_fast_path(my_agent_t* agent, const agentos_task_t* task, agentos_result_t* result)
+static int handle_fast_path(my_agent_t* agent, const agentrt_task_t* task, agentrt_result_t* result)
 {
-    agentos_trace_push("my_agent", "fast_path_start");
+    agentrt_trace_push("my_agent", "fast_path_start");
 
     // 快速匹配已知模式
-    agentos_memory_query_t query = {
+    agentrt_memory_query_t query = {
         .layer = MEMORY_LAYER_L2,
         .pattern = task->description,
         .max_results = 3,
         .threshold = 0.85f
     };
 
-    agentos_memory_result_t memories;
-    int ret = agentos_memory_search(&agent->base.memory, &query, &memories);
+    agentrt_memory_result_t memories;
+    int ret = agentrt_memory_search(&agent->base.memory, &query, &memories);
 
     if (ret == 0 && memories.count > 0) {
         // 命中已知模式 — 直接复用
@@ -364,64 +364,64 @@ static int handle_fast_path(my_agent_t* agent, const agentos_task_t* task, agent
         ret = handle_deep_path(agent, task, result);
     }
 
-    agentos_trace_pop("my_agent");
+    agentrt_trace_pop("my_agent");
     return ret;
 }
 
 /**
  * @brief 处理任务 — t2 慢思考路径
  */
-static int handle_deep_path(my_agent_t* agent, const agentos_task_t* task, agentos_result_t* result)
+static int handle_deep_path(my_agent_t* agent, const agentrt_task_t* task, agentrt_result_t* result)
 {
-    agentos_trace_push("my_agent", "deep_path_start");
+    agentrt_trace_push("my_agent", "deep_path_start");
 
     // 1. 将任务描述转换为任务图 (DAG)
-    agentos_task_graph_t graph;
-    int ret = agentos_task_decompose(task, &graph);
+    agentrt_task_graph_t graph;
+    int ret = agentrt_task_decompose(task, &graph);
     if (ret != 0) {
-        agentos_log_error("my_agent", "任务分解失败: %s", agentos_strerror(ret));
-        agentos_trace_pop("my_agent");
+        agentrt_log_error("my_agent", "任务分解失败: %s", agentrt_strerror(ret));
+        agentrt_trace_pop("my_agent");
         return ret;
     }
 
     // 2. 增量规划 — 按阶段执行
     for (size_t i = 0; i < graph.stage_count; i++) {
-        ret = agentos_task_execute_stage(&graph.stages[i], result);
+        ret = agentrt_task_execute_stage(&graph.stages[i], result);
         if (ret != 0) {
-            agentos_log_warn("my_agent", "阶段 %zu 执行失败，触发补偿", i);
-            ret = agentos_task_compensate(&graph.stages[i]);
+            agentrt_log_warn("my_agent", "阶段 %zu 执行失败，触发补偿", i);
+            ret = agentrt_task_compensate(&graph.stages[i]);
             if (ret != 0) break;
         }
 
         // 轮次内反馈 — 根据执行结果调整后续规划
         if (i + 1 < graph.stage_count) {
-            agentos_task_replan(&graph, i, result);
+            agentrt_task_replan(&graph, i, result);
         }
     }
 
     // 3. 记录到记忆层
-    agentos_memory_record_t record = {
+    agentrt_memory_record_t record = {
         .layer = MEMORY_LAYER_L1,
         .content = task->description,
         .outcome = result->success ? "success" : "failure",
         .metadata = { .duration_ms = result->elapsed_ms }
     };
-    agentos_memory_store(&agent->base.memory, &record);
+    agentrt_memory_store(&agent->base.memory, &record);
 
-    agentos_task_graph_destroy(&graph);
-    agentos_trace_pop("my_agent");
+    agentrt_task_graph_destroy(&graph);
+    agentrt_trace_pop("my_agent");
     return ret;
 }
 
 /**
  * @brief 任务处理入口 — 双思考调度
  */
-int my_agent_handle_task(my_agent_t* agent, const agentos_task_t* task, agentos_result_t* result)
+int my_agent_handle_task(my_agent_t* agent, const agentrt_task_t* task, agentrt_result_t* result)
 {
     atomic_fetch_add(&agent->active_tasks, 1);
 
     int path = classify_task_complexity(task);
-    agentos_log_info("my_agent", "收到任务[%llu], 路径=%s",
+    agentrt_log_info("my_agent", "收到任务[%llu], 路径=%s",
                      task->id, path == SYSTEM_1_FAST_PATH ? "S1-快速" : "S2-深度");
 
     int ret;
@@ -432,13 +432,13 @@ int my_agent_handle_task(my_agent_t* agent, const agentos_task_t* task, agentos_
     }
 
     // 记录指标
-    agentos_metrics_counter("my_agent.tasks.total", 1);
+    agentrt_metrics_counter("my_agent.tasks.total", 1);
     if (ret == 0) {
-        agentos_metrics_counter("my_agent.tasks.success", 1);
+        agentrt_metrics_counter("my_agent.tasks.success", 1);
     } else {
-        agentos_metrics_counter("my_agent.tasks.failure", 1);
+        agentrt_metrics_counter("my_agent.tasks.failure", 1);
     }
-    agentos_metrics_histogram("my_agent.tasks.duration_ms", result->elapsed_ms);
+    agentrt_metrics_histogram("my_agent.tasks.duration_ms", result->elapsed_ms);
 
     atomic_fetch_sub(&agent->active_tasks, 1);
     return ret;
@@ -449,27 +449,27 @@ int my_agent_handle_task(my_agent_t* agent, const agentos_task_t* task, agentos_
  */
 int my_agent_shutdown(my_agent_t* agent)
 {
-    agentos_log_info("my_agent", "Agent 关闭中, 活跃任务: %d", atomic_load(&agent->active_tasks));
+    agentrt_log_info("my_agent", "Agent 关闭中, 活跃任务: %d", atomic_load(&agent->active_tasks));
 
     // 等待活跃任务完成（最多 30 秒）
     int wait_count = 0;
     while (atomic_load(&agent->active_tasks) > 0 && wait_count < 300) {
-        agentos_time_msleep(100);
+        agentrt_time_msleep(100);
         wait_count++;
     }
 
     if (atomic_load(&agent->active_tasks) > 0) {
-        agentos_log_warn("my_agent", "强制关闭，%d 个任务未完成", atomic_load(&agent->active_tasks));
+        agentrt_log_warn("my_agent", "强制关闭，%d 个任务未完成", atomic_load(&agent->active_tasks));
     }
 
     // 持久化记忆
-    agentos_memory_flush(&agent->base.memory);
+    agentrt_memory_flush(&agent->base.memory);
 
     // 释放资源
     free(agent->data_dir);
-    agentos_agent_destroy(&agent->base);
+    agentrt_agent_destroy(&agent->base);
 
-    agentos_log_info("my_agent", "Agent 已关闭");
+    agentrt_log_info("my_agent", "Agent 已关闭");
     return 0;
 }
 ```
@@ -495,10 +495,10 @@ int main(int argc, char* argv[])
     signal(SIGTERM, signal_handler);
 
     // 加载配置
-    agentos_config_t manager;
-    int ret = agentos_config_load("ecosystem/manager/my_agent.yaml", &manager);
+    agentrt_config_t manager;
+    int ret = agentrt_config_load("ecosystem/manager/my_agent.yaml", &manager);
     if (ret != 0) {
-        fprintf(stderr, "配置加载失败: %s\n", agentos_strerror(ret));
+        fprintf(stderr, "配置加载失败: %s\n", agentrt_strerror(ret));
         return 1;
     }
 
@@ -506,38 +506,38 @@ int main(int argc, char* argv[])
     my_agent_t agent = { 0 };
     ret = my_agent_init(&agent, &manager);
     if (ret != 0) {
-        fprintf(stderr, "Agent 初始化失败: %s\n", agentos_strerror(ret));
+        fprintf(stderr, "Agent 初始化失败: %s\n", agentrt_strerror(ret));
         return 1;
     }
 
     // 通过系统调用注册到内核
-    ret = agentos_syscall_agent_register(&agent.base);
+    ret = agentrt_syscall_agent_register(&agent.base);
     if (ret != 0) {
-        fprintf(stderr, "Agent 注册失败: %s\n", agentos_strerror(ret));
+        fprintf(stderr, "Agent 注册失败: %s\n", agentrt_strerror(ret));
         return 1;
     }
 
-    agentos_log_info("my_agent", "Agent 已启动，等待任务...");
+    agentrt_log_info("my_agent", "Agent 已启动，等待任务...");
 
     // 主事件循环 — 通过 IPC 接收任务
     while (g_running) {
-        agentos_task_t task;
-        ret = agentos_syscall_task_recv(&task, 1000);
+        agentrt_task_t task;
+        ret = agentrt_syscall_task_recv(&task, 1000);
 
-        if (ret == AGENTOS_ETIMEDOUT) continue;
+        if (ret == AGENTRT_ETIMEDOUT) continue;
         if (ret != 0) {
-            agentos_log_error("my_agent", "任务接收失败: %s", agentos_strerror(ret));
+            agentrt_log_error("my_agent", "任务接收失败: %s", agentrt_strerror(ret));
             continue;
         }
 
-        agentos_result_t result = { 0 };
+        agentrt_result_t result = { 0 };
         ret = my_agent_handle_task(&agent, &task, &result);
-        agentos_syscall_task_complete(task.id, ret, &result);
+        agentrt_syscall_task_complete(task.id, ret, &result);
     }
 
     // 优雅关闭
     my_agent_shutdown(&agent);
-    agentos_config_free(&manager);
+    agentrt_config_free(&manager);
 
     return 0;
 }
@@ -560,20 +560,20 @@ sudo cmake --install .
 
 ```bash
 # 验证 Agent 契约
-agentos-cli contract validate agent_contract.json
+agentrt-cli contract validate agent_contract.json
 
 # 注册 Agent 到系统
-agentos-cli agent register \
+agentrt-cli agent register \
     --name my_agent \
     --contract agent_contract.json \
-    --binary /usr/local/lib/agentos/daemon/my_agent_d \
+    --binary /usr/local/lib/agentrt/daemon/my_agent_d \
     --manager ecosystem/manager/my_agent.yaml
 
 # 启动 Agent
-agentos-cli agent start my_agent
+agentrt-cli agent start my_agent
 
 # 验证运行状态
-agentos-cli agent status my_agent
+agentrt-cli agent status my_agent
 ```
 
 ### 6.3 安全配置
@@ -587,9 +587,9 @@ agents:
     sandbox: workbench
     permissions:
       - action: "fs.read"
-        resource: "/var/lib/agentos/my_agent/**"
+        resource: "/var/lib/agentrt/my_agent/**"
       - action: "fs.write"
-        resource: "/var/lib/agentos/my_agent/**"
+        resource: "/var/lib/agentrt/my_agent/**"
       - action: "net.http"
         resource: "api.example.com"
       - action: "memory.read"
@@ -616,7 +616,7 @@ agents:
 CTEST(my_agent, init_success)
 {
     my_agent_t agent = { 0 };
-    agentos_config_t manager = { .data_dir = "/tmp/test_agent" };
+    agentrt_config_t manager = { .data_dir = "/tmp/test_agent" };
 
     int ret = my_agent_init(&agent, &manager);
     ASSERT_EQUAL(0, ret);
@@ -628,15 +628,15 @@ CTEST(my_agent, init_success)
 CTEST(my_agent, fast_path_simple_task)
 {
     my_agent_t agent = { 0 };
-    agentos_config_t manager = { .data_dir = "/tmp/test_agent" };
+    agentrt_config_t manager = { .data_dir = "/tmp/test_agent" };
     my_agent_init(&agent, &manager);
 
-    agentos_task_t task = {
+    agentrt_task_t task = {
         .id = 1,
         .description = "简单的问候任务",
         .priority = TASK_PRIORITY_LOW
     };
-    agentos_result_t result = { 0 };
+    agentrt_result_t result = { 0 };
 
     int ret = my_agent_handle_task(&agent, &task, &result);
     ASSERT_EQUAL(0, ret);
@@ -649,10 +649,10 @@ CTEST(my_agent, fast_path_simple_task)
 
 ```bash
 # 运行契约合规测试
-agentos-cli test contract --agent my_agent
+agentrt-cli test contract --agent my_agent
 
 # 运行安全合规测试
-agentos-cli test security --agent my_agent
+agentrt-cli test security --agent my_agent
 ```
 
 ---
@@ -672,15 +672,15 @@ agentos-cli test security --agent my_agent
 
 ```c
 // 所有系统调用必须检查返回值
-int ret = agentos_syscall_memory_store(&record);
+int ret = agentrt_syscall_memory_store(&record);
 if (ret != 0) {
-    agentos_log_error("my_agent", "记忆存储失败: %s (errno=%d)", 
-                      agentos_strerror(ret), ret);
+    agentrt_log_error("my_agent", "记忆存储失败: %s (errno=%d)", 
+                      agentrt_strerror(ret), ret);
     
     // 区分可恢复和不可恢复错误
-    if (ret == AGENTOS_EAGAIN) {
+    if (ret == AGENTRT_EAGAIN) {
         // 资源暂时不可用 — 等待重试
-        agentos_time_msleep(100);
+        agentrt_time_msleep(100);
     } else {
         // 不可恢复 — 向上传播
         return ret;

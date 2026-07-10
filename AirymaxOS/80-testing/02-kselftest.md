@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）kselftest 系统级测试
 
-> **文档定位**: agentrt-linux（AirymaxOS）测试工程体系第 2 卷——kselftest 用户态系统级测试。本卷规定 kselftest 框架结构、`tools/testing/selftests/` 目录组织、`make kselftest` 入口、各子系统测试集（sched/mm/fs/net/...）、kselftest 与 KUnit 区别、运行环境要求，以及 agentrt-linux Agent 契约测试的系统级扩展。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: agentrt 7 层验证 L2（系统级测试）+ Linux 6.6 内核基线 `tools/testing/selftests/`
-> **理论根基**: Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / IRON-9 v2 同源且部分代码共享）
-> **核心约束**: IRON-9 v2 同源且部分代码共享——kselftest 框架与 Linux 6.6 上游保持源码同源，agentrt-linux 扩展必须以独立子目录形式注入，禁止改写上游 kselftest 框架代码。
+> **文档定位**： agentrt-linux（AirymaxOS）测试工程体系第 2 卷——kselftest 用户态系统级测试。本卷规定 kselftest 框架结构、`tools/testing/selftests/` 目录组织、`make kselftest` 入口、各子系统测试集（sched/mm/fs/net/...）、kselftest 与 KUnit 区别、运行环境要求，以及 agentrt-linux Agent 契约测试的系统级扩展。
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）
+> **最后更新**： 2026-07-06
+> **同源映射**： agentrt 7 层验证 L2（系统级测试）+ Linux 6.6 内核基线 `tools/testing/selftests/`
+> **理论根基**： Linux 6.6 内核基线测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / IRON-9 v2 同源且部分代码共享）
+> **核心约束**： IRON-9 v2 同源且部分代码共享——kselftest 框架与 Linux 6.6 上游保持源码同源，agentrt-linux 扩展必须以独立子目录形式注入，禁止改写上游 kselftest 框架代码。
 
 ---
 
@@ -629,7 +629,7 @@ kselftest 输出 TAP（version 13），形如 `ok <num> <suite>:<case>` / `not o
 
 ## 附录 A: 接口定义
 
-> **附录定位**: 本附录汇集 kselftest 系统级测试框架所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `tools/testing/selftests/kselftest.h`、`tools/testing/selftests/kselftest_harness.h`、`tools/testing/selftests/lib.mk`、`run_kselftest.sh` 及 `include/airymax/selftest_types.h`（[SC] 共享契约层）。kselftest 框架与 Linux 6.6 上游保持源码同源（IRON-9 v2），agentrt-linux 扩展以独立 `airymax_*` 子目录形式注入，禁止改写上游框架代码。
+> **附录定位**： 本附录汇集 kselftest 系统级测试框架所需的完整接口契约，供 1.0.1 开发阶段直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `tools/testing/selftests/kselftest.h`、`tools/testing/selftests/kselftest_harness.h`、`tools/testing/selftests/lib.mk`、`run_kselftest.sh` 及 `include/airymax/selftest_types.h`（[SC] 共享契约层）。kselftest 框架与 Linux 6.6 上游保持源码同源（IRON-9 v2），agentrt-linux 扩展以独立 `airymax_*` 子目录形式注入，禁止改写上游框架代码。
 
 ### A.1 核心数据结构
 

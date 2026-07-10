@@ -31,8 +31,8 @@
 
 | 术语 | 定义 |
 |------|------|
-| **atoms** | 微核心原语集合（IPC/内存/任务/时间/同步），对应 Airymax 的 `agentos/atoms/` 目录 |
-| **daemon** | 用户态守护进程，通过 IPC Bus 协作，对应 `agentos/daemon/` |
+| **atoms** | 微核心原语集合（IPC/内存/任务/时间/同步），对应 Airymax 的 `agentrt/atoms/` 目录 |
+| **daemon** | 用户态守护进程，通过 IPC Bus 协作，对应 `agentrt/daemon/` |
 | **ops 注入** | daemon 在 init 阶段向 atoms 注册回调表（checkpoint/hook/orch），实现反向控制流 |
 | **SHM** | 共享内存段（Shared Memory），用于跨进程零拷贝数据交换 |
 | **heapstore** | 堆存储抽象，提供持久化数据分区（registry/traces/logs/services） |
@@ -41,7 +41,7 @@
 
 ## 2. 微核心原语接口定义
 
-所有接口以 `are_` 前缀命名，避免与宿主系统符号冲突。参考实现位于 Airymax atoms 层（corekern/syscall/memory/taskflow），其原生符号以 `agentos_` 前缀提供，由适配层桥接至 `are_` 标准 ABI。
+所有接口以 `are_` 前缀命名，避免与宿主系统符号冲突。参考实现位于 Airymax atoms 层（corekern/syscall/memory/taskflow），其原生符号以 `agentrt_` 前缀提供，由适配层桥接至 `are_` 标准 ABI。
 
 ### 2.1 错误码基线
 
@@ -475,7 +475,7 @@ are_error_t are_shm_advise(are_shm_t *s, size_t offset, size_t len, int advice);
 
 ### 4.2 heapstore（堆存储）
 
-heapstore 是结构化持久化数据分区抽象，对应 Airymax `agentos/heapstore/`。L1 仅规定**最小接口集**，具体存储引擎（SQLite/LMDB/RocksDB）由实现者选择。
+heapstore 是结构化持久化数据分区抽象，对应 Airymax `agentrt/heapstore/`。L1 仅规定**最小接口集**，具体存储引擎（SQLite/LMDB/RocksDB）由实现者选择。
 
 ```c
 typedef enum {
@@ -742,19 +742,19 @@ const are_version_info_t *are_version_get(void);
 
 | 标准接口 | 参考实现位置 |
 |----------|-------------|
-| `are_ipc_*` | `agentos/atoms/corekern/include/ipc.h`（`agentos_ipc_*`） |
-| `are_mem_alloc/free/realloc` | `agentos/atoms/corekern/include/mem.h`（`agentos_mem_*`） |
-| 五级压力框架 | `agentos/atoms/corekern/include/oom_handler.h`（`agentos_oom_*`） |
-| `are_task_create/yield/join` | `agentos/atoms/corekern/include/task.h`（`agentos_task_*`） |
-| `are_time_ns/monotonic_ns` | `agentos/atoms/corekern/include/agentos_time.h`（`agentos_time_*`） |
-| 同步原语 | `agentos/commons/platform/include/platform.h`（`agentos_mutex_*` 等） |
-| `are_heapstore_*` | `agentos/heapstore/include/heapstore.h` |
-| 任务依赖解析 | `agentos/atoms/taskflow/include/taskflow.h` |
-| checkpoint 参考 | `agentos/daemon/common/include/checkpoint.h` |
+| `are_ipc_*` | `agentrt/atoms/corekern/include/ipc.h`（`agentrt_ipc_*`） |
+| `are_mem_alloc/free/realloc` | `agentrt/atoms/corekern/include/mem.h`（`agentrt_mem_*`） |
+| 五级压力框架 | `agentrt/atoms/corekern/include/oom_handler.h`（`agentrt_oom_*`） |
+| `are_task_create/yield/join` | `agentrt/atoms/corekern/include/task.h`（`agentrt_task_*`） |
+| `are_time_ns/monotonic_ns` | `agentrt/atoms/corekern/include/agentrt_time.h`（`agentrt_time_*`） |
+| 同步原语 | `agentrt/commons/platform/include/platform.h`（`agentrt_mutex_*` 等） |
+| `are_heapstore_*` | `agentrt/heapstore/include/heapstore.h` |
+| 任务依赖解析 | `agentrt/atoms/taskflow/include/taskflow.h` |
+| checkpoint 参考 | `agentrt/daemon/common/include/checkpoint.h` |
 
 ### 9.1 适配层桥接示例
 
-参考实现提供 `are_l1_adapter.c` 将 `agentos_*` 符号桥接至 `are_*` 标准 ABI：
+参考实现提供 `are_l1_adapter.c` 将 `agentrt_*` 符号桥接至 `are_*` 标准 ABI：
 
 ```c
 /* are_l1_adapter.c — 桥接 Airymax 原生 API 至 ARE L1 标准 */
@@ -762,18 +762,18 @@ const are_version_info_t *are_version_get(void);
 #include "ipc.h"
 #include "mem.h"
 #include "task.h"
-#include "agentos_time.h"
+#include "agentrt_time.h"
 
 are_error_t are_ipc_init(void) {
-    return (are_error_t)agentos_ipc_init();
+    return (are_error_t)agentrt_ipc_init();
 }
 
 void *are_mem_alloc(size_t size) {
-    return agentos_mem_alloc(size);
+    return agentrt_mem_alloc(size);
 }
 
 uint64_t are_time_monotonic_ns(void) {
-    return agentos_time_monotonic_ns();
+    return agentrt_time_monotonic_ns();
 }
 /* ... 其余接口一一映射 ... */
 ```

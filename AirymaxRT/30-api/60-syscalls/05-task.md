@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 概述
 
-任务管理系统调用提供任务提交、查询、等待和取消的接口。所有函数使用 `agentos_sys_task_*` 前缀，任务通过字符串 ID 标识。
+任务管理系统调用提供任务提交、查询、等待和取消的接口。所有函数使用 `agentrt_sys_task_*` 前缀，任务通过字符串 ID 标识。
 
 ### 五维正交原则体现
 
@@ -29,16 +29,16 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 函数 | 描述 |
 |------|------|
-| `agentos_sys_task_submit()` | 提交任务到内核 |
-| `agentos_sys_task_query()` | 查询任务状态 |
-| `agentos_sys_task_wait()` | 等待任务完成 |
-| `agentos_sys_task_cancel()` | 取消任务 |
+| `agentrt_sys_task_submit()` | 提交任务到内核 |
+| `agentrt_sys_task_query()` | 查询任务状态 |
+| `agentrt_sys_task_wait()` | 等待任务完成 |
+| `agentrt_sys_task_cancel()` | 取消任务 |
 
 ---
 
 ## API 详细说明
 
-### `agentos_sys_task_submit()`
+### `agentrt_sys_task_submit()`
 
 ```c
 /**
@@ -47,13 +47,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  * @param input_len 输入长度
  * @param timeout_ms 超时时间（毫秒）
  * @param out_output 输出参数，返回任务结果
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_output，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_output，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_task_submit(const char *input,
+AGENTRT_API agentrt_error_t agentrt_sys_task_submit(const char *input,
                                                      size_t input_len,
                                                      uint32_t timeout_ms,
                                                      char **out_output);
@@ -62,32 +62,32 @@ AGENTOS_API agentos_error_t agentos_sys_task_submit(const char *input,
 **使用示例**：
 ```c
 char *result = NULL;
-agentos_error_t err = agentos_sys_task_submit(
+agentrt_error_t err = agentrt_sys_task_submit(
     "{\"task\": \"analyze data\"}", 27, 30000, &result);
-if (err == AGENTOS_OK) {
+if (err == AGENTRT_OK) {
     printf("Result: %s\n", result);
-    agentos_sys_free(result);
+    agentrt_sys_free(result);
 }
 ```
 
-### `agentos_sys_task_query()`
+### `agentrt_sys_task_query()`
 
 ```c
 /**
  * @brief 查询任务状态
  * @param task_id 任务 ID（字符串）
  * @param out_status 输出参数，返回任务状态
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
  * @ownership 无堆内存分配
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTOS_API agentos_error_t agentos_sys_task_query(const char *task_id,
+AGENTRT_API agentrt_error_t agentrt_sys_task_query(const char *task_id,
                                                     int *out_status);
 ```
 
-### `agentos_sys_task_wait()`
+### `agentrt_sys_task_wait()`
 
 ```c
 /**
@@ -95,29 +95,29 @@ AGENTOS_API agentos_error_t agentos_sys_task_query(const char *task_id,
  * @param task_id 任务 ID（字符串）
  * @param timeout_ms 等待超时时间（毫秒）
  * @param out_result 输出参数，返回任务结果
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
- * @ownership 调用者拥有 *out_result，通过 agentos_sys_free() 释放
+ * @ownership 调用者拥有 *out_result，通过 agentrt_sys_free() 释放
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_task_wait(const char *task_id,
+AGENTRT_API agentrt_error_t agentrt_sys_task_wait(const char *task_id,
                                                    uint32_t timeout_ms,
                                                    char **out_result);
 ```
 
-### `agentos_sys_task_cancel()`
+### `agentrt_sys_task_cancel()`
 
 ```c
 /**
  * @brief 取消任务
  * @param task_id 任务 ID（字符串）
- * @return agentos_error_t (AGENTOS_OK=0 成功，负值=错误)
+ * @return agentrt_error_t (AGENTRT_OK=0 成功，负值=错误)
  *
  * @threadsafe 是
  * @reentrant 否
  */
-AGENTOS_API agentos_error_t agentos_sys_task_cancel(const char *task_id);
+AGENTRT_API agentrt_error_t agentrt_sys_task_cancel(const char *task_id);
 ```
 
 ---
@@ -125,9 +125,9 @@ AGENTOS_API agentos_error_t agentos_sys_task_cancel(const char *task_id);
 ## 注意事项
 
 1. **任务 ID 类型**：所有任务 ID 为 `const char *` 字符串类型（非 `uint64_t`）。
-2. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentos_sys_free()` 释放。
-3. **错误码**：返回值使用 [error.h](../../AgentRT/agentos/commons/utils/error/include/error.h) 定义的负整数错误码。
-4. **系统调用初始化**：使用任务相关 API 前需调用 `agentos_syscalls_init()`。
+2. **输出所有权**：所有 `out_*` 参数由调用者通过 `agentrt_sys_free()` 释放。
+3. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+4. **系统调用初始化**：使用任务相关 API 前需调用 `agentrt_syscalls_init()`。
 
 ---
 
@@ -136,7 +136,7 @@ AGENTOS_API agentos_error_t agentos_sys_task_cancel(const char *task_id);
 - [系统调用总览](../README.md)
 - [记忆管理系统调用](memory.md)
 - [会话管理系统调用](session.md)
-- [错误码体系](../../AgentRT/agentos/commons/utils/error/include/error.h)
+- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
 - [架构设计：CoreLoopThree 认知循环](../../10-architecture/02-coreloopthree.md)
 
 ---

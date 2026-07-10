@@ -148,7 +148,7 @@ CoreLoopThree 的记忆层本质上是 MemoryRovol 的高级封装：
 
 ### 与日志系统 (Logging System) 的关系
 三层运行时通过统一的日志接口实现全链路可观测性：
-- **结构化日志** → 使用 `AGENTOS_LOG_*` 宏记录各层关键事件，格式统一、内容结构化
+- **结构化日志** → 使用 `AGENTRT_LOG_*` 宏记录各层关键事件，格式统一、内容结构化
 - **跨语言追踪** → 通过 `trace_id` 实现 C/Python/Go/Rust 多语言日志的完整关联
 - **动态反馈调节** → 日志系统根据运行时负载自动调整采样率，形成控制论负反馈
 
@@ -231,7 +231,7 @@ CoreLoopThree 三层间通信基于 IPC Binder 的高效机制：
 ### 2.2 目录结构
 
 ```
-agentos/atoms/coreloopthree/
+agentrt/atoms/coreloopthree/
 ├── CMakeLists.txt                 # 顶层构建文件
 ├── README.md                      # 模块说明
 ├── include/                       # 公共头文件
@@ -270,14 +270,14 @@ agentos/atoms/coreloopthree/
 
 **数据结构**:
 ```c
-typedef struct agentos_intent {
+typedef struct agentrt_intent {
     char* intent_raw_text;          // 原始输入文本
     size_t intent_raw_len;          // 原始文本长度
     char* intent_goal;              // 提取的核心目标
     size_t intent_goal_len;         // 目标长度
     uint32_t intent_flags;          // 标志位（紧急、复杂等）
     void* intent_context;           // 附加上下文
-} agentos_intent_t;
+} agentrt_intent_t;
 ```
 
 **功能**:
@@ -290,7 +290,7 @@ typedef struct agentos_intent {
 
 **数据结构**:
 ```c
-typedef struct agentos_task_node {
+typedef struct agentrt_task_node {
     char* task_node_id;              // 任务 ID
     size_t task_node_id_len;         // ID 长度
     char* task_node_agent_role;      // 需要的 Agent 角色
@@ -301,16 +301,16 @@ typedef struct agentos_task_node {
     uint8_t task_node_priority;      // 优先级
     void* task_node_input;           // 输入数据
     void* task_node_output;          // 输出数据
-} agentos_task_node_t;
+} agentrt_task_node_t;
 
-typedef struct agentos_task_plan {
+typedef struct agentrt_task_plan {
     char* task_plan_id;              // 计划 ID
     size_t task_plan_id_len;         // ID 长度
-    agentos_task_node_t** task_plan_nodes;  // 节点数组
+    agentrt_task_node_t** task_plan_nodes;  // 节点数组
     size_t task_plan_node_count;     // 节点数量
     char** task_plan_entry_points;   // 入口点节点 ID 数组
     size_t task_plan_entry_count;    // 入口点数量
-} agentos_task_plan_t;
+} agentrt_task_plan_t;
 ```
 
 **功能**:
@@ -323,15 +323,15 @@ typedef struct agentos_task_plan {
 
 **规划策略**:
 ```c
-typedef agentos_error_t (*agentos_plan_func_t)(
-    const agentos_intent_t* intent,
+typedef agentrt_error_t (*agentrt_plan_func_t)(
+    const agentrt_intent_t* intent,
     void* context,
-    agentos_task_plan_t** out_plan);
+    agentrt_task_plan_t** out_plan);
 ```
 
 **协同策略**:
 ```c
-typedef agentos_error_t (*agentos_coordinate_func_t)(
+typedef agentrt_error_t (*agentrt_coordinate_func_t)(
     const char** prompts,
     size_t count,
     void* context,
@@ -340,8 +340,8 @@ typedef agentos_error_t (*agentos_coordinate_func_t)(
 
 **调度策略**:
 ```c
-typedef agentos_error_t (*agentos_dispatch_func_t)(
-    const agentos_task_node_t* task,
+typedef agentrt_error_t (*agentrt_dispatch_func_t)(
+    const agentrt_task_node_t* task,
     const void** candidates,
     size_t count,
     void* context,
@@ -353,9 +353,9 @@ typedef agentos_error_t (*agentos_dispatch_func_t)(
 ```
 用户输入
    ↓
-[意图解析] → agentos_intent_t
+[意图解析] → agentrt_intent_t
    ↓
-[规划策略] → agentos_task_plan_t (DAG)
+[规划策略] → agentrt_task_plan_t (DAG)
    ↓
 [协同策略] → 多模型协调
    ↓
@@ -368,20 +368,20 @@ typedef agentos_error_t (*agentos_dispatch_func_t)(
 
 #### 创建认知引擎
 ```c
-agentos_error_t agentos_cognition_create(
-    agentos_plan_strategy_t* plan_strategy,
-    agentos_coordinator_strategy_t* coord_strategy,
-    agentos_dispatching_strategy_t* disp_strategy,
-    agentos_cognition_engine_t** out_engine);
+agentrt_error_t agentrt_cognition_create(
+    agentrt_plan_strategy_t* plan_strategy,
+    agentrt_coordinator_strategy_t* coord_strategy,
+    agentrt_dispatching_strategy_t* disp_strategy,
+    agentrt_cognition_engine_t** out_engine);
 ```
 
 #### 处理用户输入
 ```c
-agentos_error_t agentos_cognition_process(
-    agentos_cognition_engine_t* engine,
+agentrt_error_t agentrt_cognition_process(
+    agentrt_cognition_engine_t* engine,
     const char* input,
     size_t input_len,
-    agentos_task_plan_t** out_plan);
+    agentrt_task_plan_t** out_plan);
 ```
 
 ---
@@ -400,20 +400,20 @@ typedef enum {
     TASK_STATUS_FAILED,
     TASK_STATUS_CANCELLED,
     TASK_STATUS_RETRYING
-} agentos_task_status_t;
+} agentrt_task_status_t;
 ```
 
 #### 4.1.2 执行单元
 
 ```c
-struct agentos_execution_unit {
+struct agentrt_execution_unit {
     void* data;
-    agentos_error_t (*execute)(
-        agentos_execution_unit_t* unit,
+    agentrt_error_t (*execute)(
+        agentrt_execution_unit_t* unit,
         const void* input,
         void** out_output);
-    void (*destroy)(agentos_execution_unit_t* unit);
-    const char* (*get_metadata)(agentos_execution_unit_t* unit);
+    void (*destroy)(agentrt_execution_unit_t* unit);
+    const char* (*get_metadata)(agentrt_execution_unit_t* unit);
 };
 ```
 
@@ -430,7 +430,7 @@ struct agentos_execution_unit {
 ```
 接收任务计划（DAG）
    ↓
-[任务提交] → agentos_task_t
+[任务提交] → agentrt_task_t
    ↓
 [并发控制] → 线程池调度
    ↓
@@ -447,27 +447,27 @@ struct agentos_execution_unit {
 
 #### 注册执行单元
 ```c
-agentos_error_t agentos_execution_register_unit(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_register_unit(
+    agentrt_execution_engine_t* engine,
     const char* unit_id,
-    agentos_execution_unit_t* unit);
+    agentrt_execution_unit_t* unit);
 ```
 
 #### 提交任务
 ```c
-agentos_error_t agentos_execution_submit(
-    agentos_execution_engine_t* engine,
-    const agentos_task_t* task,
+agentrt_error_t agentrt_execution_submit(
+    agentrt_execution_engine_t* engine,
+    const agentrt_task_t* task,
     char** out_task_id);
 ```
 
 #### 等待完成
 ```c
-agentos_error_t agentos_execution_wait(
-    agentos_execution_engine_t* engine,
+agentrt_error_t agentrt_execution_wait(
+    agentrt_execution_engine_t* engine,
     const char* task_id,
     uint32_t timeout_ms,
-    agentos_task_t** out_result);
+    agentrt_task_t** out_result);
 ```
 
 ---
@@ -479,10 +479,10 @@ agentos_error_t agentos_execution_wait(
 #### 5.1.1 记忆记录
 
 ```c
-typedef struct agentos_memory_record {
+typedef struct agentrt_memory_record {
     char* memory_record_id;                     // 记录唯一 ID
     size_t memory_record_id_len;                // ID 长度
-    agentos_memory_type_t memory_record_type;   // 类型（RAW/FEATURE/STRUCTURE/PATTERN）
+    agentrt_memory_type_t memory_record_type;   // 类型（RAW/FEATURE/STRUCTURE/PATTERN）
     uint64_t memory_record_timestamp_ns;        // 时间戳
     char* memory_record_source_agent;           // 来源 Agent ID
     size_t memory_record_source_len;            // 来源长度
@@ -492,13 +492,13 @@ typedef struct agentos_memory_record {
     size_t memory_record_data_len;              // 数据长度
     float memory_record_importance;             // 重要性（0-1）
     uint32_t memory_record_access_count;        // 访问次数
-} agentos_memory_record_t;
+} agentrt_memory_record_t;
 ```
 
 #### 5.1.2 记忆查询
 
 ```c
-typedef struct agentos_memory_query {
+typedef struct agentrt_memory_query {
     char* memory_query_text;                 // 查询文本
     size_t memory_query_text_len;            // 文本长度
     uint64_t memory_query_start_time;        // 起始时间
@@ -508,7 +508,7 @@ typedef struct agentos_memory_query {
     uint32_t memory_query_limit;             // 返回数量上限
     uint32_t memory_query_offset;            // 偏移量
     uint8_t memory_query_include_raw;        // 是否包含原始数据
-} agentos_memory_query_t;
+} agentrt_memory_query_t;
 ```
 
 ### 5.2 与 MemoryRovol 的关系
@@ -529,24 +529,24 @@ MemoryRovol
 
 #### 写入记忆
 ```c
-agentos_error_t agentos_memory_write(
-    agentos_memory_engine_t* engine,
-    const agentos_memory_record_t* record,
+agentrt_error_t agentrt_memory_write(
+    agentrt_memory_engine_t* engine,
+    const agentrt_memory_record_t* record,
     char** out_record_id);
 ```
 
 #### 查询记忆
 ```c
-agentos_error_t agentos_memory_query(
-    agentos_memory_engine_t* engine,
-    const agentos_memory_query_t* query,
-    agentos_memory_result_t** out_result);
+agentrt_error_t agentrt_memory_query(
+    agentrt_memory_engine_t* engine,
+    const agentrt_memory_query_t* query,
+    agentrt_memory_result_t** out_result);
 ```
 
 #### 挂载上下文
 ```c
-agentos_error_t agentos_memory_mount(
-    agentos_memory_engine_t* engine,
+agentrt_error_t agentrt_memory_mount(
+    agentrt_memory_engine_t* engine,
     const char* record_id,
     const char* context);
 ```
@@ -558,16 +558,16 @@ agentos_error_t agentos_memory_mount(
 ### 6.1 主循环接口
 
 ```c
-typedef struct agentos_loop_config {
+typedef struct agentrt_loop_config {
     uint32_t loop_config_cognition_threads;   // 认知层线程数
     uint32_t loop_config_execution_threads;   // 行动层线程数
     uint32_t loop_config_memory_threads;      // 记忆层线程数
     uint32_t loop_config_max_queued_tasks;    // 最大排队任务数
     uint32_t loop_config_stats_interval_ms;   // 统计输出间隔
-    agentos_plan_strategy_t* loop_config_plan_strategy;      // 规划策略
-    agentos_coordinator_strategy_t* loop_config_coord_strategy; // 协同策略
-    agentos_dispatching_strategy_t* loop_config_disp_strategy; // 调度策略
-} agentos_loop_config_t;
+    agentrt_plan_strategy_t* loop_config_plan_strategy;      // 规划策略
+    agentrt_coordinator_strategy_t* loop_config_coord_strategy; // 协同策略
+    agentrt_dispatching_strategy_t* loop_config_disp_strategy; // 调度策略
+} agentrt_loop_config_t;
 ```
 
 ### 6.2 完整流程
@@ -597,15 +597,15 @@ typedef struct agentos_loop_config {
 
 #### 创建核心循环
 ```c
-agentos_error_t agentos_loop_create(
-    const agentos_loop_config_t* manager,
-    agentos_core_loop_t** out_loop);
+agentrt_error_t agentrt_loop_create(
+    const agentrt_loop_config_t* manager,
+    agentrt_core_loop_t** out_loop);
 ```
 
 #### 提交任务
 ```c
-agentos_error_t agentos_loop_submit(
-    agentos_core_loop_t* loop,
+agentrt_error_t agentrt_loop_submit(
+    agentrt_core_loop_t* loop,
     const char* input,
     size_t input_len,
     char** out_task_id);
@@ -613,8 +613,8 @@ agentos_error_t agentos_loop_submit(
 
 #### 等待结果
 ```c
-agentos_error_t agentos_loop_wait(
-    agentos_core_loop_t* loop,
+agentrt_error_t agentrt_loop_wait(
+    agentrt_core_loop_t* loop,
     const char* task_id,
     uint32_t timeout_ms,
     char** out_result,
@@ -777,10 +777,10 @@ Core (MicroCoreRT 微核心)
 
 ```c
 // 认知层提交任务
-agentos_error_t err = sys_task_submit(plan, &task_id);
+agentrt_error_t err = sys_task_submit(plan, &task_id);
 
 // 行动层等待任务完成
-agentos_task_t* result;
+agentrt_task_t* result;
 err = sys_task_wait(task_id, 5000, &result);
 
 // 记忆层写入记忆
@@ -796,9 +796,9 @@ err = sys_memory_write(record, &record_id);
 #include "memoryrovol.h"
 
 // 直接调用 MemoryRovol 各层接口
-agentos_layer1_raw_write();
-agentos_layer2_feature_add();
-agentos_retrieval_attractor_network_retrieve();
+agentrt_layer1_raw_write();
+agentrt_layer2_feature_add();
+agentrt_retrieval_attractor_network_retrieve();
 ```
 
 **四层记忆调用**：
@@ -807,10 +807,10 @@ agentos_retrieval_attractor_network_retrieve();
 记忆层 API
    ↓ FFI 封装
 MemoryRovol 四层架构
-   ├─ L1 Raw: agentos_layer1_raw_write()
-   ├─ L2 Feature: agentos_layer2_feature_add()
-   ├─ L3 Structure: agentos_layer3_structure_encode()
-   └─ L4 Pattern: agentos_layer4_pattern_mine()
+   ├─ L1 Raw: agentrt_layer1_raw_write()
+   ├─ L2 Feature: agentrt_layer2_feature_add()
+   ├─ L3 Structure: agentrt_layer3_structure_encode()
+   └─ L4 Pattern: agentrt_layer4_pattern_mine()
 ```
 
 ### 8.3 与 syscall 的关系
@@ -819,12 +819,12 @@ MemoryRovol 四层架构
 
 ```c
 // syscall/task.c
-extern agentos_cognition_engine_t* g_cognition;
-extern agentos_execution_engine_t* g_execution;
+extern agentrt_cognition_engine_t* g_cognition;
+extern agentrt_execution_engine_t* g_execution;
 
-void agentos_sys_init(void* cognition, void* execution, void* memory) {
-    g_cognition = (agentos_cognition_engine_t*)cognition;
-    g_execution = (agentos_execution_engine_t*)execution;
+void agentrt_sys_init(void* cognition, void* execution, void* memory) {
+    g_cognition = (agentrt_cognition_engine_t*)cognition;
+    g_execution = (agentrt_execution_engine_t*)execution;
 }
 ```
 
@@ -832,10 +832,10 @@ void agentos_sys_init(void* cognition, void* execution, void* memory) {
 
 | CoreLoopThree API | Syscall | 内核服务 |
 |-------------------|---------|---------|
-| agentos_cognition_process() | sys_task_submit() | Task Scheduler |
-| agentos_execution_submit() | sys_task_submit() | Task Scheduler |
-| agentos_memory_write() | sys_memory_write() | Memory Manager |
-| agentos_memory_query() | sys_memory_query() | Memory Manager |
+| agentrt_cognition_process() | sys_task_submit() | Task Scheduler |
+| agentrt_execution_submit() | sys_task_submit() | Task Scheduler |
+| agentrt_memory_write() | sys_memory_write() | Memory Manager |
+| agentrt_memory_query() | sys_memory_query() | Memory Manager |
 
 ---
 
@@ -891,25 +891,25 @@ typedef struct my_plan_data {
     // 自定义数据
 } my_plan_data_t;
 
-agentos_error_t my_plan_strategy(
-    const agentos_intent_t* intent,
+agentrt_error_t my_plan_strategy(
+    const agentrt_intent_t* intent,
     void* context,
-    agentos_task_plan_t** out_plan) {
+    agentrt_task_plan_t** out_plan) {
     
     my_plan_data_t* data = (my_plan_data_t*)context;
     // 实现规划逻辑
     
-    return AGENTOS_OK;
+    return AGENTRT_OK;
 }
 
-void my_plan_destroy(agentos_plan_strategy_t* strategy) {
+void my_plan_destroy(agentrt_plan_strategy_t* strategy) {
     if (strategy->data) {
         free(strategy->data);
     }
 }
 
 // 创建策略
-agentos_plan_strategy_t* strategy = malloc(sizeof(agentos_plan_strategy_t));
+agentrt_plan_strategy_t* strategy = malloc(sizeof(agentrt_plan_strategy_t));
 strategy->plan = my_plan_strategy;
 strategy->destroy = my_plan_destroy;
 strategy->data = NULL;
@@ -919,23 +919,23 @@ strategy->data = NULL;
 
 ```c
 typedef struct my_unit {
-    agentos_execution_unit_t base;
+    agentrt_execution_unit_t base;
     // 私有数据
 } my_unit_t;
 
-agentos_error_t my_execute(
-    agentos_execution_unit_t* unit,
+agentrt_error_t my_execute(
+    agentrt_execution_unit_t* unit,
     const void* input,
     void** out_output) {
     
     my_unit_t* my_unit = (my_unit_t*)unit;
     // 实现执行逻辑
     
-    return AGENTOS_OK;
+    return AGENTRT_OK;
 }
 
 // 注册
-agentos_execution_register_unit(engine, "my_unit", &my_unit->base);
+agentrt_execution_register_unit(engine, "my_unit", &my_unit->base);
 ```
 
 ---
@@ -945,7 +945,7 @@ agentos_execution_register_unit(engine, "my_unit", &my_unit->base);
 ### 10.1 常见问题
 
 #### 问题：任务规划失败
-**症状**: `agentos_cognition_process()` 返回错误  
+**症状**: `agentrt_cognition_process()` 返回错误  
 **排查**:
 1. 检查意图解析是否正确
 2. 验证规划策略是否注册
@@ -961,8 +961,8 @@ agentos_execution_register_unit(engine, "my_unit", &my_unit->base);
 ### 10.2 调试技巧
 
 - 启用 Debug 日志级别
-- 使用 `agentos_cognition_stats()` 查看统计信息
-- 使用 `agentos_execution_health_check()` 检查健康状态
+- 使用 `agentrt_cognition_stats()` 查看统计信息
+- 使用 `agentrt_execution_health_check()` 检查健康状态
 
 ---
 
@@ -971,10 +971,10 @@ agentos_execution_register_unit(engine, "my_unit", &my_unit->base);
 - [README.md](../../README.md) - 项目总览
 - [memoryrovol.md](memoryrovol.md) - MemoryRovol 架构详解
 - [syscall.md](syscall.md) - 系统调用接口文档
-- [cognition.h](../../../AgentRT/agentos/atoms/coreloopthree/include/cognition.h) - 认知层头文件 ✅
-- [execution.h](../../../AgentRT/agentos/atoms/coreloopthree/include/execution.h) - 行动层头文件 ✅
-- [memory.h](../../../AgentRT/agentos/atoms/coreloopthree/include/memory.h) - 记忆层头文件 ✅
-- [loop.h](../../../AgentRT/agentos/atoms/coreloopthree/include/loop.h) - 核心循环接口 ✅
+- [cognition.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/cognition.h) - 认知层头文件 ✅
+- [execution.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/execution.h) - 行动层头文件 ✅
+- [memory.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/memory.h) - 记忆层头文件 ✅
+- [loop.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/loop.h) - 核心循环接口 ✅
 
 ---
 

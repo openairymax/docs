@@ -17,8 +17,8 @@ Airymax 采用分层日志架构，各层使用不同的日志宏和头文件：
 | 层级 | 日志宏 | 头文件 | 说明 |
 |------|--------|--------|------|
 | daemon 服务层 | `SVC_LOG_*` | `svc_log.h` | 系统用户态服务日志，如 IPC 服务、资源管理 |
-| atoms/gateway/protocols | `AGENTOS_LOG_*` | `agentos_log.h` | 微核心核心、网关、协议层日志 |
-| cupolas 安全穹顶 | `AGENTOS_LOG_AUDIT` / `SVC_LOG_AUDIT` | `agentos_log.h` / `svc_log.h` | 安全审计日志，用于合规审查和取证分析 |
+| atoms/gateway/protocols | `AGENTRT_LOG_*` | `agentrt_log.h` | 微核心核心、网关、协议层日志 |
+| cupolas 安全穹顶 | `AGENTRT_LOG_AUDIT` / `SVC_LOG_AUDIT` | `agentrt_log.h` / `svc_log.h` | 安全审计日志，用于合规审查和取证分析 |
 | Desktop | `logger.*()` | `logger.ts` | 桌面端 TypeScript 日志 |
 | Python SDK | `logging.*` | Python `logging` 模块 | Python 绑定层日志 |
 | Go SDK | `zap.*` | `zap` logger | Go 绑定层日志 |
@@ -26,15 +26,15 @@ Airymax 采用分层日志架构，各层使用不同的日志宏和头文件：
 
 ### 0.2 HiLog 与 Airymax 日志系统的关系
 
-> **⚠️ 重要说明**：HiLog 是 OpenHarmony 的日志系统，**不是** Airymax 的日志系统。本文档中出现的 HiLog 示例仅作为日志用法参考，Airymax 实际代码中应使用对应的 `AGENTOS_LOG_*`（atoms/gateway/protocols 层）或 `SVC_LOG_*`（daemon 服务层）宏。
+> **⚠️ 重要说明**：HiLog 是 OpenHarmony 的日志系统，**不是** Airymax 的日志系统。本文档中出现的 HiLog 示例仅作为日志用法参考，Airymax 实际代码中应使用对应的 `AGENTRT_LOG_*`（atoms/gateway/protocols 层）或 `SVC_LOG_*`（daemon 服务层）宏。
 >
 > 对应关系：
-> - `HiLog::FATAL(LABEL, ...)` → `AGENTOS_LOG_FATAL(MODULE, ...)` 或 `SVC_LOG_FATAL(TAG, ...)`
-> - `HiLog::ERROR(LABEL, ...)` → `AGENTOS_LOG_ERROR(MODULE, ...)` 或 `SVC_LOG_ERROR(TAG, ...)`
-> - `HiLog::WARN(LABEL, ...)` → `AGENTOS_LOG_WARN(MODULE, ...)` 或 `SVC_LOG_WARN(TAG, ...)`
-> - `HiLog::INFO(LABEL, ...)` → `AGENTOS_LOG_INFO(MODULE, ...)` 或 `SVC_LOG_INFO(TAG, ...)`
-> - `HiLog::DEBUG(LABEL, ...)` → `AGENTOS_LOG_DEBUG(MODULE, ...)` 或 `SVC_LOG_DEBUG(TAG, ...)`
-> - `HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)` 或 `SVC_LOG_AUDIT(TAG, ...)`
+> - `HiLog::FATAL(LABEL, ...)` → `AGENTRT_LOG_FATAL(MODULE, ...)` 或 `SVC_LOG_FATAL(TAG, ...)`
+> - `HiLog::ERROR(LABEL, ...)` → `AGENTRT_LOG_ERROR(MODULE, ...)` 或 `SVC_LOG_ERROR(TAG, ...)`
+> - `HiLog::WARN(LABEL, ...)` → `AGENTRT_LOG_WARN(MODULE, ...)` 或 `SVC_LOG_WARN(TAG, ...)`
+> - `HiLog::INFO(LABEL, ...)` → `AGENTRT_LOG_INFO(MODULE, ...)` 或 `SVC_LOG_INFO(TAG, ...)`
+> - `HiLog::DEBUG(LABEL, ...)` → `AGENTRT_LOG_DEBUG(MODULE, ...)` 或 `SVC_LOG_DEBUG(TAG, ...)`
+> - `HiLog::AUDIT(LABEL, ...)` → `AGENTRT_LOG_AUDIT(MODULE, ...)` 或 `SVC_LOG_AUDIT(TAG, ...)`
 
 ### 0.3 结构化 JSON 日志格式（v0.1.0+ 标准）
 
@@ -64,18 +64,18 @@ Airymax 采用分层日志架构，各层使用不同的日志宏和头文件：
 
 **传播规则**：
 1. **请求入口**：在请求入口（如 IPC 网关、HTTP handler）生成 `trace_id`（W3C Trace Context 格式，32 位 hex）和 `request_id`（UUID v4）
-2. **进程内传播**：通过 `agentos_tls_get/set()`（参见 `platform.h`）在线程局部存储中保存当前 `trace_id`/`request_id`
+2. **进程内传播**：通过 `agentrt_tls_get/set()`（参见 `platform.h`）在线程局部存储中保存当前 `trace_id`/`request_id`
 3. **跨进程传播**：通过 IPC 消息头或 HTTP header（`traceparent` / `x-request-id`）传递
 4. **日志输出**：每条日志必须包含当前 `trace_id` 和 `request_id`
 
 **示例**：
 ```c
 // 请求入口生成
-agentos_tls_set(AGENTOS_TLS_KEY_TRACE_ID, trace_id);
-agentos_tls_set(AGENTOS_TLS_KEY_REQUEST_ID, request_id);
+agentrt_tls_set(AGENTRT_TLS_KEY_TRACE_ID, trace_id);
+agentrt_tls_set(AGENTRT_TLS_KEY_REQUEST_ID, request_id);
 
 // 日志中自动携带
-AGENTOS_LOG_INFO(MODULE, "Processing request: op=%s", operation);
+AGENTRT_LOG_INFO(MODULE, "Processing request: op=%s", operation);
 // 输出: {"trace_id":"0af765...","request_id":"req-abc123","message":"Processing request: op=submit",...}
 ```
 
@@ -144,7 +144,7 @@ AGENTOS_LOG_INFO(MODULE, "Processing request: op=%s", operation);
 
 ## 第 2 章 日志分级与分类
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTRT_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentrt_log.h`。
 
 ### 2.1 日志级别定义
 
@@ -260,7 +260,7 @@ HiLog::AUDIT(LABEL, "Capability created: subject=%s, resource=%s, permissions=0x
 
 **响应要求**：审计日志必须持久化，保留期限符合合规要求，不可被应用层删除
 
-> **Airymax 映射**：`HiLog::AUDIT(LABEL, ...)` → `AGENTOS_LOG_AUDIT(MODULE, ...)`（atoms 层）或 `SVC_LOG_AUDIT(TAG, ...)`（daemon 层）
+> **Airymax 映射**：`HiLog::AUDIT(LABEL, ...)` → `AGENTRT_LOG_AUDIT(MODULE, ...)`（atoms 层）或 `SVC_LOG_AUDIT(TAG, ...)`（daemon 层）
 
 ### 2.2 日志级别选择矩阵
 
@@ -277,7 +277,7 @@ HiLog::AUDIT(LABEL, "Capability created: subject=%s, resource=%s, permissions=0x
 
 ## 第 3 章 日志内容规范
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTRT_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentrt_log.h`。
 
 ### 3.1 信息论视角下的日志内容
 
@@ -411,7 +411,7 @@ HiLog::ERROR(LABEL, "Connect to server failed, please check network configuratio
 
 ## 第 4 章 日志打印策略
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTRT_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentrt_log.h`。
 
 ### 4.1 打印时机控制
 
@@ -496,9 +496,9 @@ HiLog::DEBUG(LABEL, "%s", detailed_info.c_str());     // 但 DEBUG 可能关闭
 **【正例】**
 ```cpp
 // 使用条件判断延迟生成：仅当日志级别启用时才生成字符串
-if (AGENTOS_LOG_DEBUG_ENABLED()) {
+if (AGENTRT_LOG_DEBUG_ENABLED()) {
     std::string detailed_info = GenerateDetailedInfo();
-    AGENTOS_LOG_DEBUG(MODULE, "%s", detailed_info.c_str());
+    AGENTRT_LOG_DEBUG(MODULE, "%s", detailed_info.c_str());
 }
 ```
 
@@ -515,7 +515,7 @@ if (AGENTOS_LOG_DEBUG_ENABLED()) {
 
 ## 第 5 章 HiLog 接口使用规范
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTRT_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentrt_log.h`。
 
 ### 5.1 Domain ID 分配的系统工程方法
 
@@ -748,7 +748,7 @@ HiLog::WARN(LABEL, "TCP connection closed: reason=peer_timeout, duration=300s");
 ---
 ## 第 7 章 Airymax 模块日志示例
 
-> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTOS_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentos_log.h`。
+> **⚠️ 提示**：以下示例使用 HiLog 语法仅作参考。Airymax 实际代码必须使用 `SVC_LOG_*`（daemon 层）或 `AGENTRT_LOG_*`（atoms 层）宏，定义分别位于 `svc_log.h` 和 `agentrt_log.h`。
 
 ### 7.1 Atoms（原子层）日志规范
 Atoms模块实现微核心核心功能，日志要求最高级别的性能和精度：

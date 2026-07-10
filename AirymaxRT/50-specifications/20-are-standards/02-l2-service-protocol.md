@@ -392,7 +392,7 @@ service_discovery:
   # backend: k8s              # K8s API
 
   shm:
-    name: /agentos_service_registry
+    name: /agentrt_service_registry
     size: 1048576            # 1 MiB
     heartbeat_interval_ms: 10000
     expire_timeout_ms: 30000
@@ -428,7 +428,7 @@ service_discovery:
 
 ### 7.6 参考实现
 
-Airymax 原生实现：`agentos/daemon/common/include/service_discovery.h`（shm 后端）。第三方实现其他后端时需实现 `are_svc_discovery_adapter_t` 全部函数指针（除 `heartbeat` 可返回 `ARE_ENOTSUP`）。
+Airymax 原生实现：`agentrt/daemon/common/include/service_discovery.h`（shm 后端）。第三方实现其他后端时需实现 `are_svc_discovery_adapter_t` 全部函数指针（除 `heartbeat` 可返回 `ARE_ENOTSUP`）。
 
 ---
 
@@ -735,13 +735,13 @@ int main(void) {
 
 | 标准接口 | 参考实现位置 |
 |----------|-------------|
-| `are_ipc_message_header_t` | `agentos/daemon/common/include/ipc_service_bus.h`（`ipc_bus_message_header_t`） |
-| 消息类型枚举 | `agentos/daemon/common/include/ipc_service_bus.h`（`ipc_bus_msg_type_t`） |
-| 协议字段枚举 | `agentos/daemon/common/include/ipc_service_bus.h`（`ipc_bus_proto_t`） |
-| 服务发现 shm 后端 | `agentos/daemon/common/include/service_discovery.h`（`sd_*`） |
-| 背压控制器 | `agentos/daemon/common/include/ipc_backpressure.h`（`ipc_bp_*`） |
-| JSON-RPC 辅助 | `agentos/daemon/common/include/jsonrpc_helpers.h` |
-| 方法分派器 | `agentos/daemon/common/include/method_dispatcher.h` |
+| `are_ipc_message_header_t` | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_message_header_t`） |
+| 消息类型枚举 | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_msg_type_t`） |
+| 协议字段枚举 | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_proto_t`） |
+| 服务发现 shm 后端 | `agentrt/daemon/common/include/service_discovery.h`（`sd_*`） |
+| 背压控制器 | `agentrt/daemon/common/include/ipc_backpressure.h`（`ipc_bp_*`） |
+| JSON-RPC 辅助 | `agentrt/daemon/common/include/jsonrpc_helpers.h` |
+| 方法分派器 | `agentrt/daemon/common/include/method_dispatcher.h` |
 
 ### 13.1 与原生实现的差异
 

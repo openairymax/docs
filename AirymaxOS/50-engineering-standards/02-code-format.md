@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）代码格式标准
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 2 卷——代码格式。本卷规定缩进、行宽、大括号、空格、switch/case、空行与多语句等机械格式规则，并以"配置即代码"形式由 `.clang-format` / `.rustfmt.toml` / `.pyproject.toml` / `.prettierrc` 强制执行。
-> **版本**: 1.0.1（开发）
-> **最后更新**: 2026-07-06
-> **同源映射**: `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` + `.clang-format`（689 行 + 560 ForEachMacros）
-> **理论根基**: Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
-> **SSoT 声明（C-2.6 D-04，2026-07-09）**: 本卷为 agentrt-linux **格式规则的唯一权威来源（SSoT）**。格式规则编号的目标体系为 **OS-FMT-NNN**（4 段前缀，闭源总纲已确立，FMT = Format）。本卷正文中现存的历史编号 **OS-KER-004~021 / OS-STD-047 / OS-STD-202~211** 将逐步迁移为 OS-FMT-NNN，迁移映射见 §0.2。迁移完成前，历史编号与 OS-FMT 编号**并存且等价**，规则效力以本卷正文为准；本卷与闭源总纲的任何冲突，以闭源总纲附录 A 为准。
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 2 卷——代码格式。本卷规定缩进、行宽、大括号、空格、switch/case、空行与多语句等机械格式规则，并以"配置即代码"形式由 `.clang-format` / `.rustfmt.toml` / `.pyproject.toml` / `.prettierrc` 强制执行。\
+> **版本**： 1.0.1（开发）\
+> **最后更新**： 2026-07-06\
+> **同源映射**： `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/coding-style.rst` + `.clang-format`（689 行 + 560 ForEachMacros）\
+> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
+> **SSoT 声明（C-2.6 D-04，2026-07-09）**： 本卷为 agentrt-linux **格式规则的唯一权威来源（SSoT）**。格式规则编号的目标体系为 **OS-FMT-NNN**（4 段前缀，闭源总纲已确立，FMT = Format）。本卷正文中现存的历史编号 **OS-KER-004~021 / OS-STD-047 / OS-STD-202~211** 将逐步迁移为 OS-FMT-NNN，迁移映射见 §0.2。迁移完成前，历史编号与 OS-FMT 编号**并存且等价**，规则效力以本卷正文为准；本卷与闭源总纲的任何冲突，以闭源总纲附录 A 为准。
 
 ---
 

@@ -51,7 +51,7 @@ make -j$(nproc)             # 编译
 ```
 OpenAirymax/
 ├── AgentRT/                    ← 纯源码目录
-│   ├── agentos/                # 核心代码
+│   ├── agentrt/                # 核心代码
 │   │   ├── atoms/              # 原子模块
 │   │   ├── commons/            # 公共库
 │   │   ├── daemon/             # 用户态服务
@@ -71,7 +71,7 @@ OpenAirymax/
 │   ├── Makefile                # 自动生成的Makefile
 │   ├── bin/                    # 可执行文件
 │   ├── lib/                    # 库文件
-│   ├── agentos/                # 子项目构建产物
+│   ├── agentrt/                # 子项目构建产物
 │   │   ├── atoms/
 │   │   ├── commons/
 │   │   └── ...
@@ -89,7 +89,7 @@ OpenAirymax/
 
 ```bash
 # 设置项目根目录变量（根据实际路径修改）
-export AGENTOS_ROOT="$(pwd)"        # 假设当前在 Airymax 目录
+export AGENTRT_ROOT="$(pwd)"        # 假设当前在 Airymax 目录
 export BUILD_DIR="../AgentRT-build"  # 或使用绝对路径
 
 # 1. 创建构建目录（如不存在）
@@ -99,11 +99,11 @@ mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
 # 3. 配置CMake
-cmake ${AGENTOS_ROOT} \
+cmake ${AGENTRT_ROOT} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
     -DBUILD_TESTING=ON \
-    -DAGENTOS_ENABLE_EXAMPLES=ON
+    -DAGENTRT_ENABLE_EXAMPLES=ON
 
 # 4. 编译
 make -j$(nproc)
@@ -153,7 +153,7 @@ make -j$(nproc)
 cd AgentRT-build
 cmake ../Airymax \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DAGENTOS_SANITIZE=ON \
+    -DAGENTRT_SANITIZE=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 make -j$(nproc)
 ```
@@ -244,9 +244,9 @@ AgentRT-build/
 cd <path-to-Airymax>
 
 # 检查文件是否被.gitignore排除
-git check-ignore -v agentos/build
+git check-ignore -v agentrt/build
 git check-ignore -v CMakeCache.txt
-git check-ignore -v agentos/toolkit/rust/target
+git check-ignore -v agentrt/toolkit/rust/target
 
 # 预期输出：显示匹配的规则编号
 ```
@@ -337,7 +337,7 @@ cmake ../Airymax -DCMAKE_BUILD_TYPE=Debug
 
 # Coverage 构建
 mkdir AgentRT-build-coverage && cd AgentRT-build-coverage
-cmake ../Airymax -DCMAKE_BUILD_TYPE=Debug -DAGENTOS_COVERAGE=ON
+cmake ../Airymax -DCMAKE_BUILD_TYPE=Debug -DAGENTRT_COVERAGE=ON
 ```
 
 ---
@@ -386,9 +386,9 @@ jobs:
 ### 远程仓库地址
 
 **Airymax 主仓库：**
-- 主仓库：https://atomgit.com/openairymax/agentos
+- 主仓库：https://atomgit.com/openairymax/agentrt
 - GitHub 镜像：https://github.com/SpharxTeam/Airymax
-- Gitee 镜像：https://gitee.com/SpharxTeam/agentos
+- Gitee 镜像：https://gitee.com/SpharxTeam/agentrt
 
 **关联模块仓库：**
 - Docs 文档模块：https://atomgit.com/openairymax/docs

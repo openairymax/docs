@@ -162,7 +162,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 宏 | 用途 | 定义位置 |
 |----|------|---------|
 | `MEMORY_FREE_SAFE(pptr)` | 安全释放内存并置指针为 NULL（接受指针的指针） | [C_coding_style_standard.md](../30-coding-standard/01-c-coding-style.md) / `memory_compat.h` |
-| `AGENTOS_SECURE_ZERO(ptr, size)` | 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`） | [C_Cpp_secure_coding_standard.md](../30-coding-standard/02-c-cpp-secure-coding.md) / `memory_compat.h` |
+| `AGENTRT_SECURE_ZERO(ptr, size)` | 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`） | [C_Cpp_secure_coding_standard.md](../30-coding-standard/02-c-cpp-secure-coding.md) / `memory_compat.h` |
 
 ---
 
@@ -172,12 +172,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 错误码 | C 内核值 | SDK 十六进制值 | 说明 |
 |--------|---------|--------------|------|
-| AGENTOS_SUCCESS | 0 | 0x0000 | 成功 |
-| AGENTOS_ERR_INVALID_PARAM | -2 | 0x0003 | 参数无效 |
-| AGENTOS_ERR_OUT_OF_MEMORY | -4 | 0x0002 | 内存不足 |
-| AGENTOS_ERR_NOT_FOUND | -6 | 0x0004 | 资源不存在 |
-| AGENTOS_ERR_PERMISSION_DENIED | -10 | 0x0005 | 权限不足 |
-| AGENTOS_ERR_TIMEOUT | -8 | 0x0006 | 操作超时 |
+| AGENTRT_SUCCESS | 0 | 0x0000 | 成功 |
+| AGENTRT_ERR_INVALID_PARAM | -2 | 0x0003 | 参数无效 |
+| AGENTRT_ERR_OUT_OF_MEMORY | -4 | 0x0002 | 内存不足 |
+| AGENTRT_ERR_NOT_FOUND | -6 | 0x0004 | 资源不存在 |
+| AGENTRT_ERR_PERMISSION_DENIED | -10 | 0x0005 | 权限不足 |
+| AGENTRT_ERR_TIMEOUT | -8 | 0x0006 | 操作超时 |
 
 > **📝 双错误码体系说明**  
 > Airymax 采用双错误码体系：C 内核使用负整数（定义于 `error.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../70-project-erp/02-error-code-reference.md)。

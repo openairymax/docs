@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）C 语言编码规范强化补充
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）内核态 C 语言编码规范的强化补充规则，与 `C_coding_style_standard.md` 配套使用。本文件聚焦 12 条强化规则，每条规则附 OLK-6.6 源码路径，并以"正确示例 / 错误示例"成对呈现。
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **SSoT 声明（C-2.6 D-03，2026-07-09）**: 本文件的核心独特价值是 **OLK-6.6 源码行号索引**（每条规则附 `文件名:行号` 出处）。规则编号的权威来源为 [01-coding-standards.md](../01-coding-standards.md)（语义层）与 [02-code-format.md](../02-code-format.md)（格式层）；本文件中的 3 段编号（OS-KER-007~015）与 SSoT 存在冲突，请使用 [C_coding_style_standard.md §0 映射表](C_coding_style_standard.md#0-ssot-对齐声明与编号映射)进行交叉引用。4 段编号（OS-STD-CODE-010/012/014/015）已与目标编号体系对齐。
+> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）内核态 C 语言编码规范的强化补充规则，与 `C_coding_style_standard.md` 配套使用。本文件聚焦 12 条强化规则，每条规则附 OLK-6.6 源码路径，并以"正确示例 / 错误示例"成对呈现。\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**： 2026-07-09\
+> **理论根基**： Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0\
+> **SSoT 声明（C-2.6 D-03，2026-07-09）**： 本文件的核心独特价值是 **OLK-6.6 源码行号索引**（每条规则附 `文件名:行号` 出处）。规则编号的权威来源为 [01-coding-standards.md](../01-coding-standards.md)（语义层）与 [02-code-format.md](../02-code-format.md)（格式层）；本文件中的 3 段编号（OS-KER-007~015）与 SSoT 存在冲突，请使用 [C_coding_style_standard.md §0 映射表](C_coding_style_standard.md#0-ssot-对齐声明与编号映射)进行交叉引用。4 段编号（OS-STD-CODE-010/012/014/015）已与目标编号体系对齐。
 
 ---
 
@@ -643,4 +643,4 @@ task->cmds = kmalloc(cmd_count * sizeof(struct agentrt_cmd), GFP_KERNEL);	/* WRO
 
 ---
 
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
+> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0

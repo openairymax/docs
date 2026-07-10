@@ -2,13 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # K8s CRD 设计
 
-> **文档定位**: agentrt-linux（AirymaxOS，极境智能体操作系统）云原生体系核心子文档，定义 Agent 自定义资源（CRD）的声明式模型、controller 逻辑与调度到 agentrt-linux 节点的机制
-> **版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）
-> **最后更新**: 2026-07-09
-> **理论根基**: Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论
-> **SPDX-License-Identifier**: AGPL-3.0-or-later OR Apache-2.0
-> **同源映射**: agentrt gateway + Linux 6.6 容器编排（IRON-9 v2 [IND] 完全独立层，云原生为 agentrt-linux 专属扩展）
-> **IRON-9 v2 层次**: [IND] 完全独立层（K8s CRD 与 controller 为 agentrt-linux 云原生专属实现）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）云原生体系核心子文档，定义 Agent 自定义资源（CRD）的声明式模型、controller 逻辑与调度到 agentrt-linux 节点的机制\
+> **版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-09\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
+> **同源映射**：agentrt gateway + Linux 6.6 容器编排（IRON-9 v2 [IND] 完全独立层，云原生为 agentrt-linux 专属扩展）\
+> **IRON-9 v2 层次**：[IND] 完全独立层（K8s CRD 与 controller 为 agentrt-linux 云原生专属实现）
 
 ---
 

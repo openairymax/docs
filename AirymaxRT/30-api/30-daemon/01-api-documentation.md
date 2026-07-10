@@ -481,10 +481,10 @@ int service_init(const char* config_path) {
 // ==================== 主循环 ====================
 
 void run_server(void) {
-    agentos_socket_t server_fd = create_socket(g_config->socket_path);
+    agentrt_socket_t server_fd = create_socket(g_config->socket_path);
     
     while (g_running) {
-        agentos_socket_t client_fd = accept_connection(server_fd, 5000);
+        agentrt_socket_t client_fd = accept_connection(server_fd, 5000);
         if (client_fd == INVALID_SOCKET) continue;
         
         // 读取请求

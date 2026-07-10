@@ -3,12 +3,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux L1 核心运行时接口规范
 
-**最新**: 2026-07-07  
-**版本**: 0.1.1（文档体系完成）/ 1.0.1（开发）  
-**状态**: 草案  
-**路径**: OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/L1_runtime_interface.md  
-**父文档**: [ARE Standards 总览](./README.md)  
-**理论根基**: 体系并行论、五维正交24原则、MicroCoreRT 微核心极简设计、seL4 形式化验证思想  
+> **最新**： 2026-07-07\
+> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **状态**： 草案\
+> **路径**： OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/L1_runtime_interface.md\
+> **父文档**： [ARE Standards 总览](./README.md)\
+> **理论根基**： 体系并行论、五维正交24原则、MicroCoreRT 微核心极简设计、seL4 形式化验证思想  
 
 ---
 

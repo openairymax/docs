@@ -114,7 +114,7 @@ Tier 3: Tooling (仅CI使用)
 
 ### 3.2 tiktoken 特殊处理方案
 
-**问题**: tiktoken 是 Python 库，没有 C 语言原生接口，但 `agentos/commons/CMakeLists.txt` 通过 `pkg_check_modules(TIKTOKEN REQUIRED tiktoken)` 强制要求。
+**问题**: tiktoken 是 Python 库，没有 C 语言原生接口，但 `agentrt/commons/CMakeLists.txt` 通过 `pkg_check_modules(TIKTOKEN REQUIRED tiktoken)` 强制要求。
 
 **解决方案**: 在 CI 中创建 **pkg-config 存根 (Stub)**
 
@@ -184,13 +184,13 @@ chmod +x scripts/ci/deploy-artifacts.sh
 
 | 模块 | 源码路径 | MCIS维度 | CMake选项 |
 |------|---------|----------|-----------|
-| daemon | agentos/daemon | 执行体 | -DBUILD_TESTS=ON -DENABLE_LLM_DUMMY=ON |
-| atoms | agentos/atoms | 认知体 | -DBUILD_TESTS=ON |
-| commons | agentos/commons | 认知体 | -DBUILD_TESTS=ON |
-| cupolas | agentos/cupolas | 安全穹顶体 | -DBUILD_TESTS=ON |
-| gateway | agentos/gateway | 执行体 | -DBUILD_TESTS=ON |
-| heapstore | agentos/heapstore | 记忆体 | -DBUILD_TESTS=ON |
-| manager | agentos/manager | 执行体 | -DBUILD_TESTS=ON |
+| daemon | agentrt/daemon | 执行体 | -DBUILD_TESTS=ON -DENABLE_LLM_DUMMY=ON |
+| atoms | agentrt/atoms | 认知体 | -DBUILD_TESTS=ON |
+| commons | agentrt/commons | 认知体 | -DBUILD_TESTS=ON |
+| cupolas | agentrt/cupolas | 安全穹顶体 | -DBUILD_TESTS=ON |
+| gateway | agentrt/gateway | 执行体 | -DBUILD_TESTS=ON |
+| heapstore | agentrt/heapstore | 记忆体 | -DBUILD_TESTS=ON |
+| manager | agentrt/manager | 执行体 | -DBUILD_TESTS=ON |
 
 ---
 
@@ -241,9 +241,9 @@ install-deps.sh 中的重试逻辑:
 
 | 检查项 | 工具 | 检查范围 | 阻塞? |
 |--------|------|---------|-------|
-| C/C++静态分析 | cppcheck | agentos/*/src | 否 |
+| C/C++静态分析 | cppcheck | agentrt/*/src | 否 |
 | C/C++格式检查 | clang-format | *.c/*.h | 否 |
-| Python质量 | pylint + mypy | agentos/toolkit/python | 否 |
+| Python质量 | pylint + mypy | agentrt/toolkit/python | 否 |
 | 内存检测 | Valgrind | daemon (Debug+ASan) | 否 |
 | 安全扫描 | Trivy + Gitleaks | 全项目 | 是(严重漏洞) |
 
