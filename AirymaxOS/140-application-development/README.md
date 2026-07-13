@@ -4,10 +4,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发工程体系主索引\
 > **版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**：2026-07-13\
 > **优先级**：P1（7 文档）\
 > **同源映射**：agentrt SDK（Python/Rust/Go/TypeScript 四语言）+ Linux 6.6 用户态开发模型 + seL4 TCB 生命周期\
 > **理论根基**：Linux 应用开发哲学 + Airymax K-2 接口契约化 + E-7 文档即代码
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），Agent 应用开发已通过审查（应用开发层 Phase B/C/D 验证：系统调用编号 SSoT 注册表 31 编号 + Agent 8 状态生命周期 + seL4 TCB 生命周期借鉴 + D9 目录结构 SSoT 对齐）
 
 ---
 

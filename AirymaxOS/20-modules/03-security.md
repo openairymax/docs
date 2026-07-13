@@ -236,6 +236,24 @@ typedef struct airy_capability {
     uint64_t mint_depth;
     uint32_t mint_quota;
 } airy_capability_t;
+
+/**
+ * cap_t — Capability 引用（句柄）类型 [SC]
+ *
+ * cap_t 是 capability 的轻量引用/句柄，用于 syscall 参数传递和 IPC 消息
+ * 中的 capability 标识。它与 airy_capability_t 的关系类似于 seL4 中
+ * seL4_CPtr 与 cte_t（capability table entry）的关系：
+ *
+ *   - cap_t：64-bit 整数句柄，标识 CNode 中某个 capability slot，
+ *           轻量、可在用户态/内核态间零拷贝传递
+ *   - airy_capability_t：完整的 capability 元数据结构体，存储在
+ *                        CNode slot 中，包含类型/权限/派生链等信息
+ *
+ * syscall 入口通过 cap_t 查找对应 CNode slot，取出 airy_capability_t
+ * 进行权限检查后执行操作。与 seL4 seL4_CPtr (= seL4_Word = uint64_t)
+ * 的设计一致。
+ */
+typedef uint64_t cap_t;
 ```
 
 **CNode + CSpace 派生树**（seL4 风格，Step 2.4 #1 补齐）：

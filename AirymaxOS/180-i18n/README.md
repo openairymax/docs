@@ -4,10 +4,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）国际化与本地化工程体系主索引\
 > **版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**：2026-07-13\
 > **优先级**：P2（5 文档）\
 > **同源映射**：agentrt 多语言错误码 + Linux 6.6 locale / gettext / iconv\
 > **理论根基**：软件国际化哲学 + Airymax A-3 人文关怀 + E-7 文档即代码
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），国际化与本地化已通过审查（D7 修复涉及 `02-encoding-spec.md`：陈旧注释路径 `ipc_msg_hdr.h` → `ipc.h` 已修复）
 
 ---
 
@@ -103,6 +105,16 @@ docs/AirymaxOS/50-engineering-standards/
 ### 3.2 1.0.1 版本范围
 
 实施国际化工程标准，补充 Agent 提示词多语言支持与社区翻译流程。
+
+### 3.3 D7 修复说明（Wave 2 v2 Phase D）
+
+`02-encoding-spec.md` 中曾存在陈旧注释路径引用：L533 处将 IPC 128B 消息头定义的注释路径错误标注为 `ipc_msg_hdr.h`，实际应为 `ipc.h`。该问题在 Wave 2 v2 Phase D（D7，对应 C-A07）中已修复：
+
+| 修复项 | 修复前 | 修复后 | 状态 |
+|--------|--------|--------|------|
+| 陈旧注释路径 | `ipc_msg_hdr.h` | `ipc.h` | 已修复 |
+
+此修复与 `170-performance/03-ipc-performance.md` 中的 5 处同源陈旧路径（D7 同批修复）保持一致，确保全文档体系对 IPC 消息头物理宿主的引用统一为 `ipc.h`。
 
 ---
 

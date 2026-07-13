@@ -18,11 +18,11 @@ agentrt-linux 在 Linux 6.6 内核基线的标准系统调用之上，新增 Age
 
 | # | 平面 | 分类 | 核心 syscall | 借鉴来源 |
 |---|------|------|-------------|---------|
-| 1 | 控制面 | IPC 原语（8） | `airy_sys_call` / `send` / `recv` / `nbsend` / `nbrecv` / `reply_recv` / `yield` / `reply` | seL4 8-activity syscall 模型 |
+| 1 | 控制面 | IPC 原语（8） | `airy_sys_call` / `send` / `recv` / `nbsend` / `nbrecv` / `reply_recv` / `yield` / `reply` | seL4 master 模式 8-activity syscall 模型 |
 | 2 | 控制面 | 控制原语（3） | `airy_sys_rovol_ctl` / `sched_ctl` / `clt_notify` | agent 领域最小需求 |
 | 3 | 控制面 | 通知原语（1） | `airy_sys_notify` | seL4 Notification 异步信号 |
 
-> **说明**：LsmCtl（安全策略加载）与 WasmLoad（模块加载）已归入 `airy_sys_call` 统一 capability invocation 入口——通过 security capability 和 module capability 进行类型分发，无需独立 syscall。`airy_sys_reply` 完齐 seL4 8 个 activity syscall（Reply 独立回复，无需等待下一条消息）。
+> **说明**：LsmCtl（安全策略加载）与 WasmLoad（模块加载）已归入 `airy_sys_call` 统一 capability invocation 入口——通过 security capability 和 module capability 进行类型分发，无需独立 syscall。`airy_sys_reply` 完齐 seL4 master 模式 8 个 activity syscall（Reply 独立回复，无需等待下一条消息）。
 
 ### 1.2 数据面（io_uring，零 syscall）
 
@@ -108,7 +108,38 @@ agentrt-linux 专用系统调用采用 **12 核心 + 12 预留 = 24 槽位** 方
 | 11 | `AIRY_SYS_NOTIFY` | 通知原语 | 异步通知信号（seL4 Notification） |
 | 12-23 | 预留 | — | 未来扩展 |
 
-**设计依据**：借鉴 seL4 的 8 个 activity syscall（Call/ReplyRecv/Send/NBSend/Recv/NBRecv/Reply/Yield），agentrt-linux 的 8 个 IPC 原语完整对齐。3 个控制原语覆盖 agent 领域的最小需求（记忆卷载、调度策略、认知通知），1 个通知原语提供 agent 间异步事件信号。LsmCtl 与 WasmLoad 通过 capability invocation 归入 `airy_sys_call`。数据面 I/O 完全由 io_uring 处理（零 syscall）。
+**内部编号 → Linux syscall_64.tbl 注册号映射**：
+
+agentrt-linux 新增 syscall 在 Linux 内核 `arch/x86/entry/syscalls/syscall_64.tbl` 中注册于 512 起始的预留区间。下表为内部编号与 Linux 注册号的完整映射：
+
+| 内部编号 | 符号 | Linux 注册号 | syscall_64.tbl 条目 |
+|---------|------|-------------|-------------------|
+| 0 | `AIRY_SYS_CALL` | 512 | `512  common  airy_sys_call      sys_airy_sys_call` |
+| 1 | `AIRY_SYS_SEND` | 513 | `513  common  airy_sys_send      sys_airy_sys_send` |
+| 2 | `AIRY_SYS_RECV` | 514 | `514  common  airy_sys_recv      sys_airy_sys_recv` |
+| 3 | `AIRY_SYS_NBSEND` | 515 | `515  common  airy_sys_nbsend    sys_airy_sys_nbsend` |
+| 4 | `AIRY_SYS_NBRECV` | 516 | `516  common  airy_sys_nbrecv    sys_airy_sys_nbrecv` |
+| 5 | `AIRY_SYS_REPLY_RECV` | 517 | `517  common  airy_sys_reply_recv sys_airy_sys_reply_recv` |
+| 6 | `AIRY_SYS_YIELD` | 518 | `518  common  airy_sys_yield     sys_airy_sys_yield` |
+| 7 | `AIRY_SYS_ROVOL_CTL` | 519 | `519  common  airy_sys_rovol_ctl sys_airy_sys_rovol_ctl` |
+| 8 | `AIRY_SYS_SCHED_CTL` | 520 | `520  common  airy_sys_sched_ctl sys_airy_sys_sched_ctl` |
+| 9 | `AIRY_SYS_CLT_NOTIFY` | 521 | `521  common  airy_sys_clt_notify sys_airy_sys_clt_notify` |
+| 10 | `AIRY_SYS_REPLY` | 522 | `522  common  airy_sys_reply     sys_airy_sys_reply` |
+| 11 | `AIRY_SYS_NOTIFY` | 523 | `523  common  airy_sys_notify    sys_airy_sys_notify` |
+| 12-23 | 预留 | 524-535 | 预留（`524-535 common airy_sys_reserved_*`） |
+
+> **映射原则**：内部编号（0-11）仅用于文档和 ABI 头文件中的符号常量定义；Linux 注册号（512-535）用于 `syscall_64.tbl` 注册。两者之间为固定偏移 `+512` 关系，由 `syscalls.h` [SC] 头文件通过 `#define __NR_airy_sys_call 512` 锁定。
+
+**设计依据**：借鉴 seL4 syscall 极简模型（源码证据 `libsel4/include/api/syscall.xml:11-37`）：
+
+- **seL4 master 模式：8 个 API syscall**（`Call/ReplyRecv/Send/NBSend/Recv/NBRecv/Reply/Yield`）
+- **seL4 MCS 模式：11 个 API syscall**（master 8 个中替换 `Reply` 为 `Wait/NBWait`，新增 `NBSendRecv/NBSendWait`）
+
+agentrt-linux 采用 master 模式 8 个 IPC 原语作为"seL4 风格基础"（`airy_sys_call/airy_sys_send/airy_sys_recv/airy_sys_nbsend/airy_sys_nbrecv/airy_sys_reply_recv/airy_sys_yield/airy_sys_reply`，与 seL4 master 模式 8 个一一对应）；**不引入 MCS 模式**（agent 场景不需要 MCS 的 `reply_t` 对象与 `schedcontext` 模型，由 `airy_ep->lock` 临界区串行执行保证原子性，详见 `30-interfaces/02-ipc-protocol.md` §4.8）。
+
+在 seL4 master 8 原语基础上，agentrt-linux 扩展 4 个 agent 领域控制原语（`AIRY_SYS_ROVOL_CTL/AIRY_SYS_SCHED_CTL/AIRY_SYS_CLT_NOTIFY/AIRY_SYS_NOTIFY`），覆盖 agent 领域最小需求（记忆卷载、调度策略、认知通知、异步事件信号）。LsmCtl 与 WasmLoad 通过 capability invocation 归入 `airy_sys_call`。数据面 I/O 完全由 io_uring 处理（零 syscall）。
+
+**总计：8 seL4 风格 IPC 原语 + 4 agent 扩展控制原语 = 12 核心 syscall**，符合 §2.2"12 核心 + 12 预留 = 24 槽位"分配（从原 v0.6.0 的 120 槽位缩减 80%，详见历史审查 `_review_0.7.0/01-syscall-minimization-and-ssot-conflict-analysis.md`）。
 
 ### 2.3 ABI 稳定性
 
@@ -132,6 +163,8 @@ agentrt-linux 专用系统调用采用 **12 核心 + 12 预留 = 24 槽位** 方
     #define AIRY_API
 #endif
 ```
+
+> **类型说明**：下述 syscall 签名中的 `cap_t` 为 capability 引用句柄类型（`typedef uint64_t cap_t`），定义于 [SC] 共享头文件 `include/airymax/security_types.h`。详见 [20-modules/03-security.md §4.1](../20-modules/03-security.md)。
 
 ### 3.2 IPC 原语（7 个）
 

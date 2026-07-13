@@ -4,9 +4,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**： agentrt-linux（AirymaxOS）运维工程体系主索引
 > **版本**： 0.1.1
-> **最后更新**： 2026-07-06
+> **最后更新**： 2026-07-13
 > **同源映射**： agentrt daemons（12 个用户态服务）+ Linux 6.6 systemd 集成
 > **理论根基**： Linux 发行版运维哲学 + Airymax S-1 反馈闭环 + E-2 可观测性
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），运维体系已通过审查（已知遗留 C-E02：OS-STD-2xx 运维域编号残留，移交 1.0.1 清理；运维体系设计框架与 systemd 集成 / RPM 包管理 / 监控告警 / 故障恢复机制完整）
 
 ---
 

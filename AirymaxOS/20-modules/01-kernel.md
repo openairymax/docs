@@ -114,7 +114,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 11    | `airy_sys_notify`     | 通知原语   | 异步通知信号（seL4 Notification）                         |
 | 12-23 | 预留                    | —      | 未来扩展                                              |
 
-**数据面 I/O 完全由 io\_uring 处理（零 syscall）**。LsmCtl 与 WasmLoad 通过 capability invocation 归入 `airy_sys_call`。`airy_sys_reply` 完齐 seL4 8 个 activity syscall。`airy_sys_notify` 提供 agent 间异步事件通知（seL4 Notification 二进制信号量语义）。
+**数据面 I/O 完全由 io\_uring 处理（零 syscall）**。LsmCtl 与 WasmLoad 通过 capability invocation 归入 `airy_sys_call`。`airy_sys_reply` 完齐 seL4 master 模式 8 个 activity syscall（不引入 MCS 模式，详见 `30-interfaces/01-syscalls.md` §2.2）。`airy_sys_notify` 提供 agent 间异步事件通知（seL4 Notification 二进制信号量语义）。
 
 **syscall 审计流程**：新增 syscall 需 TSC 评审，遵循"机制在内核、策略在用户态"原则。推荐采用 seL4 的 syscall.xml 单一来源管理（ES-SEL4-21），对应 R-01 增强建议（纳入 1.0.1 M1 阶段）。
 
@@ -513,16 +513,16 @@ agentrt-linux 的 IPC 采用 **数据面/控制面分离** 架构：
 
 **\[SC] 对接**：`struct airy_ipc_msg_hdr`（128B）定义在 `include/airymax/ipc.h`，包含 magic（0x41524531 'ARE1'）、opcode、flags、trace\_id、timestamp\_ns、src\_task、dst\_task、payload\_len、reserved\[84] 等字段。与 SSoT 逐字节一致。
 
-### 6.4 Fastpath 设计（POINT OF NO RETURN）
+### 6.4 Fastpath 设计（借鉴 seL4 POINT OF NO RETURN 模式）
 
-**seL4 Fastpath**（ES-SEL4-13）：IPC 快路径的核心理念是 **POINT OF NO RETURN**——一旦进入 fastpath，就不允许回退到慢路径。
+**seL4 Fastpath**（ES-SEL4-13，源码证据 `src/fastpath/fastpath.c:168-233`）：IPC 快路径的核心理念是 **POINT OF NO RETURN**——一旦进入 fastpath，就不允许回退到慢路径。seL4 Fastpath 的语义是"批量验证后不可逆提交 + 直接切换线程上下文"，**不是"零拷贝"**。
 
 | 维度                 | seL4 实现                           | 代码证据                                |
 | ------------------ | --------------------------------- | ----------------------------------- |
 | fastpath 入口        | `lookup_fp` 无递归 do-while          | `include/fastpath/fastpath.h:46-90` |
-| fastpath 主体        | 12 项前置检查 + 直接 transfer            | `src/fastpath/fastpath.c`（899 行）    |
+| fastpath 主体        | 12 项前置检查 + 直接 transfer            | `src/fastpath/fastpath.c:168-233`（POINT OF NO RETURN 在 L168-233 之间）    |
 | badge 传递           | `cap_endpoint_cap_get_capEPBadge` | `src/fastpath/fastpath.c:185`       |
-| POINT OF NO RETURN | 进入后不可回退                           | `src/fastpath/fastpath.c`           |
+| POINT OF NO RETURN | 12 项前置检查全部通过后进入不可逆点，直接切换线程上下文                           | `src/fastpath/fastpath.c:168-233`           |
 
 **Fastpath 触发条件**（4 类）：
 
@@ -531,7 +531,11 @@ agentrt-linux 的 IPC 采用 **数据面/控制面分离** 架构：
 3. **signal fastpath**：Notification 发送
 4. **vm\_fault fastpath**：页故障处理
 
-**agentrt-linux 落地**：io\_uring 的零拷贝路径对应 IPC fastpath 语义。当满足"固定 buffer + registered ring + 无 fault"条件时，走 io\_uring fastpath（零 syscall）；否则走慢路径（io\_uring enter + fallback）。
+**agentrt-linux 落地（语义分层）**：
+- **Fastpath 模式借鉴**（POINT OF NO RETURN）：agentrt-linux IPC 快路径借鉴 seL4 "12 项前置检查 + 不可逆提交"模式——内核在进入临界区后完成全部前置检查（端点状态、capability 有效性、buffer 已注册、无 fault），全部通过后进入不可逆点，直接切换上下文，避免回退开销。
+- **零拷贝优化（独立命名）**：io\_uring 的固定 buffer + registered ring 路径是**独立的零拷贝优化**，与 seL4 Fastpath 语义不同——seL4 Fastpath 是"批量验证后不可逆提交 + 线程上下文切换"，io_uring 零拷贝是"buffer 共享避免数据拷贝"。两者同名但不同义，**禁止混用**。
+
+**当满足"固定 buffer + registered ring + 无 fault + 端点 Idle + 双方就绪"条件时，走 IPC Fastpath（POINT OF NO RETURN 模式 + io_uring 零拷贝优化）；否则走慢路径（io_uring enter + fallback）。**
 
 ### 6.5 Notification 异步信号
 

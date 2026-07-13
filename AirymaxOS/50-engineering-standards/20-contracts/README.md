@@ -4,11 +4,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**： agentrt-linux（AirymaxOS）OS 层契约规范体系的入口与索引\
 > **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
+> **最后更新**： 2026-07-13\
 > **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **编号权威**： [09-ssot-registry.md §3](../09-ssot-registry.md)
 
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。其中 `contracts.md`（Part III 日志格式契约）为日志格式与传输管道的唯一 SSoT。
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D）。契约规范子目录（2 文档）已通过 B2 seL4 深读 SEL4-01~08 验证 + 6 项新发现设计模式对齐 + [SC] 共享契约层物理宿主 `120-cross-project-code-sharing.md` Tab 8 缩进验证（对齐 OLK-6.6 §1）。IPC 128B 消息头结构体名 `struct airy_ipc_msg_hdr` 与 `include/airymax/ipc.h` 物理宿主对齐，无陈旧路径引用。
 
 ---
 
@@ -403,6 +405,7 @@ flowchart TD
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-07 | 初始版本（agentrt-linux OS 层契约规范总览，含 IRON-9 v2 三层契约分层、4 大契约规范索引、版本管理策略、兼容性保证） |
+| 0.1.1 | 2026-07-13 | Wave 2 v2 Phase D 审查状态声明：B2 seL4 深读 SEL4-01~08 + 6 项新发现设计模式对齐 + [SC] 物理宿主 Tab 8 缩进验证 |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（契约实现与代码同步验证） |
 
 ---

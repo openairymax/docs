@@ -6,7 +6,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **正式全称**：agentrt-linux（AirymaxOS，极境智能体操作系统，简称 AirymaxOS）\
 > **仓库别名**：agentrt-linux（仓库名）\
 > **版本**：0.1.1\
-> **最后更新**：2026-07-06
+> **最后更新**：2026-07-13
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），需求层基础文档已通过审查（Phase B/C/D 验证：需求分层模型与追溯框架与 B1 OLK-6.6 六大编码规范支柱 + B2 seL4 SEL4-01~08 设计思想对齐，需求来源中 seL4 唯一来源声明 ADR-014 已获源码级证据）
 
 ---
 
@@ -33,7 +35,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 项    | 内容                                                          |
 | ---- | ----------------------------------------------------------- |
 | 文档版本 | 0.1.1/ 1.0.1（开发基线）                                  |
-| 最后更新 | 2026-07-06                                                  |
+| 最后更新 | 2026-07-13                                                  |
 | 文档状态 | 维护中                                                         |
 | 文档路径 | `OpenAirymax/docs/AirymaxOS/00-requirements/README.md` |
 | 适用范围 | agentrt-linux 全部 8 个子仓                                      |

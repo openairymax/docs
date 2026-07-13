@@ -4,9 +4,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**： agentrt-linux（AirymaxOS）开发流程工程体系主索引
 > **版本**： 0.1.1
-> **最后更新**： 2026-07-06
+> **最后更新**： 2026-07-13
 > **同源映射**： agentrt 开发流程 + Linux 6.6 内核开发流程（development-process.rst 8 章）
 > **理论根基**： Linux 内核开发流程 + Airymax S-4 涌现性管理 + C-2 增量演化
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），开发流程已通过审查（B1 OLK-6.6 维护者制度 ES-OLK-8 对齐：`MAINTAINERS` 文件 / `get_maintainer.pl` 脚本 / 补丁生命周期 6 阶段均有源码级证据；GAP-02 `get_maintainer.pl` 等价物待 1.0.1 落地）
 
 ---
 

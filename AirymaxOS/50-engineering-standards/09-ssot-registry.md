@@ -417,7 +417,7 @@ OS-<前缀>-<子域>-<NNN>
 
 > **权威定义文档**：130-roadmap/06-acceptance-criteria.md
 >
-> **SSoT 对齐说明**：历史 00-handbook §3.7 与 07-governance §10 中定义的 OS-ACC-001~005 与 130-roadmap 中的 OS-ACC 编号存在语义冲突（同一编号指代不同验收项）。本注册表确认 130-roadmap/06-acceptance-criteria.md 为 OS-ACC 的唯一权威定义文档。00-handbook 与 07-governance 中的 OS-ACC 表应改为引用本注册表。此冲突的彻底消解列入后续工作。
+> **SSoT 对齐说明（v0.2.5 已消解）**：历史 00-handbook §3.7 与 07-governance §10 中定义的 OS-ACC-001~005 与 130-roadmap 中的 OS-ACC 编号存在语义冲突（同一编号指代不同验收项）。现已完成消解：本注册表 §7 确认 130-roadmap/06-acceptance-criteria.md 为 OS-ACC 的唯一权威定义文档；00-handbook §3.7 已改为引用本注册表 §7（见 00-handbook L151）；07-governance §10.6 已改为引用本注册表 §7（见 07-governance L645）。OS-ACC 编号体系单源权威已建立。
 
 ---
 

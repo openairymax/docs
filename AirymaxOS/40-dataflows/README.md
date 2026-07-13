@@ -4,9 +4,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**： agentrt-linux（AirymaxOS）数据流程设计层的总览与索引\
 > **版本**： 0.1.1\
-> **最后更新**： 2026-07-07\
+> **最后更新**： 2026-07-13\
 > **父文档**： [agentrt-linux 总览](../README.md)\
 > **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（syscalls.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
+
+> **审查状态**： Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），数据流程设计层已通过 P0 文档修正验证。Phase B 完成对 seL4 调度 bitmap 倒序索引、preemptionPoint 精细化、三态 IRQ 状态机的源码级深读；Phase D 完成 D5/D6 共 2 项 P0 文档修正，覆盖 vtime 类型修正（`__s32` Q16.16 定点）与 64 字节对齐表述澄清（[SC] 8 字节核心视图 + [IND] 扩展视图）。
 
 ---
 
@@ -93,6 +95,35 @@ agentrt-linux 数据流程设计层聚焦于「数据如何流动」，是「接
 - 性能约束与可观测性
 - 版权声明
 
+### 4.1 Wave 2 v2 Phase D 修复说明（D5/D6）
+
+Phase D 完成 2 项 P0 文档修正，全部落地于 [04-scheduling-flow.md](04-scheduling-flow.md) §14.1 + §16：
+
+| 编号 | 类别 | 修复前（陈旧） | 修复后（对齐源码） | 关键依据 |
+|------|------|---------------|---------------|----------|
+| **D5**（C-A05） | vtime 类型 | `u64`（64 位无符号整数） | `__s32`（Q16.16 定点），通过 `airy_vtime_t` typedef 暴露 | `-mno-80387` 约束（无 FPU 路径）+ seL4 `kernel/timestamp.h` 定点设计 + agentrt atoms/corekern `airy_vtime_t` 同源 |
+| **D6**（C-A06） | 64 字节对齐表述 | "任务描述符 64 字节对齐" | **[SC] 8 字节核心视图**（`magic/prio/_pad/vtime` 4 字段，对齐 SSoT §2.6）+ **[IND] 扩展视图**（见 §6.1，包含调度链/统计等内核态专属字段） | IRON-9 v2 三层模型——[SC] 仅暴露同源核心字段，[IND] 内核态扩展独立 |
+
+**关键澄清**：
+- **D5**：`vtime` 不使用 `u64` 浮点时间戳，而用 `__s32` Q16.16 定点（整数部分 16 bit + 小数部分 16 bit），保证在 `-mno-80387` 编译选项下（无 FPU）仍能进行高精度 vtime 排序与衰减计算。这与 seL4 `kernel/timestamp.h` 的定点设计理念一致，也是 [SC] 共享契约层与 agentrt `airy_vtime_t` 同源的字段。
+- **D6**：64 字节对齐并非"任务描述符整体对齐到 64 字节"——而是 **IRON-9 v2 三层模型的物理隔离**：[SC] 仅暴露 `magic/prio/_pad/vtime` 共 8 字节核心视图（4 字段对齐 4 字节边界），与 agentrt 同源且部分代码共享；[IND] 扩展视图（包含 `scx_dsq` 调度链、`stats` 统计等内核态专属字段）独立实现于 agentrt-linux，不污染 [SC] 契约层。
+
+**[SC] 任务描述符核心视图**（对齐 SSoT §2.6，Tab 8 缩进已通过 D10 验证）：
+
+```c
+/* [SC] 共享契约层：核心字段（4 字段，8 字节，对齐 4 字节边界） */
+struct airy_task_desc {
+    __u32    magic;        /* 0x41524531 ('ARE1') — [SC] 同源 */
+    __u16    prio;         /* 0-139，对齐 MicroCoreRT — [SC] 同源 */
+    uint16_t _pad;         /* 填充至 4 字节对齐 — [SC] 同源 */
+    airy_vtime_t vtime;    /* Q16.16 定点虚拟时间 — [SC] 同源 */
+};
+```
+
+**代码引用**：
+- [file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/40-dataflows/04-scheduling-flow.md](file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/40-dataflows/04-scheduling-flow.md)（§14.1 vtime 类型 + §16 [SC]/[IND] 视图分层）
+- 共享契约头文件：`include/airymax/sched.h`（`airy_vtime_t` + `airy_task_desc` + `airy_vtime_decay()`）
+
 ---
 
 ## 5. 与 agentrt 数据流的关系
@@ -154,6 +185,7 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 | 版本 | 日期 | 变更内容 | 变更人 |
 |---|---|---|---|
 | 0.1.1 | 2026-07-06 | 初始版本，定义 4 大数据流分类矩阵与索引 | 工程规范委员会 |
+| 0.1.1 | 2026-07-13 | Wave 2 v2 Phase B/C/D 源码级深读审查成果落地：D5（vtime `u64` → `__s32` Q16.16 定点）+ D6（64 字节对齐表述澄清为 [SC] 8 字节核心视图 + [IND] 扩展视图） | 工程规范委员会 |
 
 ---
 

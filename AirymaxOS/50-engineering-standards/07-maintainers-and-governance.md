@@ -167,7 +167,7 @@ L:	airymax-dev@airymaxos.com
 S:	Supported
 W:	https://airymaxos.com/docs/subsystems/kernel
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=kernel
-T:	git git@atomgit.com:openairymax/kernel.git
+T:	git https://atomgit.com/openairymax/kernel.git
 F:	kernel/
 H:	atoms/corekern
 V:	agentrt-linux 1.x / Linux 6.6
@@ -179,7 +179,7 @@ L:	airymax-dev@airymaxos.com
 S:	Supported
 W:	https://airymaxos.com/docs/subsystems/services
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=services
-T:	git git@atomgit.com:openairymax/services.git
+T:	git https://atomgit.com/openairymax/services.git
 F:	services/
 H:	daemons
 V:	agentrt-linux 1.x / Linux 6.6
@@ -191,7 +191,7 @@ L:	airymax-security@airymaxos.com
 S:	Supported
 W:	https://airymaxos.com/docs/subsystems/security
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=security
-T:	git git@atomgit.com:openairymax/security.git
+T:	git https://atomgit.com/openairymax/security.git
 F:	security/
 H:	cupolas
 V:	agentrt-linux 1.x / Linux 6.6
@@ -203,7 +203,7 @@ L:	airymax-memory@airymaxos.com
 S:	Maintained
 W:	https://airymaxos.com/docs/subsystems/memory
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=memory
-T:	git git@atomgit.com:openairymax/memory.git
+T:	git https://atomgit.com/openairymax/memory.git
 F:	memory/
 H:	heapstore + memoryrovol
 V:	agentrt-linux 1.x / Linux 6.6
@@ -215,7 +215,7 @@ L:	airymax-cognition@airymaxos.com
 S:	Maintained
 W:	https://airymaxos.com/docs/subsystems/cognition
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=cognition
-T:	git git@atomgit.com:openairymax/cognition.git
+T:	git https://atomgit.com/openairymax/cognition.git
 F:	cognition/
 H:	coreloopthree + frameworks
 V:	agentrt-linux 1.x / Linux 6.6
@@ -227,7 +227,7 @@ L:	airymax-cloudnative@airymaxos.com
 S:	Maintained
 W:	https://airymaxos.com/docs/subsystems/cloudnative
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=cloudnative
-T:	git git@atomgit.com:openairymax/cloudnative.git
+T:	git https://atomgit.com/openairymax/cloudnative.git
 F:	cloudnative/
 H:	gateway + sdk
 V:	agentrt-linux 1.x / Linux 6.6
@@ -239,7 +239,7 @@ L:	airymax-system@airymaxos.com
 S:	Supported
 W:	https://airymaxos.com/docs/subsystems/system
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=system
-T:	git git@atomgit.com:openairymax/system.git
+T:	git https://atomgit.com/openairymax/system.git
 F:	system/
 H:	commons
 V:	agentrt-linux 1.x / Linux 6.6
@@ -251,7 +251,7 @@ L:	airymax-tests@airymaxos.com
 S:	Maintained
 W:	https://airymaxos.com/docs/subsystems/tests
 B:	https://gitlab.airymaxos.com/agentrt-linux/-/issues?label=tests
-T:	git git@atomgit.com:openairymax/tests-linux.git
+T:	git https://atomgit.com/openairymax/tests-linux.git
 F:	tests-linux/
 H:	全模块测试
 V:	agentrt-linux 1.x / Linux 6.6

@@ -26,9 +26,9 @@
 ## 3. 独立仓库可行性
 
 **结论**: 高度可行。
-- `Docs/` 本身已是独立 git submodule（`git@atomgit.com:openairymax/docs.git`）
+- `Docs/` 本身已是独立 git submodule（`https://atomgit.com/openairymax/docs.git`）
 - `30-interfaces/05-runtime-interfaces/` 作为标准容器，可独立发布
-- 未来可拆分为独立 `are-standards` 仓库（`git@atomgit.com:openairymax/are-standards.git`）
+- 未来可拆分为独立 `are-standards` 仓库（`https://atomgit.com/openairymax/are-standards.git`）
 - 参考实现保留在 Airymax 主仓库，标准文档独立发布
 
 ## 4. 标准化路线图

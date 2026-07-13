@@ -245,7 +245,7 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 | 层次 | 共享程度 | 本文档涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件 `include/airymax/{sched,ipc,bpf_struct_ops,memory_types,security_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/airymax/`，其他子仓通过 `-I` 引用 |
+| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件 `include/uapi/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `include/uapi/airymax/`（Linux UAPI 标准路径），其他子仓通过 `-I` 引用。bpf_struct_ops.h 为补充共享文件，非 [SC] 核心头文件 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_ext/io_uring/eBPF） |
 

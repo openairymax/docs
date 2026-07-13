@@ -64,13 +64,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 6 个 \[SC] 头文件清单
 
-\[SC] 层包含**6 个**共享头文件，存放于 `include/airymax/` 目录，两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**：
+\[SC] 层包含**6 个**共享头文件，存放于 `include/airymax/` 目录（完整内核路径 `include/uapi/airymax/`，对齐 Linux UAPI 标准），两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**：
 
 | 序号 | 文件                  | 共享内容                                                                                                    | magic 值               | 落地路径                                |
 | -- | ------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------- |
 | 1  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
-| 2  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型 + Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
-| 3  | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符                     | —                     | `include/airymax/cognition_types.h` |
+| 2  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
+| 3  | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符 + **统一错误码类型（`airy_err_t` = `int32_t`）** | —                     | `include/airymax/cognition_types.h` |
 | 4  | `sched.h`           | SCHED\_EXT 约束（复用 7）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL                 | `0x41475453` ('AGTS') | `include/airymax/sched.h`           |
 | 5  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/airymax/ipc.h`             |
 | 6  | `syscalls.h`        | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
@@ -78,7 +78,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 **补充内容**（不属于上述 6 个头文件，但两端共享语义）：
 
 - capability 令牌格式
-- 错误码（`airy_err_t`）
+- 错误码具体值（13 个 `AIRY_E*` 宏，`airy_err_t` 类型定义见 cognition_types.h）
 - 规则编号体系（IRON/BAN/STD/ACC）
 - 五维正交 24 原则
 

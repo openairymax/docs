@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **正式全称**：agentrt-linux（极境智能体操作系统，英文名：AirymaxOS）\
 > **仓库别名**：agentrt-linux（仓库名）\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-11\
+> **最后更新**：2026-07-13\
 > **文档维护**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）
 
 ***
@@ -24,11 +24,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 设计三大支柱
 
-| 支柱                 | 思想                                                          | 理论根基                                  |
-| ------------------ | ----------------------------------------------------------- | ------------------------------------- |
-| **微内核设计思想**        | 最小化特权态代码、服务用户态化、消息传递通信、capability 安全                        | seL4（核心参考）                            |
-| **Linux 6.6 内核基线** | 基于 Linux 6.6 内核，sched\_ext + eBPF + io\_uring + Rust 微内核化改造 | Linux 内核工程基线                          |
-| **Airymax 同源性**    | 与 agentrt 共享设计理念，天然适配                                       | agentrt atoms/cupolas/coreloopthree 等 |
+| 支柱                 | 思想                                                          | 理论根基                                  | 参考来源                                                |
+| ------------------ | ----------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| **微内核设计思想**        | 最小化特权态代码、服务用户态化、消息传递通信、capability 安全                        | seL4（核心参考，ADR-014 唯一来源）               | seL4 源码（`01Reference/seL4-master`）    |
+| **Linux 6.6 内核基线** | 基于 Linux 6.6 内核，sched\_ext + eBPF + io\_uring + Rust 微内核化改造 | Linux 内核工程基线（openEuler OLK-6.6 标杆）    | Linux 6.6 内核源码（`01Reference/kernel-OLK-6.6`） |
+| **Airymax 同源性**    | 与 agentrt 共享设计理念，天然适配                                       | agentrt atoms/cupolas/coreloopthree 等 | IRON-9 v2 三层模型（\[SC]/\[SS]/\[IND]）落地                   |
 
 ## 3. 子仓清单（8 个）
 
@@ -128,15 +128,15 @@ docs/AirymaxOS/
 
 | 仓库   | URL                                             |
 | ---- | ----------------------------------------------- |
-| 管理仓  | `git@atomgit.com:openairymax/agentrt-linux.git` |
-| 子仓 1 | `git@atomgit.com:openairymax/kernel.git`        |
-| 子仓 2 | `git@atomgit.com:openairymax/services.git`      |
-| 子仓 3 | `git@atomgit.com:openairymax/security.git`      |
-| 子仓 4 | `git@atomgit.com:openairymax/memory.git`        |
-| 子仓 5 | `git@atomgit.com:openairymax/cognition.git`     |
-| 子仓 6 | `git@atomgit.com:openairymax/cloudnative.git`   |
-| 子仓 7 | `git@atomgit.com:openairymax/system.git`        |
-| 子仓 8 | `git@atomgit.com:openairymax/tests-linux.git`   |
+| 管理仓  | `https://atomgit.com/openairymax/agentrt-linux.git` |
+| 子仓 1 | `https://atomgit.com/openairymax/kernel.git`        |
+| 子仓 2 | `https://atomgit.com/openairymax/services.git`      |
+| 子仓 3 | `https://atomgit.com/openairymax/security.git`      |
+| 子仓 4 | `https://atomgit.com/openairymax/memory.git`        |
+| 子仓 5 | `https://atomgit.com/openairymax/cognition.git`     |
+| 子仓 6 | `https://atomgit.com/openairymax/cloudnative.git`   |
+| 子仓 7 | `https://atomgit.com/openairymax/system.git`        |
+| 子仓 8 | `https://atomgit.com/openairymax/tests-linux.git`   |
 
 ## 6. 版本规划
 

@@ -4,10 +4,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系主索引\
 > **版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**：2026-07-13\
 > **优先级**：P1（5 文档）\
 > **同源映射**：agentrt ABI 稳定性 + Linux 6.6 KABI / ABI 兼容性体系\
 > **理论根基**：Linux 内核兼容性哲学 + Airymax K-2 接口契约化 + C-2 增量演化
+
+> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），兼容性已通过审查（IRON-9 v2 [SC]/[SS]/[IND] 三层模型：[SC] 共享契约层 ABI/KABI 稳定性契约、[SS] 同源语义层 agentrt ABI 同源、[IND] 独立实现层 kernel 系统调用 + KABI 白名单）
 
 ---
 

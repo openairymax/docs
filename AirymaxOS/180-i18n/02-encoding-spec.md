@@ -530,7 +530,7 @@ size_t airy_token_count(const char *prompt, size_t byte_len)
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <airymax/airy_utf8.h>
-#include <airymax/ipc_msg_hdr.h>
+#include <airymax/ipc.h>
 
 /* 设置 IPC 消息头的 trace_id（UTF-8 安全复制） */
 int airy_ipc_set_trace_id(struct airy_ipc_msg_hdr *hdr,
