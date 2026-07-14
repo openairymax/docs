@@ -59,7 +59,7 @@ agentrt 与 agentrt-linux 共用的工程标准规范（符号链接至 AirymaxO
 - [**工程标准手册**](50-engineering-standards/00-engineering-standards-handbook.md) — 总览与导航
 - [**编码风格**](50-engineering-standards/10-coding-style/) — C/C++/Rust/Go/Python/JS 编码规范
 - [**跨项目代码共享**](50-engineering-standards/120-cross-project-code-sharing.md) — IRON-9 v2 [SC] 共享契约层
-- [**合规检查**](50-engineering-standards/08-compliance-checklist.md) — 17 项检查规则
+- [**合规检查**](50-engineering-standards/05-development-process.md) — 17 项检查规则（Part III 合规检查清单）
 
 ### 6️⃣ 应用开发（140-application-development）
 

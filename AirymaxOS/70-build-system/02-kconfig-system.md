@@ -58,7 +58,7 @@ flowchart LR
 
 关键点：Kconfig 不仅求解宏值，还求解**依赖闭包**——当 `select` 强制选中某选项时，其依赖必须同时满足；当 `depends on` 不满足时选项不可见。`syncconfig` 把 `.config` 转化为 make 侧（`auto.conf`）、C 侧（`autoconf.h`）与依赖时间戳（`include/config/*.h`）三套产物，使配置变化能被 `if_changed_dep`/`fixdep` 捕获。
 
-- **OS-STD-201**：agentrt-linux 内核态配置必须以 Kconfig 为唯一描述手段，禁止用 `Makefile` 的 `ifeq`/环境变量绕过 Kconfig 做特性开关（对齐 K-4 可插拔策略）。
+- **OS-KER-030**：agentrt-linux 内核态配置必须以 Kconfig 为唯一描述手段，禁止用 `Makefile` 的 `ifeq`/环境变量绕过 Kconfig 做特性开关（对齐 K-4 可插拔策略）。
 - **OS-BUILD-021**：所有 `CONFIG_*` 宏必须由 Kconfig 求解并写入 `auto.conf`，禁止在 `Makefile` 中手动 `CONFIG_XXX := y`；手动赋值会绕过依赖求解导致配置不一致。
 
 ---
@@ -580,7 +580,7 @@ graph LR
 | OS-KER-027 | Kconfig.airymaxos 仅聚合跨子系统特性 | MUST |
 | OS-KER-028 | 新 choice/menuconfig 须用工具实际验证 | MUST |
 | OS-KER-029 | airymaxos-base.config 变更经评审 | MUST |
-| OS-STD-201 | 内核态配置以 Kconfig 为唯一手段 | MUST |
+| OS-KER-030 | 内核态配置以 Kconfig 为唯一手段 | MUST |
 | OS-STD-143 | 新 CONFIG 选项默认 off（沿用） | MUST |
 | OS-STD-144 | 新 CONFIG 选项有 help 文本（沿用） | MUST |
 | OS-STD-145 | 相关选项 menuconfig+if 分组（沿用） | MUST |

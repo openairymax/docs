@@ -131,7 +131,7 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 | OS-ACC-037 ★ | ABI 检查工具集成 | `grep -rE "abi-check\|libabigail" docs/AirymaxOS/70-build-system/` | ≥1 处 | P0 | M1 |
 | OS-ACC-038 | 12 daemons 集成定义 | `grep -rE "12 daemons\|daemons 集成" docs/AirymaxOS/` | ≥2 处 | P0 | M1 |
 | OS-ACC-039 | 同源 API 映射表 | `grep -rE "同源 API\|MicroCoreRT\|Cupolas\|MemoryRovol\|CoreLoopThree" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
-| OS-ACC-040 | airymaxos- 子仓前缀 | `grep -rE "airymaxos-" docs/AirymaxOS/` | ≥8 处（8 子仓） | P0 | M1 |
+| OS-ACC-040 | 8 子仓裸名（禁止 airymaxos- 前缀） | `grep -rE "github.com/agentrt-linux/airymaxos-" docs/AirymaxOS/` | 0 处 | P0 | M1 |
 
 ---
 

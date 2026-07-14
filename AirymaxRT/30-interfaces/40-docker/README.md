@@ -85,7 +85,7 @@ docker exec agentrt-gateway gateway_d --help
 # 挂载源码目录
 docker run -it --rm \
   -v /path/to/Airymax:/workspace/Airymax \
-  -w /workspace/AgentRT/build \
+  -w /workspace/agentrt/build \
   agentrt:latest bash
 
 # 在容器内执行构建命令
@@ -106,7 +106,7 @@ services:
       dockerfile: docs/AirymaxRT/30-interfaces/40-docker/Dockerfile.dev
     volumes:
       - ../..:/workspace/Airymax
-    working_dir: /workspace/AgentRT/build
+    working_dir: /workspace/agentrt/build
     command: bash -c "cmake .. && make -j$(nproc) && ctest"
 ```
 
@@ -494,7 +494,7 @@ docker-compose logs --tail=50
 ## 📞 技术支持
 
 - **Docker Hub**: https://hub.docker.com/r/spharx/agentrt
-- **GitHub Issues**: https://github.com/spharx/AgentRT/issues?q=is%3Aissue+is%3Aopen+label%3Adocker
+- **GitHub Issues**: https://github.com/spharx/agentrt/issues?q=is%3Aissue+is%3Aopen+label%3Adocker
 - **文档**: https://docs.agentrt.dev/docker
 
 ---

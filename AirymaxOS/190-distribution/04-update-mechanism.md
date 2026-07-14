@@ -612,16 +612,16 @@ echo "[完成] 12 daemon 滚动重启完成"
 
 ## 7. 错误码体系对接
 
-更新机制错误码纳入 agentrt-linux 统一错误码体系：
+更新机制错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/airymax/error.h`）：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|
-| AIRY_E_UPDATE_LIVEPATCH | -320 | livepatch 应用失败 |
-| AIRY_E_UPDATE_OSTREE | -321 | rpm-ostree 更新失败 |
-| AIRY_E_UPDATE_ROLLBACK | -322 | 回滚失败 |
-| AIRY_E_UPDATE_HEALTH | -323 | 健康检查失败 |
-| AIRY_E_UPDATE_MIGRATE | -324 | 数据迁移失败 |
-| AIRY_E_UPDATE_DEP | -325 | 依赖冲突 |
+| AIRY_DIST_EUPDATE_LIVEPATCH | -1010 | livepatch 应用失败 |
+| AIRY_DIST_EUPDATE_OSTREE | -1011 | rpm-ostree 更新失败 |
+| AIRY_DIST_EUPDATE_ROLLBACK | -1012 | 回滚失败 |
+| AIRY_DIST_EUPDATE_HEALTH | -1013 | 健康检查失败 |
+| AIRY_DIST_EUPDATE_MIGRATE | -1014 | 数据迁移失败 |
+| AIRY_DIST_EUPDATE_DEP | -1015 | 依赖冲突 |
 
 集中错误处理示例：
 
@@ -637,13 +637,13 @@ int airy_update_atomic(const char *target_version)
 
 	ret = airy_update_ostree_upgrade(target_version);
 	if (ret < 0) {
-		ret = -AIRY_E_UPDATE_OSTREE;
+		ret = -AIRY_DIST_EUPDATE_OSTREE;
 		goto out_err;
 	}
 
 	ret = airy_update_reboot_and_check();
 	if (ret < 0) {
-		ret = -AIRY_E_UPDATE_HEALTH;
+		ret = -AIRY_DIST_EUPDATE_HEALTH;
 		goto out_rollback;
 	}
 	return 0;

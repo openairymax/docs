@@ -357,7 +357,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | `airy_` 前缀 | agentrt 命名空间（同源） | airy_sys_task_submit / airy_ipc_send |
 | `<service_name>_d` 后缀 | 守护进程命名 | llm_d / market_d / monit_d / tool_d / sched_d |
 | `module_action_object()` | 函数命名 | cognition_submit_task / memory_search_vector |
-| 大写_下划线 | 常量命名 | AIRY_EOK / AIRY_IPC_MSG_HDR_SIZE |
+| 大写_下划线 | 常量命名 | AIRY_EOK / AIRY_IPC_HDR_SZ |
 | 名词结构 | 类型命名 | struct airy_task_desc / struct airy_ipc_msg_hdr |
 
 ### 5.6 E-6 错误可追溯原则
@@ -369,7 +369,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 落地子仓/模块 | 错误追溯机制 | 实现要点 |
 |---------------|--------------|----------|
 | security 审计哈希链 | 安全错误追溯 | SHA-256 哈希链不可篡改日志 |
-| services 结构化错误码 | 错误码体系 | airy_errno.h 对齐 errno |
+| services 结构化错误码 | 错误码体系 | error.h SSoT 对齐 errno |
 | services 错误链 | 错误上下文传递 | airy_err_wrap 添加模块名/函数名/行号 |
 | services OpenTelemetry | 调用栈追溯 | 分布式追踪 + 完整调用链 |
 | tests-linux 错误注入测试 | 错误恢复验证 | 故障注入 + 错误恢复测试 |

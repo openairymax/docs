@@ -8,8 +8,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**： agentrt E-2 可观测性原则 + Linux 6.6 ftrace/eBPF/perf
 > **理论根基**： Linux 内核可观测性 + Airymax E-2 可观测性 + C-3 记忆卷载
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），可观测性已通过审查（B1 OLK-6.6 对齐：`EXPORT_TRACEPOINT` 导出符号机制、`lockdep_assert` 编译时锁不变式断言均有源码级证据；C-D06/C-D08 工程标准差距移交 1.0.1 M1+）
-
 ---
 
 ## 1. 模块定位

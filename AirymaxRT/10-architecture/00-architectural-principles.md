@@ -51,7 +51,7 @@ Airymax 架构设计基于**体系并行（Multibody Cybernetic Intelligent Syst
 3. **保证演进一致**：确保系统在长期演进中保持架构完整性
 4. **提供验证标准**：为代码审查和架构评审提供客观依据
 
-Airymax 是一个**驱动多智能体协作的操作系统**：
+Airymax 是一个**驱动多智能体协作的运行时平台**（用户态微核心，非操作系统）：
 - “纯净”微核心是项目的框架；
 - “三层认知循环”认知循环是“神经系统”；
 - “记忆卷载”系统是智能的经验基底；
@@ -149,7 +149,7 @@ Airymax 采用严格的层次分解：
 
 ```
 +---------------------------------------------+
-|              agentrt/daemon/ 用户态服务               |
+|              agentrt/daemons/ 用户态服务               |
 |     llm_d · market_d · monit_d · tool_d     |
 +---------------------------------------------+
 |             agentrt/gateway/ 网关层                  |
@@ -199,7 +199,7 @@ Airymax 遵循严格的微核心架构哲学：
 
 - **`corekern/`** 仅包含**六大子系统**：IPC（进程间通信）、Mem（内存管理含池化与守卫）、Task（任务调度含 POSIX/Windows 双平台）、Time（时间服务含时钟事件与定时器），以及 OOM 处理、可观测性、错误处理。总计 7 个头文件、13 个源文件——这是整个系统的最小内核。
 - **`coreloopthree/`** 和 **`memoryrovol/`** 作为内核子系统，提供认知循环和记忆演化能力。
-- 所有用户态服务（LLM、市场、监控、调度、工具）运行在 `agentrt/daemon/` 中，通过 `syscall/` 的标准化接口与内核交互。
+- 所有用户态服务（LLM、市场、监控、调度、工具）运行在 `agentrt/daemons/` 中，通过 `syscall/` 的标准化接口与内核交互。
 - 安全机制集中在 `agentrt/cupolas/` 中，与内核逻辑解耦。
 
 这种分离保证了内核故障不会影响服务的可替换性，服务崩溃也不会拖垮内核稳定性。
@@ -426,7 +426,7 @@ cupolas.h         --> 只依赖 agentrt.h（corekern）
 **实施规则**：
 
 1. 新模块的头文件只能 `#include` 同层或下层的接口
-2. 禁止从 `agentrt/daemon/` 直接调用 `agentrt/atoms/` 内部函数（必须通过 `syscalls.h`）
+2. 禁止从 `agentrt/daemons/` 直接调用 `agentrt/atoms/` 内部函数（必须通过 `syscalls.h`）
 3. 禁止从 `agentrt/atoms/` 内部模块之间直接耦合（必须通过 `corekern/` 的 IPC）
 
 **验证方法**：
@@ -505,7 +505,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 **实施规则**：
 
 1. `corekern/` 新增接口必须通过架构委员会审批
-2. 新功能优先考虑作为 `agentrt/daemon/` 守护进程实现
+2. 新功能优先考虑作为 `agentrt/daemons/` 守护进程实现
 3. 内核接口必须是泛化的——不包含任何业务语义
 
 ### 3.2 原则 K-2：接口契约化原则
@@ -561,11 +561,11 @@ AIRY_API void airy_cognition_destroy(airy_cognition_engine_t* engine);
 **在 Airymax 中的体现**：
 
 ```
-agentrt/daemon/llm_d/     --> 通过 airy_sys_* 系统调用与内核通信
-agentrt/daemon/market_d/  --> 通过 airy_sys_* 系统调用与内核通信
-agentrt/daemon/monit_d/   --> 通过 airy_sys_* 系统调用与内核通信
-agentrt/daemon/sched_d/   --> 通过 airy_sys_* 系统调用与内核通信
-agentrt/daemon/tool_d/    --> 通过 airy_sys_* 系统调用与内核通信
+agentrt/daemons/llm_d/     --> 通过 airy_sys_* 系统调用与内核通信
+agentrt/daemons/market_d/  --> 通过 airy_sys_* 系统调用与内核通信
+agentrt/daemons/monit_d/   --> 通过 airy_sys_* 系统调用与内核通信
+agentrt/daemons/sched_d/   --> 通过 airy_sys_* 系统调用与内核通信
+agentrt/daemons/tool_d/    --> 通过 airy_sys_* 系统调用与内核通信
 ```
 
 系统调用接口（`syscalls.h`）提供了统一的抽象：
@@ -916,28 +916,31 @@ R(t) = e^(-t/tau)
 
 **在 Airymax 中的体现**：
 
-**错误码体系（`error.h`）**：
+**错误码体系（`agentrt/commons/utils/error/include/error.h` + `agentrt/commons/include/airy_types.h`，SSoT 权威源）**：
+
+> **SSoT 声明**：错误码权威定义位于 `agentrt/commons/utils/error/include/error.h`（`AIRY_ERR_*` 扩展码）和 `agentrt/commons/include/airy_types.h`（`airy_err_t` 类型 + `AIRY_E*` POSIX 码）。`airymax/error.h` 为规划中的 [SC] 共享路径，当前尚未创建。`airy_err_t` 类型定义见 `airy_types.h:41`。本节示例必须与 `docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md` §2.5（方案 A：POSIX errno 负值）逐字节一致。
 
 ```c
-typedef enum {
-    AIRY_EOK = 0,                  /* 成功 */
-    AIRY_EINVAL = EINVAL,         /* 无效参数 */
-    AIRY_ENOMEM = ENOMEM,         /* 内存不足 */
-    AIRY_EPERM = EPERM,           /* 权限不足 */
-    AIRY_ETIMEOUT = ETIMEDOUT,   /* 超时 */
-    AIRY_EBUSY = EBUSY,           /* 资源忙 */
-    AIRY_ENOENT = ENOENT,         /* 不存在 */
-    AIRY_EEXIST = EEXIST,         /* 已存在 */
-    AIRY_EIO = EIO,               /* I/O 错误 */
-    AIRY_EFAULT = EFAULT,         /* 地址错误 */
-    AIRY_EAGAIN = EAGAIN,         /* 重试 */
-    AIRY_EMSGSIZE = EMSGSIZE,     /* 消息过大 */
-    AIRY_EPROTO = EPROTO,         /* 协议错误 */
-    AIRY_ENOSYS = ENOSYS,         /* 功能未实现 */
-    AIRY_EDEADLK = EDEADLK,       /* 死锁 */
-    AIRY_EOVERFLOW = EOVERFLOW,   /* 溢出 */
-    AIRY_ELAST = 255              /* 最后一个错误码 */
-} airy_err_t;
+/* agentrt/commons/include/airy_types.h —— airy_err_t 类型 + AIRY_E* POSIX 码（权威源） */
+typedef int32_t airy_err_t;        /* 错误码类型（int32_t），定义于 airy_types.h:41 */
+
+#define AIRY_EOK        0          /* 成功 */
+#define AIRY_EPERM      (-1)       /* 权限不足（对齐 POSIX EPERM） */
+#define AIRY_ENOENT     (-2)       /* 不存在（对齐 POSIX ENOENT） */
+#define AIRY_EIO        (-5)       /* I/O 错误（对齐 POSIX EIO） */
+#define AIRY_EAGAIN     (-11)      /* 重试（对齐 POSIX EAGAIN） */
+#define AIRY_ENOMEM     (-12)      /* 内存不足（对齐 POSIX ENOMEM） */
+#define AIRY_EACCESS    (-13)      /* 权限拒绝（对齐 POSIX EACCES） */
+#define AIRY_EFAULT     (-14)      /* 地址错误（对齐 POSIX EFAULT） */
+#define AIRY_EBUSY      (-16)      /* 资源忙（对齐 POSIX EBUSY） */
+#define AIRY_EEXIST     (-17)      /* 已存在（对齐 POSIX EEXIST） */
+#define AIRY_EINVAL     (-22)      /* 无效参数（对齐 POSIX EINVAL） */
+#define AIRY_ENOSYS     (-38)      /* 功能未实现（对齐 POSIX ENOSYS） */
+#define AIRY_EDEADLK    (-35)      /* 死锁（对齐 POSIX EDEADLK） */
+#define AIRY_EMSGSIZE   (-90)      /* 消息过大（对齐 POSIX EMSGSIZE） */
+#define AIRY_EPROTO     (-71)      /* 协议错误（对齐 POSIX EPROTO） */
+#define AIRY_EOVERFLOW  (-75)      /* 溢出（对齐 POSIX EOVERFLOW） */
+#define AIRY_ETIMEDOUT  (-110)     /* 超时（对齐 POSIX ETIMEDOUT） */
 ```
 
 **错误链（Error Chaining）**：
@@ -1513,10 +1516,10 @@ python scripts/check_error_i18n.py --lang zh-CN,en-US
 
 | 引用文档 | 关系说明 |
 |---------|---------|
-| [体系并行论](00-basic-theories/01-mcis-cn.md) | 本文档的核心理论框架，五维正交系统的理论基础 |
-| [认知层理论](00-basic-theories/02-cognition-design-cn.md) | 原则 C-1、C-2 的理论基础 |
-| [记忆层理论](00-basic-theories/03-memory-design-cn.md) | 原则 C-3、C-4 的理论基础 |
-| [设计原则](00-basic-theories/04-design-principles-cn.md) | 本文档的哲学前身 |
+| [体系并行论](../00-requirements/01-mcis-cn.md) | 本文档的核心理论框架，五维正交系统的理论基础 |
+| [认知层理论](../00-requirements/02-cognition-design-cn.md) | 原则 C-1、C-2 的理论基础 |
+| [记忆层理论](../00-requirements/03-memory-design-cn.md) | 原则 C-3、C-4 的理论基础 |
+| [设计原则](../00-requirements/04-design-principles-cn.md) | 本文档的哲学前身 |
 | [微核心架构（MicroCoreRT）](10-architecture/04-microcorert.md) | 原则 K-1、K-3 的技术实现 |
 | [核心循环架构](10-architecture/02-coreloopthree.md) | 原则 C-1、C-2、S-3 的技术实现 |
 | [记忆系统架构](10-architecture/03-memoryrovol.md) | 原则 C-3、C-4 的技术实现 |

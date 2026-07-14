@@ -504,7 +504,7 @@ typedef struct __attribute__((packed)) {
 |----|------|------|------|
 | 成功 | 0 | `AIRY_EOK` | `0` |
 | 通用 | -1 ~ -99 | 通用错误 | `AIRY_EINVAL=-2` |
-| 系统 | -100 ~ -199 | 系统级 | `AIRY_ETIMEOUT=-1004` |
+| 系统 | -100 ~ -199 | 系统级 | `AIRY_ETIMEDOUT=-1004` |
 | 内存 | -1100 ~ -1199 | 内存错误 | `AIRY_ENOMEM=-1100` |
 | IPC | -1200 ~ -1299 | IPC 错误 | `AIRY_EMSGSIZE=-1201` |
 | 安全 | -1300 ~ -1399 | 安全错误 | `AIRY_EPERM=-1302` |

@@ -196,7 +196,7 @@ int airy_dag_schedule(struct airy_dag_workflow *wf)
 
 	/* 若本超步无就绪节点且仍有 PENDING，说明存在环路或死锁 */
 	if (ready_count == 0 && airy_dag_has_pending(wf))
-		return -AIRY_EDAG_DEADLOCK;
+		return -AIRY_EXEC_EDAG_DEADLOCK;
 
 	return ready_count;
 }
@@ -476,14 +476,14 @@ int airy_consensus_reach(struct airy_consensus_session *session)
 
 	switch (session->strategy) {
 	case AIRY_MAC_CONSENSUS_MAJORITY:
-		return yes > total / 2 ? 0 : -AIRY_ENOCONSENSUS;
+		return yes > total / 2 ? 0 : -AIRY_EXEC_ENOCONSENSUS;
 	case AIRY_MAC_CONSENSUS_UNANIMOUS:
-		return no == 0 ? 0 : -AIRY_ENOCONSENSUS;
+		return no == 0 ? 0 : -AIRY_EXEC_ENOCONSENSUS;
 	case AIRY_MAC_CONSENSUS_WEIGHTED:
 		return airy_weighted_vote(session);
 	case AIRY_MAC_CONSENSUS_LEADER_VETO:
 		return session->votes[0].leader_veto ?
-		       -AIRY_ENOCONSENSUS : 0;
+		       -AIRY_EXEC_ENOCONSENSUS : 0;
 	}
 	return -AIRY_EINVAL;
 }
@@ -522,13 +522,16 @@ int airy_delegation_dispatch(uint32_t master, uint32_t slave,
 	struct airy_ipc_msg_hdr hdr = {0};
 	int ret;
 
-	hdr.magic = 0x41524531;
-	hdr.version = 1;
-	hdr.type = AIRY_IPC_TYPE_REQUEST;
-	hdr.src_agent_id = master;
-	hdr.dst_agent_id = slave;
-	hdr.payload_len = sizeof(*task);
-	hdr.trace_id = task->trace_id;
+	/* 填充 128B 消息头（SSoT Layout C，无 version/type 字段） */
+	hdr.magic        = AIRY_IPC_MAGIC;        /* 0x41524531 */
+	hdr.opcode       = AIRY_IPC_OP_SEND;      /* SEND 操作码 */
+	hdr.flags        = 0;                     /* 默认阻塞模式 */
+	hdr.trace_id      = task->trace_id;
+	hdr.timestamp_ns  = ktime_get_real_ns();  /* CLOCK_REALTIME 纳秒 */
+	hdr.src_task      = master;               /* 源任务 ID（u64） */
+	hdr.dst_task      = slave;                /* 目标任务 ID（u64） */
+	hdr.payload_len   = sizeof(*task);
+	/* payload_type（REQUEST）由 payload 首字段携带，不在消息头中 */
 
 	/* 通过 io_uring 提交委托请求 */
 	ret = airy_ipc_send(&hdr, task, sizeof(*task));
@@ -536,8 +539,7 @@ int airy_delegation_dispatch(uint32_t master, uint32_t slave,
 		return ret;
 
 	/* 主 Agent 阻塞等待从 Agent 响应（wait_event_interruptible） */
-	return airy_ipc_wait_response(master, hdr.seq,
-					 task->trace_id, 5000);
+	return airy_ipc_wait_response(master, hdr.trace_id, 5000);
 }
 ```
 

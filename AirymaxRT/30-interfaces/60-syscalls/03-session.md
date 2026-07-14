@@ -163,7 +163,7 @@ typedef enum {
 ## 注意事项
 
 1. **输出所有权**：所有 `out_*` 参数由调用者通过 `airy_sys_free()` 释放。
-2. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+2. **错误码**：返回值使用 [error.h](../../agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
 3. **系统调用初始化**：使用会话相关 API 前需调用 `airy_syscalls_init()`。
 4. **会话 ID 格式**：返回的会话 ID 为字符串类型，由系统内部生成。
 
@@ -176,7 +176,7 @@ typedef enum {
 - [记忆管理系统调用](memory.md)
 - [Agent 管理系统调用](agent.md)
 - [架构设计：CoreLoopThree 认知循环](../../10-architecture/02-coreloopthree.md)
-- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
+- [错误码体系](../../agentrt/commons/utils/error/include/error.h)
 
 ---
 

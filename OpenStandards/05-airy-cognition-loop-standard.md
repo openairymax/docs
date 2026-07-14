@@ -349,7 +349,7 @@ int airy_cog_loop_init(airy_cog_context_t *ctx,
  *   0:                  阶段完成
  *   -AIRY_EINVAL:   非法状态
  *   -AIRY_EBUDGET:  Token 预算耗尽
- *   -AIRY_ETIMEOUT: 超过 deadline
+ *   -AIRY_ETIMEDOUT: 超过 deadline
  */
 int airy_cog_loop_step(airy_cog_context_t *ctx,
                           const void *input, void *output);
@@ -409,7 +409,7 @@ int airy_cog_register_phase(airy_cog_phase_t phase,
 | `AIRY_EOK` | 0 | 成功 |
 | `AIRY_EINVAL` | -2 | 参数非法（含非法状态转移） |
 | `AIRY_EBUDGET` | -1004 | Token 预算耗尽 |
-| `AIRY_ETIMEOUT` | -1004 | 超过 deadline |
+| `AIRY_ETIMEDOUT` | -1004 | 超过 deadline |
 | `AIRY_ECog_TIMEOUT` | -1701 | 认知处理超时 |
 | `AIRY_EMODEL` | -1702 | 模型调用失败 |
 | `AIRY_EPHASE` | -1703 | 阶段处理函数未注册 |
@@ -459,7 +459,7 @@ while (ctx.current_phase != /* terminated */ 99) {
         fprintf(stderr, "Token 预算耗尽\n");
         break;
     }
-    if (rc == -AIRY_ETIMEOUT) {
+    if (rc == -AIRY_ETIMEDOUT) {
         fprintf(stderr, "超时\n");
         break;
     }

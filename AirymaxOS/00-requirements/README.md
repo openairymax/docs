@@ -8,15 +8,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**：0.1.1\
 > **最后更新**：2026-07-13
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），需求层基础文档已通过审查（Phase B/C/D 验证：需求分层模型与追溯框架与 B1 OLK-6.6 六大编码规范支柱 + B2 seL4 SEL4-01~08 设计思想对齐，需求来源中 seL4 唯一来源声明 ADR-014 已获源码级证据）
-
 ---
 
 ## 1. 文档定位说明
 
 本文档（`00-requirements/README.md`）是 agentrt-linux 需求分析体系的**顶层纲领**，承担三项核心职责：
 
-1. **统一需求语言**：为 agentrt-linux 8 个子仓（kernel / services / security / memory / cognition / cloudnative / system / tests）提供一致的需求分类、编号与追溯框架。
+1. **统一需求语言**：为 agentrt-linux 8 个子仓（kernel / services / security / memory / cognition / cloudnative / system / tests-linux）提供一致的需求分类、编号与追溯框架。
 2. **定义需求分层**：将 agentrt-linux 的全部需求自顶向下分解为「业务需求 → 功能需求 → 非功能需求」三层，确保从用户场景到工程指标的可追溯性。
 3. **链接下游设计**：作为需求层与架构设计层、模块设计层、接口设计层、数据流程设计层之间的桥梁，建立"需求 → 设计 → 实现 → 验证"的完整闭环。
 

@@ -16,7 +16,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 - [1. 设计目标与背景](#1-设计目标与背景)
 - [2. 协议版本演进模型](#2-协议版本演进模型)
-- [3. 128B 消息头版本字段](#3-128b-消息头版本字段)
+- [3. 128B 消息头版本识别](#3-128b-消息头版本识别)
 - [4. 运行时协商协议](#4-运行时协商协议)
 - [5. 版本兼容矩阵](#5-版本兼容矩阵)
 - [6. 降级策略](#6-降级策略)
@@ -85,7 +85,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
 
 ### 2.3 版本号编码
 
-协议版本号编码在 128B 消息头的 `version` 字段（uint16_t）：
+协议版本号不编码在 128B 消息头中（SSoT `struct airy_ipc_msg_hdr` 无 `version` 字段）。消息头通过 `magic`（0x41524531 'ARE1'）标识协议族；版本协商在连接建立时通过握手协议完成，不使用每消息版本字段。版本号编解码宏仅用于握手 payload：
 
 ```c
 /* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
@@ -111,27 +111,29 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
 
 ---
 
-## 3. 128B 消息头版本字段
+## 3. 128B 消息头版本识别
 
-### 3.1 version 字段语义
+> **SSoT 对齐说明**：SSoT Layout C（`struct airy_ipc_msg_hdr`，定义于 `include/airymax/ipc.h`）**不含 `version` 字段**。128B 消息头布局为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]，共 9 字段。协议版本识别依赖 `magic` 字段（0x41524531 'ARE1'），版本协商通过 §4 运行时握手协议完成，而非消息头内嵌版本号。
 
-`version` 字段标识**发送方使用的协议版本**，不是期望的接收版本。接收方根据此字段决定如何解析消息。
+### 3.1 magic 字段版本识别
+
+`magic` 字段（offset 0, 4 bytes, `__u32`）值 0x41524531（'ARE1'）是协议识别的唯一标识。magic 值永不变更，与 agentrt 逐字节一致（[SC] 共享契约层）。接收方校验 magic 失败时直接丢弃消息，返回 `-EPROTO`。
 
 ### 3.2 版本兼容范围
 
-agentrt-linux 各版本支持的协议版本范围：
+agentrt-linux 各版本通过运行时握手协议（§4）协商支持的特性集。内核版本与特性集映射：
 
-| 内核版本 | 支持的协议版本 | 默认协商版本 |
-|---------|--------------|-------------|
-| 1.0.1 | v1.0, v1.1, v1.2 | v1.2 |
-| 1.0.2 | v1.0, v1.1, v1.2 | v1.2 |
-| 2.0.1 | v1.0, v1.1, v1.2, v2.0 | v2.0 |
-| 3.0 LTS | v1.0, v1.1, v1.2, v2.0, v2.1 | v2.1 |
-| 5.0 LTS | v1.0, v1.1, v1.2, v2.0, v2.1, v3.0 | v3.0 |
+| 内核版本 | 支持的特性集 | 默认协商特性集 |
+|---------|------------|--------------|
+| 1.0.1 | 基础 IPC（SEND/RECV/SEND_BATCH/CANCEL） | 基础 IPC |
+| 1.0.2 | 基础 IPC + 零拷贝 | 基础 IPC + 零拷贝 |
+| 2.0.1 | 基础 IPC + 零拷贝 + 序列号确认 | 全特性 |
+| 3.0 LTS | 全特性 + 扩展保留字段 | 全特性 |
+| 5.0 LTS | 全特性 + 扩展保留字段 + v3 扩展 | 全特性 + v3 扩展 |
 
-### 3.3 reserved 字段版本化
+### 3.3 reserved 字段扩展
 
-`reserved[72]` 字段是保留字段，用于未来版本扩展。版本演进规则：
+`reserved[84]` 字段（offset 44, 84 bytes, `__u8[84]`）是保留字段，用于未来版本扩展。版本演进规则：
 
 - v1.x：reserved 字段必须全零，接收方忽略非零值
 - v2.0：reserved 前 8 字节用于扩展字段（如 `seq_num`、`ack_num`），剩余全零
@@ -153,7 +155,7 @@ sequenceDiagram
     participant URING as io_uring 通道
     participant KERN as 内核 IPC 服务
 
-    APP->>URING: 提交 AIRY_IPC_OP_HANDSHAKE SQE
+    APP->>URING: 提交 AIRY_IPC_OP_SEND SQE（payload_type=0x0001 REQUEST）
     Note over APP: SQE payload: 客户端支持的<br/>最高版本 + 支持版本位图
     URING->>KERN: 转发握手请求
     KERN->>KERN: 查找最低共同支持版本
@@ -245,7 +247,7 @@ uint16_t airy_ipc_negotiate_version(
 ```mermaid
 stateDiagram-v2
     [*] --> INIT: 连接建立
-    INIT --> NEGOTIATING: 提交 HANDSHAKE SQE
+    INIT --> NEGOTIATING: 提交 SEND(REQUEST) SQE
     NEGOTIATING --> ESTABLISHED: 收到 CQE (成功)
     NEGOTIATING --> FAILED: 收到 CQE (失败/超时)
     ESTABLISHED --> ESTABLISHED: 正常 IPC 通信
@@ -262,29 +264,27 @@ stateDiagram-v2
 | 字段 | v1.0 | v1.1 | v1.2 | v2.0 | 兼容性 |
 |------|------|------|------|------|--------|
 | magic | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| version | ✓ | ✓ | ✓ | ✓ | 永不变更（值可变） |
-| type | ✓ | ✓ | ✓ | ✓ | 永不变更（5 种 payload） |
 | payload_len | ✓ | ✓ | ✓ | ✓ | 永不变更 |
 | flags | ✓ | ✓ | ✓ | ✓ | 新标志位向后兼容 |
-| src_pid | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| dst_pid | ✓ | ✓ | ✓ | ✓ | 永不变更 |
+| src_task | ✓ | ✓ | ✓ | ✓ | 永不变更（__u64） |
+| dst_task | ✓ | ✓ | ✓ | ✓ | 永不变更（__u64） |
 | trace_id | ✓ | ✓ | ✓ | ✓ | 永不变更 |
 | timestamp_ns | ✓ | ✓ | ✓ | ✓ | 永不变更 |
 | reserved[0..7] | 忽略 | 忽略 | 忽略 | seq_num | v2.0 新增 |
 | reserved[8..15] | 忽略 | 忽略 | 忽略 | ack_num | v2.0 新增 |
-| reserved[16..71] | 忽略 | 忽略 | 忽略 | 忽略 | 保留 |
+| reserved[16..83] | 忽略 | 忽略 | 忽略 | 忽略 | 保留 |
 
 ### 5.2 payload 类型版本化
 
 5 种 payload 协议的版本化策略：
 
-| payload 类型 | type 值 | 版本化策略 |
+| payload 类型 | payload_type 值 | 版本化策略 |
 |-------------|---------|-----------|
 | AIRY_IPC_TYPE_REQUEST | 0x01 | 新增字段追加至尾部，旧版本忽略尾部 |
 | AIRY_IPC_TYPE_RESPONSE | 0x02 | 同上 |
 | AIRY_IPC_TYPE_EVENT | 0x03 | 同上 |
-| AIRY_IPC_TYPE_ERROR | 0x04 | 错误码枚举只增不减 |
-| AIRY_IPC_TYPE_HANDSHAKE | 0x05 | 握手专用，结构固定 |
+| AIRY_IPC_TYPE_STREAM | 0x04 | 流式数据，有序可靠投递 |
+| AIRY_IPC_TYPE_NOTIFICATION | 0x05 | 尽力投递，无需响应 |
 
 ---
 
@@ -348,21 +348,27 @@ payload 版本化遵循"只追加不修改"原则：
 
 ### 8.1 操作码编号约束
 
-操作码遵循"只增不减"原则，编号一旦分配永不复用：
+操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），4 个基础操作码在所有版本中保持稳定，永不重定义、永不复用：
 
-| 操作码 | 名称 | 引入版本 | 状态 |
-|--------|------|---------|------|
-| 0x00 | AIRY_IPC_OP_NOP | v1.0 | 活跃 |
-| 0x01 | AIRY_IPC_OP_HANDSHAKE | v1.0 | 活跃 |
-| 0x10 | AIRY_IPC_OP_AGENT_CREATE | v1.0 | 活跃 |
-| 0x11 | AIRY_IPC_OP_AGENT_DESTROY | v1.0 | 活跃 |
-| 0x20 | AIRY_IPC_OP_ROVOL_MOUNT | v1.0 | 活跃 |
-| 0x21 | AIRY_IPC_OP_ROVOL_UMOUNT | v1.0 | 活跃 |
-| 0x30 | AIRY_IPC_OP_TOKEN_BUDGET | v1.0 | 活跃 |
-| 0x40 | AIRY_IPC_OP_EVENT_SUBSCRIBE | v1.1 | 活跃 |
-| 0x41 | AIRY_IPC_OP_EVENT_UNSUBSCRIBE | v1.1 | 活跃 |
-| 0x50 | AIRY_IPC_OP_BATCH_SUBMIT | v1.2 | 活跃 |
-| 0x60 | AIRY_IPC_OP_RELIABLE_SEND | v2.0 | 规划中 |
+```c
+/* include/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
+enum airy_ipc_op {
+    AIRY_IPC_OP_SEND       = 0,
+    AIRY_IPC_OP_RECV       = 1,
+    AIRY_IPC_OP_SEND_BATCH = 2,
+    AIRY_IPC_OP_CANCEL     = 3,
+};
+```
+
+| 操作码 | 名称 | 层次 | 版本兼容性 |
+|--------|------|------|-----------|
+| 0 | AIRY_IPC_OP_SEND | [SC] SSoT | 全版本稳定 |
+| 1 | AIRY_IPC_OP_RECV | [SC] SSoT | 全版本稳定 |
+| 2 | AIRY_IPC_OP_SEND_BATCH | [SC] SSoT | 全版本稳定 |
+| 3 | AIRY_IPC_OP_CANCEL | [SC] SSoT | 全版本稳定 |
+| >= 0x100 | [IND] 独立扩展 | [IND] agentrt-linux 专属 | 版本协商中按需引入 |
+
+> **SSoT 约束**：基础操作码（0-3）由 SSoT 权威定义，本文档不重定义。agentrt-linux 专属扩展操作码（如 Agent 生命周期管理等）必须使用 >= 0x100 的值并标注 [IND] 独立扩展，避免与 SSoT 基础值（0-3）冲突。
 
 ### 8.2 未识别操作码处理
 
@@ -370,18 +376,19 @@ payload 版本化遵循"只追加不修改"原则：
 
 ```c
 switch (opcode) {
-case AIRY_IPC_OP_HANDSHAKE:
-    return handle_handshake(sqes, cqe);
-case AIRY_IPC_OP_AGENT_CREATE:
-    return handle_agent_create(sqes, cqe);
-/* ... */
+case AIRY_IPC_OP_SEND:
+    return handle_send(sqes, cqe);
+case AIRY_IPC_OP_RECV:
+    return handle_recv(sqes, cqe);
+case AIRY_IPC_OP_SEND_BATCH:
+    return handle_send_batch(sqes, cqe);
+case AIRY_IPC_OP_CANCEL:
+    return handle_cancel(sqes, cqe);
+/* [IND] 独立扩展 opcode >= 0x100 由 agentrt-linux 专属处理 */
 default:
     /* 未识别操作码 */
     cqe->res = -ENOSYS;
-    cqe->flags |= AIRY_IPC_CQE_F_UNSUPPORTED;
-    log_write(LOG_WARN, "unsupported IPC opcode: 0x%02x version: v%d.%d",
-        opcode, AIRY_IPC_VERSION_MAJOR(hdr->version),
-        AIRY_IPC_VERSION_MINOR(hdr->version));
+    log_write(LOG_WARN, "unsupported IPC opcode: 0x%04x", opcode);
     return 0;
 }
 ```
@@ -400,10 +407,10 @@ sequenceDiagram
     participant DGW as gateway_d (OS 级)
     participant URING as io_uring 通道
 
-    AGW->>URING: HANDSHAKE (client_max=v1.2)
-    URING->>DGW: 转发握手
+    AGW->>URING: SEND(REQUEST) (client_max=v1.2)
+    URING->>DGW: 转发握手请求
     DGW->>DGW: 协商 v1.2 (共同最高)
-    DGW->>URING: HANDSHAKE RESP (negotiated=v1.2)
+    DGW->>URING: SEND(RESPONSE) (negotiated=v1.2)
     URING->>AGW: 返回协商结果
     Note over AGW,DGW: 后续使用 v1.2 协议通信
 ```
@@ -724,7 +731,7 @@ int airy_ipc_set_min_version(uint16_t min_ver)
 
 | 层次 | 共享内容 | 本文档使用 |
 |------|---------|-----------|
-| [SC] 共享契约层 | `include/airymax/ipc.h` 128B 消息头 + magic + version 字段 | 消息头布局与 agentrt 共享 |
+| [SC] 共享契约层 | `include/airymax/ipc.h` 128B 消息头 + magic 字段 | 消息头布局与 agentrt 共享 |
 | [SS] 语义同源层 | 网关协议协商语义 | gateway_d 与 agentrt gateway 协商语义同源 |
 | [IND] 完全独立层 | 版本协商逻辑 + 注册表 + sysfs | agentrt-linux 专属实现 |
 

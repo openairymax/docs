@@ -215,7 +215,7 @@ MemoryRovol 通过结构化日志实现全面可观测性：
 
 ### 2.2 目录结构
 
-> **注**: MemoryRovol 已从原 `AgentRT/agentrt/atoms/memoryrovol/` 独立为 Airymax 商业化核心模块，现位于 `MemoryRovol/`。
+> **注**: MemoryRovol 已从原 `agentrt/atoms/memoryrovol/` 独立为 Airymax 商业化核心模块，现位于 `MemoryRovol/`。
 
 ```
 MemoryRovol/

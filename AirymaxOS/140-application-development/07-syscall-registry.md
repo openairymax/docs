@@ -779,7 +779,7 @@ int send_cognition_result(uint32_t agent_id, const void *payload, size_t len)
         .src     = agent_id,
         .dst     = AIRY_DST_BROADCAST,
         .opcode  = AIRY_IPC_OP_SEND,
-        .flags   = AIRY_IPC_FLAG_ZEROCOPY,
+        .flags   = AIRY_IPC_F_ZEROCOPY,
         .payload_len = len,
     };
     int ret;

@@ -1,9 +1,9 @@
 /**
- * @mainpage AgentRT — 多体控制论智能操作系统
+ * @mainpage AgentRT — 多体控制论智能运行时平台
  *
  * @section overview 系统概述
  *
- * AgentRT 是基于**多体控制论智能系统 (MCIS)** 构建的智能体操作系统，
+ * AgentRT 是基于**多体控制论智能系统 (MCIS)** 构建的智能体运行时平台，
  * 采用微核心架构，支持五大框架、多协议网关和分层安全防护。
  *
  * @section architecture 系统架构
@@ -39,14 +39,22 @@
  * | **Compat** | 兼容性 | `compat.h` |
  *
  * @subsection layer_cupolas 安全穹顶 (Cupolas)
- * 四重纵深防护安全子系统：
  *
- * | 模块 | 说明 |
- * |------|------|
- * | **Workbench** | 虚拟工位：资源隔离与沙箱 |
- * | **Permission** | 权限裁决：细粒度访问控制 |
- * | **Sanitizer** | 输入净化：数据清洗与验证 |
- * | **Audit** | 审计追踪：全链路操作记录 |
+ * Cupolas 是 Airymax 的内生安全防护层，包含 **七大子系统**：
+ *
+ * | 子系统 | 说明 | 源码目录 |
+ * |------|------|---------|
+ * | **Workbench** | 虚拟工位：资源隔离与沙箱 | `cupolas/workbench/` |
+ * | **Permission** | 权限裁决：细粒度访问控制 | `cupolas/permission/` |
+ * | **Sanitizer** | 输入净化：数据清洗与验证 | `cupolas/sanitizer/` |
+ * | **Audit** | 审计追踪：全链路操作记录 | `cupolas/audit/` |
+ * | **Guards** | 安全增强：代码签名、Entitlements、运行时保护（ASLR/Stack Canary/DEP） | `cupolas/security/` |
+ * | **Security Vault** | 安全凭证存储：Keychain 级别密钥/凭证管理 | `cupolas/security/`（vault） |
+ * | **Network Security** | 网络安全：TLS、Certificate Pinning、App Transport Security | `cupolas/security/`（network_security） |
+ *
+ * 其中 **四重防护链**（4 阶段纵深防御流程）为：
+ * 输入净化(Sanitizer) → 权限仲裁(Permission) → 网络过滤(Network Security) → 审计记录(Audit)。
+ * 注意"四重防护链"指 4 阶段防御流程，"七大子系统"指 7 个独立安全组件，是不同维度的概念。
  *
  * @subsection layer_daemon 用户态服务层 (Daemons)
  * 系统服务用户态服务：
@@ -111,7 +119,7 @@
  * | **Agent Framework** | CoreLoopThree | 认知-执行-记忆循环 |
  * | **Memory Framework** | MemoryRovol | 多层记忆存储与遗忘 |
  * | **Task Framework** | CoreKern | 任务调度与同步 |
- * | **Safety Framework** | Cupolas | 四重纵深防护 |
+ * | **Safety Framework** | Cupolas | 七大子系统 + 四重防护链 |
  * | **Tool Framework** | tool_d | 工具注册与执行 |
  *
  * @section getting_started 快速开始

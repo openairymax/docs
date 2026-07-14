@@ -513,12 +513,12 @@ int weather_agent_main(airy_agent_t self, int argc, char **argv)
     /* 3. 通过 IPC 把结果发回调度方 */
     struct airy_ipc_msg_hdr hdr = {0};
     hdr.magic        = AIRY_IPC_MAGIC;       /* 0x41524531 */
-    hdr.version      = 0x0100;
-    hdr.type         = 0x0003;                  /* EVENT */
+    hdr.opcode       = AIRY_IPC_OP_SEND;     /* SEND 操作码 */
+    hdr.flags        = AIRY_IPC_F_NOREPLY;   /* 单向通知，无需响应 */
+    hdr.src_task     = airy_self_task(self); /* 运行时填充，用户态不可伪造 */
+    hdr.dst_task     = 0;                    /* 0 表示广播 */
     hdr.payload_len  = (uint32_t)rc;
-    hdr.flags        = AIRY_IPC_FLAG_NOREPLY;
-    hdr.src_pid      = airy_self_pid(self);
-    hdr.dst_pid      = 0;                       /* 广播 */
+    /* payload_type（0x0003 EVENT）由 payload 首字段携带，不在消息头中 */
     rc = airy_ipc_send(ipc_cap, &hdr, response, (size_t)rc);
     return rc;
 }

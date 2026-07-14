@@ -222,7 +222,7 @@ ipcs -q
 redis-cli --latency
 
 # 检查服务发现配置
-cat agentrt/daemon/common/include/service_discovery.h | grep DEFAULT
+cat agentrt/daemons/common/include/service_discovery.h | grep DEFAULT
 
 # 检查心跳间隔
 grep heartbeat agentrt/gateway/config/*.yaml

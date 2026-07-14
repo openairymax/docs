@@ -27,7 +27,7 @@
         <mxCell id="layer2" value="Layer 2: Protocol Layer 协议层" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
           <mxGeometry x="200" y="170" width="900" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="l2_1" value="JSON-RPC Handler&#xa;内部同步调用 / 工具调用&#xa;Cupola 间通信 / Atom 调用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l2_1" value="JSON-RPC Handler&#xa;内部同步调用 / 工具调用&#xa;Cupolas 间通信 / Atom 调用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="240" y="195" width="240" height="45" as="geometry" />
         </mxCell>
         <mxCell id="l2_2" value="MCP Handler&#xa;模型上下文协议&#xa;第三方 Tool 接入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
@@ -88,7 +88,7 @@
         <mxCell id="l5_2" value="Planning 规划&#xa;DAG 构建 + 策略选择&#xa;调用 MemoryRovol L2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="530" y="500" width="240" height="75" as="geometry" />
         </mxCell>
-        <mxCell id="l5_3" value="Action 执行&#xa;调度 Cupola 执行&#xa;写 HeapStore traces/logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l5_3" value="Action 执行&#xa;调度 Cupolas 执行&#xa;写 HeapStore traces/logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="790" y="500" width="240" height="75" as="geometry" />
         </mxCell>
         <mxCell id="e_l5_12" style="endArrow=classic;html=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="l5_1" target="l5_2">
@@ -99,24 +99,24 @@
         </mxCell>
 
         <!-- Layer 4 → Layer 6 -->
-        <mxCell id="e_l4_l6" value="IPC Bus（调度 Cupola）" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#3866FA;strokeWidth=2;fontSize=10;fontColor=#3866FA;" edge="1" parent="1" source="layer4" target="layer6">
+        <mxCell id="e_l4_l6" value="IPC Bus（调度 Cupolas）" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#3866FA;strokeWidth=2;fontSize=10;fontColor=#3866FA;" edge="1" parent="1" source="layer4" target="layer6">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- ===== Layer 6: Cupola Layer ===== -->
-        <mxCell id="layer6" value="Layer 6: Cupola Layer 服务穹顶层（可插拔安全沙箱，每个 Cupola = Service Interface + Lifecycle Hooks + Resource Sandbox）" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
+        <!-- ===== Layer 6: Cupolas Layer ===== -->
+        <mxCell id="layer6" value="Layer 6: Cupolas Layer 服务穹顶层（可插拔安全沙箱，每个 Cupolas = Service Interface + Lifecycle Hooks + Resource Sandbox）" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
           <mxGeometry x="200" y="630" width="900" height="170" as="geometry" />
         </mxCell>
-        <mxCell id="l6_1" value="Cupola (LLM Svc)&#xa;llm_d&#xa;──────────&#xa;LLM 推理调度&#xa;模型路由 / Token 管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l6_1" value="Cupolas (LLM Svc)&#xa;llm_d&#xa;──────────&#xa;LLM 推理调度&#xa;模型路由 / Token 管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="220" y="665" width="180" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="l6_2" value="Cupola (Tool Svc)&#xa;tool_d&#xa;──────────&#xa;工具调用管理&#xa;执行沙箱 / 结果校验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l6_2" value="Cupolas (Tool Svc)&#xa;tool_d&#xa;──────────&#xa;工具调用管理&#xa;执行沙箱 / 结果校验" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="420" y="665" width="180" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="l6_3" value="Cupola (Info Svc)&#xa;info_d&#xa;──────────&#xa;信息聚合 / 知识检索&#xa;上下文注入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l6_3" value="Cupolas (Info Svc)&#xa;info_d&#xa;──────────&#xa;信息聚合 / 知识检索&#xa;上下文注入" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="620" y="665" width="180" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="l6_4" value="Cupola (其他)&#xa;sched_d / monit_d / observe_d&#xa;channel_d / notify_d / market_d&#xa;hook_d / plugin_d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="l6_4" value="Cupolas (其他)&#xa;sched_d / monit_d / observe_d&#xa;channel_d / notify_d / market_d&#xa;hook_d / plugin_d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="820" y="665" width="240" height="120" as="geometry" />
         </mxCell>
 
@@ -160,7 +160,7 @@
           <mxGeometry x="1140" y="490" width="180" height="110" as="geometry" />
         </mxCell>
 
-        <mxCell id="ipc_5" value="4-Layer Security&#xa;──────────&#xa;Input Sanitization&#xa;Permission Arbitration&#xa;Cupola Sandbox&#xa;Audit &amp; Trace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=10;" vertex="1" parent="1">
+        <mxCell id="ipc_5" value="4-Layer Security&#xa;──────────&#xa;Input Sanitization&#xa;Permission Arbitration&#xa;Cupolas Sandbox&#xa;Audit &amp; Trace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="1140" y="620" width="180" height="100" as="geometry" />
         </mxCell>
 
@@ -201,7 +201,7 @@
         </mxCell>
 
         <!-- 左侧图例 -->
-        <mxCell id="legend" value="图例：&#xa;━━ 主请求流（蓝实线）&#xa;┄┄ IPC Bus 贯穿（青虚线）&#xa;┄┄ CoreKern 嵌套 CoreLoopThree（黄虚框）&#xa;&#xa;7 层架构：&#xa;L1 Clients → L2 Protocol&#xa;→ L3 Gateway → L4 CoreKern&#xa;→ L5 CoreLoopThree (嵌套)&#xa;→ L6 Cupola → L7 Data" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;backgroundColor=#ffffff;strokeColor=#999999;" vertex="1" parent="1">
+        <mxCell id="legend" value="图例：&#xa;━━ 主请求流（蓝实线）&#xa;┄┄ IPC Bus 贯穿（青虚线）&#xa;┄┄ CoreKern 嵌套 CoreLoopThree（黄虚框）&#xa;&#xa;7 层架构：&#xa;L1 Clients → L2 Protocol&#xa;→ L3 Gateway → L4 CoreKern&#xa;→ L5 CoreLoopThree (嵌套)&#xa;→ L6 Cupolas → L7 Data" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;backgroundColor=#ffffff;strokeColor=#999999;" vertex="1" parent="1">
           <mxGeometry x="20" y="80" width="170" height="180" as="geometry" />
         </mxCell>
 

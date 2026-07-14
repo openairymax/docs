@@ -209,7 +209,7 @@ agentrt-linux 需要划分子仓结构以支持模块化开发。子仓划分需
 4. 清晰的依赖关系（层次分解原则 S-2）
 5. 独立的可测试性（E-8）
 
-候选方案包括：6 子仓（kernel/system/tools/builder/security/tests）、8 子仓、12 子仓（按 agentrt 模块完全对应）。
+候选方案包括：6 子仓（kernel/system/tools/builder/security/tests-linux）、8 子仓、12 子仓（按 agentrt 模块完全对应）。
 
 ### 决策
 
@@ -231,7 +231,7 @@ agentrt-linux 采用 **8 子仓划分**：
 1. **微内核能力域**：8 子仓严格按微内核能力域划分（内核 / 服务 / 安全 / 内存 / 认知 / 云原生 / 系统 / 测试），无功能重叠
 2. **agentrt-linux 治理组对应**：8 子仓与 agentrt-linux 子仓治理组（Kernel / Base Systems / Security / Cloud Native / QA 等）一一对应
 3. **Airymax 同源**：8 子仓与 agentrt 核心模块（atoms/corekern、daemons、cupolas、heapstore+memoryrovol、coreloopthree+frameworks、gateway+sdk、commons）一一对应
-4. **清晰依赖**：层次分解明确（kernel → services/security/memory/cognition → cloudnative → system → tests），符合 S-2 层次分解原则
+4. **清晰依赖**：层次分解明确（kernel → services/security/memory/cognition → cloudnative → system → tests-linux），符合 S-2 层次分解原则
 5. **独立测试**：每个子仓可独立测试，符合 E-8 可测试性原则
 6. **避免过细**：12 子仓过细增加治理成本，6 子仓过粗导致功能耦合
 
@@ -248,7 +248,7 @@ agentrt-linux 采用 **8 子仓划分**：
 
 | 方案                                               | 优势    | 劣势                              | 未采纳原因            |
 | ------------------------------------------------ | ----- | ------------------------------- | ---------------- |
-| 6 子仓（kernel/system/tools/builder/security/tests） | 治理简单  | 功能耦合、与 agentrt 同源性差             | 已被 v2.2 详细任务清单废弃 |
+| 6 子仓（kernel/system/tools/builder/security/tests-linux） | 治理简单  | 功能耦合、与 agentrt 同源性差             | 已被 v2.2 详细任务清单废弃 |
 | 12 子仓（按 agentrt 完全对应）                            | 同源性最强 | 过细增加治理成本、部分 agentrt 模块在 OS 层无对应 | 治理成本过高           |
 | 单一仓库                                             | 最简单   | 违反模块化原则、无法独立演进                  | 违反 S-2 层次分解      |
 

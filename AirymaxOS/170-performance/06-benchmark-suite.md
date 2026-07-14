@@ -102,7 +102,7 @@ agentrt-linux 需要建立完整的基准测试套件，参考 Linux 6.6 perf be
 ### 3.1 系统调用延迟
 
 ```c
-/* airymaxos-tests/microbench/bench_syscall_latency.c [IND] */
+/* tests-linux/microbench/bench_syscall_latency.c [IND] */
 
 #include <stdio.h>
 #include <stdint.h>
@@ -188,7 +188,8 @@ static void bench_ipc_roundtrip(void)
 
     for (int i = 0; i < ITERATIONS; i++) {
         struct timespec start, end;
-        airy_ipc_msg_t msg = { .opcode = AIRY_IPC_OP_NOP };
+        /* SSoT 无 NOP 操作码，用 SEND + payload_len=0 测量 IPC 框架固定开销 */
+        airy_ipc_msg_t msg = { .opcode = AIRY_IPC_OP_SEND, .payload_len = 0 };
 
         clock_gettime(CLOCK_MONOTONIC, &start);
         airy_ipc_send(&msg);
@@ -220,7 +221,7 @@ static void bench_ipc_roundtrip(void)
 ### 4.1 调度吞吐量
 
 ```c
-/* airymaxos-tests/subbench/bench_sched_throughput.c [IND] */
+/* tests-linux/subbench/bench_sched_throughput.c [IND] */
 
 /**
  * bench_sched_throughput - 测量调度器吞吐量
@@ -318,7 +319,7 @@ static void bench_mem_bandwidth(void)
 ### 5.1 Agent 生命周期
 
 ```c
-/* airymaxos-tests/e2ebench/bench_agent_lifecycle.c [IND] */
+/* tests-linux/e2ebench/bench_agent_lifecycle.c [IND] */
 
 /**
  * bench_agent_lifecycle - 测量 Agent 完整生命周期延迟
@@ -411,7 +412,7 @@ static void bench_llm_inference(void)
 ### 6.1 1000 Agent 并发
 
 ```c
-/* airymaxos-tests/stressbench/bench_stress_1000_agents.c [IND] */
+/* tests-linux/stressbench/bench_stress_1000_agents.c [IND] */
 
 /**
  * bench_stress_1000_agents - 1000 个 Agent 并发压力测试
@@ -513,7 +514,7 @@ static void bench_stress_memory(void)
 ### 7.1 基线管理
 
 ```c
-/* airymaxos-tests/regression/baseline.json */
+/* tests-linux/regression/baseline.json */
 {
   "version": "1.0.1",
   "git_commit": "abc123",
@@ -583,7 +584,7 @@ int detect_regression(const bench_result_t *baseline,
 ### 8.1 测试用例注册
 
 ```c
-/* airymaxos-tests/bench_registry.c [IND] */
+/* tests-linux/bench_registry.c [IND] */
 
 typedef struct bench_test_case {
     const char *name;

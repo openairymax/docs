@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agentrt.org/schemas/skill_contract.json",
-  "title": "Skill Contract Schema (AgentRT/)",
+  "title": "Skill Contract Schema (agentrt/)",
   "description": "AgentRT Skill 契约 JSON Schema 规范，基于五维正交设计体系（系统观、内核观、认知观、工程观、设计美学），用于验证技能能力描述文件。理论基础：工程两论、双系统认知、微核心哲学、设计美学。",
   "type": "object",
   "required": [

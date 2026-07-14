@@ -627,13 +627,13 @@ flowchart TB
 
 ### 11.1 错误码
 
-超节点 OS 复用 [140/07-syscall-registry.md](../140-application-development/07-syscall-registry.md) 定义的错误码，并扩展以下专用错误码：
+超节点 OS 复用 [140/07-syscall-registry.md](../140-application-development/07-syscall-registry.md) 定义的错误码，并扩展以下专用错误码（归入内核错误段 -200~-299，SSoT 定义于 `include/airymax/error.h`）：
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
-| `AIRY_ENODIE` | -13 | die 不存在 | 指定的 die_id 超出范围 |
-| `AIRY_ECXL` | -14 | CXL 操作失败 | CXL 设备不可用或池已满 |
-| `AIRY_ESNAPSHOT` | -15 | 快照失败 | 整机快照过程中 Agent 状态冲突 |
+| `AIRY_KERN_ENODIE` | -210 | die 不存在 | 指定的 die_id 超出范围 |
+| `AIRY_KERN_ECXL` | -211 | CXL 操作失败 | CXL 设备不可用或池已满 |
+| `AIRY_KERN_ESNAPSHOT` | -212 | 快照失败 | 整机快照过程中 Agent 状态冲突 |
 
 ### 11.2 错误处理策略
 
@@ -643,7 +643,7 @@ if (ret == -AIRY_EBUSY) {
     /* Agent 正在快照，等待后重试 */
     usleep(10000);
     ret = airy_sys_rovol_migrate(agent_id, dst_die, AIRY_ROVOL_MIGRATE_HOT);
-} else if (ret == -AIRY_ENODIE) {
+} else if (ret == -AIRY_KERN_ENODIE) {
     log_write(LOG_ERROR, "目标 die %u 不存在", dst_die);
     return ret;
 } else if (ret == -AIRY_EPERM) {

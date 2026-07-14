@@ -55,18 +55,18 @@ agentrt-linux 采用双错误码体系，分别适用于不同场景：
 C 负整数体系按子系统分段，定义于 [SC] 共享契约层：
 
 ```c
-/* include/airymax/error.h [SC] */
+/* include/airymax/error.h [SC] — 错误码 SSoT（单一数据源）
+ * airy_err_t 类型定义见 airy_types.h:41，此处通过 #include 获取 */
 #ifndef _AIRY_ERROR_H
 #define _AIRY_ERROR_H
 
-#include <linux/types.h>
-
-typedef int airy_err_t;
+#include <airymax/uapi_compat.h>
+#include "airy_types.h"  /* airy_err_t = int32_t（定义于 airy_types.h:41） */
 
 /* 成功 */
 #define AIRY_EOK               0
 
-/* 通用错误（-1 ~ -99），SSoT 对齐 30-interfaces/01-syscalls.md */
+/* 通用错误（-1 ~ -99），SSoT 对齐 30-interfaces/01-syscalls.md §6 */
 #define AIRY_EINVAL          (-1)   /* 无效参数 */
 #define AIRY_ENOMEM          (-2)   /* 内存不足 */
 #define AIRY_ENOSYS          (-3)   /* 未实现 */
@@ -77,7 +77,7 @@ typedef int airy_err_t;
 #define AIRY_EBADF           (-8)   /* 描述符错误 */
 #define AIRY_EBUSY           (-9)   /* 资源繁忙 */
 #define AIRY_ENOTSUP         (-10)  /* 不支持 */
-#define AIRY_ETIMEOUT        (-11)  /* 超时 */
+#define AIRY_ETIMEDOUT        (-11)  /* 超时 */
 #define AIRY_ECONFLICT       (-12)  /* 状态冲突 */
 #define AIRY_EGENERIC        (-13)  /* 通用错误（兜底） */
 #define AIRY_EACCES          (-14)  /* 访问拒绝 */
@@ -94,6 +94,9 @@ typedef int airy_err_t;
 #define AIRY_KERN_ESCHED     (-201)
 #define AIRY_KERN_EIPC       (-202)
 #define AIRY_KERN_EMEM       (-203)
+#define AIRY_KERN_ENODIE     (-210)  /* die 不存在（超节点） */
+#define AIRY_KERN_ECXL       (-211)  /* CXL 操作失败（超节点） */
+#define AIRY_KERN_ESNAPSHOT  (-212)  /* 快照失败（超节点） */
 
 /* 服务错误（-300 ~ -399） */
 #define AIRY_SVC_EGATEWAY    (-300)
@@ -110,6 +113,8 @@ typedef int airy_err_t;
 /* 执行错误（-500 ~ -599） */
 #define AIRY_EXEC_ETASK      (-500)
 #define AIRY_EXEC_ECOMPENSATE (-501)
+#define AIRY_EXEC_EDAG_DEADLOCK  (-510)  /* DAG 死锁（编排） */
+#define AIRY_EXEC_ENOCONSENSUS   (-511)  /* 共识未达成（编排） */
 
 /* 记忆错误（-600 ~ -699） */
 #define AIRY_MEM_EROVOL      (-600)
@@ -128,6 +133,25 @@ typedef int airy_err_t;
 /* i18n 错误（-900 ~ -999） */
 #define AIRY_I18N_ELOCALE    (-900)
 #define AIRY_I18N_EENCODING  (-901)
+
+/* 发行版错误（-1000 ~ -1099） */
+#define AIRY_DIST_EPKG_BUILD       (-1000)  /* 包构建失败 */
+#define AIRY_DIST_EPKG_INSTALL    (-1001)  /* 包安装失败 */
+#define AIRY_DIST_EPKG_DEP        (-1002)  /* 依赖冲突 */
+#define AIRY_DIST_EPKG_VERIFY     (-1003)  /* GPG 验证失败 */
+#define AIRY_DIST_EPKG_REPRODUCIBLE (-1004) /* 可重现构建失败 */
+#define AIRY_DIST_EPKG_ARCH       (-1005)  /* 架构不匹配 */
+#define AIRY_DIST_EUPDATE_LIVEPATCH (-1010) /* livepatch 应用失败 */
+#define AIRY_DIST_EUPDATE_OSTREE  (-1011)  /* rpm-ostree 更新失败 */
+#define AIRY_DIST_EUPDATE_ROLLBACK (-1012) /* 回滚失败 */
+#define AIRY_DIST_EUPDATE_HEALTH  (-1013)  /* 健康检查失败 */
+#define AIRY_DIST_EUPDATE_MIGRATE (-1014)  /* 数据迁移失败 */
+#define AIRY_DIST_EUPDATE_DEP     (-1015)  /* 依赖冲突 */
+#define AIRY_DIST_ENODISTRO       (-1020)  /* 不支持的发行版 */
+#define AIRY_DIST_ENOKERN         (-1021)  /* 内核版本过低 */
+#define AIRY_DIST_ENOGLIBC        (-1022)  /* glibc 版本过低 */
+#define AIRY_DIST_ENOMOD          (-1023)  /* 内核模块加载失败 */
+#define AIRY_DIST_ENOFALLBACK     (-1024)  /* 无可用降级路径 */
 
 #endif /* _AIRY_ERROR_H */
 ```

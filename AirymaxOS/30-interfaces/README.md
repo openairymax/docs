@@ -74,7 +74,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 - **显式契约**: 所有接口以 C 头文件 + Doxygen 注释形式给出显式契约，包括参数语义、返回值、错误码、并发约束。
 - **ABI 稳定**: 系统调用编号、IPC 消息头布局、capability 令牌格式在 MAJOR 版本内保持 ABI 稳定，破坏性变更必须升级 MAJOR 版本。
 - **版本协商**: IPC 消息头携带 `version` 字段（当前 0x0100），支持协议版本协商。
-- **错误码对齐**: 全部接口错误码对齐 `airy_errno.h`，与 agentrt 同源且部分代码共享（IRON-9 v2）。
+- **错误码对齐**: 全部接口错误码对齐 `include/airymax/error.h`（[SC] SSoT），与 agentrt 同源且部分代码共享（IRON-9 v2）。
 - **并发约束显式**: 所有接口在 Doxygen 注释中显式声明线程安全性与可重入性（thread-safe / reentrant / async-signal-safe）。
 
 ### 3.2 E-7 文档即代码
@@ -102,29 +102,6 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 | 3 | [03-sdk-api.md](03-sdk-api.md) | 4 语言矩阵 + 4 嵌套客户端 + Python/Rust/Go/TS 示例 + 错误处理 | 450-550 |
 | 4 | [04-coding-standard.md](04-coding-standard.md) | 15 规范引用 + 命名规范 + C/Rust 风格 + 日志 + Doxygen + 安全编码 + 对照 | 350-450 |
 | 5 | [05-syscall-semantic-mapping.md](05-syscall-semantic-mapping.md) | P0-03 方案 D 分层 API 设计 + [SS] 语义映射表 + [IND] 独有调用 + SDK 层签名同源 + 调用路径选择 | 400-500 |
-
-### 4.1 Wave 2 v2 Phase D 修复说明（D1/D3/D4/D8）
-
-Phase D 完成 4 项 P0 文档修正，全部对齐 seL4 master 模式源码语义：
-
-| 编号 | 类别 | 修复文档 | 修复前（陈旧） | 修复后（对齐 seL4） | seL4 源码证据 |
-|------|------|---------|---------------|-----------------------|---------------|
-| **D1**（C-A01） | IPC 状态机命名 | [02-ipc-protocol.md](02-ipc-protocol.md) §4.7 | `SendWaiting / RecvWaiting` | `Send / Recv`（严格对齐 seL4 `EPState_Idle/Send/Recv`） | `include/object/structures.h:36-41` |
-| **D3**（C-A03） | syscall 数量 | [01-syscalls.md](01-syscalls.md) §2.2 | 笼统"seL4 风格 8 syscall" | master 模式 8 / MCS 模式 11 区分；agentrt-linux 采用 master 8 + 4 agent 扩展 = 12 核心 | seL4 master：8 个 activity syscall；MCS：11 个（替换 `Reply` 为 `Wait/NBWait`，新增 `NBSendRecv/NBSendWait`） |
-| **D4**（C-A04） | Reply 原子性 | [02-ipc-protocol.md](02-ipc-protocol.md) §4.8 | "Reply Capability 原子性"独立设计 | Reply 原子性 = `doReplyTransfer` 临界区串行执行**涌现属性**，非独立设计 | `src/object/endpoint.c:115-127` + `src/kernel/thread.c:131-200` |
-| **D8**（C-A05+C-A08） | CLOCK 设计权衡 | [02-ipc-protocol.md](02-ipc-protocol.md) §2.4 | 缺失时钟基准说明 | 新增 §2.4 `timestamp_ns` 时钟基准设计权衡（CLOCK_REALTIME vs CLOCK_MONOTONIC），明确 IPC 用 CLOCK_REALTIME 对齐北京时间，调度 vtime 用 `__s32` Q16.16 定点不依赖 wall clock | seL4 `include/kernel/timestamp.h` + Linux 6.6 `include/uapi/linux/time.h` |
-
-**关键澄清**：
-- **D1**：状态名描述"端点所处的语义态"而非"线程等待态"，因此**不带 `Waiting` 后缀**。`Send`/`Recv` 与 seL4 `EPState_Send`/`EPState_Recv` 一一对应。
-- **D3**：agentrt-linux 采用 seL4 master 模式 8 IPC 原语（`Call/ReplyRecv/Send/NBSend/Recv/NBRecv/Reply/Yield`）作为"seL4 风格基础"，**不引入 MCS 模式**（agent 场景不需要 MCS 的 `reply_t` 对象与 `schedcontext` 模型，由 `airy_ep->lock` 临界区串行执行保证原子性，详见 §4.8）。
-- **D4**：seL4 没有"Reply Capability 原子性"独立设计，原子性是**临界区串行执行 + TCB 内嵌 caller slot + 形式化验证**的涌现属性；agentrt-linux 借鉴 `doReplyTransfer` 模式但实现独立（自旋锁 + 临界区串行，非形式化验证）。
-- **D8**：禁止误改 `timestamp_ns` 为 `CLOCK_MONOTONIC`，否则将破坏跨主机分布式追踪能力；如需单机单调时间戳，应在 payload 协议中扩展独立字段（**不污染 [SC] 消息头**）。
-
-**代码引用**：
-- [file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/30-interfaces/02-ipc-protocol.md](file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/30-interfaces/02-ipc-protocol.md)（§2.4 / §4.7 / §4.8）
-- [file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/30-interfaces/01-syscalls.md](file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/30-interfaces/01-syscalls.md)（§2.2）
-
----
 
 ## 5. 与 agentrt 接口的关系
 

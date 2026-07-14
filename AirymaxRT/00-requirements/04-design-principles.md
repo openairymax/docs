@@ -57,7 +57,7 @@ The collaboration of the dual-thinking system (Thinkdual) enables the system to 
 Airymax follows MicroCoreRT design philosophy:
 
 - **Minimalist kernel**: The `agentrt/atoms/` directory contains only the most fundamental foundations (IPC, memory management with pooling and guard, task scheduling, time services, as well as OOM handling, observability, and error handling—six major subsystems in total) along with the two major subsystems `coreloopthree` and `memoryrovol`.
-- **Externalized services**: All user-mode services (e.g., LLM, marketplace, monitoring) run as independent daemon processes (`agentrt/daemon/`), interacting with the kernel through system calls.
+- **Externalized services**: All user-mode services (e.g., LLM, marketplace, monitoring) run as independent daemon processes (`agentrt/daemons/`), interacting with the kernel through system calls.
 - **Security isolation**: The `agentrt/cupolas/` module provides security mechanisms like virtual workstations, permission arbitration, and input sanitization, decoupled from the kernel.
 
 This design ensures kernel stability and portability while allowing services to evolve independently.

@@ -151,7 +151,7 @@ AIRY_API airy_err_t airy_sys_memory_delete(const char *record_id);
 
 1. **记忆索引**：语义搜索基于 HNSW 索引（非 FAISS）。详见 [MemoryRovol 架构](../../10-architecture/03-memoryrovol.md)。
 2. **输出所有权**：所有 `out_*` 参数由调用者通过 `airy_sys_free()` 释放。
-3. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+3. **错误码**：返回值使用 [error.h](../../agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
 4. **系统调用初始化**：使用记忆相关 API 前需调用 `airy_syscalls_init()`。
 
 ---
@@ -162,7 +162,7 @@ AIRY_API airy_err_t airy_sys_memory_delete(const char *record_id);
 - [任务管理系统调用](task.md)
 - [会话管理系统调用](session.md)
 - [架构设计：MemoryRovol 记忆系统](../../10-architecture/03-memoryrovol.md)
-- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
+- [错误码体系](../../agentrt/commons/utils/error/include/error.h)
 
 ---
 

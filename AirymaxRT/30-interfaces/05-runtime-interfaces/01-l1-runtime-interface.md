@@ -13,8 +13,8 @@
 本标准规定 Agent Runtime Environment（ARE）的**微核心（micro-core）原语接口**、**运行时生命周期**、**内存模型**以及 **ops 注入机制**。所有接口以 C ABI 形式描述，可直接映射到 C/C++/Rust/Go/Zig 等系统语言。
 
 本标准**不**规定：
-- L2 层 IPC Bus 消息头格式（见 [L2_service_protocol.md](L2_service_protocol.md)）；
-- L3 层权限裁决、沙箱、错误码体系（见 [L3_security_governance.md](L3_security_governance.md)）；
+- L2 层 IPC Bus 消息头格式（见 [02-l2-service-protocol.md](02-l2-service-protocol.md)）；
+- L3 层权限裁决、沙箱、错误码体系（见 [03-l3-security-governance.md](03-l3-security-governance.md)）；
 - 具体调度算法实现（轮询/加权/优先级/ML 等为策略，本标准仅约束机制）。
 
 ### 1.2 目标
@@ -32,7 +32,7 @@
 | 术语 | 定义 |
 |------|------|
 | **atoms** | 微核心原语集合（IPC/内存/任务/时间/同步），对应 Airymax 的 `agentrt/atoms/` 目录 |
-| **daemon** | 用户态守护进程，通过 IPC Bus 协作，对应 `agentrt/daemon/` |
+| **daemon** | 用户态守护进程，通过 IPC Bus 协作，对应 `agentrt/daemons/` |
 | **ops 注入** | daemon 在 init 阶段向 atoms 注册回调表（checkpoint/hook/orch），实现反向控制流 |
 | **SHM** | 共享内存段（Shared Memory），用于跨进程零拷贝数据交换 |
 | **heapstore** | 堆存储抽象，提供持久化数据分区（registry/traces/logs/services） |
@@ -45,24 +45,27 @@
 
 ### 2.1 错误码基线
 
-所有 L1 接口返回 `are_error_t`（`int32_t`）。成功为 `ARE_OK (0)`，错误为负值。错误码权威定义与分段见 L3 标准《第 5 节 统一错误码体系》；本标准仅引用下列基础码：
+所有 L1 接口返回 `are_error_t`（`int32_t`）。成功为 `ARE_OK (0)`，错误为负值。错误码权威定义与分段见 L3 标准《第 5 节 统一错误码体系》；本标准仅引用下列基础码。
 
-| 宏 | 值 | 含义 |
-|----|----|------|
-| `ARE_OK` | 0 | 成功 |
-| `ARE_EINVAL` | -1 | 参数无效 |
-| `ARE_ENOMEM` | -2 | 内存不足 |
-| `ARE_EBUSY` | -3 | 资源忙碌 |
-| `ARE_ENOENT` | -4 | 资源不存在 |
-| `ARE_EPERM` | -5 | 权限不足 |
-| `ARE_ETIMEDOUT` | -6 | 操作超时 |
-| `ARE_ENOTINIT` | -9 | 子系统未初始化 |
-| `ARE_ENOTSUP` | -11 | 操作不支持 |
-| `ARE_EUNKNOWN` | -99 | 未知错误 |
+> **SSoT 映射声明**：[SC] 共享契约层错误码 SSoT 位于 `include/airymax/error.h`，类型 `airy_err_t = int32_t`（定义于 `airy_types.h:41`），与 `docs/AirymaxRT/50-engineering-standards/120-cross-project-code-sharing.md` §2.1（13 个 `AIRY_E*` 宏，对齐 POSIX errno 负值）逐字节一致。L1 标准 ABI 采用 `ARE_*` 前缀作为第三方可实现的公开接口，与内部 `AIRY_*` 宏**值空间一致**（均为 `int32_t`），映射关系：`ARE_OK ↔ AIRY_EOK`、`ARE_EINVAL ↔ AIRY_EINVAL`、`ARE_ENOMEM ↔ AIRY_ENOMEM`、`ARE_ETIMEDOUT ↔ AIRY_ETIMEDOUT` 等。`ARE_*` 与 `AIRY_*` 应保持数值对齐（POSIX errno 负值），具体值见 `docs/AirymaxRT/30-interfaces/05-runtime-interfaces/` 同目录 L3 标准。
+
+| 宏 | 值 | 含义 | 映射至 `AIRY_*` |
+|----|----|------|----------------|
+| `ARE_OK` | 0 | 成功 | `AIRY_EOK` |
+| `ARE_EPERM` | -1 | 权限不足（对齐 POSIX EPERM） | `AIRY_EPERM` |
+| `ARE_ENOENT` | -2 | 资源不存在（对齐 POSIX ENOENT） | `AIRY_ENOENT` |
+| `ARE_ENOMEM` | -12 | 内存不足（对齐 POSIX ENOMEM） | `AIRY_ENOMEM` |
+| `ARE_EINVAL` | -22 | 参数无效（对齐 POSIX EINVAL） | `AIRY_EINVAL` |
+| `ARE_EBUSY` | -16 | 资源忙碌（对齐 POSIX EBUSY） | `AIRY_EBUSY` |
+| `ARE_ENOSYS` | -38 | 功能未实现（对齐 POSIX ENOSYS） | `AIRY_ENOSYS` |
+| `ARE_ENOTSUP` | -95 | 操作不支持（对齐 POSIX ENOTSUP） | `AIRY_ENOTSUP` |
+| `ARE_ENOTINIT` | -4097 | 子系统未初始化（Airymax 专属） | `AIRY_ENOTINIT` |
+| `ARE_ETIMEDOUT` | -110 | 操作超时（对齐 POSIX ETIMEDOUT） | `AIRY_ETIMEDOUT` |
+| `ARE_EUNKNOWN` | -99 | 未知错误（Airymax 专属） | `AIRY_EUNKNOWN` |
 
 ```c
 #include <stdint.h>
-typedef int32_t are_error_t;
+typedef int32_t are_error_t;  /* 与 airy_err_t 等价，值空间一致 */
 ```
 
 ### 2.2 IPC 接口
@@ -750,7 +753,7 @@ const are_version_info_t *are_version_get(void);
 | 同步原语 | `agentrt/commons/platform/include/platform.h`（`airy_mtx_*` 等） |
 | `are_heapstore_*` | `agentrt/heapstore/include/heapstore.h` |
 | 任务依赖解析 | `agentrt/atoms/taskflow/include/taskflow.h` |
-| checkpoint 参考 | `agentrt/daemon/common/include/checkpoint.h` |
+| checkpoint 参考 | `agentrt/daemons/common/include/checkpoint.h` |
 
 ### 9.1 适配层桥接示例
 
@@ -785,8 +788,8 @@ uint64_t are_time_monotonic_ns(void) {
 ## 10. 参考文档
 
 - [ARE Standards 总览](README.md)
-- [L2 服务通信协议](L2_service_protocol.md) — IPC Bus 消息头、JSON-RPC 命名空间
-- [L3 安全与治理](L3_security_governance.md) — 错误码权威定义、沙箱、审计
+- [L2 服务通信协议](02-l2-service-protocol.md) — IPC Bus 消息头、JSON-RPC 命名空间
+- [L3 安全与治理](03-l3-security-governance.md) — 错误码权威定义、沙箱、审计
 
 ---
 

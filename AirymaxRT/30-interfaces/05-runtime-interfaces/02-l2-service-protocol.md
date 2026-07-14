@@ -22,8 +22,8 @@
 - 第三方实现兼容性指南。
 
 本标准**不**规定：
-- L1 内核级 IPC 原语（见 [L1_runtime_interface.md](L1_runtime_interface.md) §2.2）；
-- L3 权限裁决、沙箱、错误码权威定义（见 [L3_security_governance.md](L3_security_governance.md)）；
+- L1 内核级 IPC 原语（见 [01-l1-runtime-interface.md](01-l1-runtime-interface.md) §2.2）；
+- L3 权限裁决、沙箱、错误码权威定义（见 [03-l3-security-governance.md](03-l3-security-governance.md)）；
 - 具体传输介质（Unix socket / TCP / SHM，由实现者选择）。
 
 ### 1.2 目标
@@ -40,12 +40,12 @@
 
 | 维度 | L1（内核级） | L2（应用级） |
 |------|-------------|-------------|
-| 消息结构 | `are_ipc_message_t`（40 字节，5 字段） | `are_ipc_message_header_t`（128 字节，14 字段） |
+| 消息结构 | `airy_kernel_ipc_message_t`（40 字节，5 字段） | `struct airy_ipc_msg_hdr`（128 字节，8 字段，[SC] SSoT） |
 | 设计目标 | 极致性能、零依赖 | 自描述、可观测、跨进程 |
 | 桥接 | L2 header 序列化后作为 L1 message 的 payload 传输 |
-| 参考实现 | `atoms/corekern/include/ipc.h` | `daemon/common/include/ipc_service_bus.h` |
+| 参考实现 | `agentrt/atoms/corekern/include/ipc.h` | `agentrt/daemons/common/include/ipc_service_bus.h` |
 
-L2 消息在 L1 通道上传输时，整个 `are_ipc_message_header_t` + payload 作为一个 L1 `are_ipc_message_t.data` 传入；接收方按 magic 字段判别协议版本。
+L2 消息在 L1 通道上传输时，整个 `struct airy_ipc_msg_hdr` + payload 作为一个 L1 `airy_kernel_ipc_message_t.data` 传入；接收方按 magic 字段判别协议。
 
 ---
 
@@ -53,26 +53,30 @@ L2 消息在 L1 通道上传输时，整个 `are_ipc_message_header_t` + payload
 
 ### 2.1 结构体定义
 
+> **SSoT 声明**：IPC 消息头结构体权威定义位于 `include/airymax/ipc.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件，逐字节相同）。本节 `struct airy_ipc_msg_hdr` 必须与 `docs/AirymaxRT/30-interfaces/06-ipc/README.md` §2.1 以及源码 `agentrt/commons/include/airymax/ipc.h` 逐字节一致（128 字节，8 字段，`__attribute__((packed))`，`_Static_assert(sizeof(...) == 128)`）。
+>
+> **修正说明**：本节早期草案使用 `are_ipc_message_header_t`（typedef）+ `uint32_t/uint16_t/uint64_t` + 13 字段 + 无 `__attribute__((packed))` + 无真实 `_Static_assert`，与 [SC] SSoT 三重违规（命名/类型/布局）。已统一为 SSoT 版本 `struct airy_ipc_msg_hdr`（无 typedef）+ `__u32/__u16/__u64/__u8` UAPI 类型 + 8 字段 + `__attribute__((packed))` + `_Static_assert`。L2 开放标准接口（`are_ipc_*` 函数族）仍可由第三方实现，但消息头结构体必须与 [SC] SSoT 逐字节一致。
+
 ```c
-#include <stdint.h>
+/* SSoT: include/airymax/ipc.h —— [SC] 共享契约层，agentrt 与 agentrt-linux 逐字节共享 */
+#include <airymax/uapi_compat.h>  /* __u32/__u16/__u64/__u8 跨平台 UAPI 类型 */
 
 /* ==================== 常量 ==================== */
-#define ARE_IPC_MAGIC          0x41524531u  /* "ARE1"，big-endian: 'A','R','E','1' */
-#define ARE_IPC_VERSION        1
-#define ARE_IPC_HEADER_SIZE    128           /* 定长，禁止变更（影响所有 ABI） */
-#define ARE_IPC_MAX_SOURCE_LEN 32
-#define ARE_IPC_MAX_TARGET_LEN 32
-#define ARE_IPC_MAX_PAYLOAD    (512u * 1024u)  /* 512 KiB */
+#define AIRY_IPC_MAGIC        0x41524531u  /* "ARE1"，big-endian: 'A','R','E','1' */
+#define AIRY_IPC_HDR_SZ       128          /* 定长，禁止变更（影响所有 ABI） */
+#define ARE_IPC_MAX_PAYLOAD   (512u * 1024u)  /* 512 KiB，L2 负载上限 */
 
-/* ==================== 消息类型 ==================== */
+/* ==================== L2 协议消息类型（由 opcode 字段承载） ==================== */
+/* 注：struct airy_ipc_msg_hdr.opcode 字段注释引用 [SC] SSoT 的 enum airy_ipc_op
+ * （见 include/airymax/ipc.h）。以下为 L2 协议层对 opcode 字段的语义定义。 */
 typedef enum {
     ARE_MSG_REQUEST   = 0,  /* 请求-响应模式的请求 */
     ARE_MSG_RESPONSE  = 1,  /* 请求-响应模式的响应 */
     ARE_MSG_NOTIFY    = 2,  /* 单向通知（无响应） */
     ARE_MSG_ERROR     = 3,  /* 错误响应（替代 RESPONSE 时表示失败） */
-} are_msg_type_t;
+} airy_l2_msg_type_t;
 
-/* ==================== 协议字段 ==================== */
+/* ==================== 协议字段（由上层协议层处理，不在 128B 头中） ==================== */
 typedef enum {
     ARE_PROTO_JSON_RPC = 0,  /* JSON-RPC 2.0，默认且强制支持 */
     ARE_PROTO_MCP      = 1,  /* Model Context Protocol */
@@ -82,67 +86,101 @@ typedef enum {
 } are_proto_t;
 
 /* ==================== flags 位定义 ==================== */
-#define ARE_FLAG_COMPRESSED  0x0001u  /* payload 经 zlib 压缩 */
-#define ARE_FLAG_ENCRYPTED   0x0002u  /* payload 经 TLS/AES-GCM 加密 */
-#define ARE_FLAG_STREAMING   0x0004u  /* 流式消息分片（需重组） */
-#define ARE_FLAG_DROPPABLE   0x0008u  /* 背压时可丢弃（日志/指标类） */
-#define ARE_FLAG_IDEMPOTENT  0x0010u  /* 幂等请求，可安全重试 */
-#define ARE_FLAG_TRACE_SAMPLED 0x0020u /* 该 trace 已被采样 */
+#define AIRY_IPC_F_COMPRESSED    0x0001u  /* payload 经 zlib 压缩 */
+#define AIRY_IPC_F_ENCRYPTED     0x0002u  /* payload 经 TLS/AES-GCM 加密 */
+#define AIRY_IPC_F_STREAMING     0x0004u  /* 流式消息分片（需重组） */
+#define AIRY_IPC_F_DROPPABLE     0x0008u  /* 背压时可丢弃（日志/指标类） */
+#define AIRY_IPC_F_IDEMPOTENT    0x0010u  /* 幂等请求，可安全重试 */
+#define AIRY_IPC_F_TRACE_SAMPLED 0x0020u /* 该 trace 已被采样 */
 
-/* ==================== 128 字节消息头 ==================== */
-typedef struct are_ipc_message_header {
-    uint32_t magic;            /* offset  0: 0x41524531 ("ARE1") */
-    uint16_t version;          /* offset  4: 协议版本，当前 = 1 */
-    uint16_t msg_type;         /* offset  6: are_msg_type_t */
-    uint32_t protocol;         /* offset  8: are_proto_t */
-    uint64_t msg_id;           /* offset 12: 消息唯一 ID（请求方分配） */
-    uint64_t trace_id;         /* offset 20: 分布式追踪 ID，贯穿全链路 */
-    uint64_t correlation_id;   /* offset 28: 请求-响应关联 ID */
-    char     source[32];       /* offset 36: 源 daemon 名（NULL-terminated） */
-    char     target[32];       /* offset 68: 目标 daemon 名 */
-    uint32_t payload_len;      /* offset 100: 负载字节数（≤ ARE_IPC_MAX_PAYLOAD） */
-    uint32_t flags;            /* offset 104: are_flag_t 位域 */
-    uint64_t timestamp_ns;    /* offset 108: 纳秒时间戳（CLOCK_REALTIME） */
-    uint32_t checksum;         /* offset 116: CRC32(header[0:116] + payload) */
-    uint32_t reserved;         /* offset 120: 保留，必须为 0（未来扩展） */
-    /* 总长度 = 124 字节，结构体内含 4 字节对齐填充至 128 */
-} are_ipc_message_header_t;  /* _Static_assert(sizeof == 128) */
+/* ==================== 128 字节消息头（[SC] SSoT，与 include/airymax/ipc.h 逐字节一致） ==================== */
+/**
+ * struct airy_ipc_msg_hdr - IPC message header (128 bytes, [SC] shared)
+ * @magic: Must be AIRY_IPC_MAGIC (0x41524531 'ARE1').
+ * @opcode: Operation code; see enum airy_ipc_op.
+ * @flags: Message flags (AIRY_IPC_F_*).
+ * @trace_id: Distributed trace identifier for cross-daemon tracing.
+ * @timestamp_ns: Timestamp in nanoseconds (CLOCK_REALTIME).
+ * @src_task: Source task identifier.
+ * @dst_task: Destination task identifier.
+ * @payload_len: Payload length in bytes (excludes this 128B header).
+ * @reserved: 84 bytes padding, must be zero.
+ *
+ * Fixed 128-byte header, layout never changes. Shared between
+ * agentrt (user-space) and agentrt-linux (kernel) via [SC] contract layer.
+ * Recipients MUST validate magic before processing.
+ */
+struct airy_ipc_msg_hdr {
+    __u32   magic;          /* offset 0,  'ARE1' (0x41524531) */
+    __u16   opcode;         /* offset 4,  操作码（见 enum airy_ipc_op） */
+    __u16   flags;          /* offset 6,  消息标志（AIRY_IPC_F_*） */
+    __u64   trace_id;       /* offset 8,  分布式追踪 ID（贯穿全链路） */
+    __u64   timestamp_ns;   /* offset 16, 纳秒时间戳（CLOCK_REALTIME） */
+    __u64   src_task;       /* offset 24, 源任务 ID（整型 task ID，非字符串） */
+    __u64   dst_task;       /* offset 32, 目标任务 ID（整型 task ID，非字符串） */
+    __u32   payload_len;    /* offset 40, 负载长度（不含本 128B 头） */
+    __u8    reserved[84];   /* offset 44, 84 字节保留，必须为零 */
+} __attribute__((packed));
 
-/* ==================== 完整消息 ==================== */
+_Static_assert(sizeof(struct airy_ipc_msg_hdr) == 128,
+    "IPC message header must be exactly 128 bytes");
+
+/* ==================== 完整消息（L2 便利包装，非 [SC] SSoT） ==================== */
 typedef struct {
-    are_ipc_message_header_t header;
+    struct airy_ipc_msg_hdr header;
     void    *payload;          /* 调用者拥有所有权，长度 = header.payload_len */
     size_t   payload_size;     /* 实际分配容量，≥ payload_len */
 } are_ipc_message_t;
 ```
 
+**与早期草案的对应关系**（仅供迁移参考）：
+
+| 早期草案字段（已废弃） | SSoT 字段（`struct airy_ipc_msg_hdr`） | 说明 |
+|---------------------|--------------------------------------|------|
+| `uint32_t magic` | `__u32 magic` | 类型改为 UAPI `__u32`，magic 值不变（0x41524531） |
+| `uint16_t version` | — | 移除（version 由 `opcode`/`flags` 承载） |
+| `uint16_t msg_type` | `__u16 opcode` | 重命名为 `opcode`，对齐 [SC] SSoT `enum airy_ipc_op`（见 `include/airymax/ipc.h`） |
+| `uint32_t protocol` | — | 移除（protocol 由上层协议层处理，不在 128B 头中） |
+| `uint64_t msg_id` | — | 移除（msg_id 由 `trace_id` + `src_task` 推导） |
+| `uint64_t trace_id` | `__u64 trace_id` | 保留，类型改为 UAPI `__u64` |
+| `uint64_t correlation_id` | — | 移除（correlation 由 `trace_id` 复用） |
+| `char source[32]` | `__u64 src_task` | 改为整型 task ID（字符串名易变且占空间） |
+| `char target[32]` | `__u64 dst_task` | 改为整型 task ID |
+| `uint32_t payload_len` | `__u32 payload_len` | 保留，类型改为 UAPI `__u32` |
+| `uint32_t flags` | `__u16 flags` | 类型改为 UAPI `__u16`（16 位足够） |
+| `uint64_t timestamp_ns` | `__u64 timestamp_ns` | 保留，类型改为 UAPI `__u64` |
+| `uint32_t checksum` | — | 移除（CRC32 由传输层处理，不在固定头中） |
+| `uint32_t reserved` | `__u8 reserved[84]` | 扩展为 84 字节保留区，凑齐 128 字节 |
+| 宏 `ARE_IPC_MAGIC` | `AIRY_IPC_MAGIC` | 对齐 [SC] SSoT 命名 |
+| 宏 `ARE_IPC_HEADER_SIZE` | `AIRY_IPC_HDR_SZ` | 对齐 [SC] SSoT 命名 |
+| 宏 `ARE_IPC_VERSION` | — | 移除（version 字段已移除） |
+| 宏 `ARE_IPC_MAX_SOURCE_LEN`/`ARE_IPC_MAX_TARGET_LEN` | — | 移除（source/target 字符串字段已移除） |
+
 > **字节序**：所有多字节整数采用**主机字节序**（native endian）。跨网络传输时由传输层（TLS/TCP）或显式序列化处理。CTS 包含大端/小端两套用例。
 
 ### 2.2 字段语义
 
+> **说明**：以下字段语义基于 [SC] SSoT `struct airy_ipc_msg_hdr`（8 字段）。早期草案的 `version`/`protocol`/`msg_id`/`correlation_id`/`checksum` 字段已移除，对应能力由 `opcode`/`flags`/`trace_id`/`src_task` 承载（迁移关系见 §2.1 对应关系表）。
+
 | 字段 | 必填 | 语义 |
 |------|------|------|
-| `magic` | 是 | 接收方必须先校验 magic，不匹配则丢弃消息并记录 `WARN` |
-| `version` | 是 | 接收方仅处理支持的主版本；不匹配返回 `ARE_EPROTO` |
-| `msg_type` | 是 | REQUEST/RESPONSE/NOTIFY/ERROR 四选一 |
-| `protocol` | 是 | 指示 payload 的序列化协议，决定反序列化器选择 |
-| `msg_id` | 是 | 请求方分配的唯一 ID，RESPONSE 必须 echo 回 REQUEST 的 msg_id |
-| `trace_id` | 是 | 0 表示未启用追踪；非 0 时全链路透传（见 §6） |
-| `correlation_id` | 否 | 用于异步请求-响应匹配，可与 msg_id 相同 |
-| `source` | 是 | 发送方 daemon 名（如 "llm_d"），便于审计与路由 |
-| `target` | 是 | 目标 daemon 名（如 "tool_d"）；广播时填 "*" |
-| `payload_len` | 是 | 0 表示无 payload；> ARE_IPC_MAX_PAYLOAD 拒绝 |
-| `flags` | 是 | 位域，未定义位必须为 0 |
-| `timestamp_ns` | 是 | 发送时刻的 CLOCK_REALTIME，用于审计与超时计算 |
-| `checksum` | 是 | CRC32，覆盖 header[0:116] 与 payload；校验失败丢弃并 `WARN` |
-| `reserved` | 是 | 必须 0；未来版本可定义新字段 |
+| `magic` | 是 | 接收方必须先校验 magic == `AIRY_IPC_MAGIC`，不匹配则丢弃消息并记录 `WARN` |
+| `opcode` | 是 | 操作码，承载 L2 消息类型（见 `enum airy_ipc_op` / `airy_l2_msg_type_t`）：REQUEST/RESPONSE/NOTIFY/ERROR 四选一 |
+| `flags` | 是 | 位域（`AIRY_IPC_F_*`），未定义位必须为 0；`__u16`（16 位足够） |
+| `trace_id` | 是 | 分布式追踪 ID（`__u64`）；0 表示未启用追踪；非 0 时全链路透传（见 §6） |
+| `timestamp_ns` | 是 | 发送时刻的 CLOCK_REALTIME 纳秒时间戳（`__u64`），用于审计与超时计算 |
+| `src_task` | 是 | 源任务 ID（`__u64` 整型 task ID，非字符串名），便于审计与路由 |
+| `dst_task` | 是 | 目标任务 ID（`__u64` 整型 task ID）；广播时由上层路由层处理 |
+| `payload_len` | 是 | 0 表示无 payload；> `ARE_IPC_MAX_PAYLOAD` 拒绝（`__u32`） |
+| `reserved[84]` | 是 | 84 字节保留区，必须全零；未来版本可定义新字段（前向兼容） |
 
 ### 2.3 一致性要求
 
-- `sizeof(are_ipc_message_header_t)` 必须等于 128（CTS 用 `_Static_assert` 验证）；
-- `checksum` 计算时，`checksum` 字段本身以 0 参与计算；
-- 接收方在 magic/version/checksum 任一校验失败时**必须丢弃消息**，不得回复 ERROR（避免错误风暴）；
-- `source` 与 `target` 必须以 `\0` 结尾，长度 ≤ 31 字节（保留 1 字节终结符）。
+- `sizeof(struct airy_ipc_msg_hdr)` 必须等于 128（CTS 用 `_Static_assert` 验证，已在 §2.1 定义）；
+- 结构体必须以 `__attribute__((packed))` 声明，禁止编译器插入对齐填充；
+- 接收方在 magic 校验失败时**必须丢弃消息**，不得回复 ERROR（避免错误风暴）；
+- `reserved[84]` 必须全零；CRC32 校验由传输层处理，不在固定 128B 头中承载；
+- 早期草案的 `source`/`target` 字符串字段已移除，改用 `src_task`/`dst_task` 整型 task ID；daemon 名到 task ID 的映射由服务发现层（§7）维护。
 
 ---
 
@@ -198,7 +236,7 @@ typedef struct {
 **NOTIFY 的 header 约束**：
 - `msg_type` = `ARE_MSG_NOTIFY`；
 - 接收方不得返回任何 RESPONSE；
-- `flags` 可含 `ARE_FLAG_DROPPABLE`，背压时可丢弃。
+- `flags` 可含 `AIRY_IPC_F_DROPPABLE`，背压时可丢弃。
 
 ### 3.3 ERROR
 
@@ -242,7 +280,7 @@ typedef struct {
 
 ### 4.5 Custom
 
-`ARE_PROTO_CUSTOM` 允许实现者自定义 payload 格式。使用时 `flags` 必须额外设置 `ARE_FLAG_COMPRESSED` 或在 payload 头部携带自描述元数据。CTS 不覆盖 Custom 协议，但要求 magic/version/checksum 仍校验。
+`ARE_PROTO_CUSTOM` 允许实现者自定义 payload 格式。使用时 `flags` 必须额外设置 `AIRY_IPC_F_COMPRESSED` 或在 payload 头部携带自描述元数据。CTS 不覆盖 Custom 协议，但要求 magic/version/checksum 仍校验。
 
 ---
 
@@ -428,7 +466,7 @@ service_discovery:
 
 ### 7.6 参考实现
 
-Airymax 原生实现：`agentrt/daemon/common/include/service_discovery.h`（shm 后端）。第三方实现其他后端时需实现 `are_svc_discovery_adapter_t` 全部函数指针（除 `heartbeat` 可返回 `ARE_ENOTSUP`）。
+Airymax 原生实现：`agentrt/daemons/common/include/service_discovery.h`（shm 后端）。第三方实现其他后端时需实现 `are_svc_discovery_adapter_t` 全部函数指针（除 `heartbeat` 可返回 `ARE_ENOTSUP`）。
 
 ---
 
@@ -520,7 +558,7 @@ Airymax 原生实现：`agentrt/daemon/common/include/service_discovery.h`（shm
 
 ### 9.1 trace_id 格式
 
-`trace_id` 是 64 位无符号整数，在 `are_ipc_message_header_t.trace_id` 字段中传递。生成规则：
+`trace_id` 是 64 位无符号整数，在 `struct airy_ipc_msg_hdr.trace_id` 字段中传递。生成规则：
 
 - 高 32 位：进程启动时的随机种子（每进程唯一）；
 - 低 32 位：进程内单调递增计数器。
@@ -541,7 +579,7 @@ Airymax 原生实现：`agentrt/daemon/common/include/service_discovery.h`（shm
 
 ### 9.3 采样
 
-`flags & ARE_FLAG_TRACE_SAMPLED` 表示该 trace 已被采样，observe_d 据此决定是否采集完整 span。未采样的 trace 仅记录必要的日志（INFO 级），减少开销。
+`flags & AIRY_IPC_F_TRACE_SAMPLED` 表示该 trace 已被采样，observe_d 据此决定是否采集完整 span。未采样的 trace 仅记录必要的日志（INFO 级），减少开销。
 
 ### 9.4 一致性要求
 
@@ -555,13 +593,13 @@ Airymax 原生实现：`agentrt/daemon/common/include/service_discovery.h`（shm
 
 ### 10.1 三级背压策略
 
-当 daemon 队列深度上升时，按下列阈值触发分级响应（参考实现：`daemon/common/include/ipc_backpressure.h`）：
+当 daemon 队列深度上升时，按下列阈值触发分级响应（参考实现：`agentrt/daemons/common/include/ipc_backpressure.h`）：
 
 | 级别 | 阈值 | 行为 |
 |------|------|------|
 | `ARE_BP_NORMAL` | < 60% | 正常处理 |
 | `ARE_BP_SLOW` | 60–80% | 生产者降速：客户端收到 `ARE_ERR_SVC_BUSY` + `retry_after_ms`，建议指数退避 |
-| `ARE_BP_DROP` | 80–90% | 丢弃 `ARE_FLAG_DROPPABLE` 消息（日志/指标/心跳类），不回复 ERROR |
+| `ARE_BP_DROP` | 80–90% | 丢弃 `AIRY_IPC_F_DROPPABLE` 消息（日志/指标/心跳类），不回复 ERROR |
 | `ARE_BP_REJECT` | > 90% | 拒绝新连接，已建立连接的 REQUEST 返回 `ARE_ERR_SVC_BUSY`，触发告警 |
 | 恢复 | < 60% | 恢复正常速率，记录恢复事件 |
 
@@ -575,7 +613,7 @@ uint32_t backoff_ms = 100;          /* 初始 100ms */
 for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
     are_error_t rc = are_ipc_call(...);
     if (rc == ARE_OK) break;
-    if (rc == ARE_ERR_SVC_BUSY && (flags & ARE_FLAG_IDEMPOTENT)) {
+    if (rc == ARE_ERR_SVC_BUSY && (flags & AIRY_IPC_F_IDEMPOTENT)) {
         /* 指数退避 + 抖动 */
         uint32_t jitter = rand() % 50;
         are_time_sleep_ms(backoff_ms + jitter);
@@ -587,7 +625,7 @@ for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
 ```
 
 约束：
-- **仅幂等请求**（`flags & ARE_FLAG_IDEMPOTENT`）允许重试，非幂等请求重试可能导致重复执行；
+- **仅幂等请求**（`flags & AIRY_IPC_F_IDEMPOTENT`）允许重试，非幂等请求重试可能导致重复执行；
 - `data.retry_after_ms` 优先于客户端本地退避计算；
 - 最大重试次数默认 3 次（与 `IPC_BUS_MAX_RETRIES` 一致）；
 - 重试时**必须保留**原 `msg_id` 与 `trace_id`。
@@ -735,25 +773,25 @@ int main(void) {
 
 | 标准接口 | 参考实现位置 |
 |----------|-------------|
-| `are_ipc_message_header_t` | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_message_header_t`） |
-| 消息类型枚举 | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_msg_type_t`） |
-| 协议字段枚举 | `agentrt/daemon/common/include/ipc_service_bus.h`（`ipc_bus_proto_t`） |
-| 服务发现 shm 后端 | `agentrt/daemon/common/include/service_discovery.h`（`sd_*`） |
-| 背压控制器 | `agentrt/daemon/common/include/ipc_backpressure.h`（`ipc_bp_*`） |
-| JSON-RPC 辅助 | `agentrt/daemon/common/include/jsonrpc_helpers.h` |
-| 方法分派器 | `agentrt/daemon/common/include/method_dispatcher.h` |
+| `struct airy_ipc_msg_hdr` | `agentrt/daemons/common/include/ipc_service_bus.h`（`ipc_bus_message_header_t` 适配层，最终对齐 `include/airymax/ipc.h`） |
+| 消息类型枚举 | `agentrt/daemons/common/include/ipc_service_bus.h`（`ipc_bus_msg_type_t`） |
+| 协议字段枚举 | `agentrt/daemons/common/include/ipc_service_bus.h`（`ipc_bus_proto_t`） |
+| 服务发现 shm 后端 | `agentrt/daemons/common/include/service_discovery.h`（`sd_*`） |
+| 背压控制器 | `agentrt/daemons/common/include/ipc_backpressure.h`（`ipc_bp_*`） |
+| JSON-RPC 辅助 | `agentrt/daemons/common/include/jsonrpc_helpers.h` |
+| 方法分派器 | `agentrt/daemons/common/include/method_dispatcher.h` |
 
 ### 13.1 与原生实现的差异
 
-Airymax 原生 `ipc_bus_message_header_t` 字段顺序与本标准略有不同（原生 `reserved[16]`，本标准 `reserved` 4 字节 + 对齐）。本标准冻结字段布局为 v1，原生实现需通过适配层桥接或迁移至本标准 ABI。
+Airymax 原生 `ipc_bus_message_header_t` 适配层将旧 13 字段布局桥接至 [SC] SSoT `struct airy_ipc_msg_hdr`（8 字段 + `reserved[84]`）。本标准冻结字段布局为 v1（128 字节，`__attribute__((packed))`），原生实现需通过适配层桥接或迁移至本标准 ABI。
 
 ---
 
 ## 14. 参考文档
 
 - [ARE Standards 总览](README.md)
-- [L1 核心运行时接口](L1_runtime_interface.md) — IPC 原语、内存、任务
-- [L3 安全与治理](L3_security_governance.md) — 错误码权威定义、权限、审计
+- [L1 核心运行时接口](01-l1-runtime-interface.md) — IPC 原语、内存、任务
+- [L3 安全与治理](03-l3-security-governance.md) — 错误码权威定义、权限、审计
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
 - [MCP Specification](https://modelcontextprotocol.io/)
 - [A2A Protocol](https://a2a-protocol.org/)

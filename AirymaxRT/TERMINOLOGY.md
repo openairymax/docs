@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **最新**: 2026-06-25  
 **状态**: 维护中   
-**路径**: `Docs/TERMINOLOGY.md`  
+**路径**: `docs/AirymaxRT/TERMINOLOGY.md`
 
 ---
 
@@ -158,7 +158,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `airy_core_*`
 
-**代码目录**: `AgentRT/agentrt/atoms/corekern/`
+**代码目录**: `agentrt/atoms/corekern/`
 
 **参见**: MicroCoreRT（微核心，架构概念层）、IPC、AirymaxSyscall（系统调用层）
 
@@ -182,7 +182,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `airy_loop_*`
 
-**代码目录**: `AgentRT/agentrt/atoms/coreloopthree/`
+**代码目录**: `agentrt/atoms/coreloopthree/`
 
 **参见**: Thinkdual（双思考系统）、MemoryRovol（记忆卷载）、TaskFlow（任务流引擎）
 
@@ -206,10 +206,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 体系 | 适用场景 | 格式 |
 |------|---------|------|
-| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=-1` |
+| **C 负整数体系**（首要） | C 内核和 daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=-22`、`AIRY_ENOMEM=-12`、`AIRY_ETIMEDOUT=-110`（对齐 POSIX errno 负值；权威定义位于 `agentrt/commons/utils/error/include/error.h` + `agentrt/commons/include/airy_types.h`，方案 A SSoT；`airy_err_t = int32_t` 类型定义于 `airy_types.h:41`） |
 | **SDK 十六进制体系**（次要） | SDK 和外部接口 | `0x0000`-`0x7FFF` 分段 |
 
-**系统内代码**: `AIRY_E*`（统一命名）
+**系统内代码**: `AIRY_E*`（统一命名；成功码统一为 `AIRY_EOK = 0`，不再使用 `AIRY_OK`）
 
 **禁止**: C 内核代码中使用十六进制错误码；SDK 中使用负整数错误码
 
@@ -235,7 +235,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `airy_heapstore_*`
 
-**代码目录**: `AgentRT/agentrt/heapstore/`
+**代码目录**: `agentrt/heapstore/`
 
 ---
 
@@ -299,7 +299,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `airy_layer*_*` / `airy_mr_*`
 
-**代码目录**: `MemoryRovol/`（独立模块，原位于 `AgentRT/agentrt/atoms/memoryrovol/`，现已独立为 Airymax 商业化核心模块）
+**代码目录**: `MemoryRovol/`（独立模块，原位于 `agentrt/atoms/memoryrovol/`，现已独立为 Airymax 商业化核心模块）
 
 **参见**: CoreLoopThree（三层认知循环）、Forgetting Engine（遗忘机制）、TimeSliceInfer（分时推理框架）、MemorySwap（记忆交换算法）
 
@@ -317,7 +317,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### MicroCoreRT / 微核心（架构概念层名称）
 
-**定义**: 极简的操作系统内核抽象层，只提供最基本的 IPC、内存管理、任务调度、时间管理、可观测性功能。其他功能作为用户态服务实现。名称取自 Micro + Core + RT（Runtime）。
+**定义**: 极简的运行时内核抽象层（用户态微核心，非操作系统内核），只提供最基本的 IPC、内存管理、任务调度、时间管理、可观测性功能。其他功能作为用户态服务实现。名称取自 Micro + Core + RT（Runtime）。
 
 > 注: 这是"微内核风格"的用户态抽象层，不是真正的操作系统内核（不运行在 ring 0，不管理硬件）。
 
@@ -327,7 +327,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `airy_core_*`（与 CoreKern 共享）
 
-**代码目录**: `AgentRT/agentrt/atoms/corekern/`（与 CoreKern 同目录）
+**代码目录**: `agentrt/atoms/corekern/`（与 CoreKern 同目录）
 
 **参见**: CoreKern（原子核心，标准模块名）、IPC、AirymaxSyscall（系统调用层）、Service Isolation（服务隔离）
 
@@ -339,7 +339,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 协议适配层 (Protocols)
 
-**代码目录**: `AgentRT/agentrt/protocols/`
+**代码目录**: `agentrt/protocols/`
 
 **参见**: Daemon（用户态服务层）
 
@@ -363,7 +363,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **标准名称**: 任务流引擎 (TaskFlow)
 
-**代码目录**: `AgentRT/agentrt/atoms/taskflow/`
+**代码目录**: `agentrt/atoms/taskflow/`
 
 **参见**: CoreLoopThree（三层认知循环）
 
@@ -388,7 +388,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `tc_*`（思考链）/ `mc_*`（元认知）/ `sc_*`（流式验证）/ `tc3_*`（协调器）
 
-**代码目录**: `AgentRT/agentrt/atoms/coreloopthree/src/cognition/`
+**代码目录**: `agentrt/atoms/coreloopthree/src/cognition/`
 
 **参见**: CoreLoopThree（三层认知循环）、CognitiveEvolution（认知进化系统）
 
@@ -601,10 +601,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 参考文献
 
-[1] 体系并行论 — `00-basic-theories/01-mcis-cn.md`
-[2] 认知层理论 — `00-basic-theories/02-cognition-design-cn.md`
-[3] 记忆层理论 — `00-basic-theories/03-memory-design-cn.md`
-[4] 设计原则 — `00-basic-theories/04-design-principles-cn.md`
+[1] 体系并行论 — `00-requirements/01-mcis-cn.md`
+[2] 认知层理论 — `00-requirements/02-cognition-design-cn.md`
+[3] 记忆层理论 — `00-requirements/03-memory-design-cn.md`
+[4] 设计原则 — `00-requirements/04-design-principles-cn.md`
 [5] 架构设计原则 — `00-architectural-principles.md`
 [6] MemoryRovol 架构文档 — `10-architecture/03-memoryrovol.md`
 [7] 微核心架构（MicroCoreRT） — `10-architecture/04-microcorert.md`

@@ -121,10 +121,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 示例 | 位置 |
 |------|------|
-| Rust 编码风格 | [Rust_coding_style_standard.md](../30-coding-standard/13-rust-coding-style.md) |
-| Rust 安全编码 | [Rust_secure_coding_standard.md](../30-coding-standard/14-rust-secure-coding.md) |
-| Go 编码风格 | [Go_coding_style_standard.md](../30-coding-standard/06-go-coding-style.md) |
-| Go 安全编码 | [Go_secure_coding_standard.md](../30-coding-standard/07-go-secure-coding.md) |
+| Rust 编码风格 | [Rust_coding_style.md](../../50-engineering-standards/10-coding-style/Rust_coding_style.md) |
+| Rust 安全编码 | [Rust_coding_style.md](../../50-engineering-standards/10-coding-style/Rust_coding_style.md) |
+| Go 编码风格 | [Go_coding_style.md](../../50-engineering-standards/10-coding-style/Go_coding_style.md) |
+| Go 安全编码 | [Go_coding_style.md](../../50-engineering-standards/10-coding-style/Go_coding_style.md) |
 
 ---
 
@@ -161,8 +161,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 宏 | 用途 | 定义位置 |
 |----|------|---------|
-| `MEMORY_FREE_SAFE(pptr)` | 安全释放内存并置指针为 NULL（接受指针的指针） | [C_coding_style_standard.md](../30-coding-standard/01-c-coding-style.md) / `memory_compat.h` |
-| `AIRY_SECURE_ZERO(ptr, size)` | 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`） | [C_Cpp_secure_coding_standard.md](../30-coding-standard/02-c-cpp-secure-coding.md) / `memory_compat.h` |
+| `MEMORY_FREE_SAFE(pptr)` | 安全释放内存并置指针为 NULL（接受指针的指针） | [C_Cpp_coding_style.md](../../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) / `memory_compat.h` |
+| `AIRY_SECURE_ZERO(ptr, size)` | 安全内存清零（防止编译器优化，跨平台替代 `explicit_bzero`） | [C_Cpp_coding_style.md](../../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) / `memory_compat.h` |
 
 ---
 
@@ -170,17 +170,19 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 系统调用错误码
 
+> **SSoT 声明**：错误码权威定义位于 `include/airymax/error.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件）。类型 `airy_err_t = int32_t` 定义于 `airy_types.h:41`。C 内核值与 `docs/AirymaxRT/50-engineering-standards/120-cross-project-code-sharing.md` §2.1（13 个 `AIRY_E*` 宏，对齐 POSIX errno 负值）逐字节一致；成功码统一为 `AIRY_EOK = 0`。
+
 | 错误码 | C 内核值 | SDK 十六进制值 | 说明 |
 |--------|---------|--------------|------|
-| AIRY_OK | 0 | 0x0000 | 成功 |
-| AIRY_EINVAL | -1 | 0x0003 | 参数无效 |
-| AIRY_ENOMEM | -2 | 0x0002 | 内存不足 |
-| AIRY_ENOENT | -4 | 0x0004 | 资源不存在 |
-| AIRY_EPERM | -5 | 0x0005 | 权限不足 |
-| AIRY_ETIMEDOUT | -6 | 0x0006 | 操作超时 |
+| AIRY_EOK | 0 | 0x0000 | 成功 |
+| AIRY_EPERM | -1 | 0x0005 | 权限不足（对齐 POSIX EPERM） |
+| AIRY_ENOENT | -2 | 0x0004 | 资源不存在（对齐 POSIX ENOENT） |
+| AIRY_ENOMEM | -12 | 0x0002 | 内存不足（对齐 POSIX ENOMEM） |
+| AIRY_EINVAL | -22 | 0x0003 | 参数无效（对齐 POSIX EINVAL） |
+| AIRY_ETIMEDOUT | -110 | 0x0006 | 操作超时（对齐 POSIX ETIMEDOUT） |
 
 > **📝 双错误码体系说明**  
-> Airymax 采用双错误码体系：C 内核使用负整数（定义于 `error.h` / `airy_types.h`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../../50-engineering-standards/50-project-erp/error_code_reference.md)。
+> Airymax 采用双错误码体系：C 内核使用负整数（权威定义于 `include/airymax/error.h`，[SC] 共享契约层；`airy_err_t` 类型定义于 `airy_types.h:41`），SDK 使用十六进制值。完整映射关系参见 [error_code_reference.md](../../50-engineering-standards/50-project-erp/error_code_reference.md)。
 
 **完整列表**: [syscall_api_contract.md - 第 7 章](./04-syscall-api-contract.md) | [error_code_reference.md](../../50-engineering-standards/50-project-erp/error_code_reference.md)
 

@@ -23,8 +23,8 @@
 - 合规检查清单与第三方实现安全审计要求。
 
 本标准**不**规定：
-- L1 内核原语实现（见 [L1_runtime_interface.md](L1_runtime_interface.md)）；
-- L2 IPC Bus 协议（见 [L2_service_protocol.md](L2_service_protocol.md)）；
+- L1 内核原语实现（见 [01-l1-runtime-interface.md](01-l1-runtime-interface.md)）；
+- L2 IPC Bus 协议（见 [02-l2-service-protocol.md](02-l2-service-protocol.md)）；
 - 具体加密算法选择（AES-GCM/ChaCha20-Poly1305 由实现者选择，但必须 AEAD）。
 
 ### 1.2 目标
@@ -301,13 +301,17 @@ commons/utils/error/include/error.h
 
 错误码类型为 `int32_t`（`airy_err_t` / `are_error_t`），成功为 0，错误为负值。分段如下：
 
+> **SSoT 声明**：通用段错误码权威定义位于 `include/airymax/error.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件）。类型 `airy_err_t = int32_t` 定义于 `airy_types.h:41`。本表通用段示例与 `docs/AirymaxRT/50-engineering-standards/120-cross-project-code-sharing.md` §2.1（13 个 `AIRY_E*` 宏，对齐 POSIX errno 负值）逐字节一致；`ARE_*` 与 `AIRY_*` 值空间一致（成功为 `ARE_OK = AIRY_EOK = 0`）。
+
 | 段 | 范围 | 类别 | 示例宏 | 值 | 含义 |
 |----|------|------|--------|----|------|
-| **通用** | -1 ~ -99 | 基础错误（参数、内存、权限、超时等），已与 AirymaxOS 对齐 | `AIRY_EINVAL` | -1 | 参数无效 |
-| | | | `AIRY_ENOMEM` | -2 | 内存不足 |
-| | | | `AIRY_EPERM` | -4 | 权限不足 |
-| | | | `AIRY_ETIMEOUT` | -11 | 操作超时 |
-| | | | `AIRY_ENOSYS` | -3 | 未实现 |
+| **通用** | -1 ~ -99 | 基础错误（参数、内存、权限、超时等），对齐 POSIX errno 负值 | `AIRY_EPERM` | -1 | 权限不足（对齐 POSIX EPERM） |
+| | | | `AIRY_ENOENT` | -2 | 资源不存在（对齐 POSIX ENOENT） |
+| | | | `AIRY_ENOSYS` | -38 | 未实现（对齐 POSIX ENOSYS） |
+| | | | `AIRY_ENOMEM` | -12 | 内存不足（对齐 POSIX ENOMEM） |
+| | | | `AIRY_EINVAL` | -22 | 参数无效（对齐 POSIX EINVAL） |
+| | | | `AIRY_EBUSY` | -16 | 资源忙（对齐 POSIX EBUSY） |
+| | | | `AIRY_ETIMEDOUT` | -110 | 操作超时（对齐 POSIX ETIMEDOUT） |
 | **系统** | -100 ~ -199 | 平台、线程、socket、文件 | `AIRY_ESYS_NOT_INIT` | -101 | 系统未初始化 |
 | | | | `AIRY_ESYS_MUTEX` | -105 | 互斥锁错误 |
 | | | | `AIRY_ESYS_SOCKET` | -109 | socket 错误 |
@@ -338,8 +342,8 @@ commons/utils/error/include/error.h
 | # | 禁令 | 说明 |
 |---|------|------|
 | 1 | **禁止多套并行错误码系统** | 不得在 SDK、daemon、atoms 中定义独立的错误码枚举（如 `sdk_error_t`、`daemon_error_t`），所有代码必须使用 `airy_err_t` |
-| 2 | **禁止本地 `#define` 重定义错误码** | 不得在 `.c`/`.h` 文件中 `#define AIRY_EINVAL (-1)` 之类，必须 `#include "error.h"` |
-| 3 | **禁止与字面量直接比较** | 调用方应使用语义宏（如 `if (rc == AIRY_ETIMEOUT)`），禁止 `if (rc == -11)` |
+| 2 | **禁止本地 `#define` 重定义错误码** | 不得在 `.c`/`.h` 文件中 `#define AIRY_EINVAL (-22)` 之类，必须 `#include "error.h"` |
+| 3 | **禁止与字面量直接比较** | 调用方应使用语义宏（如 `if (rc == AIRY_ETIMEDOUT)`），禁止 `if (rc == -110)` |
 | 4 | **禁止跨段借用** | LLM 类错误不得占用 -600 段；新增错误码必须归入对应段 |
 | 5 | **禁止删除已发布错误码** | 已发布的错误码值必须保留，可标记 `deprecated` 但不得删除或重用 |
 
@@ -353,7 +357,7 @@ commons/utils/error/include/error.h
 
 ### 5.5 命名约定（AIRY_E* 为唯一主名称）
 
-**`AIRY_E*` 是唯一的错误码主名称。** 旧版使用的 `AIRY_ERR_*` 形式（如 `AIRY_ERR_INVALID_PARAM`）已废弃，全系统统一使用 POSIX 风格的 `AIRY_E*` 形式（如 `AIRY_EINVAL`）。权威错误码定义见 `commons/utils/error/include/error.h` 及 [错误码参考文档](../70-project-erp/02-error-code-reference.md)。
+**`AIRY_E*` 是唯一的错误码主名称。** 旧版使用的 `AIRY_ERR_*` 形式（如 `AIRY_ERR_INVALID_PARAM`）已废弃，全系统统一使用 POSIX 风格的 `AIRY_E*` 形式（如 `AIRY_EINVAL`）。权威错误码定义见 `commons/utils/error/include/error.h` 及 [错误码参考文档](../../50-engineering-standards/50-project-erp/project_erp.md)。
 
 ---
 
@@ -733,8 +737,8 @@ ARE L3 Compliant — Verified by <审计方> on <日期>, CTS version <版本>
 | 动态策略引擎 | `agentrt/cupolas/include/dynamic_policy_engine.h` |
 | 零信任集成 | `agentrt/cupolas/include/zero_trust_integration.h` |
 | SafetyGuard | `agentrt/cupolas/include/safety_guard.h` |
-| 日志净化 | `agentrt/daemon/common/include/log_sanitizer.h` |
-| 输入校验 | `agentrt/daemon/common/include/input_validator.h` |
+| 日志净化 | `agentrt/daemons/common/include/log_sanitizer.h` |
+| 输入校验 | `agentrt/daemons/common/include/input_validator.h` |
 
 ### 12.1 适配层桥接示例
 
@@ -768,8 +772,8 @@ are_error_t are_permission_add_rule(const char *subject, const char *action,
 ## 13. 参考文档
 
 - [ARE Standards 总览](README.md)
-- [L1 核心运行时接口](L1_runtime_interface.md) — IPC 原语、内存、任务
-- [L2 服务通信协议](L2_service_protocol.md) — IPC Bus 消息头、JSON-RPC 命名空间
+- [L1 核心运行时接口](01-l1-runtime-interface.md) — IPC 原语、内存、任务
+- [L2 服务通信协议](02-l2-service-protocol.md) — IPC Bus 消息头、JSON-RPC 命名空间
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [SPDX Specification 2.3](https://spdx.dev/specifications/)
 - [CycloneDX 1.5](https://cyclonedx.org/docs/1.5/)

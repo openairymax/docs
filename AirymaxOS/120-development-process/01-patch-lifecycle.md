@@ -24,7 +24,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.2 适用范围
 
-本文档适用于 agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
+本文档适用于 agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）以及同源 agentrt 的协同变更流程。涉及 MicroCoreRT 与 AgentsIPC 同源 API 的改动遵循第 10 节的跨仓流程。
 
 ### 1.3 关键术语
 
@@ -386,7 +386,7 @@ stateDiagram-v2
 
 ## 10. agentrt-linux 8 子仓跨仓 PR 流程
 
-agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
+agentrt-linux 的 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）之间存在依赖关系。跨仓变更需通过 submodule 更新触发上游仓 PR。
 
 ### 10.1 8 子仓依赖关系
 
@@ -435,7 +435,7 @@ Signed-off-by: Author Name <author@example.com>"
 gh pr create --base develop --title "system/airy_ipc: add agent_priority field"
 
 # 2. system 子仓 PR 合并后，更新 kernel 子仓的 submodule 指针
-cd ../airymaxos-kernel
+cd ../kernel
 git checkout -b feature/airy_ipc-priority-support
 git submodule update --remote system
 git commit -s -m "kernel: consume airy_ipc agent_priority field
@@ -480,7 +480,7 @@ agentrt-linux 将 Linux 内核的邮件 + `git send-email` 流程适配为 GitHu
 
 Fixes: 54a4f0239f2e ("original commit summary")
 Closes: #123
-Link: https://github.com/agentrt-linux/airymaxos-kernel/pull/456#discussion_r789
+Link: https://github.com/agentrt-linux/kernel/pull/456#discussion_r789
 
 Signed-off-by: Author Name <author@example.com>
 Reviewed-by: Reviewer Name <reviewer@example.com>
@@ -660,8 +660,8 @@ graph TD
 
 agentrt-linux 的 umbrella repo 通过 `.gitmodules` 引用 8 子仓的 commit SHA。当某一子仓的 PR 合并到 `develop` 后，GitHub Actions 自动触发上游子仓的 submodule 更新 PR：
 
-1. **下游仓 merge 触发**：`airymaxos-kernel` 仓 PR 合并后，CI 调用 `git submodule update --remote airymaxos-kernel` 更新 `services`/`security`/`memory` 仓的 `.gitmodules` 指针。
-2. **自动 PR 创建**：CI 为每个上游子仓自动创建 `chore: bump airymaxos-kernel submodule to <sha>` 的 PR，目标分支为 `develop`，PR 描述必须引用下游仓的 commit SHA（12 字符）。
+1. **下游仓 merge 触发**：`kernel` 仓 PR 合并后，CI 调用 `git submodule update --remote kernel` 更新 `services`/`security`/`memory` 仓的 `.gitmodules` 指针。
+2. **自动 PR 创建**：CI 为每个上游子仓自动创建 `chore: bump kernel submodule to <sha>` 的 PR，目标分支为 `develop`，PR 描述必须引用下游仓的 commit SHA（12 字符）。
 3. **上游仓 CI 验证**：上游子仓 PR 触发本地 CI，拉取新版下游产物后执行编译 + 7 层验证前 4 层（OS-DEV-121）；通过后方可 merge。
 4. **阶段推进**：当某一阶段（如阶段 1）的全部子仓 submodule PR merge 完成，CI 自动解锁阶段 2 子仓（system/cognition）的 PR 队列。
 

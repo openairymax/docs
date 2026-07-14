@@ -486,7 +486,7 @@ relationships:
 
 ## Part II: agentrt-linux 统一错误码参考
 
-> **SSoT 声明**： 本文档的错误码规范以 [SC] 共享契约层 `include/airymax/error.h` 为单一数据源（SSoT）。C 内核首要体系使用 `AIRY_E*` 前缀（唯一主名称），SDK 次要体系使用 `AIRY_ERROR_*` 前缀。旧版 `AIRY_ERR_*` 前缀已废弃，新代码禁止使用。详见 [跨项目代码共享](../120-cross-project-code-sharing.md)。
+> **SSoT 声明**： 本文档的错误码规范以方案 A（POSIX errno 负值）为唯一权威方案。权威源文件：`agentrt/commons/utils/error/include/error.h`（定义 `AIRY_ERR_*` 扩展码 + 错误链/i18n 接口）+ `agentrt/commons/include/airy_types.h:41`（定义 `airy_err_t` 类型 + `AIRY_E*` POSIX 码）。`airymax/error.h` 为规划中的 [SC] 共享头文件路径，当前尚未创建；在创建前，以 `agentrt/commons/utils/error/include/error.h` 为实际权威源。C 内核首要体系使用 `AIRY_E*` 前缀（唯一主名称），SDK 次要体系使用 `AIRY_ERROR_*` 前缀。旧版 `AIRY_ERR_*` 前缀已废弃，新代码禁止使用。详见 [跨项目代码共享](../120-cross-project-code-sharing.md) §2.5。
 
 ---
 
@@ -976,15 +976,19 @@ IPC 错误码由 kernel 和 services 联合定义：
 
 ##### 4.1.2 用户态错误码定义模板
 
+> **注意**：以下十六进制值（`0x00010000` 等）属于 **ERP 位掩码分类方案（方案 D）**，用于 SDK/外部接口的十六进制分段错误码体系（次要体系），**非 C 内核错误码方案**。C 内核首要体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`），权威定义见 `agentrt/commons/include/airy_types.h`。方案 D 不可与方案 A 混用。
+
 ```c
 /**
- * @brief 错误码宏定义 — 用户态
+ * @brief 错误码宏定义 — 用户态（SDK 十六进制次要体系，非 C 内核首要体系）
  * @file include/airymax/ipc.h（[SC] 共享契约层）
  * @since 1.0.1
+ * @note 以下十六进制值为 ERP 位掩码分类（方案 D），非 C 内核错误码（方案 A）。
+ *       C 内核错误码使用方案 A（POSIX errno 负值），见 agentrt/commons/include/airy_types.h。
  */
 
-/* === 通用用户态错误码（0x00XX0000） === */
-#define AIRY_ERROR_INVALID_PARAM    0x00010000  /**< 参数无效 */
+/* === 通用用户态错误码（0x00XX0000，ERP 位掩码分类，非 C 内核错误码） === */
+#define AIRY_ERROR_INVALID_PARAM    0x00010000  /**< 参数无效（SDK 十六进制，非 C 内核 -22） */
 #define AIRY_ERROR_OUT_OF_MEMORY    0x00020000  /**< 内存不足 */
 #define AIRY_ERROR_PERMISSION_DENIED 0x00030000 /**< 权限不足 */
 #define AIRY_ERROR_TIMEOUT          0x00040000  /**< 操作超时 */
@@ -1511,7 +1515,7 @@ matrix
 1. 所有模块都依赖于 kernel 提供的基础运行环境
 2. system 模块依赖 services 提供系统服务能力
 3. cognition 模块依赖 memory、security、services 多个模块
-4. tests 模块对所有其他模块都是测试依赖关系，不参与运行时依赖
+4. tests-linux 模块对所有其他模块都是测试依赖关系，不参与运行时依赖
 
 ---
 

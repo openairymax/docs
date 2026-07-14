@@ -39,8 +39,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 术语 | 简要定义 | 来源 |
 |------|---------|------|
-| 技能 (Skill) | 可复用的执行单元，为智能体 (Agent) 提供具体能力 | [设计原则](../../00-basic-theories/04-design-principles-cn.md) |
-| 执行单元 (Execution Unit) | 行动层的基本执行单位，如工具、代码、API 等 | [认知层设计](../../00-basic-theories/02-cognition-design-cn.md) |
+| 技能 (Skill) | 可复用的执行单元，为智能体 (Agent) 提供具体能力 | [设计原则](../../00-requirements/04-design-principles-cn.md) |
+| 执行单元 (Execution Unit) | 行动层的基本执行单位，如工具、代码、API 等 | [认知层设计](../../00-requirements/02-cognition-design-cn.md) |
 | 契约 (Contract) | 机器可读的能力描述文件 | 本规范 |
 | 工具服务 (`tool_d`) | 负责加载和执行技能的用户态服务 | 本规范 |
 
@@ -995,15 +995,15 @@ Skill 契约涉及两个版本概念，需明确区分：
 | [Agent 契约规范](./agent_contract.md) | 本规范与 Agent 契约规范结构相似，两者共同构成 Airymax 的能力描述体系 |
 | [架构设计原则](../../00-architectural-principles.md) | 本规范是架构原则在技能管理方面的具体实现，特别是 MicroCoreRT 微核心思想和模块化原则 |
 | [统一术语表](../../TERMINOLOGY.md) | 本规范使用的术语定义和解释，如 Skill、执行单元、契约等 |
-| [C&C++ 安全编程规范](../30-coding-standard/02-c-cpp-secure-coding.md) | 编译型技能的实现应遵循安全编程规范，特别是在内存管理和错误处理方面 |
-| [日志打印规范](../30-coding-standard/10-log-standard.md) | 技能运行时应遵循日志规范，记录关键操作和异常情况 |
+| [C&C++ 安全编程规范](../../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) | 编译型技能的实现应遵循安全编程规范，特别是在内存管理和错误处理方面 |
+| [日志打印规范](../../50-engineering-standards/10-coding-style/coding_conventions.md) | 技能运行时应遵循日志规范，记录关键操作和异常情况 |
 
 ---
 
 ## 参考文献
 
-[1] Airymax 设计哲学。../../00-basic-theories/04-design-principles-cn.md  
-[2] Airymax 认知层设计。../../00-basic-theories/02-cognition-design-cn.md  
+[1] Airymax 设计哲学。../../00-requirements/04-design-principles-cn.md  
+[2] Airymax 认知层设计。../../00-requirements/02-cognition-design-cn.md  
 [3] 架构设计原则。../../00-architectural-principles.md  
 [4] 统一术语表。../../TERMINOLOGY.md  
 [5] JSON Schema Draft-07 Specification. https://json-schema.org/draft-07/json-schema-release.html  

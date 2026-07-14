@@ -879,7 +879,7 @@ CoreLoopThree / daemon Services
 
 **LLM 服务与 Tool 服务通信**:
 ```c
-// agentrt/daemon/llm_d/src/main.c
+// agentrt/daemons/llm_d/src/main.c
 airy_ipc_channel_t* channel;
 airy_ipc_channel_create("llm_to_tool", 8192, &channel);
 

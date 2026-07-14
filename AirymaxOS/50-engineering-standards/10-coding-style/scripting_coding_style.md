@@ -953,7 +953,7 @@ _ERROR_CODE_MAP: dict[int, type[AgentRTError]] = {
     0: None,                          # AIRY_EOK
     -2: ValidationError,              # AIRY_EINVAL
     -4: ResourceError,                # AIRY_ENOMEM
-    -8: ResourceError,                # AIRY_ETIMEOUT
+    -8: ResourceError,                # AIRY_ETIMEDOUT
     -17: ResourceError,               # AIRY_EBUSY
 }
 
@@ -2399,7 +2399,7 @@ AIRY_E* 错误码到 HTTP 状态码的映射：
 | `AIRY_EOK` (0) | 200 | 成功 |
 | `AIRY_EINVAL` (-1) | 400 | 参数无效 |
 | `AIRY_ENOMEM` (-2) | 503 | 资源不足 |
-| `AIRY_ETIMEOUT` (-11) | 408 / 504 | 请求超时 |
+| `AIRY_ETIMEDOUT` (-11) | 408 / 504 | 请求超时 |
 | `AIRY_EBUSY` (-9) | 429 | 服务繁忙 |
 | `AIRY_ENOENT` | 404 | 资源不存在 |
 | `AIRY_EPERM` | 403 | 权限不足 |

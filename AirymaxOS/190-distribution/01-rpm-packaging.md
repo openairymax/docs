@@ -616,16 +616,16 @@ done
 
 ## 8. 错误码体系对接
 
-发行版管理错误码纳入 agentrt-linux 统一错误码体系：
+发行版管理错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/airymax/error.h`）：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|
-| AIRY_E_PKG_BUILD | -301 | 包构建失败 |
-| AIRY_E_PKG_INSTALL | -302 | 包安装失败 |
-| AIRY_E_PKG_DEP | -303 | 依赖冲突 |
-| AIRY_E_PKG_VERIFY | -304 | GPG 验证失败 |
-| AIRY_E_PKG_REPRODUCIBLE | -305 | 可重现构建失败 |
-| AIRY_E_PKG_ARCH | -306 | 架构不匹配 |
+| AIRY_DIST_EPKG_BUILD | -1000 | 包构建失败 |
+| AIRY_DIST_EPKG_INSTALL | -1001 | 包安装失败 |
+| AIRY_DIST_EPKG_DEP | -1002 | 依赖冲突 |
+| AIRY_DIST_EPKG_VERIFY | -1003 | GPG 验证失败 |
+| AIRY_DIST_EPKG_REPRODUCIBLE | -1004 | 可重现构建失败 |
+| AIRY_DIST_EPKG_ARCH | -1005 | 架构不匹配 |
 
 集中错误处理示例：
 
@@ -641,19 +641,19 @@ int airy_pkg_install(const char *package_name)
 
 	ret = airy_pkg_check_dep(package_name);
 	if (ret < 0) {
-		ret = -AIRY_E_PKG_DEP;
+		ret = -AIRY_DIST_EPKG_DEP;
 		goto out_err;
 	}
 
 	ret = airy_pkg_verify_gpg(package_name);
 	if (ret < 0) {
-		ret = -AIRY_E_PKG_VERIFY;
+		ret = -AIRY_DIST_EPKG_VERIFY;
 		goto out_err;
 	}
 
 	ret = system("dnf install -y %s", package_name);
 	if (ret != 0) {
-		ret = -AIRY_E_PKG_INSTALL;
+		ret = -AIRY_DIST_EPKG_INSTALL;
 		goto out_err;
 	}
 	return 0;

@@ -430,22 +430,23 @@ int airy_client_call(airy_client_t *client,
 	if (!client || !method || (!payload && payload_len > 0))
 		return -AIRY_EINVAL;
 
-	/* 填充 128B 消息头 */
-	hdr.magic = 0x41524531;
-	hdr.version = 1;
-	hdr.type = AIRY_IPC_TYPE_REQUEST;
-	hdr.src_agent_id = client->self_agent_id;
-	hdr.dst_agent_id = dst_agent_id;
-	hdr.payload_len = payload_len;
-	hdr.trace_id = client->next_trace_id++;
-	hdr.seq = client->next_seq++;
+	/* 填充 128B 消息头（SSoT Layout C，无 version/type/seq 字段） */
+	hdr.magic        = AIRY_IPC_MAGIC;        /* 0x41524531 */
+	hdr.opcode       = AIRY_IPC_OP_SEND;      /* SEND 操作码 */
+	hdr.flags        = 0;                     /* 默认阻塞模式 */
+	hdr.trace_id     = client->next_trace_id++;
+	hdr.timestamp_ns = ktime_get_real_ns();   /* CLOCK_REALTIME 纳秒 */
+	hdr.src_task     = client->self_agent_id; /* 源任务 ID（u64） */
+	hdr.dst_task     = dst_agent_id;          /* 目标任务 ID（u64） */
+	hdr.payload_len  = payload_len;
+	/* payload_type（REQUEST）由 payload 首字段携带，不在消息头中 */
 
 	/* agentrt-linux 路径：syscall（io_uring 注册） */
 	if (client->use_syscall) {
 		ret = syscall(AIRY_SYS_IPC_SEND, &hdr, payload, payload_len);
 		if (ret < 0)
 			return ret;
-		return airy_syscall_recv(client, hdr.seq, out_resp);
+		return airy_syscall_recv(client, hdr.trace_id, out_resp);
 	}
 
 	/* agentrt 用户态路径：io_uring 提交至消息队列 */
@@ -641,7 +642,7 @@ def call_with_retry(client, dst, method, payload, max_retries=3):
 |----------|----------|----------|
 | SDK API 签名 | golden 文件对比 | 四语言签名完全一致 |
 | 错误码映射 | 错误码矩阵测试 | 全部错误码正确穿透 |
-| 128B 消息头 | 字节级对比 | magic/version/trace_id 一致 |
+| 128B 消息头 | 字节级对比 | magic/opcode/trace_id 一致 |
 | 流式分片 | 顺序完整性 | 分片顺序与顺序一致 |
 
 ### 9.2 FFI 边界安全测试

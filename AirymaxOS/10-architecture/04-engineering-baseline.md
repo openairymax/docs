@@ -142,7 +142,7 @@ agentrt-linux 子仓治理模式遵循以下原则：
 1. **每个子仓对应一个治理组**：治理组负责技术决策和代码审查
 2. **社区开放**：欢迎外部贡献，治理组负责审查与合入
 3. **能力域清晰**：8 子仓严格按微内核能力域划分，无功能重叠
-4. **层次纪律**：治理组之间的依赖遵循 S-2 层次分解原则（kernel → services/security/memory/cognition → cloudnative → system → tests）
+4. **层次纪律**：治理组之间的依赖遵循 S-2 层次分解原则（kernel → services/security/memory/cognition → cloudnative → system → tests-linux）
 5. **独立演进**：每个子仓可独立测试和演进，通过接口契约协同
 
 ---
@@ -522,6 +522,24 @@ agentrt-linux 工程基线声明以下兼容性：
 - 兼容企业级 Linux 生态的架构支持（x86 / ARM / RISC-V / LoongArch）
 - 基于 Linux 6.6 内核基线，与企业级 Linux 内核同源
 - 兼容 agentrt-linux 超节点 OS 设计（大规模容器低时延通信）
+
+### 10.1 openEuler Euler API 兼容性策略
+
+agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态接口规范，在工程实践层面保持与 Euler 标准的强对齐。兼容性策略遵循 IRON-9 v2 三层共享模型：
+
+| 层次 | Euler API 兼容策略 | 落地方式 |
+|------|-------------------|---------|
+| **[SC] 共享契约层** | 共享类型定义与 IPC 契约与 Euler API 语义对齐（如 capability 模型、IPC 消息头布局参考 Euler IPC 规范演进） | 6 个 [SC] 头文件（memory_types.h / security_types.h / cognition_types.h / sched.h / ipc.h / syscalls.h）在 agentrt 与 agentrt-linux 间共享，语义与 Euler API 对齐 |
+| **[SS] 语义同源层** | 高层 API 语义与 Euler API 保持同源（如 12 daemons 语义对应 Euler 系统服务、io_uring IPC 原语对应 Euler IO 接口） | API 签名独立演进，语义操作一致，详见 `20-modules/02-services.md` §6.2 [SS] 语义同源层 20 项 API 映射 |
+| **[IND] 独立层** | agentrt-linux syscall 编号体系独立（AIRY_SYS_ 前缀，12 核心 + 12 预留 = 24 槽位），不复用 Euler API 编号 | capability invocation 统一入口 `airy_sys_call` 消除独立 syscall 需求，编号体系详见 `30-interfaces/01-syscalls.md` |
+
+**关键声明**：
+
+1. **Euler API 语义对齐**——agentrt-linux 在 [SC] 和 [SS] 层面与 Euler API 保持语义同源，确保应用层在 agentrt-linux 与 openEuler 之间的可移植性。
+2. **syscall 编号独立**——agentrt-linux 拥有独立的 syscall 编号体系（AIRY_SYS_0~11 核心 + AIRY_SYS_12~23 预留），不直接复用 Euler API 的 syscall 编号。这是 IRON-9 v2 "同源且独立"原则的体现：语义同源，编号独立。
+3. **包格式兼容**——agentrt-linux 兼容 Euler API 的 RPM 包格式和 dnf 包管理器，支持直接安装 openEuler 生态的 RPM 包。
+4. **安全模型对齐**——agentrt-linux 的 capability 安全模型与 Euler API 的安全模块（SELinux）在语义层对齐，但实现路径独立（agentrt-linux 用 Cupolas capability 模型 + LSM 钩子）。
+5. **演进策略**——agentrt-linux 跟踪 openEuler 24.03 LTS / 26.03 的 Euler API 演进，通过 ADR 评审决定是否同步新特性，禁止未经评审的基线漂移（IRON-10 / BAN-361）。
 
 ---
 

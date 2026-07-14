@@ -19,14 +19,14 @@
 
 | 文档 | 描述 | 状态 |
 |------|------|------|
-| [L1_runtime_interface.md](L1_runtime_interface.md) | L1 核心运行时接口规范 | 草案 |
-| [L2_service_protocol.md](L2_service_protocol.md) | L2 服务通信协议规范 | 草案 |
-| [L3_security_governance.md](L3_security_governance.md) | L3 安全与治理规范 | 草案 |
+| [01-l1-runtime-interface.md](01-l1-runtime-interface.md) | L1 核心运行时接口规范 | 草案 |
+| [02-l2-service-protocol.md](02-l2-service-protocol.md) | L2 服务通信协议规范 | 草案 |
+| [03-l3-security-governance.md](03-l3-security-governance.md) | L3 安全与治理规范 | 草案 |
 
 ## 3. 独立仓库可行性
 
 **结论**: 高度可行。
-- `Docs/` 本身已是独立 git submodule（`https://atomgit.com/openairymax/docs.git`）
+- `docs/` 本身已是独立 git submodule（`https://atomgit.com/openairymax/docs.git`）
 - `30-interfaces/05-runtime-interfaces/` 作为标准容器，可独立发布
 - 未来可拆分为独立 `are-standards` 仓库（`https://atomgit.com/openairymax/are-standards.git`）
 - 参考实现保留在 Airymax 主仓库，标准文档独立发布

@@ -176,10 +176,10 @@ class DocumentTokenizer:
 tokenizer = DocumentTokenizer(language="zh")
 
 # 分词示例
-text = "Airymax 是一个先进的智能体操作系统，支持多语言文档处理。"
+text = "Airymax 是一个先进的智能体运行时平台，支持多语言文档处理。"
 tokens = tokenizer.tokenize(text)
 print(tokens)
-# 输出: ['Airymax', '是', '一个', '先进', '智能体', '操作系统', '支持', '多语言', '文档', '处理']
+# 输出: ['Airymax', '是', '一个', '先进', '智能体', '运行时平台', '支持', '多语言', '文档', '处理']
 
 # 构建倒排索引
 index = InvertedIndex()

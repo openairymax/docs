@@ -69,7 +69,7 @@ ChatClient  // OpenAI 兼容
 
 ## 3. 修复任务
 
-详见 [0.1.1详细任务清单.md](../../../DocsClosed/0.1.1详细任务清单.md) P0.21（SDK 标准化，32h）
+详见 [0.1.1详细任务清单](../../../docs-closed/agentrt/_design_0.1.1/03-detailed-task-list.md) P0.21（SDK 标准化，32h）
 
 ---
 

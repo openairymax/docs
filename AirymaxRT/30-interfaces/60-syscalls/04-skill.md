@@ -222,7 +222,7 @@ typedef struct airy_skill_result {
  * @return AIRY_EINVAL  参数无效（skill_url 或 out_skill_id 为 NULL）
  * @return AIRY_ENOMEM  内存不足
  * @return AIRY_EEXIST  Skill 已安装（URL 重复）
- * @return AIRY_ETIMEOUT 安装超时
+ * @return AIRY_ETIMEDOUT 安装超时
  *
  * @ownership 调用者拥有 *out_skill_id，需通过 airy_sys_free() 释放
  * @threadsafe 是。内部使用互斥锁保护 Skill 列表
@@ -633,16 +633,18 @@ airy_sys_free(agent_id);
 
 ## 🔢 错误码参考
 
+> **SSoT 声明**：错误码权威定义位于 `include/airymax/error.h`（[SC] 共享契约层）。本表与 `docs/AirymaxRT/50-engineering-standards/120-cross-project-code-sharing.md` §2.1（13 个 `AIRY_E*` 宏，对齐 POSIX errno 负值）逐字节一致。
+
 | 错误码 | 值 | 描述 |
 |-------|-----|------|
 | `AIRY_EOK` | 0 | 成功 |
-| `AIRY_EINVAL` | -1 | 参数无效 |
-| `AIRY_ENOMEM` | -2 | 内存不足 |
-| `AIRY_ENOENT` | -5 | Skill 未找到 |
-| `AIRY_EEXIST` | -18 | Skill 已安装 |
-| `AIRY_EBUSY` | -9 | Skill 正在使用 |
-| `AIRY_EPERM` | -4 | 权限不足 |
-| `AIRY_ETIMEOUT` | -11 | 操作超时 |
+| `AIRY_EPERM` | -1 | 权限不足（对齐 POSIX EPERM） |
+| `AIRY_ENOENT` | -2 | Skill 未找到（对齐 POSIX ENOENT） |
+| `AIRY_ENOMEM` | -12 | 内存不足（对齐 POSIX ENOMEM） |
+| `AIRY_EBUSY` | -16 | Skill 正在使用（对齐 POSIX EBUSY） |
+| `AIRY_EEXIST` | -17 | Skill 已安装（对齐 POSIX EEXIST） |
+| `AIRY_EINVAL` | -22 | 参数无效（对齐 POSIX EINVAL） |
+| `AIRY_ETIMEDOUT` | -110 | 操作超时（对齐 POSIX ETIMEDOUT） |
 
 ### 高层错误码（API 层）
 
@@ -667,7 +669,7 @@ airy_sys_free(agent_id);
 | [任务管理 API](./task.md) | 任务提交与查询 |
 | [Skill 契约规范](../../20-modules/10-contracts/02-skill-contract.md) | Skill 契约定义与验证 |
 | [架构设计原则](../../00-architectural-principles.md) | 五维正交设计体系 |
-| [系统调用接口](../../../AgentRT/agentrt/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
+| [系统调用接口](../../../agentrt/atoms/syscall/include/syscalls.h) | 低层系统调用 C 头文件 |
 
 ---
 

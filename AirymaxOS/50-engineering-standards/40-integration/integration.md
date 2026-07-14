@@ -361,7 +361,7 @@ struct __attribute__((aligned(64))) airy_task_desc {
 ```c
 /* ipc.h — 共享契约（简化示意） */
 #define AIRY_IPC_MAGIC        0x41524531  /* "ARE1" */
-#define AIRY_IPC_MSG_HDR_SIZE 128
+#define AIRY_IPC_HDR_SZ 128
 #define AIRY_IPC_VERSION      0x0100
 
 typedef enum {
@@ -1029,7 +1029,7 @@ Airymax 生态伙伴计划旨在构建开放、互利、可持续的智能体操
 ```bash
 # 定义 Manager 配置的根目录路径
 export AIRY_CONFIG_DIR="/etc/agentrt"          # Linux 生产环境
-export AIRY_CONFIG_DIR="./AgentRT/manager"     # 开发环境
+export AIRY_CONFIG_DIR="./agentrt/manager"     # 开发环境
 export AIRY_CONFIG_DIR="C:\\agentrt\\config"   # Windows 环境
 ```
 
@@ -1042,7 +1042,7 @@ export AIRY_CONFIG_DIR="C:\\agentrt\\config"   # Windows 环境
 1. Linux: `/etc/agentrt`
 2. Windows: `%APPDATA%\agentrt`
 3. macOS: `~/Library/Application Support/agentrt`
-4. 开发环境: `./AgentRT/manager`
+4. 开发环境: `./agentrt/manager`
 
 #### 2.2 配置子目录结构
 
@@ -1107,7 +1107,7 @@ static const char* get_config_dir(void) {
 #ifdef _WIN32
         config_dir = ".\\Airymax\\manager";
 #else
-        config_dir = "./AgentRT/manager";
+        config_dir = "./agentrt/manager";
 #endif
     }
     return config_dir;
@@ -1454,8 +1454,8 @@ void test_full_system_config_load(void) {
 /* test_schema_validation.c - Schema 验证测试 */
 void test_valid_kernel_config_passes_validation(void) {
     int result = load_and_validate_config(
-        "../AgentRT/agentrt/manager/kernel/settings.yaml",
-        "../AgentRT/agentrt/manager/schema/kernel-settings.schema.json"
+        "../agentrt/agentrt/manager/kernel/settings.yaml",
+        "../agentrt/agentrt/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_EQ(result, 0);
 }
@@ -1465,7 +1465,7 @@ void test_invalid_config_fails_validation(void) {
     
     int result = load_and_validate_config(
         "temp_invalid_config.yaml",
-        "../AgentRT/agentrt/manager/schema/kernel-settings.schema.json"
+        "../agentrt/agentrt/manager/schema/kernel-settings.schema.json"
     );
     ASSERT_NEQ(result, 0);
     
@@ -1566,10 +1566,10 @@ export AIRY_DEBUG=1
 ### 十、参考文档
 
 - [00-architectural-principles.md](../../00-architectural-principles.md)
-- [config_unified README.md](../../../AgentRT/agentrt/commons/utils/config_unified/README.md) 
-- [CONFIG_CHANGE_PROCESS.md](../../../AgentRT/agentrt/manager/CONFIG_CHANGE_PROCESS.md) 
+- [config_unified README.md](../../../agentrt/agentrt/commons/utils/config_unified/README.md) 
+- [CONFIG_CHANGE_PROCESS.md](../../../agentrt/agentrt/manager/CONFIG_CHANGE_PROCESS.md) 
 - [error_code_reference.md](../50-project-erp/project_erp.md)
-- [error.h (C 内核错误码定义)](../../../AgentRT/agentrt/commons/utils/error/include/error.h) 
+- [error.h (C 内核错误码定义)](../../../agentrt/agentrt/commons/utils/error/include/error.h) 
 - [Integration Standards README](./README.md) 
 
 ---

@@ -75,15 +75,17 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 所有 API 函数返回 `airy_err_t` 类型（`int32_t`）：
 
+> **SSoT 声明**：错误码权威定义位于 `include/airymax/error.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件）。类型 `airy_err_t = int32_t` 定义于 `airy_types.h:41`。本表与 `docs/AirymaxRT/50-engineering-standards/120-cross-project-code-sharing.md` §2.1（13 个 `AIRY_E*` 宏，对齐 POSIX errno 负值）逐字节一致。
+
 | 错误码 | 值 | 含义 |
 |--------|---|------|
 | `AIRY_EOK` | 0 | 成功 |
-| `AIRY_EINVAL` | -1 | 无效参数 |
-| `AIRY_ENOMEM` | -2 | 内存不足 |
-| `AIRY_ENOTINIT` | -3 | 未初始化 |
-| `AIRY_ENOENT` | -5 | 不存在 |
-| `AIRY_EBUSY` | -9 | 资源忙 |
-| `AIRY_ETIMEOUT` | -11 | 操作超时 |
+| `AIRY_EPERM` | -1 | 权限不足（对齐 POSIX EPERM） |
+| `AIRY_ENOENT` | -2 | 不存在（对齐 POSIX ENOENT） |
+| `AIRY_ENOMEM` | -12 | 内存不足（对齐 POSIX ENOMEM） |
+| `AIRY_EINVAL` | -22 | 无效参数（对齐 POSIX EINVAL） |
+| `AIRY_EBUSY` | -16 | 资源忙（对齐 POSIX EBUSY） |
+| `AIRY_ETIMEDOUT` | -110 | 操作超时（对齐 POSIX ETIMEDOUT） |
 
 ### 内存管理约定
 

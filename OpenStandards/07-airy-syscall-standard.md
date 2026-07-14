@@ -422,7 +422,7 @@ AIRY_API int airy_sys_notify(cap_t cap);
 | `AIRY_EBADF` | -8 | 描述符错误 | ring fd / capability 句柄无效 |
 | `AIRY_EBUSY` | -9 | 资源繁忙 | 任务正在迁移，无法快照 |
 | `AIRY_ENOTSUP` | -10 | 不支持 | 硬件不支持（如无 CXL 设备） |
-| `AIRY_ETIMEOUT` | -11 | 超时 | 调度等待超时 |
+| `AIRY_ETIMEDOUT` | -11 | 超时 | 调度等待超时 |
 | `AIRY_ECONFLICT` | -12 | 状态冲突 | 任务状态不允许当前操作 |
 
 ### 6.2 错误码使用规范
@@ -470,7 +470,7 @@ if (ret < 0) {
 | Agent 认知 | `agent.slice` | 100-119 | < 100 ms | CoreLoopThree 思考 |
 | 批处理推理 | `batch.slice` | 120-139 | < 1 s | LLM 批量推理 |
 
-超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ETIMEOUT` 错误码（AOS-STD-SYS-028）。
+超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ETIMEDOUT` 错误码（AOS-STD-SYS-028）。
 
 ### 7.3 性能回归保护
 

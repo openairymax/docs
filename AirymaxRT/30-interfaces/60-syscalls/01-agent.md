@@ -158,9 +158,9 @@ if (err == AIRY_EOK) {
 ## 注意事项
 
 1. **输出所有权**：所有 `out_*` 参数由调用者通过 `airy_sys_free()` 释放。
-2. **错误码**：返回值使用 [error.h](../../AgentRT/agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
+2. **错误码**：返回值使用 [error.h](../../agentrt/commons/utils/error/include/error.h) 定义的负整数错误码。
 3. **系统调用初始化**：使用 Agent 相关 API 前需调用 `airy_syscalls_init()`。
-4. **Agent 安全**：Agent 操作受 [Cupolas 安全穹顶](../../AgentRT/agentrt/cupolas/include/cupolas.h) 权限控制。
+4. **Agent 安全**：Agent 操作受 [Cupolas 安全穹顶](../../agentrt/cupolas/include/cupolas.h) 权限控制。
 
 ---
 
@@ -171,7 +171,7 @@ if (err == AIRY_EOK) {
 - [会话管理系统调用](session.md)
 - [Skill 管理系统调用](skill.md)
 - [架构设计：Thinkdual 双思考系统](../../10-architecture/thinkdual.md)
-- [错误码体系](../../AgentRT/agentrt/commons/utils/error/include/error.h)
+- [错误码体系](../../agentrt/commons/utils/error/include/error.h)
 
 ---
 

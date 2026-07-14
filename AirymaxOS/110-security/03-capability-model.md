@@ -39,7 +39,7 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
 1. **不可伪造**：capability 令牌由内核生成，用户态只持有 opaque handle，无法伪造
 2. **最小权限**：每个安全敏感操作需独立申请 capability 令牌，而非进程级全权
 3. **递归撤销**：Agent 终止时递归撤销所有派生 capability，无权限残留
-4. **IPC 传递**：capability 可通过 IPC 消息跨进程传递（`AIRY_IPC_FLAG_CAP_CARRY`）
+4. **IPC 传递**：capability 可通过 IPC 消息跨进程传递（`AIRY_IPC_F_CAP_CARRY`）
 5. **审计追踪**：所有 capability 操作（申请/派生/撤销/传递）可审计
 
 ### 1.4 在安全体系中的位置
@@ -651,7 +651,7 @@ int airy_vault_seal_tpm(uint32_t cap_id, uint32_t tpm_handle);
  *       -AIRY_EPERM 权限拒绝
  *
  * capability 令牌由内核生成、不可伪造（seL4 风格）。
- * 通过 IPC 消息可跨进程传递（AIRY_IPC_FLAG_CAP_CARRY 标志）。
+ * 通过 IPC 消息可跨进程传递（AIRY_IPC_F_CAP_CARRY 标志）。
  *
  * @since 1.0.1
  * @see 07-syscall-registry.md 第 3.5 节
@@ -813,13 +813,13 @@ int airy_sys_ipc_send(const struct airy_ipc_msg_hdr *hdr,
 
 ### 11.3 IPC 传递 capability
 
-capability 可通过 IPC 消息的 `AIRY_IPC_FLAG_CAP_CARRY` 标志跨进程传递：
+capability 可通过 IPC 消息的 `AIRY_IPC_F_CAP_CARRY` 标志跨进程传递：
 
 ```c
 /* 发送方：携带 capability */
 struct airy_ipc_msg_hdr hdr = {
     .magic   = AIRY_IPC_MAGIC,
-    .flags   = AIRY_IPC_FLAG_CAP_CARRY,
+    .flags   = AIRY_IPC_F_CAP_CARRY,
     .cap_id  = my_cap_id,  /* 携带的 capability */
     /* ... */
 };
@@ -828,7 +828,7 @@ airy_sys_ipc_send(&hdr, payload);
 /* 接收方：获取派生 capability */
 struct airy_ipc_msg_hdr recv_hdr;
 airy_sys_ipc_recv(&recv_hdr, buf, len);
-if (recv_hdr.flags & AIRY_IPC_FLAG_CAP_CARRY) {
+if (recv_hdr.flags & AIRY_IPC_F_CAP_CARRY) {
     /* 获得派生 capability（自动 mintcopy） */
     uint32_t new_cap = recv_hdr.cap_id;
     /* 使用派生 capability 执行操作 */
@@ -901,7 +901,7 @@ airy_sys_capability_mintcopy(cap, agent_b_id, 0x01, &new_cap);
 
 /* 3. Agent A 通过 IPC 传递 */
 struct airy_ipc_msg_hdr hdr = {
-    .flags  = AIRY_IPC_FLAG_CAP_CARRY,
+    .flags  = AIRY_IPC_F_CAP_CARRY,
     .cap_id = new_cap,
 };
 airy_sys_ipc_send(&hdr, NULL);

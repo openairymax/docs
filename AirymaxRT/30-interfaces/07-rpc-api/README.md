@@ -79,7 +79,7 @@ method_dispatcher_register(disp, "complete", handler_complete);
 
 ## 3. 修复任务
 
-详见 [0.1.1详细任务清单.md](../../../DocsClosed/0.1.1详细任务清单.md) P0.24（JSON-RPC 命名空间规范，16h）
+详见 [0.1.1详细任务清单](../../../docs-closed/agentrt/_design_0.1.1/03-detailed-task-list.md) P0.24（JSON-RPC 命名空间规范，16h）
 
 ---
 

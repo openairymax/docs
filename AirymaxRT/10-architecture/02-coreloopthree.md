@@ -971,10 +971,10 @@ airy_execution_register_unit(engine, "my_unit", &my_unit->base);
 - [README.md](../../README.md) - 项目总览
 - [memoryrovol.md](memoryrovol.md) - MemoryRovol 架构详解
 - [syscall.md](syscall.md) - 系统调用接口文档
-- [cognition.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/cognition.h) - 认知层头文件 ✅
-- [execution.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/execution.h) - 行动层头文件 ✅
-- [memory.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/memory.h) - 记忆层头文件 ✅
-- [loop.h](../../../AgentRT/agentrt/atoms/coreloopthree/include/loop.h) - 核心循环接口 ✅
+- [cognition.h](../../../agentrt/atoms/coreloopthree/include/cognition.h) - 认知层头文件 ✅
+- [execution.h](../../../agentrt/atoms/coreloopthree/include/execution.h) - 行动层头文件 ✅
+- [memory.h](../../../agentrt/atoms/coreloopthree/include/memory.h) - 记忆层头文件 ✅
+- [loop.h](../../../agentrt/atoms/coreloopthree/include/loop.h) - 核心循环接口 ✅
 
 ---
 

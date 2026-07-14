@@ -760,7 +760,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 规范       | 规则                                           |
 | -------- | -------------------------------------------- |
-| 子仓目录     | `airymaxos-[domain]/`（如 `kernel/`） |
+| 子仓目录     | `[domain]/`（如 `kernel/`、`tests-linux/`） |
 | 用户态服务目录  | `[name]_d`（如 `llm_d/`）                       |
 | 源文件      | 下划线分隔 + `.c`（如 `thinking_chain.c`）           |
 | 头文件      | 下划线分隔 + `.h`（如 `cupolas.h`）                  |

@@ -66,7 +66,7 @@ generate_api_docs.bat
 
 ```bash
 # 进入 cupolas 目录
-cd AgentRT/cupolas
+cd agentrt/cupolas
 
 # 运行 Doxygen
 doxygen Doxyfile
@@ -243,7 +243,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'AgentRT/agentrt/cupolas/**'
+      - 'agentrt/cupolas/**'
 
 jobs:
   docs:
@@ -255,14 +255,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
 
       - name: Generate Docs
-        working-directory: AgentRT/cupolas
+        working-directory: agentrt/cupolas
         run: doxygen Doxyfile
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./AgentRT/agentrt/cupolas/docs/api/html
+          publish_dir: ./agentrt/cupolas/docs/api/html
 ```
 
 ### GitLab CI 示例
@@ -274,11 +274,11 @@ generate-docs:
   before_script:
     - apk add --no-cache doxygen graphviz
   script:
-    - cd AgentRT/cupolas
+    - cd agentrt/cupolas
     - doxygen Doxyfile
   artifacts:
     paths:
-      - AgentRT/agentrt/cupolas/docs/api/html
+      - agentrt/cupolas/docs/api/html
     expire_in: 30 days
   only:
     - main

@@ -182,7 +182,7 @@ int airy_ipc_channel_create(const char *name, struct airy_ipc_channel **out);
 
 /* 常量宏：UPPER_SNAKE_CASE */
 #define AIRY_MAX_TASKS         1024
-#define AIRY_IPC_MSG_HDR_SIZE  128
+#define AIRY_IPC_HDR_SZ  128
 
 /* 结构体：用 struct 关键字，不 typedef */
 struct airy_task {
@@ -413,18 +413,20 @@ out_free_session:
 
 #### 7.4 错误码规范
 
-agentrt-linux（AirymaxOS）内核态错误码对齐 agentrt 错误码体系（[SS] 语义同源层），使用 `AIRY_E*` 前缀：
+agentrt-linux（AirymaxOS）内核态错误码对齐 agentrt 错误码体系（[SS] 语义同源层），使用 `AIRY_E*` 前缀。
+
+> **SSoT 声明**：错误码单一数据源（SSoT）为方案 A（POSIX errno 负值），权威定义见 `120-cross-project-code-sharing.md`。本文件内核态使用 `(-EAGAIN)`、`(-EINVAL)` 等 Linux 内核宏负值形式，与方案 A 的 `AIRY_EAGAIN=(-11)`、`AIRY_EINVAL=(-22)` 等数值完全一致（`-EAGAIN == -11 == AIRY_EAGAIN`）。
 
 ```c
-/* [SS] 语义同源层：错误码体系（airy_errno.h 与内核态映射一致） */
+/* [SS] 语义同源层：错误码体系（方案 A POSIX errno 负值，error.h SSoT 与内核态映射一致） */
 #define AIRY_EOK              0
-#define AIRY_EAGAIN          (-EAGAIN)
-#define AIRY_ENOMEM          (-ENOMEM)
-#define AIRY_EINVAL          (-EINVAL)
-#define AIRY_EMSGSIZE        (-EMSGSIZE)
-#define AIRY_ETIMEDOUT       (-ETIMEDOUT)
-#define AIRY_EBUSY           (-EBUSY)
-#define AIRY_ENOENT          (-ENOENT)
+#define AIRY_EAGAIN          (-EAGAIN)   /* == AIRY_EAGAIN (-11) */
+#define AIRY_ENOMEM          (-ENOMEM)   /* == AIRY_ENOMEM  (-12) */
+#define AIRY_EINVAL          (-EINVAL)   /* == AIRY_EINVAL  (-22) */
+#define AIRY_EMSGSIZE        (-EMSGSIZE) /* == AIRY_EMSGSIZE (-90) */
+#define AIRY_ETIMEDOUT       (-ETIMEDOUT) /* == AIRY_ETIMEDOUT (-110) */
+#define AIRY_EBUSY           (-EBUSY)    /* == AIRY_EBUSY   (-16) */
+#define AIRY_ENOENT          (-ENOENT)   /* == AIRY_ENOENT  (-2)  */
 ```
 
 #### 7.5 错误处理流程总览
@@ -602,7 +604,7 @@ kfree(old);
 
 #include <stdint.h>  /* C99 标准头文件，非内核头文件 */
 
-#define AIRY_IPC_MSG_HDR_SIZE  128
+#define AIRY_IPC_HDR_SZ  128
 #define AIRY_IPC_MSG_BODY_MAX  4096
 
 enum airy_ipc_msg_type {
@@ -2025,8 +2027,10 @@ inline void secure_memset(void* ptr, uint8_t value, size_t size) {
 
 #### 8.1 错误码定义
 
+> **SSoT 说明**：以下为模块级错误码枚举示例（-1000~-999 段），**非 C 内核错误码 SSoT**。C 内核首要错误码体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`、`AIRY_ETIMEDOUT=-110`），权威定义见 `agentrt/commons/include/airy_types.h` + `agentrt/commons/utils/error/include/error.h`（详见 `120-cross-project-code-sharing.md` §2.5）。以下枚举仅用于演示模块级错误码命名规范。
+
 ```cpp
-// 错误码命名：模块名_E描述
+// 错误码命名：模块名_E描述（模块级错误码示例，非 C 内核 SSoT）
 enum : int {
     AIRY_EOK = 0,
 
@@ -2034,7 +2038,7 @@ enum : int {
     AIRY_EGENERAL = -1000,
     AIRY_EINVALID_ARG = -1001,
     AIRY_ENOMEM = -1002,
-    AIRY_ETIMEOUT = -1003,
+    AIRY_ETIMEDOUT = -1003,
     AIRY_ENOENT = -1004,
     AIRY_EEXIST = -1005,
     AIRY_EPERM = -1006,
@@ -2907,9 +2911,9 @@ private:
 
 ### 1. 缓冲区溢出防护
 
-#### 1.1 边界检查原则（OS-SEC-010）
+#### 1.1 边界检查原则（OS-SEC-110）
 
-> **OS-SEC-010**：所有涉及用户可控长度参数的缓冲区操作必须进行边界检查。内核态代码处理来自用户态的数据时，不能信任任何长度参数——用户态程序可以传递任意值（包括恶意构造的值）。
+> **OS-SEC-110**：所有涉及用户可控长度参数的缓冲区操作必须进行边界检查。内核态代码处理来自用户态的数据时，不能信任任何长度参数——用户态程序可以传递任意值（包括恶意构造的值）。
 
 ```c
 /* 好：边界检查在缓冲区操作之前 */
@@ -2935,9 +2939,9 @@ strcpy(dst->name, src->name);       /* 无边界检查 */
 strncpy(dst->name, src->name, 32);  /* 不保证 NUL 终止 */
 ```
 
-#### 1.3 安全内存复制函数（OS-SEC-011）
+#### 1.3 安全内存复制函数（OS-SEC-111）
 
-> **OS-SEC-011**：内核态与用户态之间的数据复制必须使用 `copy_from_user()` / `copy_to_user()`，并检查返回值。禁止直接解引用用户态指针。内核态内部复制使用 `memcpy`，但必须确保目标缓冲区足够大。
+> **OS-SEC-111**：内核态与用户态之间的数据复制必须使用 `copy_from_user()` / `copy_to_user()`，并检查返回值。禁止直接解引用用户态指针。内核态内部复制使用 `memcpy`，但必须确保目标缓冲区足够大。
 
 ```c
 /* 用户态 → 内核态 */
@@ -2962,9 +2966,9 @@ memcpy(dst, src, len);
 
 ### 2. 整数安全
 
-#### 2.1 整数溢出检测（OS-SEC-012）
+#### 2.1 整数溢出检测（OS-SEC-112）
 
-> **OS-SEC-012**：所有涉及用户可控整数的算术运算（特别是乘法）必须使用内核提供的溢出安全函数：`check_add_overflow()`、`check_sub_overflow()`、`check_mul_overflow()`、`struct_size()`、`array_size()`。
+> **OS-SEC-112**：所有涉及用户可控整数的算术运算（特别是乘法）必须使用内核提供的溢出安全函数：`check_add_overflow()`、`check_sub_overflow()`、`check_mul_overflow()`、`struct_size()`、`array_size()`。
 
 ```c
 size_t total_bytes;
@@ -2981,9 +2985,9 @@ p = kmalloc(struct_size(p, items, n), GFP_KERNEL);
 p = kmalloc(n * sizeof(*p), GFP_KERNEL);  /* n 为 0x40000000 时溢出为 0 */
 ```
 
-#### 2.2 类型转换安全（OS-SEC-013）
+#### 2.2 类型转换安全（OS-SEC-113）
 
-> **OS-SEC-013**：避免隐式类型转换导致的数据截断。从大类型向小类型转换时，必须显式检查范围。`size_t` 向 `int` 转换时需要检查 `INT_MAX` 边界。
+> **OS-SEC-113**：避免隐式类型转换导致的数据截断。从大类型向小类型转换时，必须显式检查范围。`size_t` 向 `int` 转换时需要检查 `INT_MAX` 边界。
 
 ```c
 /* 好：显式范围检查 */
@@ -2995,9 +2999,9 @@ int ret = (int)len;
 int ret = len;  /* 如果 len > INT_MAX，ret 变为未定义行为 */
 ```
 
-#### 2.3 符号问题（OS-SEC-014）
+#### 2.3 符号问题（OS-SEC-114）
 
-> **OS-SEC-014**：避免有符号/无符号混用。长度、大小、索引使用 `size_t` 或 `u32`；错误码使用 `int`（可负值）。禁止将有符号数与无符号数直接比较。
+> **OS-SEC-114**：避免有符号/无符号混用。长度、大小、索引使用 `size_t` 或 `u32`；错误码使用 `int`（可负值）。禁止将有符号数与无符号数直接比较。
 
 ```c
 /* 好 */
@@ -3015,9 +3019,9 @@ if (len < 0)         /* 永远不会为真，因为比较时 len 被提升为无
 
 ### 3. 格式化字符串安全
 
-#### 3.1 禁止用户可控格式化字符串（OS-SEC-015）
+#### 3.1 禁止用户可控格式化字符串（OS-SEC-115）
 
-> **OS-SEC-015**：禁止将用户可控的字符串作为格式化字符串传递给 `printk` / `pr_info` / `sprintf` 等函数。格式化字符串必须总是编译时常量字符串字面量。
+> **OS-SEC-115**：禁止将用户可控的字符串作为格式化字符串传递给 `printk` / `pr_info` / `sprintf` 等函数。格式化字符串必须总是编译时常量字符串字面量。
 
 ```c
 /* 好：格式化字符串是字面量常量 */
@@ -3027,9 +3031,9 @@ pr_info("agentrt: task %u state %s\n", task->id, state_name);
 pr_info(user_msg);  /* 用户可注入 %n 或 %s 导致信息泄露/崩溃 */
 ```
 
-#### 3.2 格式化字符串的 __printf 注解（OS-SEC-016）
+#### 3.2 格式化字符串的 __printf 注解（OS-SEC-116）
 
-> **OS-SEC-016**：自定义的格式化函数必须使用 `__printf(fmt_idx, arg_idx)` 属性注解，让编译器检查格式化字符串与参数类型是否匹配。
+> **OS-SEC-116**：自定义的格式化函数必须使用 `__printf(fmt_idx, arg_idx)` 属性注解，让编译器检查格式化字符串与参数类型是否匹配。
 
 ```c
 __printf(2, 3)
@@ -3043,9 +3047,9 @@ airy_log(ctx, "task %u created\n", task->id);
 
 ### 4. 指针安全
 
-#### 4.1 NULL 检查（OS-SEC-017）
+#### 4.1 NULL 检查（OS-SEC-117）
 
-> **OS-SEC-017**：所有来自外部（函数参数、返回值、全局变量）的指针在解引用前必须进行 NULL 检查。内核内部函数可假设参数非 NULL（通过 `__must_check` 和调用者契约保证），但边界 API 必须防御。
+> **OS-SEC-117**：所有来自外部（函数参数、返回值、全局变量）的指针在解引用前必须进行 NULL 检查。内核内部函数可假设参数非 NULL（通过 `__must_check` 和调用者契约保证），但边界 API 必须防御。
 
 ```c
 /* 边界 API：必须检查 NULL */
@@ -3064,9 +3068,9 @@ static void __airy_task_enqueue(struct airy_task *task)
 }
 ```
 
-#### 4.2 悬挂指针防护（OS-SEC-018）
+#### 4.2 悬挂指针防护（OS-SEC-118）
 
-> **OS-SEC-018**：释放内存后立即将指针置为 NULL。使用 `kfree_sensitive()` 清除敏感数据后再释放。禁止在释放后继续使用指针（UAF）。
+> **OS-SEC-118**：释放内存后立即将指针置为 NULL。使用 `kfree_sensitive()` 清除敏感数据后再释放。禁止在释放后继续使用指针（UAF）。
 
 ```c
 /* 好 */
@@ -3090,9 +3094,9 @@ task->id = 0;  /* 释放后使用！ */
 
 ### 5. 并发安全
 
-#### 5.1 数据竞争防护（OS-SEC-019）
+#### 5.1 数据竞争防护（OS-SEC-119）
 
-> **OS-SEC-019**：所有被多个线程访问的共享数据必须通过同步原语保护。数据竞争（data race）是未定义行为，可能导致内核崩溃或安全漏洞。KCSAN 在 CI 中检测数据竞争。
+> **OS-SEC-119**：所有被多个线程访问的共享数据必须通过同步原语保护。数据竞争（data race）是未定义行为，可能导致内核崩溃或安全漏洞。KCSAN 在 CI 中检测数据竞争。
 
 ```c
 struct airy_task_table {
@@ -3117,9 +3121,9 @@ void airy_task_table_add_bad(struct airy_task_table *t,
 }
 ```
 
-#### 5.2 死锁预防（OS-SEC-020）
+#### 5.2 死锁预防（OS-SEC-120）
 
-> **OS-SEC-020**：多锁获取必须遵循固定的锁顺序。锁顺序必须在代码注释中明确记录。禁止在持有自旋锁时调用可能睡眠的函数（如 `kmalloc(GFP_KERNEL)`、`mutex_lock()`、`schedule()`）。
+> **OS-SEC-120**：多锁获取必须遵循固定的锁顺序。锁顺序必须在代码注释中明确记录。禁止在持有自旋锁时调用可能睡眠的函数（如 `kmalloc(GFP_KERNEL)`、`mutex_lock()`、`schedule()`）。
 
 ```c
 /*
@@ -3147,9 +3151,9 @@ spin_unlock(&task_table->lock);
 
 ### 6. 权限与能力检查（Cupolas Capability）
 
-#### 6.1 capability 检查（OS-SEC-021）
+#### 6.1 capability 检查（OS-SEC-121）
 
-> **OS-SEC-021**：所有安全敏感操作（资源访问、权限变更、配置修改）必须通过 Cupolas capability 系统检查。capability 是不可伪造的令牌，无 capability 即无访问权限。Cupolas capability 结构体定义位于 [SC] 共享契约层（`include/airymax/capability.h`），遵循 IRON-9 v2 同源且部分代码共享原则。
+> **OS-SEC-121**：所有安全敏感操作（资源访问、权限变更、配置修改）必须通过 Cupolas capability 系统检查。capability 是不可伪造的令牌，无 capability 即无访问权限。Cupolas capability 结构体定义位于 [SC] 共享契约层（`include/airymax/capability.h`），遵循 IRON-9 v2 同源且部分代码共享原则。
 
 ```c
 /* 好：操作前检查 capability */
@@ -3168,9 +3172,9 @@ int airy_resource_access_bad(struct airy_session *s, u32 resource_id)
 }
 ```
 
-#### 6.2 capability 令牌管理（OS-SEC-022）
+#### 6.2 capability 令牌管理（OS-SEC-122）
 
-> **OS-SEC-022**：capability 令牌必须通过安全通道传递，禁止在日志中打印 capability 的原始值。capability 令牌的创建和销毁必须记录审计日志。
+> **OS-SEC-122**：capability 令牌必须通过安全通道传递，禁止在日志中打印 capability 的原始值。capability 令牌的创建和销毁必须记录审计日志。
 
 ```c
 /* 好：capability 通过安全通道传递，不打印原始值 */
@@ -3188,9 +3192,9 @@ int airy_capability_grant(struct airy_session *from,
 
 ### 7. 输入验证（从用户态接收的数据）
 
-#### 7.1 所有用户态输入必须验证（OS-SEC-023）
+#### 7.1 所有用户态输入必须验证（OS-SEC-123）
 
-> **OS-SEC-023**：从用户态接收的任何数据（系统调用参数、ioctl 参数、procfs/sysfs 写入、netlink 消息）必须经过完整验证后才能使用。验证包括：长度检查、范围检查、类型检查、格式检查。
+> **OS-SEC-123**：从用户态接收的任何数据（系统调用参数、ioctl 参数、procfs/sysfs 写入、netlink 消息）必须经过完整验证后才能使用。验证包括：长度检查、范围检查、类型检查、格式检查。
 
 ```c
 /* 完整的输入验证流程 */
@@ -3223,9 +3227,9 @@ int airy_syscall_task_create(struct airy_task_create_args __user *uargs)
 }
 ```
 
-#### 7.2 系统调用参数验证模板（OS-SEC-024）
+#### 7.2 系统调用参数验证模板（OS-SEC-124）
 
-> **OS-SEC-024**：所有系统调用必须遵循以下验证模板——UAPI 结构体字段的验证不能遗漏任何一个。
+> **OS-SEC-124**：所有系统调用必须遵循以下验证模板——UAPI 结构体字段的验证不能遗漏任何一个。
 
 ```c
 /*
@@ -3244,9 +3248,9 @@ int airy_syscall_task_create(struct airy_task_create_args __user *uargs)
 
 ### 8. 信息泄露防护
 
-#### 8.1 copy_to_user 敏感数据（OS-SEC-025）
+#### 8.1 copy_to_user 敏感数据（OS-SEC-125）
 
-> **OS-SEC-025**：向用户态复制数据前，必须确保复制的数据不包含内核地址、未初始化内存、或其他敏感信息。结构体在复制前必须清零或填充到安全值。
+> **OS-SEC-125**：向用户态复制数据前，必须确保复制的数据不包含内核地址、未初始化内存、或其他敏感信息。结构体在复制前必须清零或填充到安全值。
 
 ```c
 /* 好：清零结构体后再填充 */
@@ -3265,9 +3269,9 @@ info.id = task->id;
 copy_to_user(uinfo, &info, sizeof(info));
 ```
 
-#### 8.2 内核地址保护（OS-SEC-026）
+#### 8.2 内核地址保护（OS-SEC-126）
 
-> **OS-SEC-026**：禁止向用户态泄露内核地址。`%p` 默认输出已哈希化，但任何尝试输出真实内核地址的代码必须经过安全审查。导出到用户态的日志中不得包含内核指针值。
+> **OS-SEC-126**：禁止向用户态泄露内核地址。`%p` 默认输出已哈希化，但任何尝试输出真实内核地址的代码必须经过安全审查。导出到用户态的日志中不得包含内核指针值。
 
 ```c
 /* 好：日志中不输出内核地址 */
@@ -3277,9 +3281,9 @@ pr_info("task %u created\n", task->id);
 pr_info("task %u at %px\n", task->id, task);  /* %px 泄露内核地址 */
 ```
 
-#### 8.3 敏感数据清零（OS-SEC-027）
+#### 8.3 敏感数据清零（OS-SEC-127）
 
-> **OS-SEC-027**：密钥、密码、token 等敏感数据在使用完毕后必须使用 `memzero_explicit()` 清零，防止被后续的堆栈检查或内存转储泄露。使用 `kfree_sensitive()` 释放包含敏感数据的内存。
+> **OS-SEC-127**：密钥、密码、token 等敏感数据在使用完毕后必须使用 `memzero_explicit()` 清零，防止被后续的堆栈检查或内存转储泄露。使用 `kfree_sensitive()` 释放包含敏感数据的内存。
 
 ```c
 /* 好：敏感数据使用后清零 */
@@ -3300,7 +3304,7 @@ memzero_explicit(key, sizeof(key));  /* 清零，编译器不会优化掉 */
 **根因**：`af_key.c` 中 `pfkey_broadcast()` 函数在释放 `sk` 后仍通过 `sock_net(sk)` 访问 `sk`，导致 UAF。
 
 **agentrt-linux 教训**：
-- 释放结构体后立即将指针置 NULL（OS-SEC-018）
+- 释放结构体后立即将指针置 NULL（OS-SEC-118）
 - 使用引用计数管理生命周期（OS-KER-127）
 - KASAN 在 CI 中检测 UAF（每次 PR）
 
@@ -3311,7 +3315,7 @@ memzero_explicit(key, sizeof(key));  /* 清零，编译器不会优化掉 */
 **根因**：ASN.1 解码器在计算 `len = 1 << len` 时未检查溢出，攻击者可通过构造极端 `len` 值触发堆溢出。
 
 **agentrt-linux 教训**：
-- 所有移位操作必须检查溢出（OS-SEC-012）
+- 所有移位操作必须检查溢出（OS-SEC-112）
 - 使用 `check_shl_overflow()` 替代裸移位
 - 乘法/移位前使用 `struct_size()` / `array_size()`
 
@@ -3322,7 +3326,7 @@ memzero_explicit(key, sizeof(key));  /* 清零，编译器不会优化掉 */
 **根因**：UDP `ufo_append_data()` 函数在计算片段大小时未检查 `length` 是否溢出，导致 `skb` 数据区被越界覆盖。
 
 **agentrt-linux 教训**：
-- 网络数据包处理是缓冲区溢出高发区（OS-SEC-010）
+- 网络数据包处理是缓冲区溢出高发区（OS-SEC-110）
 - 所有来自网络的数据长度必须经过多重验证
 - 使用 `check_add_overflow()` 进行累积长度计算
 
@@ -3330,11 +3334,11 @@ memzero_explicit(key, sizeof(key));  /* 清零，编译器不会优化掉 */
 
 ```mermaid
 graph TD
-    CVE["Linux 内核 CVE 修复经验"] --> T1["铁律 1：验证所有外部输入<br/>OS-SEC-023"]
-    CVE --> T2["铁律 2：检查所有整数运算<br/>OS-SEC-012"]
-    CVE --> T3["铁律 3：释放后立即置 NULL<br/>OS-SEC-018"]
-    CVE --> T4["铁律 4：共享数据必须加锁<br/>OS-SEC-019"]
-    CVE --> T5["铁律 5：清零所有敏感数据<br/>OS-SEC-027"]
+    CVE["Linux 内核 CVE 修复经验"] --> T1["铁律 1：验证所有外部输入<br/>OS-SEC-123"]
+    CVE --> T2["铁律 2：检查所有整数运算<br/>OS-SEC-112"]
+    CVE --> T3["铁律 3：释放后立即置 NULL<br/>OS-SEC-118"]
+    CVE --> T4["铁律 4：共享数据必须加锁<br/>OS-SEC-119"]
+    CVE --> T5["铁律 5：清零所有敏感数据<br/>OS-SEC-127"]
 
     T1 --> GOAL["agentrt-linux 内核安全"]
     T2 --> GOAL

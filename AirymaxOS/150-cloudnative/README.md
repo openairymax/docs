@@ -9,8 +9,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**：agentrt gateway + Linux 6.6 容器与编排（containerd / K8s / OCI）\
 > **理论根基**：云原生计算哲学 + Airymax S-4 涌现性管理 + K-3 服务隔离
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），云原生体系已通过审查（云原生层 Phase B/C/D 验证：containerd / K8s CRD / CNI / CSI 设计与 IRON-9 v2 同源且部分代码共享原则对齐）
-
 ---
 
 ## 1. 模块定位

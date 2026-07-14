@@ -52,7 +52,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 
 ### 1.3 工程标准适用范围
 
-- **适用对象**：agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests）
+- **适用对象**：agentrt-linux 全部 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）
 - **适用语言**：内核态 C（主力）、内核模块 Rust（安全敏感子系统）、用户态服务 C/Rust/Python/TypeScript
 - **适用阶段**：0.1.1→ 1.0.1→ 后续所有版本
 - **不适用**：agentrt 用户态运行时（遵循 agentrt 自身的 IRON-1~10 规则，与本手册 IRON-9 v2 同源但独立）

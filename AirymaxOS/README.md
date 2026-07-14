@@ -128,15 +128,15 @@ docs/AirymaxOS/
 
 | 仓库   | URL                                             |
 | ---- | ----------------------------------------------- |
-| 管理仓  | `https://atomgit.com/openairymax/agentrt-linux.git` |
-| 子仓 1 | `https://atomgit.com/openairymax/kernel.git`        |
-| 子仓 2 | `https://atomgit.com/openairymax/services.git`      |
-| 子仓 3 | `https://atomgit.com/openairymax/security.git`      |
-| 子仓 4 | `https://atomgit.com/openairymax/memory.git`        |
-| 子仓 5 | `https://atomgit.com/openairymax/cognition.git`     |
-| 子仓 6 | `https://atomgit.com/openairymax/cloudnative.git`   |
-| 子仓 7 | `https://atomgit.com/openairymax/system.git`        |
-| 子仓 8 | `https://atomgit.com/openairymax/tests-linux.git`   |
+| 管理仓  | `https://atomgit.com/openairymax/agentrt-linux` |
+| 子仓 1 | `https://atomgit.com/openairymax/kernel`        |
+| 子仓 2 | `https://atomgit.com/openairymax/services`      |
+| 子仓 3 | `https://atomgit.com/openairymax/security`      |
+| 子仓 4 | `https://atomgit.com/openairymax/memory`        |
+| 子仓 5 | `https://atomgit.com/openairymax/cognition`     |
+| 子仓 6 | `https://atomgit.com/openairymax/cloudnative`   |
+| 子仓 7 | `https://atomgit.com/openairymax/system`        |
+| 子仓 8 | `https://atomgit.com/openairymax/tests-linux`   |
 
 ## 6. 版本规划
 

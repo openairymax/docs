@@ -7,8 +7,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**：2026-07-13\
 > **父文档**：[agentrt-linux 总览](../README.md)
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），架构设计层已通过 P0 文档修正验证。Phase B 完成对 OLK-6.6（B1 六大编码规范支柱 + ES-OLK-1~13 + 8 项新发现）与 seL4（B2 SEL4-01~08 验证 + 6 项新发现）的源码级深读；Phase C 形成 34 项 / ~108h 统一差距清单；Phase D 完成 8 项 A 类文档修正（C-A01~C-A08）并新建本目录 `06-directory-structure.md`（D9，~350 行系统性目录结构 SSoT）。[SC] 头文件 Tab 8 缩进验证通过（D10）。
-
 ---
 
 ## 1. 架构设计概览
@@ -230,7 +228,7 @@ agentrt-linux 架构设计层包含 6 个核心文档，覆盖系统架构、五
 | 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | 已存在 |
 | 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | 已存在 |
 | 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~014（14 个核心决策） | 新增 |
-| 6 | [06-directory-structure.md](06-directory-structure.md) | 源码目录结构 SSoT（ES-OLK-1~13 落地 + seL4 设计模式对齐 + [SC] 物理隔离） | 新增（Wave 2 v2 Phase D） |
+| 6 | [06-directory-structure.md](06-directory-structure.md) | 源码目录结构 SSoT（ES-OLK-1~13 落地 + seL4 设计模式对齐 + [SC] 物理隔离） | 新增 |
 
 ### 5.1 文档阅读顺序建议
 
@@ -243,14 +241,14 @@ agentrt-linux 架构设计层包含 6 个核心文档，覆盖系统架构、五
 
 ### 5.2 目录结构 SSoT（[06-directory-structure.md](06-directory-structure.md)）
 
-`06-directory-structure.md` 是 Wave 2 v2 Phase D 新增文档（D9，~350 行），作为 agentrt-linux 源码目录结构的**单一事实来源（SSoT）**，沉淀 Phase B 源码级深读成果：
+`06-directory-structure.md` 是新增文档（~350 行），作为 agentrt-linux 源码目录结构的**单一事实来源（SSoT）**，沉淀源码级分析成果：
 
 - **设计原则（5 条）**：ES-OLK-1 关注点分离 + ES-OLK-2 架构正交 + ES-OLK-3/6 UAPI 分离 + seL4 单编译单元（可选）+ IRON-9 v2 三层模型，每条均有源码级标杆证据（B1 OLK-6.6 顶层目录、B2 seL4 `CMakeLists.txt:355-363`）。
 - **顶层目录结构**：对齐 OLK-6.6 `arch/kernel/mm/fs/net/ipc/security/cognition/services/...` 分层，[SC] 物理隔离于 `include/airymax/`。
 - **[SC] 头文件物理隔离**：6 个共享契约头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）Tab 8 缩进 + 最小 typedef + 双向 CI 校验，对齐 OLK-6.6 §1/§5 + IRON-9 v2 三层模型。
 - **代码引用**：[file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/10-architecture/06-directory-structure.md](file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/10-architecture/06-directory-structure.md)
 
-> **D10 验证结论**：本目录 4 个文档的 [SC] 代码段（`02-five-dimensional-principles.md` / `03-microkernel-strategy.md` / `04-engineering-baseline.md` / `06-directory-structure.md`）Tab 8 缩进已全部对齐通过。
+> **缩进验证**：本目录 4 个文档的 [SC] 代码段（`02-five-dimensional-principles.md` / `03-microkernel-strategy.md` / `04-engineering-baseline.md` / `06-directory-structure.md`）Tab 8 缩进已全部对齐通过。
 
 ---
 
@@ -296,7 +294,7 @@ agentrt-linux 架构设计严格遵循 `docs/AirymaxRT/00-architectural-principl
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-06 | 初始占位版本（含架构层 5 文档索引） |
-| 0.1.1 | 2026-07-13 | Wave 2 v2 Phase B/C/D 源码级深读审查成果落地：新增 `06-directory-structure.md`（D9），架构层文档数 5 → 6；[SC] 头文件 Tab 8 验证通过（D10） |
+| 0.1.1 | 2026-07-13 | 新增 `06-directory-structure.md`，架构层文档数 5 → 6；[SC] 头文件 Tab 8 缩进验证通过 |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步） |
 
 ---

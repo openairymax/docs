@@ -13,9 +13,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。ARE（Airymax Runtime Environment）标准接口的命名前缀权威为 [coding_conventions.md Part IV §1.10](../10-coding-style/coding_conventions.md)（`are_*` 前缀）。
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D）。运行时接口子目录（2 文档）已通过 B2 seL4 深读 SEL4-01~08 验证 + 6 项新发现设计模式对齐 + B1 OLK-6.6 深读 ES-OLK-1~13 工程思想对齐 + IRON-9 v2 三层模型 [SC]/[SS]/[IND] 落地验证。当前方案 v0.6.0 P0 修复率 92% / 三层评分综合 80/100（B）。
-
----
 
 ## 文档信息卡
 - **目标读者**: OS 内核开发者、ARE 标准贡献者、安全架构师、协议设计者  
@@ -517,7 +514,7 @@ ARE Standards 的设计全程遵循五维正交24原则，关键映射如下：
 | 版本 | 日期 | 修改说明 | 作者 |
 |------|------|----------|------|
 | v0.1.1 | 2026-07-07 | 初始草案，完成文档体系结构 | Airymax Architecture Team |
-| v0.1.1 | 2026-07-13 | Wave 2 v2 Phase D 审查状态声明：B2 seL4 SEL4-01~08 + 6 项新发现设计模式 + B1 OLK-6.6 ES-OLK-1~13 + IRON-9 v2 三层模型落地验证 | Airymax Architecture Team |
+| v0.1.1 | 2026-07-13 | seL4 SEL4-01~08 + 6 项新发现设计模式 + OLK-6.6 ES-OLK-1~13 + IRON-9 v2 三层模型落地验证 | Airymax Architecture Team |
 
 ---
 

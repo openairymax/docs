@@ -139,7 +139,7 @@ agentrt-linux 采用 master 模式 8 个 IPC 原语作为"seL4 风格基础"（`
 
 在 seL4 master 8 原语基础上，agentrt-linux 扩展 4 个 agent 领域控制原语（`AIRY_SYS_ROVOL_CTL/AIRY_SYS_SCHED_CTL/AIRY_SYS_CLT_NOTIFY/AIRY_SYS_NOTIFY`），覆盖 agent 领域最小需求（记忆卷载、调度策略、认知通知、异步事件信号）。LsmCtl 与 WasmLoad 通过 capability invocation 归入 `airy_sys_call`。数据面 I/O 完全由 io_uring 处理（零 syscall）。
 
-**总计：8 seL4 风格 IPC 原语 + 4 agent 扩展控制原语 = 12 核心 syscall**，符合 §2.2"12 核心 + 12 预留 = 24 槽位"分配（从原 v0.6.0 的 120 槽位缩减 80%，详见历史审查 `_review_0.7.0/01-syscall-minimization-and-ssot-conflict-analysis.md`）。
+**总计：8 seL4 风格 IPC 原语 + 4 agent 扩展控制原语 = 12 核心 syscall**，符合 §2.2"12 核心 + 12 预留 = 24 槽位"分配（从原 v0.6.0 的 120 槽位缩减 80%）。
 
 ### 2.3 ABI 稳定性
 
@@ -415,13 +415,13 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | Agent 认知 | `agent.slice` | 100-119 | < 100 ms | CoreLoopThree 思考 |
 | 批处理推理 | `batch.slice` | 120-139 | < 1 s | LLM 批量推理 |
 
-超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ETIMEOUT` 错误码，由 SDK 层按重试策略处理（详见 [03-sdk-api.md](03-sdk-api.md) 第 7 章）。
+超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ETIMEDOUT` 错误码，由 SDK 层按重试策略处理（详见 [03-sdk-api.md](03-sdk-api.md) 第 7 章）。
 
 ---
 
 ## 6. 错误码定义
 
-错误码对齐 `airy_errno.h`，与 agentrt 同源且部分代码共享（IRON-9 v2）。错误码统一使用 `AIRY_E*` 前缀，负值返回。
+错误码对齐 `include/airymax/error.h`（[SC] 补充共享头文件，SSoT 权威定义见 `180-i18n/03-error-message-i18n.md` §2.2），与 agentrt 同源且部分代码共享（IRON-9 v2）。错误码统一使用 `AIRY_E*` 前缀，负值返回。以下为 SSoT 引用，权威定义见 `include/airymax/error.h`，不得另起定义。
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
@@ -436,7 +436,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_EBADF` | -8 | 描述符错误 | ring fd / capability 句柄无效 |
 | `AIRY_EBUSY` | -9 | 资源繁忙 | 任务正在迁移，无法快照 |
 | `AIRY_ENOTSUP` | -10 | 不支持 | 硬件不支持（如无 CXL 设备） |
-| `AIRY_ETIMEOUT` | -11 | 超时 | 调度等待超时 |
+| `AIRY_ETIMEDOUT` | -11 | 超时 | 调度等待超时 |
 | `AIRY_ECONFLICT` | -12 | 状态冲突 | 任务状态不允许当前操作 |
 
 ### 6.1 错误码使用规范
@@ -455,7 +455,7 @@ if (ret < 0) {
 
 - 与 Linux 标准 `errno` 的转换通过 `airy_errno_to_linux()` 工具函数完成。
 - 与 agentrt 应用层错误码的转换通过 `airy_errno_to_app()` 工具函数完成。
-- 转换表在 `airy_errno.h` 中以静态数组定义，便于维护。
+- 转换表在 `include/airymax/error.h` 中以静态数组定义，便于维护。
 
 ### 6.3 错误码稳定性
 

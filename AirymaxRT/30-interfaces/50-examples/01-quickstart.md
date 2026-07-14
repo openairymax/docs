@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
         
         // 释放结果内存
         AIRY_FREE(answer);
-    } else if (err == AIRY_ETIMEOUT) {
+    } else if (err == AIRY_ETIMEDOUT) {
         printf("\n⏰ 超时：Agent在30秒内未完成思考\n");
     } else {
         printf("\n❌ 错误: %d\n", err);
@@ -508,7 +508,7 @@ int main() {
 **问题**: `fatal error: 'agentrt.h' file not found`
 ```bash
 # 解决：指定正确的include路径
--I/path/to/AgentRT/agentrt/include
+-I/path/to/agentrt/include
 ```
 
 **问题**: `undefined reference to 'airy_init'`
@@ -577,8 +577,8 @@ airy_loop_create(&config, &loop);
 ## 🆘 获取帮助
 
 - **文档**: https://docs.agentrt.dev
-- **GitHub Issues**: https://github.com/spharx/AgentRT/issues
-- **Discussions**: https://github.com/spharx/AgentRT/discussions
+- **GitHub Issues**: https://github.com/spharx/agentrt/issues
+- **Discussions**: https://github.com/spharx/agentrt/discussions
 - **邮件列表**: dev@agentrt.dev
 
 ---

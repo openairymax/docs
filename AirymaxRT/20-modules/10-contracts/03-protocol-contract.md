@@ -29,7 +29,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **系统集成商**: 实现客户端与 Airymax 的通信对接
-2. **服务开发者**: 开发 agentrt/daemon/ 用户态服务层，实现服务间通信
+2. **服务开发者**: 开发 agentrt/daemons/ 用户态服务层，实现服务间通信
 3. **内核开发者**: 实现和维护 syscall 层接口
 4. **安全审计人员**: 审查通信安全性和权限控制
 
@@ -42,7 +42,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | Habitat 网关 | 统一的通信网关，处理外部请求和服务间通信 | 本规范 |
 | JSON-RPC 2.0 | 基于 JSON 的远程过程调用协议 | 本规范 |
 | 系统调用 (Syscall) | 用户态进入内核的唯一入口 | [syscall_api_contract.md](./syscall_api_contract.md) |
-| TraceID | 分布式追踪的唯一标识 | [日志打印规范](../30-coding-standard/10-log-standard.md) |
+| TraceID | 分布式追踪的唯一标识 | [日志打印规范](../../50-engineering-standards/10-coding-style/coding_conventions.md) |
 
 ---
 
@@ -53,7 +53,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 Airymax 采用分层架构，各层之间以及层与外部世界之间通过明确的协议通信。清晰的协议设计是系统稳定性、安全性和可维护性的基础。本规范定义了以下通信场景：
 
 1. **系统调用**: 用户态服务与内核之间的交互 (通过 syscall 层)
-2. **服务间通信**: agentrt/daemon/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
+2. **服务间通信**: agentrt/daemons/ 各用户态服务之间的通信 (通过 Habitat 网关或直接 RPC)
 3. **外部网关**: 客户端 (如 CLI、SDK、Web 应用) 与 Habitat 网关的交互
 
 协议设计遵循 Airymax 的一贯思想：**层次分明、接口稳定、安全内生、可观测**。
@@ -114,7 +114,7 @@ Airymax 采用四层协议栈，自顶向下分别为：
 │                    HTTP/1.1, HTTP/2, WebSocket, stdio        │
 ├─────────────────────────────────────────────────────────────┤
 │                         服务层 (JSON-RPC 2.0)                 │
-│                    agentrt/daemon/ 各用户态服务之间的通信                │
+│                    agentrt/daemons/ 各用户态服务之间的通信                │
 ├─────────────────────────────────────────────────────────────┤
 │                         AirymaxSyscall 层 (C ABI)                    │
 │                    agentrt/atoms/syscall/include/syscalls.h          │
@@ -479,7 +479,7 @@ Content-Type: application/json
 
 ### 5.1 概述
 
-系统调用是用户态进入内核的唯一入口，定义在 [`agentrt/atoms/syscall/include/syscalls.h`](../../AgentRT/agentrt/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
+系统调用是用户态进入内核的唯一入口，定义在 [`agentrt/atoms/syscall/include/syscalls.h`](../../agentrt/atoms/syscall/include/syscalls.h) 中。所有系统调用遵循统一的错误处理约定。
 
 ### 5.2 函数签名规范
 
@@ -487,17 +487,20 @@ Content-Type: application/json
 
 系统调用函数返回 `airy_err_t` 类型 (整数错误码):
 
+> **SSoT 声明**：错误码权威定义位于 `agentrt/commons/utils/error/include/error.h`（`AIRY_ERR_*` 扩展码）和 `agentrt/commons/include/airy_types.h`（`airy_err_t` 类型 + `AIRY_E*` POSIX 码）。`airymax/error.h` 为规划中的 [SC] 共享路径，尚未创建。类型 `airy_err_t = int32_t` 定义于 `airy_types.h:41`。本表与 `docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md` §2.5（方案 A：POSIX errno 负值）逐字节一致。
+
 ```c
 typedef int32_t airy_err_t;
 
-// 常见错误码（数值与 AirymaxOS 错误码体系对齐）
-#define AIRY_OK         0    // 成功
-#define AIRY_EINVAL     -1    // 参数无效
-#define AIRY_ENOMEM     -2    // 内存不足
-#define AIRY_EBUSY      -9    // 资源忙
-#define AIRY_ENOENT     -5    // 资源不存在
-#define AIRY_EPERM      -4    // 权限不足
-#define AIRY_ETIMEOUT  -11    // 操作超时
+// 常见错误码（SSoT 权威定义位于 agentrt/commons/include/airy_types.h，方案 A：POSIX errno 负值）
+// 数值与 POSIX errno 负值对齐
+#define AIRY_EOK         0      // 成功
+#define AIRY_EPERM      (-1)    // 权限不足（对齐 POSIX EPERM）
+#define AIRY_ENOENT     (-2)    // 资源不存在（对齐 POSIX ENOENT）
+#define AIRY_ENOMEM     (-12)   // 内存不足（对齐 POSIX ENOMEM）
+#define AIRY_EINVAL     (-22)   // 参数无效（对齐 POSIX EINVAL）
+#define AIRY_EBUSY      (-16)   // 资源忙（对齐 POSIX EBUSY）
+#define AIRY_ETIMEDOUT  (-110)  // 操作超时（对齐 POSIX ETIMEDOUT）
 ```
 
 完整错误码列表见 [第 7 章 错误码](#第 7 章 错误码)。
@@ -531,7 +534,7 @@ airy_err_t airy_sys_task_submit(
 ```c
 char* result = NULL;
 airy_err_t err = airy_sys_task_submit("...", 10, 30000, &result);
-if (err == AIRY_OK) {
+if (err == AIRY_EOK) {
     printf("Result: %s\n", result);
     AIRY_FREE(result);  // 必须释放
 }
@@ -682,36 +685,48 @@ airy_request_total{method="llm.complete",status="success"} 1234
 
 ## 第 7 章 错误码
 
-> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AIRY_EINVAL=-1`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块，与 AirymaxOS 系统调用错误码数值对齐。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AIRY_ERROR_INVALID_PARAMETER=0x0003`），详见 [error_code_reference.md](../70-project-erp/02-error-code-reference.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
+> **错误码体系说明**: 本文档中使用的负整数错误码（如 `AIRY_EINVAL=-22`）属于 Airymax **首要错误码体系**，适用于 C 内核、daemon 层和 atoms 模块，与 AirymaxOS 系统调用错误码数值对齐（对齐 POSIX errno 负值）。SDK 和外部接口应使用**次要体系**（十六进制分段错误码，如 `AIRY_ERROR_INVALID_PARAMETER=0x0003`），详见 [错误码参考文档](../../50-engineering-standards/50-project-erp/project_erp.md)。禁止在 C 内核代码中使用十六进制错误码，或在 SDK 中使用负整数错误码。
 
 ### 7.1 系统调用错误码
 
-> **⚠️ 以下错误码值与 C 内核权威错误码值一致，定义于 `agentrt/commons/utils/error/include/error.h`（[SC] 共享契约层共享 `include/airymax/error.h`）。协议层 JSON-RPC 通信直接使用内核负整数错误码，不引入额外的协议层编号。SDK 开发者应使用本文档的十六进制错误码；C 内核开发者必须使用 error.h 中的分段负整数错误码。**
+> **SSoT 声明**：错误码权威定义位于 `agentrt/commons/utils/error/include/error.h`（`AIRY_ERR_*` 扩展码）和 `agentrt/commons/include/airy_types.h`（`airy_err_t` 类型 + `AIRY_E*` POSIX 码）。`airymax/error.h` 为规划中的 [SC] 共享路径，尚未创建。类型 `airy_err_t = int32_t` 定义于 `airy_types.h:41`。本表与 `docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md` §2.5（方案 A：POSIX errno 负值）逐字节一致。成功码统一为 `AIRY_EOK = 0`（不再使用 `AIRY_OK`）。
 
-错误码定义在 [`agentrt/commons/utils/error/include/error.h`](../../AgentRT/agentrt/commons/utils/error/include/error.h) 中：
+错误码定义在 [`agentrt/commons/utils/error/include/error.h`](../../agentrt/commons/utils/error/include/error.h) 中（`AIRY_ERR_*` 扩展码），`airy_err_t` 类型与 `AIRY_E*` POSIX 码定义于 [`agentrt/commons/include/airy_types.h`](../../agentrt/commons/include/airy_types.h)（方案 A SSoT 权威源）：
 
-| 错误码 | 值 | 说明 |
-|--------|-----|------|
-| `AIRY_OK` | 0 | 成功 |
-| `AIRY_EINVAL` | -1 | 无效参数 |
-| `AIRY_ENOMEM` | -2 | 内存不足 |
-| `AIRY_ENOSYS` | -3 | 未实现 |
-| `AIRY_EPERM` | -4 | 权限不足 |
-| `AIRY_ENOENT` | -5 | 资源不存在 |
-| `AIRY_EBUSY` | -9 | 资源忙 |
-| `AIRY_ENOTSUP` | -10 | 不支持 |
-| `AIRY_ETIMEOUT` | -11 | 操作超时 |
-| `AIRY_ECONFLICT` | -12 | 状态冲突 |
-| `AIRY_EFAULT` | -13 | 地址错误 |
-| `AIRY_EOVERFLOW` | -14 | 溢出 |
-| `AIRY_EUNKNOWN` | -15 | 未知错误 |
-| `AIRY_ECANCELED` | -16 | 操作取消 |
-| `AIRY_EEXIST` | -18 | 资源已存在 |
-| `AIRY_EIO` | -19 | I/O 错误 |
-| `AIRY_EBADF` | -8 | 无效句柄 |
-| `AIRY_EINTR` | -17 | 被中断 |
-| `AIRY_ENOTINIT` | -20 | 未初始化（RT 独有） |
-| `AIRY_ERESOURCE` | -21 | 资源耗尽（RT 独有） |
+| 错误码 | 值 | 说明 | 来源 |
+|--------|-----|------|------|
+| `AIRY_EOK` | 0 | 成功 | airy_types.h |
+| `AIRY_EPERM` | -1 | 权限不足（POSIX EPERM=1） | airy_types.h |
+| `AIRY_ENOENT` | -2 | 资源不存在（POSIX ENOENT=2） | airy_types.h |
+| `AIRY_EINTR` | -4 | 被中断（POSIX EINTR=4） | airy_types.h |
+| `AIRY_EIO` | -5 | I/O 错误（POSIX EIO=5） | airy_types.h |
+| `AIRY_EAGAIN` | -11 | 资源暂时不可用（POSIX EAGAIN=11） | airy_types.h |
+| `AIRY_ENOMEM` | -12 | 内存不足（POSIX ENOMEM=12） | airy_types.h |
+| `AIRY_EACCES` | -13 | 权限不足（POSIX EACCES=13） | airy_types.h |
+| `AIRY_EFAULT` | -14 | 地址错误（POSIX EFAULT=14） | airy_types.h |
+| `AIRY_EBUSY` | -16 | 资源忙（POSIX EBUSY=16） | airy_types.h |
+| `AIRY_EEXIST` | -17 | 资源已存在（POSIX EEXIST=17） | airy_types.h |
+| `AIRY_EINVAL` | -22 | 无效参数（POSIX EINVAL=22） | airy_types.h |
+| `AIRY_ENOTINIT` | -9 | 引擎未初始化（Airymax 专属） | airy_types.h |
+| `AIRY_ECANCELLED` | -10 | 操作已取消（Airymax 专属） | airy_types.h |
+| `AIRY_EPROTO` | -71 | 协议错误（POSIX EPROTO=71） | airy_types.h |
+| `AIRY_EOVERFLOW` | -75 | 溢出（POSIX EOVERFLOW=75） | airy_types.h |
+| `AIRY_ENOTSUP` | -95 | 不支持（POSIX ENOTSUP=95） | airy_types.h |
+| `AIRY_EUNKNOWN` | -99 | 未知错误（Airymax 专属） | airy_types.h |
+| `AIRY_ETIMEDOUT` | -110 | 操作超时（POSIX ETIMEDOUT=110） | airy_types.h |
+| `AIRY_ECONNREFUSED` | -111 | 连接被拒绝（POSIX ECONNREFUSED=111） | airy_types.h |
+| `AIRY_EBADF` | -112 | 无效句柄（别名 `AIRY_ERR_SYS_FILE`） | error.h |
+| `AIRY_ERESOURCE` | -102 | 资源耗尽（别名 `AIRY_ERR_SYS_RESOURCE`） | error.h |
+
+> **v4.0 SSoT 对齐说明**：
+> - 上表所有值逐字节对齐 `airy_types.h`（`AIRY_E*` POSIX 码硬定义）和 `error.h`（`AIRY_ERR_*` 扩展码别名）。
+> - `AIRY_EINTR (-4)` 和 `AIRY_EFAULT (-14)` 于 v4.0 纳入 `airy_types.h` SSoT 硬定义（POSIX errno 负值）。此前 `AIRY_EINTR` 仅作为 `AIRY_ERR_INTERRUPTED (-19)` 的别名存在于 `error.h`，`AIRY_EFAULT` 完全未定义。
+> - `AIRY_ECANCELLED (-10)`（双 L）为 `airy_types.h` 权威定义；`AIRY_ECANCELED`（单 L）为 `error.h` 别名，映射至 `AIRY_ERR_CANCELED (-47)`。调用方应优先使用 `airy_types.h` 的 POSIX 风格码。
+> - `AIRY_EBADF (-112)` 为 `error.h` 别名（= `AIRY_ERR_SYS_FILE`），非 POSIX errno 负值。
+> - `AIRY_ERESOURCE (-102)` 为 `error.h` 别名（= `AIRY_ERR_SYS_RESOURCE`），非 POSIX errno 负值。
+> - **已移除未定义宏**：`AIRY_ECONFLICT`（完全未定义）已从本表移除。如需使用，须先在 `airy_types.h` 中注册。
+> - **v4.0 更新**：`AIRY_ENOSYS`（POSIX ENOSYS=38）已於 v4.0 纳入 `airy_types.h` SSoT 硬定义（值为 -38），不再是未定义宏。
+> - **已修正值错误**：`AIRY_EBADF`（-9→-112）、`AIRY_ECANCELED`（-125→由 `AIRY_ECANCELLED` -10 替代）、`AIRY_ENOTINIT`（-4097→-9）、`AIRY_ERESOURCE`（-4098→-102）。
 
 ### 7.2 JSON-RPC 错误码映射
 
@@ -746,7 +761,7 @@ int main() {
 
     // 1. 创建会话
     char* session_id = NULL;
-    if (airy_sys_session_create("{\"user\":\"alice\"}", &session_id) != AIRY_OK) {
+    if (airy_sys_session_create("{\"user\":\"alice\"}", &session_id) != AIRY_EOK) {
         fprintf(stderr, "Failed to create session\n");
         return 1;
     }
@@ -758,7 +773,7 @@ int main() {
     airy_err_t err = airy_sys_task_submit(
         "Develop a simple e-commerce product listing page",
         50, 30000, &result);
-    if (err == AIRY_OK) {
+    if (err == AIRY_EOK) {
         printf("Task result: %s\n", result);
         AIRY_FREE(result);
     } else {
@@ -864,14 +879,14 @@ curl -X POST http://localhost:8080/rpc \
 | [架构设计原则](../../00-architectural-principles.md) | 本规范是架构原则在通信层面的具体实现，特别是层次分解和接口稳定原则 |
 | [系统调用 API 规范](./syscall_api_contract.md) | 本规范定义了系统调用的传输协议，syscall_api_contract.md 定义了具体的 API 接口 |
 | [日志格式规范](./logging_format.md) | 本规范要求所有组件使用统一的日志格式，支持 TraceID 贯穿 |
-| [日志打印规范](../30-coding-standard/10-log-standard.md) | 通信过程中的日志记录应遵循日志打印规范 |
+| [日志打印规范](../../50-engineering-standards/10-coding-style/coding_conventions.md) | 通信过程中的日志记录应遵循日志打印规范 |
 | [统一术语表](../../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
 
 ---
 
 ## 参考文献
 
-[1] Airymax 设计哲学。../../00-basic-theories/04-design-principles-cn.md  
+[1] Airymax 设计哲学。../../00-requirements/04-design-principles-cn.md  
 [2] 架构设计原则。../../00-architectural-principles.md  
 [3] 统一术语表。../../TERMINOLOGY.md  
 [4] JSON-RPC 2.0 Specification. https://www.jsonrpc.org/specification  

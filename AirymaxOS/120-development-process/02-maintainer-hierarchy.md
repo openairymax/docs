@@ -107,14 +107,14 @@ agentrt-linux 继承 Linux 6.6 内核 `MAINTAINERS` 文件的 14 字段格式，
 AIRY_IPC PROTOCOL
 M:	Alice Chen <alice@airymaxos.org>
 R:	Bob Li <bob@airymaxos.org>
-L:	https://github.com/agentrt-linux/airymaxos-system/issues
+L:	https://github.com/agentrt-linux/system/issues
 S:	Maintained
 W:	docs/AirymaxOS/30-interfaces/
 Q:	https://github.com/orgs/agentrt-linux/projects/airy_ipc
-B:	https://github.com/agentrt-linux/airymaxos-system/issues/new?template=bug.md
+B:	https://github.com/agentrt-linux/system/issues/new?template=bug.md
 C:	matrix:#airy_ipc
 P:	120-development-process/01-patch-lifecycle.md
-T:	git https://github.com/agentrt-linux/airymaxos-system.git develop
+T:	git https://github.com/agentrt-linux/system.git develop
 F:	include/uapi/airy_ipc/
 F:	kernel/ipc/airy_ipc.c
 X:	kernel/ipc/airy_ipc/test/
@@ -124,9 +124,9 @@ K:	\b(airy_ipc_send|airy_ipc_recv)\b
 MICROCORERT KERNEL ADAPTATION
 M:	Carol Wang <carol@airymaxos.org>
 R:	Dave Zhang <dave@airymaxos.org>
-L:	https://github.com/agentrt-linux/airymaxos-kernel/issues
+L:	https://github.com/agentrt-linux/kernel/issues
 S:	Supported
-T:	git https://github.com/agentrt-linux/airymaxos-kernel.git develop
+T:	git https://github.com/agentrt-linux/kernel.git develop
 F:	kernel/microcorert/
 K:	\b(microcorert_init|microcorert_dispatch)\b
 ```
@@ -176,7 +176,7 @@ flowchart LR
     S[services 维护者]
     CO[cognition 维护者]
     CL[cloudnative 维护者]
-    T[tests 维护者]
+    T[tests-linux 维护者]
 
     CM --> K
     CM --> SY

@@ -21,7 +21,7 @@
 
 **Airymax严格遵循"源码和产物分离"原则：**
 
-1. ✅ **源码目录 (`AgentRT/`)** - 仅包含源代码、配置文件和脚本
+1. ✅ **源码目录 (`agentrt/`)** - 仅包含源代码、配置文件和脚本
 2. ✅ **构建目录 (`AgentRT-build/`)** - 所有构建产物统一输出到此目录
 3. ✅ **禁止在源码目录内进行任何构建操作**
 
@@ -50,7 +50,7 @@ make -j$(nproc)             # 编译
 
 ```
 OpenAirymax/
-├── AgentRT/                    ← 纯源码目录
+├── agentrt/                    ← 纯源码目录
 │   ├── agentrt/                # 核心代码
 │   │   ├── atoms/              # 原子模块
 │   │   ├── commons/            # 公共库
@@ -77,7 +77,7 @@ OpenAirymax/
 │   │   └── ...
 │   └── [其他构建产物]
 │
-└── Docs/                       ← 独立文档目录（独立仓库）
+└── docs/                       ← 独立文档目录（独立仓库）
     └── 30-interfaces/         # 接口文档
 ```
 
@@ -319,7 +319,7 @@ find . -type d \( -name "build" -o -name "_build" -o -name "CMakeFiles" \) \
 
 ```
 OpenAirymax/
-├── AgentRT/                  ← 源码
+├── agentrt/                  ← 源码
 ├── AgentRT-build/           ← Release 构建
 ├── AgentRT-build-debug/     ← Debug 构建
 └── AgentRT-build-coverage/  ← Coverage 构建

@@ -23,7 +23,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [7. agentrt-linux 工程基线](#7-agentrt-linux-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
-- [10. 里程碑（M1-M6）](#10-里程碑m1-m6)
+- [10. 里程碑（M0-M8）](#10-里程碑m0-m8)
 - [11. agentrt 一致性检查](#11-agentrt-一致性检查)
 - [12. 相关文档](#12-相关文档)
 - [13. 参考](#13-参考)
@@ -60,7 +60,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次 | 共享程度 | 服务子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
 | **[SC] 共享契约层** | 完全共享代码 | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码与标志位、ring 创建/注册参数 | `include/airymax/ipc.h`（与 kernel 共享） |
-| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/channel_d/info_d/notify_d/observe_d/hook_d/plugin_d）、io_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 15+ 项 | 各自独立实现 |
+| **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（gateway_d/llm_d/tool_d/sched_d/market_d/monit_d/channel_d/info_d/notify_d/observe_d/hook_d/plugin_d）、io_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs） | 各自独立仓库 |
 
 ### 2.1 维度对比
@@ -312,14 +312,14 @@ WantedBy=airymaxos.target
 | 内容 | 说明 |
 |------|------|
 | `AIRY_IPC_MAGIC`（0x41524531 'ARE1'） | IPC 消息头 magic（同源 agentrt） |
-| `AIRY_IPC_MSG_HDR_SIZE`（128） | 128B 消息头大小 |
+| `AIRY_IPC_HDR_SZ`（128） | 128B 消息头大小 |
 | `AIRY_IPC_RING_DEF/MAX_ENTRIES`（256/32768） | ring 默认/最大条目数 |
-| `AIRY_IPC_OP_*` 宏（NOP/SEND/RECV/MSG_RING/SEND_ZC） | SQE 操作码 |
+| `AIRY_IPC_OP_*` 宏（SEND/RECV/SEND_BATCH/CANCEL） | SQE 操作码 |
 | `AIRY_IPC_SQE_*` 宏（FIXED_BUF/ASYNC/BUF_SELECT/SKIP_CQE） | SQE 标志位 |
 | `AIRY_IPC_CQE_F_*` 宏（BUFFER/MORE/NOTIF） | CQE 标志位 |
 | `struct airy_ipc_msg_hdr` 结构 | 128B 消息头（magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]，Layout C SSoT） |
 
-### 6.2 [SS] 语义同源层——15+ 项 API 映射
+### 6.2 [SS] 语义同源层——20 项 API 映射
 
 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进。服务模块的同源 API：
 
@@ -474,16 +474,27 @@ graph TD
 
 ---
 
-## 10. 里程碑（M1-M6）
+## 10. 里程碑（M0-M8）
 
 | 阶段 | 目标 | 时间 | 同源标注 |
 |------|------|------|----------|
+| M0 | 文档体系完成（本模块设计文档） | 2026-07 | — |
 | M1 | io_uring IPC 库 + 通信原语 | 2026 Q3 | [SS] |
 | M2 | 12 daemons systemd 集成 | 2026 Q4 | [SS] |
 | M3 | 用户态 VFS（Phase 1） | 2027 Q1 | [IND] |
 | M4 | 用户态网络栈（AF_XDP） | 2027 Q2 | [IND] |
 | M5 | 用户态驱动框架（VFIO） | 2027 Q3 | [IND] |
 | M6 | 全部服务用户态化完成 | 2027 Q4 | [IND] |
+| M7 | 高可用 + 故障恢复 | 2028 Q1 | [IND] |
+| M8 | 生产就绪 + 性能调优 | 2028 Q2 | [IND] |
+
+### 10.1 0.1.1 版本范围
+
+仅完成 M0（文档体系完成）+ M1（[SC] 共享契约层头文件占位）。不含内核/OS 代码实施。
+
+### 10.2 1.0.1 版本范围
+
+完成 M2-M8 全部里程碑，并实施服务工程标准。
 
 ---
 

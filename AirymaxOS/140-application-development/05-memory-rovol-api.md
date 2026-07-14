@@ -910,7 +910,7 @@ MemoryRovol API 复用 [contracts.md](../50-engineering-standards/20-contracts/c
 | `AIRY_EMSGSIZE` | -7 | 消息过大 | 快照超过最大限制 | 否 |
 | `AIRY_EBUSY` | -9 | 资源繁忙 | Agent 正在迁移 | 是（延迟） |
 | `AIRY_ENOTSUP` | -10 | 不支持 | 无 CXL 设备、PMEM 未配置 | 否 |
-| `AIRY_ETIMEOUT` | -11 | 超时 | 迁移超时、userfaultfd 超时 | 是（限制次数） |
+| `AIRY_ETIMEDOUT` | -11 | 超时 | 迁移超时、userfaultfd 超时 | 是（限制次数） |
 | `AIRY_ECONFLICT` | -12 | 状态冲突 | 快照非 ACTIVE 状态、Agent 非 RUNNING | 否 |
 | `AIRY_EFAULT` | -13 | 地址错误 | 用户态指针非法 | 否 |
 | **`AIRY_ECORRUPTED`** | **-15** | **快照损坏** | **SHA-256 校验失败** | **否** |

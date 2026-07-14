@@ -632,7 +632,7 @@ int airy_ipc_register_region(int ring_fd,
 
 	/* 1. 权限仲裁（Cupolas，[SS] 语义同源层） */
 	perm.op = CUPOLAS_OP_IPC_REGION_REGISTER;
-	perm.src_pid = current->pid;
+	perm.src_task = current->pid;
 	perm.size = desc->size;
 	ret = cupolas_permission_check(&perm);
 	if (ret != CUPOLAS_PERMIT)

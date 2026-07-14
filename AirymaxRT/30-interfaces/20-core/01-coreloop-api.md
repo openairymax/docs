@@ -201,7 +201,7 @@ AIRY_API airy_err_t airy_loop_wait(
 
 **返回值**:
 - `AIRY_EOK`: 任务完成，结果可用
-- `AIRY_ETIMEOUT`: 超时
+- `AIRY_ETIMEDOUT`: 超时
 - `AIRY_EINVAL**: 参数无效
 - `AIRY_ENOENT`: 任务不存在
 - `AIRY_ENOMEM`: 内存不足

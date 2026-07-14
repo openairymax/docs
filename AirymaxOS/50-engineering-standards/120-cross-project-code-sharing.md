@@ -70,7 +70,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | -- | ------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------- |
 | 1  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
 | 2  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
-| 3  | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符 + **统一错误码类型（`airy_err_t` = `int32_t`）** | —                     | `include/airymax/cognition_types.h` |
+| 3  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/airymax/cognition_types.h` |
 | 4  | `sched.h`           | SCHED\_EXT 约束（复用 7）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL                 | `0x41475453` ('AGTS') | `include/airymax/sched.h`           |
 | 5  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/airymax/ipc.h`             |
 | 6  | `syscalls.h`        | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
@@ -78,7 +78,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 **补充内容**（不属于上述 6 个头文件，但两端共享语义）：
 
 - capability 令牌格式
-- 错误码具体值（13 个 `AIRY_E*` 宏，`airy_err_t` 类型定义见 cognition_types.h）
+- **错误码 SSoT（方案 A：POSIX errno 负值，唯一权威方案）**：
+  - `airy_err_t` 类型定义于 `agentrt/commons/include/airy_types.h:41`（`typedef int32_t airy_err_t`）。
+  - 成功码：`AIRY_EOK = 0`（与 `AIRY_SUCCESS = 0` 等价，推荐使用 `AIRY_EOK`）。
+  - 错误码值为 POSIX errno 负值（参考 Linux errno.h）：`AIRY_EINVAL=(-22)`、`AIRY_ENOMEM=(-12)`、`AIRY_ETIMEDOUT=(-110)`、`AIRY_EPERM=(-1)`、`AIRY_ENOENT=(-2)`、`AIRY_EBUSY=(-16)`、`AIRY_EIO=(-5)`、`AIRY_EEXIST=(-17)` 等。无对应 POSIX errno 的保留自定义负值（如 `AIRY_ENOTINIT=(-9)`、`AIRY_ECANCELLED=(-10)`）。
+  - 权威源文件：`agentrt/commons/utils/error/include/error.h`（定义 `AIRY_ERR_*` 扩展码 + 错误链/i18n 接口）+ `agentrt/commons/include/airy_types.h`（定义 `airy_err_t` 类型 + `AIRY_E*` POSIX 码）。**注意**：`airymax/error.h` 为规划中的 [SC] 共享头文件路径，当前尚未创建；在创建前，以 `agentrt/commons/utils/error/include/error.h` 为实际权威源。
+  - **已废弃方案**：方案 B（runtime_interfaces.md 的 -1/-2/-11 自定义序列）、方案 C（coding_conventions.md 的 -2/-4/-6 旧值）、方案 D（project_erp.md 的位掩码 0x00010000，仅用于 ERP 分类，非错误码方案）均已废弃，禁止在新代码中使用。
+  - 任何文档、代码不得另起定义，必须引用此权威源。详见 `180-i18n/03-error-message-i18n.md` §2.2。
 - 规则编号体系（IRON/BAN/STD/ACC）
 - 五维正交 24 原则
 

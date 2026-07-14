@@ -8,8 +8,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**： agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability
 > **理论根基**： Linux 内核安全机制 + Airymax E-1 安全内生 + K-3 服务隔离
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），安全加固已通过审查（B2 seL4 capability 安全模型深读 SEL4-01~08 全部验证通过 + 6 项新发现设计模式；IRON-9 v2 [SC]/[SS]/[IND] 三层模型：[SC] 共享契约层 capability 数据模型、[SS] 同源语义层 Cupolas 7 子系统、[IND] 独立实现层 kernel LSM + Landlock）
-
 ---
 
 ## 1. 模块定位

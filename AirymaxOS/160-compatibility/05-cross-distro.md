@@ -539,13 +539,15 @@ graph TD
 
 ### 15.1 兼容性错误码
 
-| 错误码 | 名称 | 含义 |
+跨发行版兼容性错误码纳入发行版错误段（-1000~-1099，SSoT 定义于 `include/airymax/error.h`）：
+
+| 错误码 | 数值 | 含义 |
 |--------|------|------|
-| -ENODISTRO | AIRY_ENODISTRO | 不支持的发行版 |
-| -ENOKERN | AIRY_ENOKERN | 内核版本过低 |
-| -ENOGLIBC | AIRY_ENOGLIBC | glibc 版本过低 |
-| -ENOMOD | AIRY_ENOMOD | 内核模块加载失败 |
-| -ENOFALLBACK | AIRY_ENOFALLBACK | 无可用降级路径 |
+| AIRY_DIST_ENODISTRO | -1020 | 不支持的发行版 |
+| AIRY_DIST_ENOKERN | -1021 | 内核版本过低 |
+| AIRY_DIST_ENOGLIBC | -1022 | glibc 版本过低 |
+| AIRY_DIST_ENOMOD | -1023 | 内核模块加载失败 |
+| AIRY_DIST_ENOFALLBACK | -1024 | 无可用降级路径 |
 
 ### 15.2 错误诊断
 

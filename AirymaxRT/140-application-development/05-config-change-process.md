@@ -52,7 +52,7 @@
 _owner:
   module: "cupolas"                    # 内容归属模块
   contact: "cupolas-team@spharx.cn"    # 联系方式
-  path: "AgentRT/cupolas"              # 模块路径
+  path: "agentrt/cupolas"              # 模块路径
   description: "内容定义责任归属 cupolas 模块，管理责任归属 Manager 模块"
 ```
 
@@ -350,7 +350,7 @@ config_change:
 
 - 00-architectural-principles.md - 架构原则
 - agentrt/manager/README.md - Manager 模块说明
-- specifications/30-coding-standard/15-security-design.md - 安全设计规范
+- 50-engineering-standards/10-coding-style/coding_conventions.md (Part V 安全设计) - 安全设计规范
 
 ---
 

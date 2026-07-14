@@ -8,8 +8,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**： agentrt 7 层自动化验证 + Linux 6.6 测试框架（KUnit/kselftest/动态分析）
 > **理论根基**： Linux 内核测试体系 + Airymax E-8 可测试性 + A-4 完美主义
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），测试体系已通过审查（B2 seL4 形式化验证边界明确：seL4 完整形式化验证不适用于 Linux 6.6 宏内核基线，agentrt-linux 采用 seL4 风格 + TLA+ 限定关键路径；已知遗留 C-E01：`tests` 简写残留 49 文件 / 177 处，移交 1.0.1）
-
 ---
 
 ## 1. 模块定位

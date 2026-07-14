@@ -8,8 +8,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**： agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`
 > **理论根基**： Linux device/driver/bus 三元组解耦 + Airymax K-3 服务隔离
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），驱动模型已通过审查（B1 OLK-6.6 驱动模型对齐：device/driver/bus 三元组、`module_*_driver` 宏、`devm_` 资源管理、platform 总线 / misc 框架均有源码级证据，ES-OLK-1~13 工程思想对齐）
-
 ---
 
 ## 1. 模块定位

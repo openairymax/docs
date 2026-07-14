@@ -282,7 +282,7 @@ _config_version: "1.0.0"
 _owner:
   module: "your-module"
   contact: "your-team@spharx.cn"
-  path: "AgentRT/manager/your_module"
+  path: "agentrt/manager/your_module"
 
 your_module:
   setting1: "value1"

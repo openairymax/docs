@@ -10,8 +10,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。其中 `contracts.md`（Part III 日志格式契约）为日志格式与传输管道的唯一 SSoT。
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D）。契约规范子目录（2 文档）已通过 B2 seL4 深读 SEL4-01~08 验证 + 6 项新发现设计模式对齐 + [SC] 共享契约层物理宿主 `120-cross-project-code-sharing.md` Tab 8 缩进验证（对齐 OLK-6.6 §1）。IPC 128B 消息头结构体名 `struct airy_ipc_msg_hdr` 与 `include/airymax/ipc.h` 物理宿主对齐，无陈旧路径引用。
-
 ---
 
 ## 1. 契约规范在 OS 层的定位
@@ -115,7 +113,7 @@ graph TB
 | syscall API | 无（用户态运行时） | `AIRY_SYS_*` 系统调用 | 任务管理、调度、记忆卷载语义一致 |
 | IPC 128B 消息头 | AgentsIPC 用户态消息队列 | io_uring 零拷贝内核通道 | 消息头字段布局完全兼容 |
 | 日志格式 | 结构化 JSON 日志 | 结构化 JSON 日志 + 内核 log_write() | 日志级别、TraceID、ANSI 颜色编码一致 |
-| 错误码 | `airy_errno.h` | `airy_errno.h`（同源共享） | 错误码值、语义、`strerror()` 描述一致 |
+| 错误码 | `include/airymax/error.h` | `include/airymax/error.h`（[SC] SSoT 同源共享） | 错误码值、语义、`strerror()` 描述一致 |
 
 ### 2.3 [IND] 完全独立层
 
@@ -405,7 +403,7 @@ flowchart TD
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-07 | 初始版本（agentrt-linux OS 层契约规范总览，含 IRON-9 v2 三层契约分层、4 大契约规范索引、版本管理策略、兼容性保证） |
-| 0.1.1 | 2026-07-13 | Wave 2 v2 Phase D 审查状态声明：B2 seL4 深读 SEL4-01~08 + 6 项新发现设计模式对齐 + [SC] 物理宿主 Tab 8 缩进验证 |
+| 0.1.1 | 2026-07-13 | seL4 SEL4-01~08 + 6 项新发现设计模式对齐 + [SC] 物理宿主 Tab 8 缩进验证 |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（契约实现与代码同步验证） |
 
 ---

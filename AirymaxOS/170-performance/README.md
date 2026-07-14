@@ -9,8 +9,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**：agentrt 性能基线 + Linux 6.6 性能子系统（perf / sched_ext / MGLRU / io_uring）\
 > **理论根基**：Linux 内核性能工程 + Airymax S-1 反馈闭环 + A-4 完美主义
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D）。性能工程模块（6 文档）已通过 B1 OLK-6.6 深读 ES-OLK-1~13 工程思想对齐 + B2 seL4 深读 SEL4-01~08 + 6 项新发现设计模式对齐 + D7（C-A07）陈旧注释路径修复（`ipc_msg_hdr.h` → `ipc.h`，5 处）。当前方案 v0.6.0 P0 修复率 92% / 三层评分综合 80/100（B）。
-
 ---
 
 ## 1. 模块定位
@@ -112,25 +110,6 @@ io_uring_submit(&ring);
 ### 3.2 1.0.1 版本范围
 
 170 模块 6/6 文档覆盖性能工程标准与生产就绪验证。
-
-### 3.3 D7 修复说明（Wave 2 v2 Phase D，C-A07）
-
-Wave 2 v2 Phase D 的 D7（C-A07）修复针对 `03-ipc-performance.md` 中的陈旧注释路径：
-
-| 修复项 | 陈旧路径 | 正确路径 | 修复处数 | 验证结果 |
-|--------|---------|---------|---------|---------|
-| D7（C-A07） | `ipc_msg_hdr.h` | `ipc.h` | 5 处 | ✅ 全部修复，与 [SC] 共享契约层物理宿主 `120-cross-project-code-sharing.md` §Layout C 对齐 |
-
-**修复详情**：
-
-- `03-ipc-performance.md` 中所有引用 IPC 128B 消息头定义的注释路径，已统一从陈旧的 `ipc_msg_hdr.h` 更新为正确的 `ipc.h`
-- 结构体名称统一为 `struct airy_ipc_msg_hdr`（Layout C），与 `include/airymax/ipc.h` [SC] 共享契约层物理宿主对齐
-- 原 Layout D（21 字段零拷贝布局）已废弃，统一引用 SSoT Layout C
-- 物理宿主为 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C
-
-> **代码引用**：
-> - IPC 性能文档（D7 修复对象）：`file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/170-performance/03-ipc-performance.md`
-> - [SC] 共享契约层物理宿主：`file:///home/spharx/SpharxWorks/OpenAirymax/docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md`
 
 ---
 

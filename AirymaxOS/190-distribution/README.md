@@ -9,8 +9,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**：agentrt 版本管理 + Linux 6.6 发行版工程（RPM / dnf / ISO / 镜像）\
 > **理论根基**：Linux 发行版管理哲学 + Airymax S-4 涌现性管理 + C-2 增量演化
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），发行版管理已通过审查（Phase B/C/D 验证：RPM 打包规范 / dnf 仓库设计 / ISO 镜像构建 / 可重现构建与 IRON-9 v2 同源且部分代码共享原则对齐）
-
 ---
 
 ## 1. 模块定位

@@ -8,8 +8,6 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**： agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统
 > **理论根基**： Linux Kbuild 递归构建 + Airymax E-7 文档即代码
 
-> **审查状态**：Wave 2 v2 源码级深读审查完成（Phase A/B/C/D），构建系统已通过审查（B1 OLK-6.6 构建系统对齐：Kbuild 递归构建 / `if_changed` 增量构建 / `filechk` 版本注入 / Kconfig 配置门控均有源码级证据；D9 新建 `10-architecture/06-directory-structure.md` 系统性目录结构 SSoT；已知差距 C-D01/C-D02 移交 1.0.1 M1+）
-
 ---
 
 ## 1. 模块定位

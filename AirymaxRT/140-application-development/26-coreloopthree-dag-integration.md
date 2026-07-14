@@ -262,7 +262,7 @@ Release 构建定义 `NDEBUG`，`assert(expr)` 展开为 `((void)0)`，导致 `e
 
 ## 六、集成测试参考
 
-完整的集成测试位于 `AgentRT/agentrt/atoms/coreloopthree/tests/unit/test_dag_integration.c`，包含 4 个测试用例：
+完整的集成测试位于 `agentrt/atoms/coreloopthree/tests/unit/test_dag_integration.c`，包含 4 个测试用例：
 
 | 测试 | 验证内容 |
 |------|---------|
@@ -289,7 +289,7 @@ ctest --test-dir build -R cl3_dag_integration --output-on-failure
 | `agentrt/atoms/taskflow/src/taskflow_advanced.c` | taskflow 引擎实现 |
 | `agentrt/atoms/coreloopthree/tests/unit/test_dag_integration.c` | W18.3 集成测试 |
 | `agentrt/atoms/coreloopthree/CMakeLists.txt` | 编译配置（链接 airy_taskflow） |
-| `agentrt/daemon/common/CMakeLists.txt` | svc_common include taskflow 路径 |
+| `agentrt/daemons/common/CMakeLists.txt` | svc_common include taskflow 路径 |
 
 ---
 

@@ -49,7 +49,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 本规范适用于以下场景：
 
 1. **内核开发者**: agentrt/atoms/模块的日志记录
-2. **服务开发者**: agentrt/daemon/用户态服务的日志记录
+2. **服务开发者**: agentrt/daemons/用户态服务的日志记录
 3. **应用开发者**: openlab/app/应用的日志记录
 4. **运维人员**: 日志收集、聚合和分析
 5. **安全审计人员**: 审计日志审查和合规检查
@@ -70,7 +70,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 背景与意义
 
-Airymax 作为一个分布式多智能体操作系统，其运行涉及内核、服务层、安全层、应用层等多个组件，跨进程、跨主机协作。为了有效诊断问题、追踪请求链路、分析系统行为，必须建立统一的日志格式规范。
+Airymax 作为一个分布式多智能体运行时平台，其运行涉及内核、服务层、安全层、应用层等多个组件，跨进程、跨主机协作。为了有效诊断问题、追踪请求链路、分析系统行为，必须建立统一的日志格式规范。
 
 **挑战:**
 - **异构组件**: 内核 (C)、服务 (Python/Go/Node.js)、应用 (多语言) 使用不同的技术栈
@@ -278,7 +278,7 @@ sess_user_alice_20260322
 **示例:**
 ```
 agentrt/atoms/corekern/src/router.c
-agentrt/daemon/llm_d/main.py
+agentrt/daemons/llm_d/main.py
 openlab/app/ecommerce/api.py
 ```
 
@@ -296,9 +296,9 @@ openlab/app/ecommerce/api.py
 | `span_id` | string | 当前跨度 ID | 分布式追踪 | `"span_789"` |
 | `parent_span_id` | string | 父跨度 ID | 分布式追踪 | `"span_456"` |
 | `error` | string | 错误信息 | 错误日志 | `"Connection timeout"` |
-| `error_code` | integer \| string | 错误码 | 错误日志 | `-2` (C 内核 AIRY_EINVAL) 或 `"0x0003"` (SDK AIRY_ERROR_INVALID_PARAMETER) |
+| `error_code` | integer \| string | 错误码 | 错误日志 | `-22` (C 内核 AIRY_EINVAL) 或 `"0x0003"` (SDK AIRY_ERROR_INVALID_PARAMETER) |
 
-> **双错误码体系说明**: `error_code` 字段接受两种格式：C 内核层使用负整数（如 `-2`，定义于 `agentrt/commons/utils/error/include/error.h`），SDK/外部层使用十六进制字符串（如 `"0x0003"`，定义于 error_code_reference.md）。同一语义错误在两种体系中的值不同（如"参数无效"在 C 内核为 `-2`，在 SDK 为 `"0x0003"`）。日志消费者应根据值的类型（整数 vs 字符串）判断其所属体系。
+> **双错误码体系说明**: `error_code` 字段接受两种格式：C 内核层使用负整数（如 `-22`，对齐 POSIX errno 负值，权威定义于 `include/airymax/error.h`，[SC] 共享契约层；`airy_err_t` 类型定义于 `airy_types.h:41`），SDK/外部层使用十六进制字符串（如 `"0x0003"`，定义于 error_code_reference.md）。同一语义错误在两种体系中的值不同（如"参数无效"在 C 内核为 `-22`，在 SDK 为 `"0x0003"`）。日志消费者应根据值的类型（整数 vs 字符串）判断其所属体系。
 
 | `duration_ms` | number | 操作耗时 (毫秒) | 性能日志 | `125.5` |
 | `agent_id` | string | Agent ID | Agent 相关日志 | `"com.agentrt.pm.v1"` |
@@ -475,7 +475,7 @@ Airymax 使用标准日志级别，按严重性递增：
 
 **示例:**
 ```json
-{"timestamp":1701234567.890,"level":"audit","logger":"agentrt.cupolas","message":"Cupola policy violation detected","trace_id":"abc123","session_id":"sess_456","event_type":"POLICY_VIOLATION","actor_id":"user_alice","target_resource":"cupola_isolation","action":"modify","result":"denied"}
+{"timestamp":1701234567.890,"level":"audit","logger":"agentrt.cupolas","message":"Cupolas policy violation detected","trace_id":"abc123","session_id":"sess_456","event_type":"POLICY_VIOLATION","actor_id":"user_alice","target_resource":"cupola_isolation","action":"modify","result":"denied"}
 ```
 
 **⚠️ 注意**: AUDIT 级别日志不受日志级别配置过滤，始终输出到审计日志文件。生产环境必须保留审计日志，保留期限应符合合规要求。
@@ -521,7 +521,7 @@ agentrt/heapstore/logs/
 │   ├── coreloopthree.log
 │   ├── memoryrovol.log
 │   └── syscall.log
-├── services/               # 服务层日志 (agentrt/daemon/)
+├── services/               # 服务层日志 (agentrt/daemons/)
 │   ├── llm_d.log
 │   ├── market_d.log
 │   ├── monit_d.log
@@ -949,7 +949,7 @@ class BatchHandler:
 |---------|---------|
 | [通信协议规范](./protocol_contract.md) | 本规范要求所有通信过程记录日志，支持 TraceID 贯穿 |
 | [系统调用 API 规范](./syscall_api_contract.md) | 系统调用的错误处理和审计日志应遵循本规范 |
-| [日志打印规范](../30-coding-standard/10-log-standard.md) | 本规范定义日志格式，Log_standard.md 定义打印方法和最佳实践 |
+| [日志打印规范](../../50-engineering-standards/10-coding-style/coding_conventions.md) | 本规范定义日志格式，coding_conventions.md Part III 定义打印方法和最佳实践 |
 | [统一术语表](../../TERMINOLOGY.md) | 本规范使用的术语定义和解释 |
 | [架构设计原则](../../../10-architecture/00-architectural-principles.md) | 本规范的设计原则基于五维正交体系，是可观测性原则的具体实现 |
 
@@ -957,7 +957,7 @@ class BatchHandler:
 
 ## 参考文献
 
-[1] Airymax 设计哲学。../../00-basic-theories/04-design-principles-cn.md  
+[1] Airymax 设计哲学。../../00-requirements/04-design-principles-cn.md  
 [2] 架构设计原则。../../../10-architecture/00-architectural-principles.md  
 [3] 统一术语表。../../TERMINOLOGY.md  
 [4] OpenTelemetry Specification. https://opentelemetry.io/docs/specs/otel/  

@@ -6,7 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **版本**：0.1.1（文档体系完成）/ 1.0.1 M1（代码落地）\
 > **最后更新**：2026-07-13\
 > **父文档**：[10-architecture/README.md](README.md)\
-> **来源**：Wave 2 v2 Phase C §7 系统性目录结构设计建议（基于 B1 OLK-6.6 深读 + B2 seL4 深读 + 8 子仓架构）\
+> **来源**：基于 OLK-6.6 源码参考 + seL4 源码参考 + 8 子仓架构\
 > **铁律依据**：IRON-9 v2 三层模型 + ES-OLK-1~13 工程思想 + ADR-014 微内核来源单一化
 
 ---
@@ -255,7 +255,7 @@ kernel (L2)
 | Notification（bitwise OR badge + 3 状态） | `kernel/airy_notification.c` | C-C01 | P1 |
 | Fastpath（POINT OF NO RETURN + 12 项前置检查） | `kernel/airy_fastpath.c` | — | ✅ 已对齐（D2 修复） |
 | Zombie 能力增量清理（`reduceZombie` + preemptionPoint） | `kernel/airy_zombie.c` | C-C05 | P2 |
-| 极简错误码（11 种 + 哨兵 + 内部 exception 分层） | `airy_err_t`（v0.2.5 已收敛：`typedef int32_t airy_err_t`，登记于 cognition_types.h [SC] 头文件，详见 120-cross-project-code-sharing.md §2.1） | C-C03 | ✅ 已收敛 |
+| 极简错误码（11 种 + 哨兵 + 内部 exception 分层） | `airy_err_t`（v0.2.5 已收敛：`typedef int32_t airy_err_t`，定义于 airy_types.h:41 [SC] 头文件，详见 120-cross-project-code-sharing.md §2.1） | C-C03 | ✅ 已收敛 |
 | 单编译单元（`kernel_all.c` 拼接 + `-ffreestanding -nostdinc`） | 待评估 | C-C06 | P2 |
 | 位域 DSL（`bitfield_gen.py` + Isabelle/HOL 同源） | `tools/bitfield_gen.py`（fork seL4，移除 HOL 部分） | C-C02 | P1 |
 | syscall XML 化（`syscall.xml` + 生成脚本） | `include/uapi/airy_syscall.xml` + `tools/syscall_header_gen.py` | C-C04 | P1 |
@@ -321,8 +321,8 @@ kernel (L2)
 
 ### 9.1 0.1.1（文档体系完成）
 
-- [x] 本文档创建（Wave 2 v2 Phase D D9）
-- [x] 目录结构设计经 Phase B/C 源码深读验证
+- [x] 本文档创建
+- [x] 目录结构设计经源码验证
 - [x] [SC] 6 头文件物理宿主确认（`include/uapi/airymax/`）
 - [x] ES-OLK-1~13 落地证据映射
 - [x] seL4 设计模式对齐状态评估
@@ -352,7 +352,7 @@ kernel (L2)
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.1.1 | 2026-07-13 | 初始版本（Wave 2 v2 Phase D D9 创建，基于 Phase C §7 建议） |
+| 0.1.1 | 2026-07-13 | 初始版本 |
 | 1.0.1 M1 | 2027-XX-XX | M1 代码开发启动，骨架代码填充 |
 | 1.0.1 M2+ | 2027-XX-XX | seL4 深度借鉴（bitfield DSL / Notification 重设计 / Zombie 清理等） |
 
