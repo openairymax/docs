@@ -148,16 +148,16 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 | 16 | `REGISTERED_FD_ONLY` | 6.0 | ❌ | ring fd 固定（无 `io_uring_register`） | daemon 用动态 fd |
 | 17 | `NO_SQARRAY` | 6.6 | ✅ | 取消 sq_array 间接寻址 | 简化提交路径 |
 | 18 | `NO_IEC` | 6.6 | ✅ | 禁用内部完整事件计数 | 性能优化 |
-| 19 | `DEFER_INIT` | 6.7 | ⚠️ 延后 | 延迟初始化 ring 资源 | 留待 1.0.1 评估 |
+| 19 | `DEFER_INIT` | 6.7 | ❌ 不启用 | 延迟初始化 ring 资源 | Linux 6.6 基线不支持（ADR-001）；1.0.1 升级 Linux 7.1 后启用（ADR-013 版本路线，非设计延期） |
 
 **启用策略**：
 
 - **必须启用**（11 项）：`SQPOLL` / `SQ_AFF` / `CQSIZE` / `CLAMP` / `SUBMIT_ALL` / `TASKRUN_FLAG` / `SINGLE_ISSUER` / `DEFER_TASKRUN` / `NO_MMAP` / `NO_SQARRAY` / `NO_IEC`——覆盖零 syscall（OS-IPC-002）、零拷贝（OS-IPC-003）、低延迟三大场景。
 - **互斥标志二选一**：`COOP_TASKRUN`（5.19+）或 `DEFER_TASKRUN`（6.0+），不可同时启用。
 - **不启用**（6 项）：`IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `SQE128` / `CQE32` / `REGISTERED_FD_ONLY`——不适用于 IPC 场景（块设备 I/O / 多 ring 共享 / 立即禁用 / 扩展 SQE-CQE / 固定 fd）。
-- **延后启用**（1 项）：`DEFER_INIT`——留待 1.0.1 评估（0.1.1 文档级，IRON-4 最小可用原则）。
+- **版本路线**（1 项）：`DEFER_INIT`——Linux 6.6 基线不支持（ADR-001）；1.0.1 升级 Linux 7.1 后启用（ADR-013 版本路线，非设计延期；设计决策已在 0.1.1 完成：0.1.1 阶段不启用，1.0.1 阶段启用）。
 
-> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 11 个 `IORING_SETUP_*` 标志，并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一，禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `SQE128` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 留待 1.0.1 评估（与 OS-IRON-004 渐进式开发原则一致）。
+> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 11 个 `IORING_SETUP_*` 标志，并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一，禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `SQE128` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 设计决策已在 0.1.1 完成（0.1.1 阶段不启用——Linux 6.6 基线不支持 ADR-001；1.0.1 阶段启用——升级 Linux 7.1 后 ADR-013），属版本路线规划非设计延期。
 
 > **与本文档已有提及对齐**：`SQPOLL`（§2.4 / §4 / §10.3）/ `SQ_AFF`（§10.3）/ `DEFER_TASKRUN`（§5）/ `NO_MMAP`（§12.3 [IND]）——本文档前述章节已分散提及 4 项，本表补全至 Linux 6.6 全量 19 项，确保 io_uring SETUP 标志清单的完整性与对齐性。
 
