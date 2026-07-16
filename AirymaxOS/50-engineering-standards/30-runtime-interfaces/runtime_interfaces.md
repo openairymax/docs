@@ -1,11 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux ARE 运行时接口规范合集
-
-> **文档定位**：合并 L1 核心运行时接口、L2 服务通信协议、L3 安全与治理三层 ARE Standards 规范，作为 agentrt-linux（AirymaxOS）运行时接口的完整参考。理论根基：体系并行论、五维正交24原则、MicroCoreRT 微核心极简设计、AgentsIPC 协议族、Cupolas 安全穹顶模型、seL4 capability 安全模型。
-> **版本**：0.1.1
-> **最后更新**：2026-07-13
-> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**：合并 L1 核心运行时接口、L2 服务通信协议、L3 安全与治理三层 ARE Standards 规范，作为 agentrt-linux（AirymaxOS）运行时接口的完整参考。理论根基：体系并行论、五维正交24原则、MicroCoreRT 微核心极简设计、AgentsIPC 协议族、Cupolas 安全穹顶模型、seL4 capability 安全模型。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[agentrt-linux（AirymaxOS）工程标准规范](README.md)\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
 > **SSoT 依赖声明**：本文件规则编号权威为 09-ssot-registry.md §3
 
 ---

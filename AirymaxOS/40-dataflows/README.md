@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）数据流程设计
-
-> **文档定位**： agentrt-linux（AirymaxOS）数据流程设计层的总览与索引\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-13\
-> **父文档**： [agentrt-linux 总览](../README.md)\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（syscalls.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
+> **文档定位**：agentrt-linux（AirymaxOS）数据流程设计层的总览与索引\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[agentrt-linux 总览](../README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（syscalls.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
 
 ---
 

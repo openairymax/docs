@@ -2,24 +2,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # agentrt-linux ARE Standards 总览
-
-> **最新**： 2026-07-13\
-> **版本**： 0.1.1\
-> **状态**： 草案\
-> **路径**： OpenAirymax/docs/AirymaxOS/50-engineering-standards/30-runtime-interfaces/README.md\
-> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
-> **编号权威**： [09-ssot-registry.md §3](../09-ssot-registry.md)\
-> **理论根基**： 体系并行论、五维正交24原则、IRON-9 v2 同源且部分代码共享
-
+> **文档定位**：agentrt-linux ARE Standards 总览\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **理论根基**：体系并行论、五维正交24原则、IRON-9 v2 同源且部分代码共享\
+> **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。ARE（Airymax Runtime Environment）标准接口的命名前缀权威为 [coding_conventions.md Part IV §1.10](../10-coding-style/coding_conventions.md)（`are_*` 前缀）。
-
-
-## 文档信息卡
-- **目标读者**: OS 内核开发者、ARE 标准贡献者、安全架构师、协议设计者  
-- **前置知识**: 理解 agentrt-linux（AirymaxOS）架构概览，熟悉 agentrt 用户态 ARE Standards  
-- **预计阅读时间**: 30 分钟  
-- **核心概念**: Agent Runtime Environment, ARE Standards, 三层标准架构, IRON-9 v2, 五维正交24原则, 共享契约  
-- **复杂度标识**: 高级  
 
 ---
 

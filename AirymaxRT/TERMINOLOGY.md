@@ -2,10 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 统一术语表
-
-**最新**: 2026-06-25  
-**状态**: 维护中   
-**路径**: `docs/AirymaxRT/TERMINOLOGY.md`
+> **文档定位**：Airymax 统一术语表\
+> **最后更新**：2026-06-25\
+> **上级文档**：[Airymax Documentation Center — 文档中心](README.md)
 
 ---
 

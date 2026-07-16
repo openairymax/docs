@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）认知循环数据流
-
-> **文档定位**： agentrt-linux（AirymaxOS）认知循环数据流的详细设计，刻画 System 1/2 双系统协同与 CoreLoopThree kthread 实现\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-07\
-> **父文档**： [数据流程设计概览](README.md)\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] cognition_types.h 落地于 include/airymax/（CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符），[SS] CoreLoopThree/Thinkdual/LLM 推理 API 语义同源，[IND] kthread 内核态/Wasm runtime/GPU-NPU 驱动独立实现
+> **文档定位**：agentrt-linux（AirymaxOS）认知循环数据流的详细设计，刻画 System 1/2 双系统协同与 CoreLoopThree kthread 实现\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-07\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——[SC] cognition_types.h 落地于 include/airymax/（CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符），[SS] CoreLoopThree/Thinkdual/LLM 推理 API 语义同源，[IND] kthread 内核态/Wasm runtime/GPU-NPU 驱动独立实现
 
 ---
 

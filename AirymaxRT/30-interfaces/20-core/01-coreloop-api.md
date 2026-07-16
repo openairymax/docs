@@ -1,8 +1,8 @@
 # CoreLoopThree API - 三层认知循环  
+> **文档定位**：CoreLoopThree API - 三层认知循环\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)
 
-**最新**: 2026-06-09  
-**状态**: 维护中  
-**路径**: docs/AirymaxRT/30-interfaces/20-core/01-coreloop-api.md  
 ---
 
 ## 📖 概述

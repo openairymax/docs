@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 设计文档
-
 > **文档定位**：agentrt-linux（AirymaxOS）的全部设计思想、架构设计、子仓设计草案\
-> **正式全称**：agentrt-linux（极境智能体操作系统，英文名：AirymaxOS）\
-> **仓库别名**：agentrt-linux（仓库名）\
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-13\
+> **正式全称**：agentrt-linux（极境智能体操作系统，英文名：AirymaxOS）\
+> **仓库别名**：agentrt-linux（仓库名）\
 > **文档维护**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）
 
 ***

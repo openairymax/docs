@@ -1,14 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 项目管理规范总览
-
-> **文档定位**： agentrt-linux（AirymaxOS）项目管理规范的顶层入口，定义项目资源、错误码、SBOM 等核心管理域的规范体系\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-13\
-> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
-> **编号权威**： [09-ssot-registry.md §3](../09-ssot-registry.md)\
-> **关联规范**： IRON-9 v2 工程铁律（工程标准规范）
-
+> **文档定位**：agentrt-linux（AirymaxOS）项目管理规范的顶层入口，定义项目资源、错误码、SBOM 等核心管理域的规范体系\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
+> **关联规范**：IRON-9 v2 工程铁律（工程标准规范）\
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。项目管理规范引用 IRON-9 v2 工程铁律作为同源约束的权威。
 
 ---

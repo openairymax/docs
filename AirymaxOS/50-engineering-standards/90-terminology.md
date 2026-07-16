@@ -2,10 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # agentrt-linux 统一术语表
-
-> **最新**：2026-07-11\
-> **状态**：正式发布\
-> **路径**：OpenAirymax/docs/AirymaxOS/50-engineering-standards/90-terminology.md\
+> **文档定位**：agentrt-linux 统一术语表\
+> **最后更新**：2026-07-11\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **作者**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）
 
 ***

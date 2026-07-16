@@ -1,28 +1,7 @@
 # Airymax 协议系统使用指南
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/70-toolkit/01-protocol-guide.md
-
-## 目录
-
-1. [架构概述](#1-架构概述)
-2. [支持的协议](#2-支持的协议)
-3. [协议检测](#3-协议检测)
-4. [SDK 使用指南](#4-sdk-使用指南)
-   - [Python SDK](#python-sdk)
-   - [Go SDK](#go-sdk)
-   - [Rust SDK](#rust-sdk)
-   - [TypeScript SDK](#typescript-sdk)
-5. [协议转换](#5-协议转换)
-6. [框架适配器](#6-框架适配器)
-   - [LangChain 适配器](#langchain-适配器)
-   - [AutoGen 适配器](#autogen-适配器)
-7. [OpenLab 集成](#7-openlab-集成)
-8. [网关桥接](#8-网关桥接)
-9. [CLI 工具参考](#9-cli-工具参考)
-10. [高级主题](#10-高级主题)
-11. [故障排除](#11-故障排除)
+> **文档定位**：Airymax 协议系统使用指南\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)
 
 ---
 

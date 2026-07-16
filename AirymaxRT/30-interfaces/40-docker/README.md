@@ -1,8 +1,7 @@
 # Airymax Docker 部署完整指南
+> **文档定位**：Airymax Docker 部署完整指南\
+> **最后更新**：2026-06-09
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/40-docker/README.md
 ---
 
 ## 🎯 三种部署方式

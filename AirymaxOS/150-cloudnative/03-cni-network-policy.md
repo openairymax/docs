@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # CNI 网络策略设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）云原生体系核心子文档，定义 Agent 间网络隔离、Cupolas 安全策略与 CNI NetworkPolicy 的联动机制\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：Linux 6.6 容器网络（IRON-9 v2 [IND] 完全独立层，CNI 为 agentrt-linux 专属扩展）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **同源映射**：Linux 6.6 容器网络（IRON-9 v2 [IND] 完全独立层，CNI 为 agentrt-linux 专属扩展）\
 > **IRON-9 v2 层次**：[SS] Cupolas 安全模型同源 + [IND] CNI 实现独立
 
 ---

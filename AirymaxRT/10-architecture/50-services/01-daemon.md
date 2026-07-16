@@ -1,8 +1,7 @@
 # Airymax Daemon 模块系统架构与使用指南
+> **文档定位**：Airymax Daemon 模块系统架构与使用指南\
+> **最后更新**：2026-06-09
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/10-architecture/50-services/01-daemon.md
 ---
 
 ## 模块概述

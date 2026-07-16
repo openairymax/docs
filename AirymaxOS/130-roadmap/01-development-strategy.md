@@ -1,10 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）开发策略
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）开发策略与三大支柱详解\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt `0.1.1技术全面改进方案v3.0.md`（v4.2，三大支柱）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则
 

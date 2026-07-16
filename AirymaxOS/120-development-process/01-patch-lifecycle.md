@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）补丁生命周期 6 阶段详解
-
-> **文档定位**： agentrt-linux（AirymaxOS）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。
-> **版本**： 0.1.1
-> **最后更新**： 2026-07-06
-> **同源映射**： agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）
-> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化
-> **核心约束**： IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 agentrt-linux 内核发行版规范并行演进，通过同源 API 保持互操作）
+> **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 1 卷——补丁生命周期。本文档详述代码从设计构想到主线、稳定版、长期维护的 6 阶段全生命周期，是工程标准层 `50-engineering-standards/05-development-process.md` 在模块设计层的展开。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt 开发流程 + Linux 6.6 内核开发流程（`Documentation/process/development-process.rst` 8 章）\
+> **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + S-4 涌现性管理 + C-2 增量演化\
+> **核心约束**：IRON-9 v2 同源且部分代码共享（agentrt 用户态运行时规范与 agentrt-linux 内核发行版规范并行演进，通过同源 API 保持互操作）
 
 ---
 

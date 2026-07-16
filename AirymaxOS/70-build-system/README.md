@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）构建系统设计
-
-> **文档定位**： agentrt-linux（AirymaxOS）构建系统工程设计主索引
-> **版本**： 0.1.1
-> **最后更新**： 2026-07-13
-> **同源映射**： agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统
-> **理论根基**： Linux Kbuild 递归构建 + Airymax E-7 文档即代码
+> **文档定位**：agentrt-linux（AirymaxOS）构建系统工程设计主索引\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **同源映射**：agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统\
+> **理论根基**：Linux Kbuild 递归构建 + Airymax E-7 文档即代码
 
 ---
 

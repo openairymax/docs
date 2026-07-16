@@ -1,15 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）编码规范总览
-
-> **文档定位**： agentrt-linux（AirymaxOS）编码规范体系的总索引与导航\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-13\
-> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
-> **编号权威**： [09-ssot-registry.md §3](../09-ssot-registry.md)\
-> **同源映射**： agentrt 编码规范体系（IRON-9 v2 同源且部分代码共享）\
-> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）五维正交 24 原则
-
+> **文档定位**：agentrt-linux（AirymaxOS）编码规范体系的总索引与导航\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **同源映射**：agentrt 编码规范体系（IRON-9 v2 同源且部分代码共享）\
+> **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）五维正交 24 原则\
+> **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。命名前缀权威为 [coding_conventions.md Part IV §4.4](./coding_conventions.md)。（族索引已废除，2026-07-12 SSoT 重新设计；2026-07-13 16 份源文件合并为 5 份合并文档）
 
 ---

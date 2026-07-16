@@ -1,13 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）系统设计文档（system，极境系统）
-
+> **文档定位**：agentrt-linux（AirymaxOS）系统设计文档（system，极境系统）\
+> **文档版本**：v1.1（2026-07-07）\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 commons 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] RPM/dnf/glibc/shell/监控工具/DevStation 实现独立\
 > **子仓编号**：07\
 > **子仓代号**：极境系统（Airymax System）\
-> **文档版本**：v1.1（2026-07-07）\
 > **设计基准**：包管理 + 配置 + shell + 基础库 + 系统监控 + DevStation\
 > **同源 agentrt**：commons\
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 commons 通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] RPM/dnf/glibc/shell/监控工具/DevStation 实现独立\
 > **横切关注点**：系统是横切关注点（cross-cutting concern），贯穿调度（sysctl 调度参数）、IPC（DevStation io_uring 通道）、eBPF（bpftrace/airymaxmon 观测）、记忆卷载（airymaxmon MemoryRovol 监控）4 大数据流
 
 ---

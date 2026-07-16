@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux OS 层契约规范
-
 > **文档定位**：agentrt-linux（AirymaxOS）OS 层三大契约的统一文档，涵盖 IPC 协议、系统调用 API、日志格式\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
-> **父文档**： [20-contracts README](README.md)
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-12\
+> **上级文档**：[agentrt-linux（AirymaxOS）工程标准规范](README.md)
 
 ---
 

@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 已知问题与解决方案
+> **文档定位**：Airymax 已知问题与解决方案\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/140-application-development/known-issues.md
 ---
 
 ## 📋 问题分类索引

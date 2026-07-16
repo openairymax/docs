@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）Kbuild 递归构建系统详解
-
-> **文档定位**： agentrt-linux（AirymaxOS）构建系统第 1 卷——Kbuild 递归构建机制详解。本卷剖析顶层 `Kbuild` descending 机制、`obj-y`/`obj-m`/`obj-n` 三态门控、子系统 Makefile 编写规范、`if_changed` 增量构建原理、`filechk` 版本注入与 `Makefile.airymaxos` 供应商扩展，并给出 agentrt-linux 构建依赖图。
-> **版本**： 0.1.1
-> **最后更新**： 2026-07-06
-> **同源映射**： agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统（`Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib`）
-> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）
-> **核心约束**： IRON-9 v2 同源且部分代码共享——agentrt-linux 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
+> **文档定位**：agentrt-linux（AirymaxOS）构建系统第 1 卷——Kbuild 递归构建机制详解。本卷剖析顶层 `Kbuild` descending 机制、`obj-y`/`obj-m`/`obj-n` 三态门控、子系统 Makefile 编写规范、`if_changed` 增量构建原理、`filechk` 版本注入与 `Makefile.airymaxos` 供应商扩展，并给出 agentrt-linux 构建依赖图。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统（`Kbuild`、`Makefile`、`scripts/Kbuild.include`、`scripts/Makefile.build`、`scripts/Makefile.lib`）\
+> **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——agentrt-linux 内核态构建沿用 Kbuild 思想但与上游保持独立演进节奏
 
 ---
 

@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux（AirymaxOS）五维正交 24 原则与落地映射
-
+# agentrt-linux 五维正交24原则与落地映射
 > **文档定位**：agentrt-linux（AirymaxOS）架构设计原则的完整定义与落地映射\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-06\
-> **父文档**：[架构设计](README.md)\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **原则来源**：[00-architectural-principles.md](../../AirymaxRT/00-architectural-principles.md)
 
 ---

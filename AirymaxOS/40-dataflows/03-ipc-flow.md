@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）IPC 消息流
-
-> **文档定位**： agentrt-linux（AirymaxOS）IPC 消息流的详细设计，刻画 io_uring 零拷贝、SQ/CQ ring 机制与 128B 消息头生命周期\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-07\
-> **父文档**： [数据流程设计概览](README.md)\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——[SC] IPC 消息头布局（128B 定长 + magic 0x41524531 'ARE1'）+ 5 种 payload 协议落地于 include/airymax/，[SS] io_uring SQE/CQE 语义 + io_uring_register OP 语义同源，[IND] io_uring 内核驱动实现 + ring buffer 内存分配策略独立
+> **文档定位**：agentrt-linux（AirymaxOS）IPC 消息流的详细设计，刻画 io_uring 零拷贝、SQ/CQ ring 机制与 128B 消息头生命周期\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-07\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——[SC] IPC 消息头布局（128B 定长 + magic 0x41524531 'ARE1'）+ 5 种 payload 协议落地于 include/airymax/，[SS] io_uring SQE/CQE 语义 + io_uring_register OP 语义同源，[IND] io_uring 内核驱动实现 + ring buffer 内存分配策略独立
 
 ---
 

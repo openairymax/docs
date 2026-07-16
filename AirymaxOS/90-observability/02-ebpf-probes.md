@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）eBPF 可编程探针
-
-> **文档定位**： agentrt-linux（AirymaxOS）可观测性体系 L2 层——可编程内核探针 eBPF 的工程规范\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-07\
-> **同源映射**： agentrt E-2 可观测性 + Linux 6.6 eBPF/BTF/kfunc/struct_ops\
-> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-2 可观测性\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——与 agentrt 用户态可观测性通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态实现独立
+> **文档定位**：agentrt-linux（AirymaxOS）可观测性体系 L2 层——可编程内核探针 eBPF 的工程规范\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-07\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt E-2 可观测性 + Linux 6.6 eBPF/BTF/kfunc/struct_ops\
+> **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-2 可观测性\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态可观测性通过 [SC] 共享契约层 + [SS] 语义同源层协作，[IND] 内核态实现独立
 
 ---
 

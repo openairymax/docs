@@ -2,10 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."  
 
 # 认知层设计
-
-**最新**: 2026-06-09  
-**状态**: 正式发布  
-**路径**: docs/AirymaxRT/00-requirements/02-cognition-design-cn.md  
+> **文档定位**：认知层设计\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
 ---
 

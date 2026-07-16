@@ -1,8 +1,9 @@
 # ARE Standards L3 — 安全与治理标准
-
-> **版本**: v0.1.0-draft | **状态**: 草案（v0.1.1 发行前冻结）| **日期**: 2026-07-04
-> **版权归属人**: SPHARX Ltd. | **许可证**: AGPL-3.0-or-later OR Apache-2.0（双许可证，SPHARX Ltd.）
-> **标准层级**: L3 | **回滚至**: [ARE Standards 总览](README.md)
+> **文档定位**：ARE Standards L3 — 安全与治理标准\
+> **文档版本**：v0.1.0-draft | **状态**: 草案（v0.1.1 发行前冻结）| **日期**: 2026-07-04\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)\
+> **版权归属人**：SPHARX Ltd. | **许可证**: AGPL-3.0-or-later OR Apache-2.0（双许可证，SPHARX Ltd.）\
+> **标准层级**：L3 | **回滚至**: [ARE Standards 总览](README.md)
 
 ---
 

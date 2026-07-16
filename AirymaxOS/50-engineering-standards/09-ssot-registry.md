@@ -1,19 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Airymax 全局规则 SSoT 注册表
-
-> **文档定位**：Airymax 全项目（agentrt 用户态运行时 + AirymaxOS/agentrt-linux 操作系统）全部编号、规则、命名的**唯一权威来源（Single Source of Truth）**。任何文档不得私自定义规则编号；所有规则编号必须在此注册表中登记后方可使用。
->
-> **版本**：0.1.1\
+> **文档定位**：Airymax 全项目（agentrt 用户态运行时 + AirymaxOS/agentrt-linux 操作系统）全部编号、规则、命名的**唯一权威来源（Single Source of Truth）**。任何文档不得私自定义规则编号；所有规则编号必须在此注册表中登记后方可使用。\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-15\
-> **权威性声明**：本注册表是 Airymax 全部规则编号的 SSoT。当任何文档与本注册表冲突时，以本注册表为准。各主题文档可包含规则的详细说明与代码示例，但必须引用本注册表中的编号——**禁止在主题文档中私自定义新编号**。新增规则编号必须通过 RFC 流程在本注册表登记。
->
-> **双编号体系声明（2026-07-15 ）**：本注册表覆盖两套同源但独立的规则编号体系：
->
-> - **AirymaxOS 规则**（第 2-12 章）：使用 `OS-` 前缀（如 `OS-IRON-001`、`OS-KER-001`、`OS-BAN-001`、`OS-ARCH-001`、`OS-IFACE-001`、`OS-TEST-001`），适用于 agentrt-linux 全部 8 子仓。权威定义散布于 `50-engineering-standards/` 各主题文档。
-> - **agentrt 规则**（第 14 章）：不使用 `OS-` 前缀（如 `IRON-1`、`BAN-001`、`STD-01`），适用于 agentrt 用户态运行时全部模块。权威定义为 `docs-closed/agentrt/agentrt工程标准规范手册.md` v29.0。
-> - 两套编号体系遵循 IRON-9 v2 三层共享模型：\[SC] 共享契约层 + \[SS] 语义同源层 + \[IND] 完全独立层。agentrt IRON-9 与 AirymaxOS OS-IRON-009 同源但独立。
->
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **权威性声明**：本注册表是 Airymax 全部规则编号的 SSoT。当任何文档与本注册表冲突时，以本注册表为准。各主题文档可包含规则的详细说明与代码示例，但必须引用本注册表中的编号——**禁止在主题文档中私自定义新编号**。新增规则编号必须通过 RFC 流程在本注册表登记。\
+> **双编号体系声明（2026-07-15 ）**：本注册表覆盖两套同源但独立的规则编号体系：\
 > **历史**：本注册表于 2026-07-12 创建，替代此前分散在 00-engineering-standards-handbook.md §3 与 07-maintainers-and-governance.md §10 中的碎片化注册表。创建原因：历史演进中各主题文档独立编号累积，导致同一编号在不同文档指代不同规则（42 个 OS-KER 编号存在冲突、OS-ACC-001\~005 在不同文件指代完全不同的验收项），必须建立单一权威注册表根除此问题。2026-07-15 升级为 Airymax 全局 SSoT，合并 agentrt 17 类规则编号体系（IRON/BAN/STD/ACC/FOUND/SPLIT/PROD/ARC/LC/PRT/LOG/PATH-BAN/L/CROSS/REQ/W/SP）；同日新增 §10 OS-ARCH / §11 OS-IFACE / §12 OS-TEST 三章，摘要登记历史使用但未登记的 42 个编号，并将原 §10 agentrt 重编号为 §13。
 
 ***

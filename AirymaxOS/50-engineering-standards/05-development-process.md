@@ -1,15 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）开发流程标准
-
-> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 5 卷——开发流程。本卷规定从设计构想进入主线、稳定版到长期维护的完整生命周期，以及维护者层级制度、补丁格式、审查响应与稳定版规则。\
-> **版本**： 1.0.1\
-> **最后更新**： 2026-07-06\
-> **同源映射**： `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/development-process.rst`\
-> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
-> **SSoT 声明**： 本卷为 agentrt-linux **开发流程规则**的唯一权威来源（SSoT）。本卷规则编号的目标体系为 **OS-STD-PROD-NNN**（4 段前缀，PROD = Process/Development）。本卷正文中现存的历史编号 **OS-STD-101~234**（与 06-toolchain-and-automation.md 共用 OS-STD-101~158 段导致 30+ 项语义冲突）将迁移为 OS-STD-PROD-101~234，迁移映射见 §0.2。历史编号与 OS-STD-PROD 编号**并存且等价**，规则效力以本卷正文为准。
->
-> **合并说明（2026-07-12）**： 本卷已合并原 `06-toolchain-and-automation.md`（→ Part II）、`08-compliance-checklist.md`（→ Part III）、`110-spdx-license-compliance.md`（→ Part IV）。原文件已物理删除，所有引用须指向本卷对应 Part。
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 5 卷——开发流程。本卷规定从设计构想进入主线、稳定版到长期维护的完整生命周期，以及维护者层级制度、补丁格式、审查响应与稳定版规则。\
+> **文档版本**：1.0.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/development-process.rst\
+> **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
+> **SSoT 声明**：本卷为 agentrt-linux **开发流程规则**的唯一权威来源（SSoT）。本卷规则编号的目标体系为 **OS-STD-PROD-NNN**（4 段前缀，PROD = Process/Development）。本卷正文中现存的历史编号 **OS-STD-101~234**（与 06-toolchain-and-automation.md 共用 OS-STD-101~158 段导致 30+ 项语义冲突）将迁移为 OS-STD-PROD-101~234，迁移映射见 §0.2。历史编号与 OS-STD-PROD 编号**并存且等价**，规则效力以本卷正文为准。\
+> **合并说明（2026-07-12）**：本卷已合并原 `06-toolchain-and-automation.md`（→ Part II）、`08-compliance-checklist.md`（→ Part III）、`110-spdx-license-compliance.md`（→ Part IV）。原文件已物理删除，所有引用须指向本卷对应 Part。
 
 ---
 

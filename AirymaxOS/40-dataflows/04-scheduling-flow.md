@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）调度数据流
-
-> **文档定位**： agentrt-linux（AirymaxOS）调度数据流的详细设计，刻画 EEVDF + sched_ext + SCHED_AGENT 三位一体调度体系\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-07\
-> **父文档**： [数据流程设计概览](README.md)\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——补充共享文件 bpf_struct_ops.h（sched_ext struct_ops 状态机 + common_value）落地于 include/airymax/，[SS] EEVDF + sched_ext + SCHED_AGENT 策略语义同源，[IND] sched_ext 内核驱动实现 + BPF 调度策略程序独立
+> **文档定位**：agentrt-linux（AirymaxOS）调度数据流的详细设计，刻画 EEVDF + sched_ext + SCHED_AGENT 三位一体调度体系\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-07\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——补充共享文件 bpf_struct_ops.h（sched_ext struct_ops 状态机 + common_value）落地于 include/airymax/，[SS] EEVDF + sched_ext + SCHED_AGENT 策略语义同源，[IND] sched_ext 内核驱动实现 + BPF 调度策略程序独立
 
 ---
 

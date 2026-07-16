@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 代码生成管道设计
-
-> **文档定位**： agentrt-linux（AirymaxOS）代码生成管道设计——以契约源（XML/.bf/.def）为唯一输入，自动生成 C / Rust / Python / Go / TypeScript 多语言绑定，消除手工样板代码并保证 [SC] 共享契约层头文件与生成代码的一致性\
-> **版本**： 0.2.8\
-> **最后更新**： 2026-07-15\
-> **父文档**： [接口设计](README.md)\
-> **SSoT 依赖**： [09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)（规则编号与契约物理宿主权威来源）
+> **文档定位**：agentrt-linux（AirymaxOS）代码生成管道设计——以契约源（XML/.bf/.def）为唯一输入，自动生成 C / Rust / Python / Go / TypeScript 多语言绑定，消除手工样板代码并保证 [SC] 共享契约层头文件与生成代码的一致性\
+> **文档版本**：0.2.8\
+> **最后更新**：2026-07-15\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **SSoT 依赖**：[09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)（规则编号与契约物理宿主权威来源）
 
 ---
 

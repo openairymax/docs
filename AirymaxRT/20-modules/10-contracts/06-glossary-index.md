@@ -2,10 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 规范集术语表与快速索引
+> **文档定位**：Airymax 规范集术语表与快速索引\
+> **最后更新**：2026-06-09
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/20-modules/10-contracts/06-glossary-index.md
 ---
 
 ## 使用说明

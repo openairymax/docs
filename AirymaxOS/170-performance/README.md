@@ -1,13 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）性能工程设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）性能工程体系主索引\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-13\
-> **优先级**：P1（6 文档）\
 > **同源映射**：agentrt 性能基线 + Linux 6.6 性能子系统（perf / sched_ext / MGLRU / io_uring）\
-> **理论根基**：Linux 内核性能工程 + Airymax S-1 反馈闭环 + A-4 完美主义
+> **理论根基**：Linux 内核性能工程 + Airymax S-1 反馈闭环 + A-4 完美主义\
+> **优先级**：P1（6 文档）
 
 ---
 

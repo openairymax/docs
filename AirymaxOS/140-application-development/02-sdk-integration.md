@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # SDK 集成设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义 Python/Rust/Go/TypeScript 四语言 SDK 与 agentrt-linux 内核通信的集成设计\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt 四语言 SDK（IRON-9 v2 [SC] 共享契约层共享头文件 + [SS] 语义同源层 SDK 层签名同源）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **同源映射**：agentrt 四语言 SDK（IRON-9 v2 [SC] 共享契约层共享头文件 + [SS] 语义同源层 SDK 层签名同源）\
 > **IRON-9 v2 层次**：[SC] 共享契约层（IPC 消息头结构、syscall 编号、错误码完全共享）+ [SS] 语义同源层（SDK 层签名同源，同一份源码两端编译，构建期条件编译切换传输层；其他层语义同源）
 
 ---

@@ -1,13 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # MemoryRovol 记忆卷载 API 契约
-
 > **文档定位**：agentrt-linux（AirymaxOS）MemoryRovol 记忆卷载子系统的完整应用层 API 契约，定义 10 个系统调用（编号 552-561）的签名、参数语义、状态机、数据流、错误处理与 SDK 集成\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
-> **父文档**：[Agent 应用开发 README](README.md)\
-> **文档性质**：实现方案文档（非设计文档）。本契约在 [02-memory-flow.md](../40-dataflows/02-memory-flow.md) 数据流设计与 [04-memory.md](../20-modules/04-memory.md) 子仓设计的基础上，补充完整的 API 签名、状态机与接口定义\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt memoryrovol（记忆卷载）+ Linux 6.6 mm 子系统（MGLRU/userfaultfd/CXL）+ seL4 Untyped retype（记忆重派生）\
+> **文档性质**：实现方案文档（非设计文档）。本契约在 [02-memory-flow.md](../40-dataflows/02-memory-flow.md) 数据流设计与 [04-memory.md](../20-modules/04-memory.md) 子仓设计的基础上，补充完整的 API 签名、状态机与接口定义\
 > **设计参考**：Linux 6.6 `mm/vmscan.c`（MGLRU aging/eviction）+ `mm/userfaultfd.c`（缺页迁移）+ `drivers/cxl/`（CXL 3.0 池化）+ seL4 `src/object/untyped.c`（retype 派生）+ agentrt memoryrovol L1-L4 模型\
 > **编号 SSoT**：完整的系统调用编号注册表见 [07-syscall-registry.md](07-syscall-registry.md) 第 3.3 节（ROVOL 552-571）
 

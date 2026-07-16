@@ -1,11 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 集成标准合集
-
-> **文档定位**：合并与 agentrt 的集成规范、生态伙伴计划、Manager 模块配置集成标准、标准参与与技术方案贡献四部分内容，作为 agentrt-linux（AirymaxOS）集成标准的完整参考。理论根基：IRON-9 v2 工程铁律、五维正交24原则、体系并行论。
-> **版本**：0.1.1
-> **最后更新**：2026-07-13
-> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0
+> **文档定位**：合并与 agentrt 的集成规范、生态伙伴计划、Manager 模块配置集成标准、标准参与与技术方案贡献四部分内容，作为 agentrt-linux（AirymaxOS）集成标准的完整参考。理论根基：IRON-9 v2 工程铁律、五维正交24原则、体系并行论。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[agentrt-linux（AirymaxOS）工程标准规范](README.md)\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
 > **SSoT 依赖声明**：本文件规则编号权威为 09-ssot-registry.md §3
 
 ---

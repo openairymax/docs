@@ -2,11 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 任务管理系统调用 API
+> **文档定位**：Airymax 任务管理系统调用 API\
+> **最后更新**：2026-06-28\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)\
+> **API 版本**：v1.0.1
 
-**最新**: 2026-06-28
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/60-syscalls/05-task.md
-**API 版本**: v1.0.1
 ---
 
 ## 概述

@@ -2,13 +2,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax IRON-9 v2 跨端共享模型
-
-> **最新**： 2026-07-10\
-> **版本**： 0.1.1（文档体系完成）/ 1.0.1（开发）\
-> **状态**： 草案\
-> **路径**： OpenAirymax/docs/AirymaxRT/10-architecture/06-iron9-shared-model.md\
-> **父文档**： [Airymax 架构概述](./01-system-architecture.md)\
-> **权威来源**： AirymaxOS [`50-engineering-standards/120-cross-project-code-sharing.md`](../../AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md)（SSoT）
+> **文档定位**：Airymax IRON-9 v2 跨端共享模型\
+> **文档版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\
+> **最后更新**：2026-07-10\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)\
+> **权威来源**：AirymaxOS [`50-engineering-standards/120-cross-project-code-sharing.md`](../../AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md)（SSoT）
 
 ---
 

@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）驱动模型 — device/driver/bus 三元组详解
-
-> **文档定位**： agentrt-linux（AirymaxOS）驱动子系统 60 模块首篇——device/driver/bus/class 四元关系核心抽象\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-06\
-> **同源映射**： agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`（device/driver/bus/class 实现）\
-> **理论根基**： Linux 6.6 内核基线 + Airymax 五维正交 24 原则\
-> **核心约束**： IRON-9 v2 同源且部分代码共享——继承 Linux 设备模型语义，不耦合上游发行版实现
+> **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块首篇——device/driver/bus/class 四元关系核心抽象\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`（device/driver/bus/class 实现）\
+> **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——继承 Linux 设备模型语义，不耦合上游发行版实现
 
 ---
 

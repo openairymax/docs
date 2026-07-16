@@ -1,16 +1,15 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）代码规范
-
-> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范 / 代码规范\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-06\
-> **同源映射**： `50-engineering-standards/README.md` §3；`00-architectural-principles.md` 五维正交 24 原则\
-> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
-> **适用范围**： agentrt-linux 内核态（C / 内联汇编）与同源用户态组件（C / Rust / Python / TypeScript）\
-> **SSoT 声明**： 本卷为 agentrt-linux **语义层代码规则**（命名/函数/注释/类型/错误处理/内存/锁）的唯一权威来源（SSoT）。语义规则编号体系为 **OS-STD-CODE-NNN**（4 段前缀，CODE = Coding），覆盖命名、函数、注释、类型、错误处理、内存与锁的全部语义层规则。
->
-> **合并说明（2026-07-12）**： 本卷已合并原 `02-code-format.md`（→ Part II）、`03-code-style.md`（→ Part III）、`60-checkpatch-rule-map.md`（→ Part IV）、`70-kernel-doc-standard.md`（→ Part V）、`80-clang-format-enforcement.md`（→ Part VI）。原文件已物理删除，所有引用须指向本卷对应 Part。
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范 / 代码规范\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：`50-engineering-standards/README.md` §3；`00-architectural-principles.md` 五维正交 24 原则\
+> **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
+> **适用范围**：agentrt-linux 内核态（C / 内联汇编）与同源用户态组件（C / Rust / Python / TypeScript）\
+> **SSoT 声明**：本卷为 agentrt-linux **语义层代码规则**（命名/函数/注释/类型/错误处理/内存/锁）的唯一权威来源（SSoT）。语义规则编号体系为 **OS-STD-CODE-NNN**（4 段前缀，CODE = Coding），覆盖命名、函数、注释、类型、错误处理、内存与锁的全部语义层规则。\
+> **合并说明（2026-07-12）**：本卷已合并原 `02-code-format.md`（→ Part II）、`03-code-style.md`（→ Part III）、`60-checkpatch-rule-map.md`（→ Part IV）、`70-kernel-doc-standard.md`（→ Part V）、`80-clang-format-enforcement.md`（→ Part VI）。原文件已物理删除，所有引用须指向本卷对应 Part。
 
 ***
 

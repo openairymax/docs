@@ -1,15 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）SBOM 生成与分发方案
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）软件物料清单（Software Bill of Materials，SBOM）生成、校验、分发与消费的工程设计规范，覆盖 SPDX 2.3 格式规范、组件清单、生成工具链、CI 集成、随产物分发、漏洞关联与可重复构建验证\
-> **版本**：0.2.8\
+> **文档版本**：0.2.8\
 > **最后更新**：2026-07-15\
-> **父文档**：`190-distribution/README.md`\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt 构建基线（IRON-9 v2 [IND] 完全独立层，SBOM 工具链为 agentrt-linux 专属）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论 + NTIA Minimum Elements 标准\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
 > **SSoT 依赖声明**：本文档所引用的全部规则编号（`OS-IRON-*`、`OS-BAN-*`、`OS-STD-*`、`OS-ACC-*` 等）权威定义见 `50-engineering-standards/09-ssot-registry.md`，本文档不私自定义新规则编号。\
-> **同源映射**：agentrt 构建基线（IRON-9 v2 [IND] 完全独立层，SBOM 工具链为 agentrt-linux 专属）\
 > **IRON-9 v2 层次**：[IND] 完全独立层（SBOM 为 agentrt-linux 发行版专属）\
 > **对标基线**：openEuler 24.03 LTS（SBOM 工程实践参照）+ NTIA Minimum Elements v1.0
 

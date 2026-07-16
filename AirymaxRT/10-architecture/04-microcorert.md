@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 微核心 (MicroCoreRT) 架构详解
+> **文档定位**：Airymax 微核心 (MicroCoreRT) 架构详解\
+> **最后更新**：2026-06-28\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
-**最新**: 2026-06-28
-**状态**: 维护中
-**路径**: docs/AirymaxRT/10-architecture/04-microcorert.md
 ---
 
 ## 1. 概述

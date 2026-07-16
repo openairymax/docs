@@ -1,14 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）工程思想
-
-> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范的第 4 主题文档——工程体系的思想核心。\
-> 本文档不是规范条文的堆砌，而是规范背后的底层哲学：为什么这样规定，而不是那样规定；为什么这条铁律不可妥协，而那条规则可以版本化演进。\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
-> **理论根基**： Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
-> **同源映射**： `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）\
-> **SSoT 声明**： OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（15 条铁律，含 OS-IRON-015 编号管理元规则，2026-07-15 提升）。本文档第 5-10 章中标注的历史 OS-IRON-003~006 编号与 SSoT 存在语义偏移（详见下方 §0 对齐映射表）。正文中保留的历史编号仅作章节内引用，**规则定义以 SSoT 为准**；本文档与 SSoT 的任何冲突，以 SSoT 为准。
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范的第 4 主题文档——工程体系的思想核心。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-12\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：`docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v2 同源且部分代码共享）\
+> **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
+> **SSoT 声明**：OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（15 条铁律，含 OS-IRON-015 编号管理元规则，2026-07-15 提升）。本文档第 5-10 章中标注的历史 OS-IRON-003~006 编号与 SSoT 存在语义偏移（详见下方 §0 对齐映射表）。正文中保留的历史编号仅作章节内引用，**规则定义以 SSoT 为准**；本文档与 SSoT 的任何冲突，以 SSoT 为准。
 
 ---
 

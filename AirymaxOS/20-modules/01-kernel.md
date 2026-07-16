@@ -1,15 +1,16 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux 内核设计文档（Airymax Kernel 极境内核）
-
+# agentrt-linux 内核设计文档
+> **文档定位**：agentrt-linux 内核设计文档（Airymax Kernel 极境内核）\
+> **文档版本**：v3.0 2026-07-11\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 atoms/corekern 通过 \[SC] 共享契约层（6 头文件）+ \[SS] 语义同源层协作，\[IND] 内核态 sched\_ext/io\_uring/eBPF/Rust 实现独立。**Syscall 架构**：12 核心 + 12 预留 = 24 槽位（Capability Invocation 统一入口 + IPC 数据面/控制面分离）。**命名统一**：所有 \[SC] 共享标识符使用 `AIRY_*` 前缀，C 函数使用 `airy_sys_*` 前缀。\
 > **子仓编号**：01\
 > **子仓代号**：极境内核（Airymax Kernel）\
-> **文档版本**：v3.0 2026-07-11\
 > **设计基准**：Linux 内核基线 + 微内核化改造\
 > **同源 agentrt**：atoms/corekern（MicroCoreRT）\
 > **理论基础**：seL4 微内核工程思想\
 > **技术路线**：基于 Linux 内核微内核化改造，非从零开发微内核\
-> **核心约束**：IRON-9 v2 同源且部分代码共享——与 agentrt 用户态 atoms/corekern 通过 \[SC] 共享契约层（6 头文件）+ \[SS] 语义同源层协作，\[IND] 内核态 sched\_ext/io\_uring/eBPF/Rust 实现独立。**Syscall 架构**：12 核心 + 12 预留 = 24 槽位（Capability Invocation 统一入口 + IPC 数据面/控制面分离）。**命名统一**：所有 \[SC] 共享标识符使用 `AIRY_*` 前缀，C 函数使用 `airy_sys_*` 前缀。\
 > **横切关注点**：内核是横切关注点（cross-cutting concern），贯穿调度、IPC、eBPF、记忆卷载 4 大数据流，提供机制骨架
 
 ***

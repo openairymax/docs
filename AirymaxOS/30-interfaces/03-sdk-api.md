@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # SDK API
-
-> **文档定位**： agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-06\
-> **父文档**： [接口设计](README.md)
+> **文档定位**：agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
 

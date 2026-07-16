@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 编码约定规范
-
 > **文档定位**：代码注释、配置审计、日志、命名约定与安全设计规范合集\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
-> **父文档**： [10-coding-style README](README.md)
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-12\
+> **上级文档**：[agentrt-linux（AirymaxOS）工程标准规范](README.md)
 
 ---
 

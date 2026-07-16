@@ -1,16 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）CI/CD 管道完整设计
-
-> **文档定位**： agentrt-linux（AirymaxOS）CI/CD 管道完整设计——覆盖 7 层自动化验证体系（OS-STD-TOOL-001~161）的工程实现，定义 8 子仓 + 管理仓的全量 CI 覆盖矩阵、编译验证矩阵、代码质量门禁、测试覆盖矩阵、SSoT 校验流水线、[SC] 共享契约层双向 CI、发布流水线、CI 基础设施与失败回滚策略。本卷是 1.0.1 开发阶段的设计基线，所有设计必须在本阶段完成。
->
-> **版本**： 0.2.8
-> **最后更新**： 2026-07-15
-> **父文档**： [`70-build-system/README.md`](README.md)（构建系统工程设计主索引）
-> **同源映射**： agentrt `cmake/` + `.github/workflows/`（伞仓 CI）+ Linux 6.6 内核 CI 思想（KUnit/kselftest/checkpatch/sparse/Coccinelle）
-> **理论根基**： Linux 6.6 内核基线 CI 工程 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）+ 7 层自动化验证体系（OS-STD-TOOL-001~161）
-> **核心约束**： IRON-9 v2 同源且部分代码共享——agentrt-linux CI 沿用 Linux 内核 CI 思想但与上游独立演进；[SC] 共享契约层双向 CI 由 OS-IRON-008 强制
-> **SSoT 依赖声明**： 本文档引用的全部规则编号（`OS-STD-TOOL-*` / `OS-IRON-*` / `OS-STD-FMT-*` / `OS-TEST-*` / `OS-STD-TEST-*`）的权威定义与登记状态以 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)（Markdown 权威源，文档体系）与 [`agentrt-linux/ssot-registry.yaml`](../../../agentrt-linux/ssot-registry.yaml)（机器可读 Schema，管理仓根）为唯一来源（SSoT）。本文档仅引用已登记编号，不私自定义新编号。当本文档与 SSoT 注册表冲突时，以注册表为准。
+> **文档定位**：agentrt-linux（AirymaxOS）CI/CD 管道完整设计——覆盖 7 层自动化验证体系（OS-STD-TOOL-001~161）的工程实现，定义 8 子仓 + 管理仓的全量 CI 覆盖矩阵、编译验证矩阵、代码质量门禁、测试覆盖矩阵、SSoT 校验流水线、[SC] 共享契约层双向 CI、发布流水线、CI 基础设施与失败回滚策略。本卷是 1.0.1 开发阶段的设计基线，所有设计必须在本阶段完成。\
+> **文档版本**：0.2.8\
+> **最后更新**：2026-07-15\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt `cmake/` + `.github/workflows/`（伞仓 CI）+ Linux 6.6 内核 CI 思想（KUnit/kselftest/checkpatch/sparse/Coccinelle）\
+> **理论根基**：Linux 6.6 内核基线 CI 工程 + Airymax 五维正交 24 原则（S/K/C/E/A 五维）+ 7 层自动化验证体系（OS-STD-TOOL-001~161）\
+> **核心约束**：IRON-9 v2 同源且部分代码共享——agentrt-linux CI 沿用 Linux 内核 CI 思想但与上游独立演进；[SC] 共享契约层双向 CI 由 OS-IRON-008 强制\
+> **SSoT 依赖声明**：本文档引用的全部规则编号（`OS-STD-TOOL-*` / `OS-IRON-*` / `OS-STD-FMT-*` / `OS-TEST-*` / `OS-STD-TEST-*`）的权威定义与登记状态以 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)（Markdown 权威源，文档体系）与 [`agentrt-linux/ssot-registry.yaml`](../../../agentrt-linux/ssot-registry.yaml)（机器可读 Schema，管理仓根）为唯一来源（SSoT）。本文档仅引用已登记编号，不私自定义新编号。当本文档与 SSoT 注册表冲突时，以注册表为准。
 
 ---
 

@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Rust 编码风格规范
-
 > **文档定位**：Rust 语言编码风格及安全编码规范合集（含 Rust 风格、Rust 安全编码）\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
-> **父文档**： [10-coding-style README](README.md)
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-12\
+> **上级文档**：[agentrt-linux（AirymaxOS）工程标准规范](README.md)
 
 ---
 

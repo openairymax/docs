@@ -1,13 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Agent 部署与运行契约
-
 > **文档定位**：agentrt-linux（AirymaxOS）Agent 应用的完整部署与运行工程契约，定义 Agent 包格式、清单规范、部署状态机、运行时沙箱、健康检查、滚动更新、回滚机制与资源配额\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
-> **父文档**：[Agent 应用开发 README](README.md)\
-> **文档性质**：实现方案文档（非设计文档）。本契约在 [01-agent-lifecycle.md](01-agent-lifecycle.md) Agent 生命周期管理与 [190-distribution/README.md](../190-distribution/README.md) Agent 应用商店设计的基础上，补充完整的部署、打包、分发与运行模型\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt gateway（Agent 网关）+ Linux 6.6 容器与进程模型 + OCI 镜像标准 + Kubernetes CRD + seL4 isolation\
+> **文档性质**：实现方案文档（非设计文档）。本契约在 [01-agent-lifecycle.md](01-agent-lifecycle.md) Agent 生命周期管理与 [190-distribution/README.md](../190-distribution/README.md) Agent 应用商店设计的基础上，补充完整的部署、打包、分发与运行模型\
 > **设计参考**：Linux 6.6 `kernel/cgroup/cgroup-v2.c`（资源隔离）+ `security/landlock/`（用户态沙箱）+ OCI image spec v1.1 + Kubernetes 1.30 + CRIU（进程迁移）+ seL4 `src/object/tcb.c`（线程隔离）
 
 ---

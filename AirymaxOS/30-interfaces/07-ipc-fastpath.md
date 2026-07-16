@@ -1,11 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IPC Fastpath 状态机设计
-
-> **文档定位**： agentrt-linux（AirymaxOS） IPC Fastpath 状态机设计——fastpath/slowpath 双路径状态机、io_uring 与 kfifo kthread 集成、性能优化与形式化验证计划\
-> **版本**： 0.2.8\
-> **最后更新**： 2026-07-15\
-> **父文档**： [接口设计](README.md)
+> **文档定位**：agentrt-linux（AirymaxOS） IPC Fastpath 状态机设计——fastpath/slowpath 双路径状态机、io_uring 与 kfifo kthread 集成、性能优化与形式化验证计划\
+> **文档版本**：0.2.8\
+> **最后更新**：2026-07-15\
+> **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
 

@@ -1,12 +1,7 @@
 # Airymax 协议兼容性集成指南
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/140-application-development/protocol_integration_guide.md
-
-## 概述
-
-Airymax 网关提供统一的协议兼容层，支持 JSON-RPC 2.0、MCP v1、A2A v0.3、OpenAI、Claude、OpenJiuwen、OpenClaw、ChinaEco、AGNTCY ACP 共 9 种协议的接入、检测与互转。本文档详细说明每种协议的集成方法、消息格式映射和常见集成场景。
+> **文档定位**：Airymax 协议兼容性集成指南\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
 ---
 

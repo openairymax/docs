@@ -1,12 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）工程标准规范
-
-> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范的主索引与总纲\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-13\
-> **同源映射**： agentrt `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ IRON-9 v2 工程铁律（工程标准规范，17 类规则编号体系）\
-> **理论根基**： Linux 6.6 内核工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范的主索引与总纲\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **同源映射**：agentrt `docs/AirymaxRT/00-architectural-principles.md`（五维正交 24 原则）+ IRON-9 v2 工程铁律（工程标准规范，17 类规则编号体系）\
+> **理论根基**：Linux 6.6 内核工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）
 
 ---
 

@@ -2,18 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 日志系统架构详解
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/10-architecture/50-services/02-logging.md
-
-## 文档信息
-
-| 字段 | 值 |
-|------|-----|
-| 文档名称 | Airymax 日志系统架构详解 |
-| 适用版本 | Dv1.7+ |
-| 路径 | `agentrt/commons/utils/observability/` |
+> **文档定位**：Airymax 日志系统架构详解\
+> **最后更新**：2026-06-09
 
 ---
 

@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Agent 延迟 SLO 实现方案
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）性能工程体系核心子文档，定义 Agent 响应延迟的服务等级目标（SLO）与保障机制\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt 延迟基线（IRON-9 v2 [SS] 语义同源层，延迟 SLO 语义同源）\
 > **理论根基**：Linux 6.6 sched_ext + EEVDF 延迟调度 + seL4 MCS 时间隔离 + Airymax A-4 完美主义 + S-1 反馈闭环\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **同源映射**：agentrt 延迟基线（IRON-9 v2 [SS] 语义同源层，延迟 SLO 语义同源）\
 > **IRON-9 v2 层次**：[SS] 语义同源层（延迟 SLO 语义与 agentrt 同源）+ [IND] 完全独立层（内核态延迟保障为 agentrt-linux 专属）
 
 ---

@@ -1,8 +1,8 @@
 # Airymax 协议快速入门指南
+> **文档定位**：Airymax 协议快速入门指南\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/70-toolkit/02-protocol-quickstart.md
 ---
 
 ## 前置条件

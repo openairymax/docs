@@ -1,12 +1,7 @@
 # Airymax 最佳实践指南
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/140-application-development/21-best-practices.md
-
-## 概述
-
-本指南汇总 Airymax 开发与运维中的最佳实践，涵盖架构设计、协议集成、性能优化、安全防护和运维管理五个维度。
+> **文档定位**：Airymax 最佳实践指南\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
 ---
 

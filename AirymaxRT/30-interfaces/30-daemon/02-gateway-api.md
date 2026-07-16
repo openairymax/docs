@@ -1,8 +1,8 @@
 # 用户态服务 API 文档
+> **文档定位**：用户态服务 API 文档\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/30-daemon/02-gateway-api.md
 ---
 
 ## 📋 概述

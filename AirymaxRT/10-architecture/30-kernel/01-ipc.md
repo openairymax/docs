@@ -2,17 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax 进程间通信（IPC）架构详解
-
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/10-architecture/30-kernel/01-ipc.md
-
-## 文档信息
-
-| 字段 | 值 |
-|------|-----|
-| 文档名称 | Airymax 进程间通信（IPC）架构详解 |
-| 适用版本 | v1.0.1+ |
+> **文档定位**：Airymax 进程间通信（IPC）架构详解\
+> **最后更新**：2026-06-09
 
 ---
 

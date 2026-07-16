@@ -2,12 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # AirymaxAgentRT 文档中心
-
-**语言**: [English](README.md) | 简体中文
-
-**最新更新**: 2026-07-11
-**状态**: 维护中
-**路径**: `docs/AirymaxRT/README_zh.md`
+> **文档定位**：AirymaxAgentRT 文档中心\
+> **最后更新**：2026-07-11\
+> **上级文档**：[Airymax Documentation Center — 文档中心](README.md)
 
 ---
 

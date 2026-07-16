@@ -1,8 +1,8 @@
 # Airymax 配置漂移检测器使用指南
+> **文档定位**：Airymax 配置漂移检测器使用指南\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/140-application-development/drift_detector_guide.md
 ---
 
 ## 目录

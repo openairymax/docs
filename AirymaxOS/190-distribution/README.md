@@ -1,13 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）发行版管理设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）发行版管理工程体系主索引\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-13\
-> **优先级**：P2（5 文档）\
 > **同源映射**：agentrt 版本管理 + Linux 6.6 发行版工程（RPM / dnf / ISO / 镜像）\
-> **理论根基**：Linux 发行版管理哲学 + Airymax S-4 涌现性管理 + C-2 增量演化
+> **理论根基**：Linux 发行版管理哲学 + Airymax S-4 涌现性管理 + C-2 增量演化\
+> **优先级**：P2（5 文档）
 
 ---
 

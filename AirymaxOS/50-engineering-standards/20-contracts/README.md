@@ -1,13 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux OS 层契约规范总览
-
-> **文档定位**： agentrt-linux（AirymaxOS）OS 层契约规范体系的入口与索引\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-13\
-> **父文档**： [工程标准规范手册](../00-engineering-standards-handbook.md)\
-> **编号权威**： [09-ssot-registry.md §3](../09-ssot-registry.md)
-
+> **文档定位**：agentrt-linux（AirymaxOS）OS 层契约规范体系的入口与索引\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-13\
+> **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
+> **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
 > **SSoT 依赖声明**：本子目录的规则编号登记于 [09-ssot-registry.md §3](../09-ssot-registry.md)。其中 `contracts.md`（Part III 日志格式契约）为日志格式与传输管道的唯一 SSoT。
 
 ---

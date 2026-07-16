@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Agent 编排设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发体系核心子文档，定义多 Agent 协作模型、DAG 工作流编排与 TaskFlow 引擎在 OS 层的应用\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt 用户态运行时 MAC 框架 + TaskFlow 引擎（IRON-9 v2 [SS] 语义同源层）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **同源映射**：agentrt 用户态运行时 MAC 框架 + TaskFlow 引擎（IRON-9 v2 [SS] 语义同源层）\
 > **IRON-9 v2 层次**：[SS] 语义同源层（协作模式高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进——agentrt-linux 基于内核 kthread + SCHED_AGENT，agentrt 基于用户态线程）
 
 ---

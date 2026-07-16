@@ -1,14 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）IRON-9 v2 三层共享模型落地规范
-
-> **文档定位**： agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 \[SC] 共享契约层（6 个头文件）、\[SS] 语义同源层、\[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。\
-> **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
-> **编号权威**： [09-ssot-registry.md §3](./09-ssot-registry.md)\
-> **理论根基**： Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
-> **SPDX-License-Identifier**： AGPL-3.0-or-later OR Apache-2.0
-
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 \[SC] 共享契约层（6 个头文件）、\[SS] 语义同源层、\[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。\
+> **文档版本**：0.1.1\
+> **最后更新**：2026-07-12\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
+> **编号权威**：[09-ssot-registry.md §3](./09-ssot-registry.md)\
+> **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
 > **SSoT 依赖声明**：本文件引用 IRON-9 v2 三层模型（[SC]/[SS]/[IND]）作为跨项目代码共享的权威框架。IPC magic 值（0x41524531 'ARE1'）与任务描述符 magic（0x41475453 'AGTS'）的权威定义登记于 [09-ssot-registry.md §3](./09-ssot-registry.md)。命名前缀隔离（`airy_*`/`airy_*`）引用 [10-coding-style/coding_conventions.md Part IV §4.4.2](./10-coding-style/coding_conventions.md)。
 
 ***

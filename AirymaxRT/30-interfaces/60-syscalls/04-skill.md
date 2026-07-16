@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
 # Airymax Skill 管理 API
+> **文档定位**：Airymax Skill 管理 API\
+> **最后更新**：2026-06-09\
+> **上级文档**：[AirymaxAgentRT 接口文档](README.md)
 
-**最新**: 2026-06-09
-**状态**: 维护中
-**路径**: docs/AirymaxRT/30-interfaces/60-syscalls/04-skill.md
 ---
 
 ## 🎯 概述

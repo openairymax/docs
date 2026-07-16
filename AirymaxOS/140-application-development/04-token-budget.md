@@ -1,13 +1,12 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Token 预算契约
-
 > **文档定位**：agentrt-linux（AirymaxOS）Agent Token 预算的完整工程契约，定义令牌桶算法、数据结构、分配策略、消耗计量、耗尽处理、恢复机制、系统调用集成、调度集成与 SDK 集成\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
-> **父文档**：[Agent 应用开发 README](README.md)\
-> **文档性质**：实现方案文档（非设计文档）。本契约在 [01-agent-lifecycle.md](01-agent-lifecycle.md) 第 3.3 节 Token 预算管理与 [170-performance/01-scheduling-performance.md](../170-performance/01-scheduling-performance.md) 第 3.3 节 Token 预算感知权重的基础上，补充完整的预算模型、接口定义、状态机与错误处理\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 CFS 带宽控制（`cpu.cfs_quota_us` / `cpu.cfs_period_us`）+ seL4 MCS 调度上下文（Scheduling Context）+ agentrt Token 能效工程\
+> **文档性质**：实现方案文档（非设计文档）。本契约在 [01-agent-lifecycle.md](01-agent-lifecycle.md) 第 3.3 节 Token 预算管理与 [170-performance/01-scheduling-performance.md](../170-performance/01-scheduling-performance.md) 第 3.3 节 Token 预算感知权重的基础上，补充完整的预算模型、接口定义、状态机与错误处理\
 > **设计参考**：主流 Linux 发行版 Linux 6.6 内核基线 `kernel/sched/fair.c`（CFS 带宽控制 `sched_cfs_period_timer`）+ seL4 `src/object/schedcontext.c`（调度上下文预算消耗）
 
 ---

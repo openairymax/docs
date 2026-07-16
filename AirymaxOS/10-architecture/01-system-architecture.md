@@ -1,9 +1,10 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux（AirymaxOS）架构设计
-
-> **版本**：0.1.1\
+# agentrt-linux 架构设计
+> **文档定位**：agentrt-linux（AirymaxOS）架构设计\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-06\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **设计原则**：微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源性
 
 ---

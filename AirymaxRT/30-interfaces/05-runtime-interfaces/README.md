@@ -1,9 +1,8 @@
 # ARE Standards — Agent Runtime Environment Standards
-
-> **版本**: v0.1.0-draft | **状态**: 草案（v0.1.1 发行前冻结）| **日期**: 2026-07-04
-> **版权归属人**: SPHARX Ltd. | **许可证**: AGPL-3.0-or-later OR Apache-2.0（双许可证，SPHARX Ltd.）
->
-> **战略定位**: ARE Standards 是 Airymax 推动的"行业底座"开放标准体系，目标是定义 Agent Runtime Environment 的三层标准接口，使第三方可独立实现兼容的 Agent 运行时。
+> **文档定位**：ARE Standards — Agent Runtime Environment Standards\
+> **文档版本**：v0.1.0-draft | **状态**: 草案（v0.1.1 发行前冻结）| **日期**: 2026-07-04\
+> **版权归属人**：SPHARX Ltd. | **许可证**: AGPL-3.0-or-later OR Apache-2.0（双许可证，SPHARX Ltd.）\
+> **战略定位**：ARE Standards 是 Airymax 推动的"行业底座"开放标准体系，目标是定义 Agent Runtime Environment 的三层标准接口，使第三方可独立实现兼容的 Agent 运行时。
 
 ---
 

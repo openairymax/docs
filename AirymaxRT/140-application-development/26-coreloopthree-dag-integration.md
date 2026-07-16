@@ -1,38 +1,8 @@
 # CoreLoopThree DAG 工作流集成指南
-
-**版本**: 0.1.1 (W18)
-**状态**: 已实现
-**路径**: docs/AirymaxRT/140-application-development/26-coreloopthree-dag-integration.md
-**版权**: (c) 2026 SPHARX Ltd. All Rights Reserved.
-
-## 概述
-
-CoreLoopThree（三层认知循环）在 0.1.1 版本中集成了 taskflow_advanced DAG 工作流引擎，提供结构化的复杂工作流编排能力。与 `airy_loop_submit()`（自然语言单任务提交）不同，DAG API 接受结构化的 `taskflow_workflow_t` 工作流定义，支持条件分支、并行汇聚、循环迭代等 DAG 模式。
-
-### 架构关系
-
-```
-                    ┌─────────────────────────────────┐
-                    │       CoreLoopThree (loop.c)     │
-                    │                                  │
-  自然语言任务 ────►│  airy_loop_submit()           │
-                    │  (reactive/reflective planner)   │
-                    │                                  │
-  结构化 DAG ─────►│  airy_loop_submit_dag()       │
-                    │  (taskflow_advanced 引擎)        │
-                    │                                  │
-                    │  ┌─────────────────────────┐    │
-                    │  │  taskflow_engine_t      │    │
-                    │  │  (内部持有，create/destroy)│   │
-                    │  └─────────────────────────┘    │
-                    └─────────────────────────────────┘
-```
-
-### 设计要点
-
-- CoreLoopThree 在 `airy_loop_create()` 时内部创建 `taskflow_engine_t*`，在 `airy_loop_destroy()` 时销毁
-- 4 个 DAG API 暴露在 `loop.h` 中，通过 `taskflow_advanced.h` 类型定义工作流
-- `taskflow_engine_get_execution()` 返回内部指针（非副本），不可调用 `taskflow_execution_destroy()`
+> **文档定位**：CoreLoopThree DAG 工作流集成指南\
+> **文档版本**：0.1.1 (W18)\
+> **上级文档**：[AirymaxAgentRT 文档中心](README.md)\
+> **版权**：(c) 2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 

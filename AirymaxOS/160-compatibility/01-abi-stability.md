@@ -1,13 +1,13 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # ABI 稳定性设计
-
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义 4 层接口稳定性分级、ABI 审查流程与弃用声明机制\
-> **版本**：0.1.1\
+> **文档版本**：0.1.1\
 > **最后更新**：2026-07-09\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
+> **同源映射**：agentrt ABI 稳定性（IRON-9 v2 [SC] 共享契约层共享 syscall 编号 + [SS] 语义同源层 SDK 层签名同源）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **同源映射**：agentrt ABI 稳定性（IRON-9 v2 [SC] 共享契约层共享 syscall 编号 + [SS] 语义同源层 SDK 层签名同源）\
 > **IRON-9 v2 层次**：[SC] 共享契约层（syscall 编号、错误码、消息头结构）+ [SS] 语义同源层（SDK 层签名同源）+ [IND] 完全独立层（内部实现）
 
 ---

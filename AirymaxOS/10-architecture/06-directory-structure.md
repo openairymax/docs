@@ -1,11 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# agentrt-linux（AirymaxOS）系统性目录结构设计
+# agentrt-linux 系统性目录结构设计
 
 > **文档定位**：agentrt-linux（AirymaxOS）源码目录结构设计文档\
-> **版本**：0.2.4（对齐闭源 v0.2.4 生产级修正版）/ 1.0.1 M1（代码落地）\
+> **文档版本**：0.2.4（对齐闭源 v0.2.4 生产级修正版）/ 1.0.1 M1（代码落地）\
 > **最后更新**：2026-07-15\
-> **父文档**：[10-architecture/README.md](README.md)\
+> **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **来源**：基于 Linux 6.6 内核基线源码参考 + seL4 源码参考 + 8 子仓架构\
 > **铁律依据**：IRON-9 v2 三层模型 + ES-OLK-1\~13 工程思想 + ADR-014 微内核来源单一化 + OS-IRON-013 8 子仓 submodule + OS-IRON-014 \[SC] 共享契约层单一数据源 + OS-IRON-015 编号管理元规则\
 > **SSoT 依赖声明**：本文档涉及的所有规则编号（OS-IRON-001\~015、OS-KER-xxx、OS-STD-xxx 等）的**唯一权威来源**为 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)。本文档不是规则编号 SSoT，仅作为目录结构设计的技术阐述载体。当本文档与 SSoT 注册表冲突时，以 SSoT 注册表为准。
