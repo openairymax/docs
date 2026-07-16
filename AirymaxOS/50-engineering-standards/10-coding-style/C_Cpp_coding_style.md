@@ -4,8 +4,100 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：C 与 C++ 语言编码风格及安全编码规范合集（含 C 内核态风格、C 强化补充、C++ 风格、C/C++ 安全编码）\
 > **版本**： 0.1.1\
-> **最后更新**： 2026-07-12\
+> **最后更新**： 2026-07-16\
 > **父文档**： [10-coding-style README](README.md)
+
+## 章节导航
+
+本文件由四部分组成，按语言与场景正交划分：
+
+| Part | 标题 | 定位 | 适用场景 |
+|------|------|------|---------|
+| [I](#part-i-agentrt-linuxairymaxosc-语言编码风格规范) | C 语言编码风格规范 | agentrt-linux 内核态 C 代码风格基线 | 内核/驱动/安全态 C 代码 |
+| [II](#part-ii-agentrt-linuxairymaxosc-语言编码规范强化补充) | C 语言编码规范强化补充 | 关键规则的源码路径标注与正反例强化 | 内核态 C 代码审查与培训 |
+| [III](#part-iii-airymax-c-编码规范) | Airymax C++ 编码规范 | C++ 语言编码风格与最佳实践 | cognition/cloudnative 等用户态 C++ 模块 |
+| [IV](#part-iv-agentrt-linuxairymaxosc-安全编码规范) | C 安全编码规范 | 缓冲区/整数/指针/并发/权限等安全编码 | 全部 C 代码安全审查 |
+
+### Part I 章节速查
+
+| § | 标题 | 关键规则 |
+|---|------|---------|
+| 0 | SSoT 对齐声明与编号映射 | 编号迁移映射表 |
+| 1 | 基础约定 | Linux 6.6 内核基线 |
+| 2 | 缩进、空格与行宽 | OS-STD-FMT-001~006 |
+| 3 | 命名约定 | airy_ 前缀、snake_case |
+| 4 | 函数定义规范 | OS-KER-015、OS-STD-CODE-007~008 |
+| 5 | 注释规范 | kernel-doc、多行注释 |
+| 6 | 头文件组织 | include 顺序、IRON-9 v2 层级标注 |
+| 7 | 错误处理规范 | OS-KER-225/001/004/224、goto 集中出口 |
+| 8 | 内存管理规范 | OS-KER-016~018/222~228、GFP/kmemleak/poison |
+| 9 | 锁与并发规范 | OS-KER-019/020/046/053/226、RCU/kref |
+| 10 | IRON-9 v2 [SC] 共享契约层 | OS-KER-021/070、代码归属 |
+| 11 | 代码示例 | 完整内核模块示例 |
+| 12 | 五维正交原则映射 | S/K/C/E/A 五维 |
+| 13 | 相关文档 | 交叉引用 |
+| 14 | 版本历史 | 变更记录 |
+
+### Part II 章节速查
+
+| § | 标题 | 关键规则 |
+|---|------|---------|
+| 0 | 文档定位与适用范围 | 与基线文档的关系 |
+| 1 | Tab-8 缩进强制 | OS-STD-FMT-001 |
+| 2 | goto 集中错误处理 | OS-KER-001 |
+| 3 | bool 仅用于返回值与栈变量 | OS-STD-011 |
+| 4 | 内核态禁 float | OS-STD-010、airy_q16_t |
+| 5 | 行宽 80 列硬上限 | OS-STD-FMT-002 |
+| 6 | 指定初始化器强制 | OS-STD-CODE-014 |
+| 7 | fallthrough 显式穿透注释 | OS-STD-CODE-015 |
+| 8 | 禁止结构体 typedef | OS-STD-CODE-020 |
+| 9 | 零警告门禁 | OS-STD-CODE-004 |
+| 10 | strscpy 强制替代 | OS-STD-CODE-010 |
+| 11 | 禁止 BUG()/BUG_ON() | OS-BAN-002 |
+| 12 | sizeof(*p) 替代 | OS-BAN-003 |
+| 13 | 强化规则速查表 | 汇总 |
+| 14 | 工具链衔接 | clang-format/sparse/coccinelle |
+| 15 | 历史与变更记录 | — |
+
+### Part III 章节速查
+
+| § | 标题 |
+|---|------|
+| 一 | 概述 |
+| 二 | 文件组织 |
+| 三 | 命名规范 |
+| 四 | 类型设计 |
+| 五 | 函数设计 |
+| 六 | 类设计 |
+| 七 | 内存管理 |
+| 八 | 错误处理 |
+| 八-B | C/C++ 互操作规范（extern "C" 包装规则） |
+| 九 | 并发编程 |
+| 十 | 代码注释 |
+| 十一 | 现代 C++ 特性 |
+| 十二 | 性能优化 |
+| 十三 | 测试集成 |
+| 十四 | Airymax 模块 C++ 编码示例 |
+| 附录 | 跨文档规范引用 |
+| 十五 | 参考文献 |
+
+### Part IV 章节速查
+
+| § | 标题 | 关键规则 |
+|---|------|---------|
+| 1 | 缓冲区溢出防护 | OS-SEC-101~105 |
+| 2 | 整数安全 | OS-SEC-106~110 |
+| 3 | 格式化字符串安全 | OS-SEC-111~115 |
+| 4 | 指针安全 | OS-SEC-116~120 |
+| 5 | 并发安全 | OS-SEC-121~122 |
+| 6 | 权限与能力检查 | OS-SEC-123~124、Cupolas Capability |
+| 7 | 输入验证 | OS-SEC-123~124 |
+| 8 | 信息泄露防护 | OS-SEC-125~127 |
+| 9 | CVE 案例分析 | — |
+| 10 | 静态分析工具 | sparse/coccinellite/clang-tidy |
+| 11 | 五维正交原则映射 | S/K/C/E/A 五维 |
+| 12 | 相关文档 | 交叉引用 |
+| 13 | 版本历史 | — |
 
 ---
 
@@ -203,6 +295,25 @@ enum airy_task_state {
 };
 ```
 
+#### 3.2.1 typedef 5 种例外条件（对齐 Linux 6.6 内核基线）
+
+> **OS-STD-CODE-031a（补充）**：OS-STD-CODE-031 禁止结构体指针 typedef，但 Linux 6.6 内核基线允许下列 5 种例外。agentrt-linux 直接对齐此例外清单，其他情况一律禁止 typedef。
+
+| 例外 | 示例 | 理由 |
+|------|------|------|
+| (1) 完全不透明类型（仅通过 accessor 函数访问） | `pid_t`、`atomic_t`、`spinlock_t` | 隐藏实现细节，便于未来重构 |
+| (2) 固定位宽整数类型（明确表达位宽语义） | `u32`、`s64`、`__be32` | 替代 `unsigned int` 等模糊类型 |
+| (3) `_t` 后缀的标准类型（C 标准 / Linux UAPI 已 typedef） | `size_t`、`ssize_t`、`uintptr_t` | 与 C 标准 / Linux UAPI 对齐 |
+| (4) 类型别名提升可读性（极少，需子系统维护者审批） | `gfp_t`（GFP 标志位） | 表达"这是标志位而非普通整数"的语义 |
+| (5) SPINLOCK 等伪类型（含锁对齐等隐藏属性） | `spinlock_t`、`seqlock_t` | 内核内部需要特殊对齐或属性 |
+
+**永不 typedef**：
+
+- 结构体指针：`struct airy_task *t`（好）vs `airy_task_t t`（坏）
+- 普通结构体：`struct airy_ipc_msg msg`（好）vs `airy_ipc_msg_t msg`（坏）
+
+参考 Linux 6.6 内核基线 `Documentation/process/coding-style.rst` §5（"structures should be referenced via pointers, not via typedefs"）。
+
 #### 3.3 命名语义化（OS-STD-CODE-001 复用 + OS-STD-CODE-028 复用）
 
 > **OS-STD-CODE-001（复用）** + **OS-STD-CODE-028（复用）**：全局符号必须描述性命名，禁止无意义缩写。局部变量短小精悍（循环计数器 `i`、临时指针 `tmp`、缓冲区 `buf`）。命名应让代码自解释，减少对注释的依赖。详见 01 §1.1 与 §1.2。
@@ -351,6 +462,8 @@ include 顺序固定：系统头 → 架构头 → 本地头 → `#define CREATE
 #endif /* _AIRY_IPC_H */
 ```
 
+**守卫策略对齐 Linux 内核**（OS-IRON-010）：agentrt-linux 头文件守卫使用 `#ifndef _AIRY_*_H` 形式，与 Linux 6.6 内核基线保持一致，**不使用** seL4 的 `#pragma once` 方案。这不是技术选型讨论，而是工程取向对齐——`#ifndef` 具有更好的可移植性（GCC/Clang/ICC 全支持），且能避免 `#pragma once` 在 NFS/符号链接场景下的潜在歧义。
+
 #### 6.4 IRON-9 v2 层级归属标注
 
 头文件应在文件头部注释中标明其 IRON-9 v2 层级归属：
@@ -360,6 +473,104 @@ include 顺序固定：系统头 → 架构头 → 本地头 → `#define CREATE
 #ifndef _AIRY_IPC_MSG_H
 #define _AIRY_IPC_MSG_H
 ```
+
+#### 6.5 编译期断言与函数属性（OS-KER-229）
+
+> **OS-KER-229**：agentrt-linux 内核态代码必须充分利用编译期断言（`BUILD_BUG_ON()` / `static_assert` / `_Static_assert`）将不变式检测前移到编译阶段；对不会返回的函数（`halt`、`panic` 等致命路径）必须标注 `__noreturn` 属性，使编译器能进行更激进的优化与控制流分析。此规则源于 agentrt-linux 内核工程对"编译期可检测的缺陷不应延迟到运行期"原则的落实。
+
+**编译期断言使用场景**：
+
+```c
+/* 结构体大小不变式——ABI 保护 */
+BUILD_BUG_ON(AIRY_IPC_HDR_SZ != 128);
+
+/* 枚举值与位宽约束 */
+static_assert(AIRY_MAX_AGENT_ID < 65536, "agent_id fits in u16");
+
+/* 编译期常量关系约束 */
+_Static_assert(sizeof(struct airy_task) <= PAGE_SIZE,
+               "airy_task must fit in one page");
+```
+
+**`__noreturn` 属性使用规范**：
+
+```c
+/* 致命错误处理函数必须标注 __noreturn */
+__noreturn void airy_panic(const char *fmt, ...);
+__noreturn void airy_halt(void);
+
+/* 调用 __noreturn 函数后不应有可达代码 */
+if (unlikely(fatal_error)) {
+        airy_panic("unrecoverable: %d\n", fatal_error);
+        /* 编译器知晓此路径不可达，无需 return */
+}
+```
+
+**强制规则**：
+
+1. **结构体布局不变式**：依赖结构体大小、偏移、对齐的代码，必须在头文件或初始化函数中使用 `BUILD_BUG_ON()` 或 `static_assert` 编译期校验。
+2. **枚举与位宽约束**：枚举值用于位域或固定位宽字段时，必须编译期校验上界。
+3. **`__noreturn` 标注**：`airy_panic`、`airy_halt`、`do_exit` 等不会返回的函数必须声明为 `__noreturn`；调用这些函数后的代码路径编译器将正确消除"缺少 return"警告。
+4. **头文件依赖最小化**：内核内部头文件不得依赖用户态接口头文件；`include/airymax/` 下的 [SC] 共享契约层头文件必须保持最小依赖集，仅包含自身类型定义所需的头文件。
+5. **UAPI 头文件编译器无关原则**（OS-IRON-016）：`include/uapi/airymax/` 下的用户态接口头文件必须坚持 C11 标准，禁止使用 `__attribute__`、`__builtin_*`、`__asm__`、`__sync_*`、`__atomic_*`、`typeof` 等编译器扩展，以保证可被任意 C11 标准编译器（GCC/Clang/MSVC/ICC）消费。内核内部头文件（`include/airymax/`）不受此约束。详见 [04-engineering-philosophy.md §2.4](../04-engineering-philosophy.md)。
+6. **`unreachable()` 标注不可达路径**：调用 `__noreturn` 函数后的代码路径，或逻辑上不可达的 `default`/`case` 分支，必须使用 Linux 内核 `unreachable()` 宏（等价于 `__builtin_unreachable()`，定义于 `include/linux/compiler.h`）标注。`airy_panic()` 之后的代码若 `airy_panic()` 已声明为 `__noreturn`，编译器自动消除警告，无需额外 `unreachable()`；仅在未声明 `__noreturn` 的场景或 `switch` 默认分支需显式标注。
+7. **位操作函数**：优先使用 Linux 内核位操作 API（`__builtin_clzl()` / `__builtin_ctzl()` / `__builtin_popcountl()` / `bitmap_*` 系列，定义于 `include/linux/bitops.h` / `include/asm-generic/bitops/`），不引入 seL4 `clzl()` / `ctzl()` / `popcountl()` 函数封装（违反 IRON-1 禁止新特性）。
+8. **缓存行对齐 padding**：使用 Linux 内核 `____cacheline_aligned` / `__cacheline_aligned` / `CACHELINE_ALIGN` 等已有宏（定义于 `include/linux/cache.h`），不引入 seL4 `PAD_TO_NEXT_CACHE_LN()` 宏。
+9. **分支预测提示**：热路径分支预测提示使用 Linux 内核 `likely()` / `unlikely()` 宏（定义于 `include/linux/compiler.h`），错误处理路径（`if (ret < 0)`、`if (IS_ERR(p))`）应使用 `unlikely()` 标注。不引入 seL4 风格的独立封装（seL4 `likely` / `unlikely` 与 Linux 同源，直接复用 Linux 宏避免命名空间冲突）。
+10. **`offsetof()` 使用**：使用 Linux 内核 `offsetof()` 宏（定义于 `include/linux/stddef.h`，等价于 `__builtin_offsetof`），不引入 seL4 `OFFSETOF()` 封装。
+
+**反向声明**（不引入的 seL4 模式）：
+
+- **不引入 `unverified_compile_assert` 宏**：seL4 的 `unverified_compile_assert(name, expr)` 是为 C parser 形式化验证工具兼容性而存在的工程妥协——C parser 不支持 `_Static_assert()`，因此在验证构建时将此宏定义为空操作。agentrt-linux 的形式化验证路径（Isabelle/HOL + Rust Kani）不经过 C parser，因此**不引入此宏**，避免无谓复杂度（违反 IRON-1 禁止新特性）。所有编译期断言统一使用 `BUILD_BUG_ON()` / `static_assert` / `_Static_assert`。
+- **不引入 seL4 `UL_CONST()` / `ULL_CONST()` 宏**：seL4 的 `UL_CONST(x)` / `ULL_CONST(x)` 是为微内核汇编启动路径设计的汇编/C 共享常量宏。agentrt-linux 作为 Linux 6.6 内核衍生工程，**直接复用** Linux 内核既有的 `_AC()` 宏（`include/uapi/linux/const.h`），不重新设计 seL4 模式。示例：`#define AIRY_PAGE_SIZE _AC(4096, UL)`。
+- **不引入 seL4 `config_set()` / `config_ternary()` / `wrap_config_set()` 编译期配置检测宏**：seL4 的 `config_set(macro)` / `config_ternary(macro, true, false)` 是为微内核编译期配置检测设计的宏技巧，`wrap_config_set()` 是为 C parser 形式化验证兼容性而存在的防常量折叠包装。agentrt-linux **直接复用** Linux 内核既有的 `IS_ENABLED()` / `IS_BUILTIN()` / `IS_MODULE()` 宏（定义于 `include/linux/kconfig.h`），不引入 seL4 模式。理由：(1) Linux 宏已覆盖全部使用场景；(2) `wrap_config_set()` 是 C parser 妥协，agentrt-linux 不使用 C parser（违反 IRON-1 禁止新特性）。
+- **不引入 seL4 属性宏命名空间**（`PACKED`/`NORETURN`/`CONST`/`PURE`/`ALIGN`/`FASTCALL`/`NO_INLINE`/`FORCE_INLINE`/`SECTION`/`UNUSED`/`USED`/`MAY_ALIAS`/`UNREACHABLE`/`OFFSETOF`）：seL4 在 `include/util.h` 定义了完整的属性宏体系，但 agentrt-linux **直接复用** Linux 内核 `include/linux/compiler_attributes.h` 的属性宏（`__packed` / `__noreturn` / `__pure` / `__aligned` / `__noinline` / `__always_inline` / `__section` 等），不引入 seL4 风格的属性宏命名空间。理由：避免双轨制命名空间冲突（违反 IRON-1 禁止新特性）。详见下方 §6.5.1 GCC 属性使用规范。
+
+#### 6.5.1 GCC 属性使用规范（对齐 Linux 6.6 内核基线）
+
+agentrt-linux 内核态代码直接复用 Linux 6.6 内核基线的 GCC 属性宏体系，定义于 `include/linux/compiler_attributes.h`（共 60+ 个属性宏）。本节列出常用属性的使用规范。
+
+| 属性 | Linux 宏 | 用途 | 使用场景 |
+|------|---------|------|---------|
+| 不返回 | `__noreturn` | 函数不返回 | `airy_panic()`、`airy_halt()`、`do_exit()` |
+| 紧凑结构体 | `__packed` | 取消结构体填充 | 协议头、寄存器映射 |
+| 对齐 | `__aligned(n)` | 强制对齐 | 共享内存结构、缓存行对齐 |
+| 初始化段 | `__init` | 仅初始化阶段使用 | `module_init()`、`airy_boot_init()` |
+| 只读数据段 | `__read_mostly` | 频繁读取的变量 | 全局统计、配置开关 |
+| 强制内联 | `__always_inline` | 强制内联 | 热路径 helper |
+| 禁止内联 | `__noinline` | 禁止内联 | 调试函数、栈跟踪锚点 |
+| 纯函数 | `__pure` | 无副作用，可 CSE | 查找函数、哈希函数 |
+| const 函数 | `__attribute__((const))` | 完全无内存访问 | 纯计算函数 |
+| 段放置 | `__section("name")` | 自定义段 | `__initdata`、`__percpu` |
+| 冷路径 | `__cold` | 标记冷代码路径 | 错误处理、panic 路径 |
+| 不可达 | `unreachable()` | 不可达声明 | `airy_panic()` 之后、`switch` 默认分支 |
+| 偏移量 | `offsetof()` | 结构体成员偏移 | 容器模式、ABI 校验 |
+| 位操作 | `__builtin_clzl()` 等 | 编译器内置位操作 | 优先级计算、bitmap 扫描 |
+
+**禁止使用**：
+- seL4 风格的属性宏命名空间（`PACKED`/`NORETURN`/`CONST`/`PURE`/`ALIGN`/`FASTCALL`/`NO_INLINE`/`FORCE_INLINE`/`SECTION`/`UNUSED`/`USED`/`MAY_ALIAS`）
+- 自创属性宏命名空间（如 `AIRY_PACKED`、`AIRY_NORETURN`）
+
+**理由**：直接复用 Linux 内核属性宏可避免双轨制命名空间冲突，且与 Linux 6.6 内核基线的 `sparse`/`checkpatch`/`clang-format` 工具链原生兼容。
+
+#### 6.5.2 形式化验证注释规范（agentrt-linux 专属）
+
+**不引入 seL4 形式化验证注释**：seL4 在源码中使用 `/** MODIFIES: */`、`/** DONT_TRANSLATE */`、`/** FNSPEC ... */` 等形式化验证辅助注释，服务于 Isabelle/HOL 的 l4v 工具链（C parser → Simpl → Isar）。agentrt-linux 的形式化验证路径与 seL4 不同——内核态使用 Isabelle/HOL 的 AutoCorres（不经过 C parser），Rust 子模块使用 Kani，因此**不引入 seL4 风格的形式化验证注释**。
+
+**agentrt-linux 形式化验证注释规范**（1.0.1+ 阶段启用）：
+
+| 验证工具 | 注释风格 | 适用范围 | 启用时机 |
+|---------|---------|---------|---------|
+| Isabelle/HOL (AutoCorres) | `/* @verified: autocorres <spec_file> */` | kernel 子仓 C 代码 | 1.0.1 M3 阶段 |
+| Rust Kani | `#[kani::requires(...)]` / `#[kani::ensures(...)]` | cognition/cloudnative Rust 模块 | 1.0.1 M3 阶段 |
+| 不验证 | （无注释） | 默认 | — |
+
+**0.1.1 阶段约束**：0.1.1 阶段不引入形式化验证注释（IRON-1 禁止新特性），仅在 [08-known-caveats.md](../../10-architecture/08-known-caveats.md) §1.2 登记验证配置敏感性，待 1.0.1 M3 阶段启用。
+
+**反向声明**（不引入的 seL4 模式）：
+
+- **不引入 seL4 `MODIFIES` / `FNSPEC` / `DONT_TRANSLATE` 注释**：seL4 的形式化验证注释是 C parser 兼容性妥协——C parser 不支持完整 C 语法，需要手动标注"哪些函数可解析、哪些函数公理化"。agentrt-linux 使用 AutoCorres（支持完整 C 语法），不需要此类注释。
+- **不引入 seL4 `compile_assert` 双层设计**：seL4 的 `compile_assert(name, expr)` 在 `CONFIG_VERIFICATION_BUILD` 时使用 typedef 技巧（因 C parser 不支持 `_Static_assert()`），否则使用 `_Static_assert`。agentrt-linux 统一使用 `BUILD_BUG_ON()` / `static_assert` / `_Static_assert`，不引入双层设计。
 
 ---
 
@@ -739,7 +950,7 @@ agentrt-linux（AirymaxOS）内核态错误码对齐 agentrt 错误码体系（[
 #define AIRY_ENOENT          (-ENOENT)   /* == AIRY_ENOENT  (-2)  */
 ```
 
-#### 7.5 错误处理流程总览
+#### 7.6 错误处理流程总览
 
 ```mermaid
 graph TD
@@ -863,7 +1074,7 @@ SYSCALL_DEFINE3(airy_agent_register, u32, agent_id,
 agent = kmem_cache_zalloc(agent_cache, GFP_KERNEL_ACCOUNT);
 ```
 
-**GFP 标志完整选型表**（OLK-6.6 规范）：
+**GFP 标志完整选型表**（Linux 6.6 内核基线）：
 
 | 上下文 | 推荐标志 | 可睡眠 | 可回收 | 核算 |
 |--------|---------|--------|--------|------|
@@ -876,9 +1087,9 @@ agent = kmem_cache_zalloc(agent_cache, GFP_KERNEL_ACCOUNT);
 
 #### 8.5 内存毒化保护（OS-KER-222）
 
-> **OS-KER-222**：对所有动态分配的内核内存启用毒化保护——分配时写入 `POISON_INUSE`（0x5a）检测 use-before-init，释放时写入 `POISON_FREE`（0x6b）检测 use-after-free，RedZone 写入 0xbb/0xcc 检测越界写。这是 Linux 内核内存安全的三层防御体系，源于 openEuler OLK-6.6 代码品味。
+> **OS-KER-222**：对所有动态分配的内核内存启用毒化保护——分配时写入 `POISON_INUSE`（0x5a）检测 use-before-init，释放时写入 `POISON_FREE`（0x6b）检测 use-after-free，RedZone 写入 0xbb/0xcc 检测越界写。这是 agentrt-linux 内核内存安全的三层防御体系，源于 Linux 6.6 内核基线工程品味。
 
-**毒化值定义**（`include/linux/poison.h` OLK-6.6 规范）：
+**毒化值定义**（`include/linux/poison.h`，Linux 6.6 内核基线）：
 
 | 宏 | 值 | 语义 | 检测目标 |
 |----|----|------|---------|
@@ -929,7 +1140,7 @@ void airy_cap_free(void *cap)
 
 > **OS-KER-223**：对所有非标准分配器（自定义 mempool、静态预留区、ring buffer）分配的内存，必须显式调用 `kmemleak_alloc`/`kmemleak_free` 注册分配/释放追踪。对刻意保留的全局对象或已知良性泄漏，必须通过 `kmemleak_not_leak` 标注。kmemleak 在未开启 `CONFIG_DEBUG_KMEMLEAK` 时通过内联空函数实现零开销消除，生产环境无性能影响。
 
-**核心 API**（`include/linux/kmemleak.h` OLK-6.6 规范）：
+**核心 API**（`include/linux/kmemleak.h`，Linux 6.6 内核基线）：
 
 | API | 语义 | 使用场景 |
 |-----|------|---------|
@@ -986,7 +1197,7 @@ int __init airy_agent_registry_init(void)
 
 #### 8.7 kmem_cache 选型标准（OS-KER-227）
 
-> **OS-KER-227**：对满足以下所有条件的对象类型，必须使用专用 `kmem_cache_create` 而非通用 `kmalloc`：(1) 对象大小固定；(2) 整个生命周期内分配/释放次数超过 100 次；(3) 对调试支持有要求（caller tracking、RedZone、poisoning）。通用 `kmalloc` 仅适用于临时缓冲区、一次性分配、大小不固定的分配。此标准源于 OLK-6.6 内核工程实践——inode/dentry/task_struct 等高频固定大小对象均使用专用 slab cache。
+> **OS-KER-227**：对满足以下所有条件的对象类型，必须使用专用 `kmem_cache_create` 而非通用 `kmalloc`：(1) 对象大小固定；(2) 整个生命周期内分配/释放次数超过 100 次；(3) 对调试支持有要求（caller tracking、RedZone、poisoning）。通用 `kmalloc` 仅适用于临时缓冲区、一次性分配、大小不固定的分配。此标准源于 Linux 6.6 内核基线工程实践——inode/dentry/task_struct 等高频固定大小对象均使用专用 slab cache。
 
 **选型决策表**：
 
@@ -1151,7 +1362,7 @@ static int airy_untyped_reset_children(cte_t *ut_slot,
 
 #### 8.9 内存安全综合示例
 
-以下示例展示 agentrt-linux 内核态遵循 OLK-6.6 代码品味的内存分配与释放最佳实践，集成了毒化保护、泄漏检测、自动释放、goto 集中出口与错误处理规范：
+以下示例展示 agentrt-linux 内核态遵循 Linux 6.6 内核基线工程品味的内存分配与释放最佳实践，集成了毒化保护、泄漏检测、自动释放、goto 集中出口与错误处理规范：
 
 ```c
 /*
@@ -1159,7 +1370,7 @@ static int airy_untyped_reset_children(cte_t *ut_slot,
  * @agent_id: Agent 标识符
  * @session_out: 输出会话对象指针
  *
- * 本示例集中展示 agentrt-linux 遵循 OLK-6.6 代码品味的内存管理工程规范：
+ * 本示例集中展示 agentrt-linux 遵循 Linux 6.6 内核基线工程品味的内存管理工程规范：
  *   - OS-KER-016: GFP 标志按上下文正确选型
  *   - OS-KER-222: 敏感对象使用专用 kmem_cache + SLAB_POISON | SLAB_RED_ZONE
  *   - OS-KER-223: kmemleak 显式标注非泄漏对象
@@ -1246,7 +1457,7 @@ static void airy_agent_session_release(struct kref *ref)
 
 #### 9.0 kref 释放回调规范（OS-KER-226）
 
-> **OS-KER-226**：`kref_put(release)` 的 `release` 回调必须通过 `container_of` 获取外层结构体指针，禁止直接将 `kfree` 作为 release 回调传入。此规则源于 OLK-6.6 `include/linux/kref.h` 第 49-55 行注释的明确声明——"it is not acceptable to pass kfree in as this function"。违反此规则将导致释放不正确（仅释放 kref 成员的地址而非外层结构体）。
+> **OS-KER-226**：`kref_put(release)` 的 `release` 回调必须通过 `container_of` 获取外层结构体指针，禁止直接将 `kfree` 作为 release 回调传入。此规则源于 Linux 6.6 内核基线 `include/linux/kref.h` 第 49-55 行注释的明确声明——"it is not acceptable to pass kfree in as this function"。违反此规则将导致释放不正确（仅释放 kref 成员的地址而非外层结构体）。
 
 **为什么不能直接传 kfree**：
 
