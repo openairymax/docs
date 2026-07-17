@@ -67,7 +67,7 @@ agentrt-linux 架构设计基于体系并行论（Multibody Cybernetic Intellige
 | cognition 增量规划器 | 轮次内反馈 | 任务节点完成后通过 callback 触发 DAG 增量扩展 |
 | memory L4 模式层 | 跨轮次反馈 | L4 持久同调挖掘历史模式 → 认知策略配置热更新 |
 | security 审计哈希链 | 安全反馈 | 审计日志 → 权限规则运行时 reload |
-| services monit_d | 健康反馈 | telemetry metrics → monit_d 告警 + 自动伸缩 |
+| services audit_d | 健康反馈 | telemetry metrics → audit_d 告警 + 自动伸缩 |
 
 ### 2.2 S-2 层次分解原则
 
@@ -176,7 +176,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 
 | 落地子仓/模块 | 守护进程 | 隔离机制 |
 |---------------|----------|----------|
-| services 12 daemons | llm_d / market_d / monit_d / tool_d / sched_d / gateway_d 等 | 独立地址空间 + systemd 单元 + capability 限制 |
+| services 12 daemons | cogn_d / gateway_d / audit_d / dev_d / sched_d / macro_superv 等 | 独立地址空间 + systemd 单元 + capability 限制 |
 | services VFS 用户态化 | vfs_d | 用户态文件系统（参考 seL4 服务用户态化，ADR-014） |
 | services 网络栈用户态化 | net_d | DPDK / AF_XDP 用户态网络 |
 | services 驱动框架用户态化 | drv_d | VFIO / libvfio 用户态驱动 |
@@ -311,7 +311,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 落地子仓/模块 | 可观测性类型 | 实现机制 |
 |---------------|--------------|----------|
 | services journald | 日志 | 结构化日志 + trace_id + 完整上下文 |
-| services monit_d | 指标 | 性能监控、资源使用、业务指标 |
+| services audit_d | 指标 | 性能监控、资源使用、业务指标 |
 | services OpenTelemetry | 追踪 | 分布式追踪、调用链分析 |
 | kernel eBPF kfunc | 内核可观测性 | dynamic pointer + kfunc 注册的探针 |
 | cloudnative Prometheus + Grafana | 云原生监控 | K8s 原生监控栈 |
@@ -354,7 +354,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 命名空间 | 用途 | 示例 |
 |----------|------|------|
 | `airy_` 前缀 | agentrt 命名空间（同源） | airy_sys_task_submit / airy_ipc_send |
-| `<service_name>_d` 后缀 | 守护进程命名 | llm_d / market_d / monit_d / tool_d / sched_d |
+| `<service_name>_d` 后缀 | 守护进程命名 | cogn_d / gateway_d / audit_d / dev_d / sched_d |
 | `module_action_object()` | 函数命名 | cognition_submit_task / memory_search_vector |
 | 大写_下划线 | 常量命名 | AIRY_EOK / AIRY_IPC_HDR_SZ |
 | 名词结构 | 类型命名 | struct airy_task_desc / struct airy_ipc_msg_hdr |
@@ -576,7 +576,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | S 系统观 + A 设计美学在 agentrt 5 维模块 ↔ agentrt-linux 8 子仓的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | K 内核观（agentrt-linux sched_ext / eBPF 独有）+ E 工程观实现（CMake vs Kbuild） |
 
-### 10.2 [SC] 共享契约层——6 个头文件在五维原则中的角色
+### 10.2 [SC] 共享契约层——10 个头文件在五维原则中的角色
 
 | 头文件 | 对应维度 | 在五维原则中的角色 | 消费方 |
 |--------|---------|-------------------|--------|

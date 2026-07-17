@@ -94,7 +94,7 @@ agentrt-linux 开发方案由三大支柱构成。三大支柱对应"标准 → 
 
 | # | 子仓 | 中文 | 核心职责 | 同源 agentrt |
 |---|------|------|---------|--------------|
-| 1 | kernel | 极境内核 | Linux 6.6 内核基线 + 微内核化改造（sched_ext + eBPF + io_uring + Rust） | atoms/corekern（MicroCoreRT） |
+| 1 | kernel | 极境内核 | Linux 6.6 内核基线 + 微内核化改造（方案 C-Prime + eBPF + io_uring + Rust） | atoms/corekern（MicroCoreRT） |
 | 2 | services | 极境服务 | 用户态系统服务（VFS + 网络 + 驱动 + 12 daemons 集成） | daemons |
 | 3 | security | 极境安全 | capability 安全 + LSM + 机密计算 + 国密 | cupolas |
 | 4 | memory | 极境记忆 | 记忆持久化 + CXL + PMEM + MGLRU | heapstore + memoryrovol |
@@ -107,7 +107,7 @@ agentrt-linux 开发方案由三大支柱构成。三大支柱对应"标准 → 
 
 | 改造方向 | 当前（Linux 6.6） | 目标（agentrt-linux 1.0.1） |
 |---------|-------------------|------------------------|
-| 调度类 | CFS + EEVDF | + SCHED_AGENT（sched_ext BPF 调度器，与 MicroCoreRT 同源） |
+| 调度类 | CFS + EEVDF | + AIRY_SCHED_AGENT（方案 C-Prime 用户态调度器，与 MicroCoreRT 同源） |
 | 驱动 | 内核态驱动 | 驱动用户态化（DPDK/SPDK 模式 + capability 隔离） |
 | IPC | System V + POSIX | + AgentsIPC 128B 消息头（与 agentrt 同源） |
 | 安全 | LSM 钩子 | + capability 安全模型（与 Cupolas 同源） |
@@ -321,7 +321,7 @@ graph TB
         A5[CoreLoopThree<br/>循环模型]
     end
     subgraph agentrt-linux[agentrt-linux OS 发行版]
-        O1[SCHED_AGENT 策略]
+        O1[AIRY_SCHED_AGENT 策略]
         O2[IPC 子系统]
         O3[capability + LSM]
         O4[记忆子系统]
@@ -342,7 +342,7 @@ agentrt 的设计假设和 agentrt-linux 的实现假设一致，agentrt 在 age
 
 | 同源点 | agentrt 侧 | agentrt-linux 侧 | 互操作效果 |
 |--------|-----------|--------------|-----------|
-| 调度 | MicroCoreRT 调度 | SCHED_AGENT 策略 | 调度语义一致，无调度适配 |
+| 调度 | MicroCoreRT 调度 | AIRY_SCHED_AGENT 策略 | 调度语义一致，无调度适配 |
 | IPC | AgentsIPC 128B 消息头 | IPC 子系统 | 消息格式一致，无序列化转换 |
 | 安全 | Cupolas 权限模型 | capability + LSM | 安全模型一致，无权限映射 |
 | 记忆 | MemoryRovol 四层 | 记忆子系统 MGLRU | 记忆模型一致，无记忆迁移 |
@@ -408,7 +408,7 @@ agentrt-linux 开发策略是五维正交 24 原则在"开发方法"维度的具
 | **K-1 内核极简** | Part 2 微内核化改造；内核职责最小化 | Part 2 |
 | **K-2 接口契约化** | 4 层接口稳定性分级；用户 ABI 永不破坏 | Part 1 + Part 2 |
 | **K-3 服务隔离** | 用户态服务化 + capability 隔离 | Part 2 + Part 5 |
-| **K-4 可插拔策略** | sched_ext BPF 调度器 + LSM 钩子 + 模块签名 | Part 2 + Part 5 |
+| **K-4 可插拔策略** | 方案 C-Prime 用户态调度器 + LSM 钩子 + 模块签名 | Part 2 + Part 5 |
 | **C-1 双系统协同** | 快慢路径分层（热路径 C / 冷路径 Rust） | Part 2 |
 | **C-2 增量演化** | 补丁序列中点可编译；git bisect 友好 | Part 6 |
 | **E-1 安全内生** | Part 5 安全加固前置（与 Part 3/4 并行） | Part 5 |

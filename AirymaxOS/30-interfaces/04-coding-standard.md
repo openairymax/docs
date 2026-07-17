@@ -55,23 +55,22 @@ agentrt-linux 全部公共符号使用统一命名空间前缀，与 agentrt 同
 
 ### 2.2 Daemon 二进制命名
 
-守护进程二进制统一使用 `<service_name>_d` 后缀（与 agentrt daemons 同源）：
+守护进程二进制遵循 `<service_name>_d` 命名约定（与 agentrt daemons 同源）；USV/ULPS/UCF 三大基础 daemon 使用语义全名（`macro_superv`/`logger_daemon`/`config_daemon`）。12 daemons 统一归属 `services/daemons/`，由 USV 统一生命周期管理：
 
 | Daemon 二进制 | 职责 | 所属子仓 |
 |--------------|------|---------|
-| `gateway_d` | 网关守护进程 | services |
-| `llm_d` | LLM 推理守护进程 | services |
-| `tool_d` | 工具守护进程 | services |
-| `sched_d` | 调度守护进程 | services |
-| `market_d` | 市场守护进程 | services |
-| `monit_d` | 监控守护进程 | services |
-| `channel_d` | 通道守护进程 | services |
-| `info_d` | 信息守护进程 | services |
-| `notify_d` | 通知守护进程 | services |
-| `observe_d` | 观测守护进程 | services |
-| `hook_d` | 钩子守护进程 | services |
-| `plugin_d` | 插件守护进程 | services |
-| `memoryrovol_d` | 记忆卷载守护进程 | memory |
+| `macro_superv` | 主监管守护进程（USV） | services/daemons/ |
+| `logger_daemon` | 日志消费守护进程（ULPS） | services/daemons/ |
+| `config_daemon` | 配置管理守护进程（UCF） | services/daemons/ |
+| `gateway_d` | 网关守护进程 | services/daemons/ |
+| `sched_d` | 调度守护进程 | services/daemons/ |
+| `vfs_d` | VFS 用户态服务守护进程 | services/daemons/ |
+| `net_d` | 网络策略守护进程 | services/daemons/ |
+| `mem_d` | 记忆管理守护进程 | services/daemons/ |
+| `cogn_d` | 认知调度守护进程 | services/daemons/ |
+| `sec_d` | 安全策略守护进程 | services/daemons/ |
+| `audit_d` | 审计守护进程 | services/daemons/ |
+| `dev_d` | 设备驱动守护进程 | services/daemons/ |
 
 ### 2.3 函数命名
 
@@ -96,7 +95,7 @@ agentrt-linux 全部公共符号使用统一命名空间前缀，与 agentrt 同
 | `airy_syscalls.h` | 系统调用接口 |
 | `include/airymax/error.h` | 错误码 SSoT 定义（[SC] 补充共享头文件） |
 | `daemon_errors.h` | daemon 错误码 |
-| `sched_agent.bpf.c` | SCHED_AGENT eBPF 程序 |
+| `airy_user_sched.policy` | 用户态调度器策略（方案 C-Prime） |
 | `io_uring_ipc.c` | io_uring IPC 实现 |
 
 ### 2.5 类型命名
@@ -489,7 +488,7 @@ AIRY_API int airy_sys_task_submit(const struct airy_task_desc *task_desc,
 
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件的命名风格、类型定义、Doxygen 注释、`AIRY_E*` 错误码前缀在两侧完全一致 |
+| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件的命名风格、类型定义、Doxygen 注释、`AIRY_E*` 错误码前缀在两侧完全一致 |
 | **[SS] 语义同源层** | 规范同源，实现独立 | agentrt（CMake 管理）↔ agentrt-linux（Kbuild + Kconfig 管理）的命名规范、daemon 命名（`_d` 后缀）、函数命名（`module_action_object()`）同源 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 用户态编码风格（4 空格 + 1TBS + 100 列）↔ agentrt-linux 内核态编码风格（Linux 6.6 内核基线：Tab 8 + K&R + 80 列 + errno+goto） |
 
@@ -551,7 +550,7 @@ graph TB
     style OS_CODE fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-IFACE-008**： 编码规范在 agentrt（用户态，4 空格 + 1TBS + 100 列）与 agentrt-linux 内核态（Linux 6.6 内核基线 Tab 8 + K&R + 80 列 + errno+goto）间保持命名同源而风格独立——6 个 [SC] 共享头文件统一采用 `airy_` 前缀 + `snake_case_t` + Doxygen + `AIRY_E*`，在两侧编译期通过 `-I` 引用同一份源码，禁止生成风格转换中间文件。
+> **OS-IFACE-008**： 编码规范在 agentrt（用户态，4 空格 + 1TBS + 100 列）与 agentrt-linux 内核态（Linux 6.6 内核基线 Tab 8 + K&R + 80 列 + errno+goto）间保持命名同源而风格独立——10 个 [SC] 共享头文件统一采用 `airy_` 前缀 + `snake_case_t` + Doxygen + `AIRY_E*`，在两侧编译期通过 `-I` 引用同一份源码，禁止生成风格转换中间文件。
 
 ---
 

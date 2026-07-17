@@ -91,7 +91,7 @@ SPDX 2.3 JSON 顶层结构包含以下必填字段：
 | 扩展字段 | 类型 | 说明 | 示例值 |
 |---------|------|------|--------|
 | `airymax:submodule` | string | 标识组件所属的 git submodule | `"kernel"` / `"services"` |
-| `airymax:homologousModule` | string | 标识同源 agentrt 用户态模块（IRON-9 v2 [SS] 语义同源层） | `"gateway_d"` / `"llm_d"` |
+| `airymax:homologousModule` | string | 标识同源 agentrt 用户态模块（IRON-9 v2 [SS] 语义同源层） | `"gateway_d"` / `"cogn_d"` |
 | `airymax:scLayer` | enum | 标识 IRON-9 v2 三层共享模型层次 | `"[SC]"` / `"[SS]"` / `"[IND]"` |
 
 > **规则引用**：扩展字段命名遵循 SSoT 注册表 §13 其他 `OS-*` 工程规则扩展登记约定，新增扩展字段须先在 `50-engineering-standards/09-ssot-registry.md` 登记。
@@ -336,10 +336,10 @@ services 子仓包含 12 个 daemon 与 2 个用户态化子系统：
 | 组件 | SPDX 子包名 | 功能 | 依赖 |
 |------|------------|------|------|
 | gateway_d | `agentrt-linux-services-gateway` | IPC 网关守护进程 | kernel |
-| llm_d | `agentrt-linux-services-llm` | LLM 调度守护进程 | kernel, cognition |
-| tool_d | `agentrt-linux-services-tool` | 工具调用守护进程 | kernel |
+| cogn_d | `agentrt-linux-services-cogn` | LLM 调度守护进程 | kernel, cognition |
+| dev_d | `agentrt-linux-services-dev` | 工具调用守护进程 | kernel |
 | sched_d | `agentrt-linux-services-sched` | 调度守护进程 | kernel |
-| monit_d | `agentrt-linux-services-monit` | 监控守护进程 | kernel |
+| audit_d | `agentrt-linux-services-audit` | 监控守护进程 | kernel |
 | net_d | `agentrt-linux-services-net` | 网络用户态化 | kernel |
 | vfs_d | `agentrt-linux-services-vfs` | VFS 用户态化 | kernel |
 | 其余 5 个 daemon | `agentrt-linux-services-*` | 各类系统服务 | kernel |

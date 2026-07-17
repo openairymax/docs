@@ -51,7 +51,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **业界定义**: 在后台运行的长生命周期进程，通常独立于终端会话，提供特定服务。Unix 传统命名以 `d` 后缀（如 `syslogd`、`sshd`）。在 systemd 体系下，daemon 作为 systemd 单元管理。
 
-**agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）采用微内核化改造策略，将功能服务化为用户态进程，通过 systemd 集成管理。命名遵循 `*_d` 约定（如 `gateway_d`、`llm_d`、`tool_d`）。12 个 daemon 服务覆盖认知、安全、记忆、调度等全部功能域。
+**agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）采用微内核化改造策略，将功能服务化为用户态进程，通过 systemd 集成管理。命名遵循 `*_d` 约定（如 `gateway_d`、`cogn_d`、`dev_d`）。12 个 daemon 服务覆盖认知、安全、记忆、调度等全部功能域。
 
 **系统内代码**: `*_d` 进程后缀，systemd unit 文件
 
@@ -409,7 +409,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次        | 标注     | 共享程度               | 内容                                                                                                                                                                                                                                                 |
 | --------- | ------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **共享契约层** | \[SC]  | 完全共享代码             | `include/airymax/` 6 个头文件：`syscalls.h`（12 核心 syscall 编号）、`ipc.h`（IPC magic + 128B 消息头）、`sched.h`（任务描述符 + 调度类）、`security_types.h`（capability + LSM）、`memory_types.h`（MemoryRovol L1-L4）、`cognition_types.h`（CoreLoopThree 阶段）。另含错误码、规则编号体系、五维正交24原则 |
+| **共享契约层** | \[SC]  | 完全共享代码             | `include/airymax/` 10 个头文件：`syscalls.h`（12 核心 syscall 编号）、`ipc.h`（IPC magic + 128B 消息头）、`sched.h`（任务描述符 + 调度类）、`security_types.h`（capability + LSM）、`memory_types.h`（MemoryRovol L1-L4）、`cognition_types.h`（CoreLoopThree 阶段）。另含错误码、规则编号体系、五维正交24原则 |
 | **语义同源层** | \[SS]  | 高层 API 语义同源，签名独立演进 | 调度语义（MicroCoreRT）、安全模型（Cupolas）、IPC 传输（AgentsIPC）、记忆模型（MemoryRovol）、认知模型（CoreLoopThree）                                                                                                                                                            |
 | **完全独立层** | \[IND] | 完全独立               | agentrt-linux 专属：内核驱动框架、Kbuild、systemd 集成、内核内部 API；agentrt 专属：跨平台用户态运行时、SDK 四语言、CLI/TUI                                                                                                                                                            |
 
@@ -733,7 +733,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 系统调用         | `airy_sys_[domain]_[action]`         | `airy_sys_task_submit`          | \[SC]        |
 | 认知层          | `airy_[prefix]_[action]`             | `airy_tc_context_window_append` | \[SS]        |
 | 安全穹顶         | `cupolas_[subsystem]_[action]`       | `cupolas_permission_check`      | \[SS]        |
-| 用户态服务        | `[service]_[action]`                 | `llm_d_complete`                | \[IND]       |
+| 用户态服务        | `[service]_[action]`                 | `cogn_d_complete`                | \[IND]       |
 | IPC 通信       | `airy_ipc_[action]`                  | `airy_ipc_send`                 | \[SS]        |
 | SCHED\_AGENT | `airy_sched_agent_[action]`          | `airy_sched_agent_submit`       | \[SS]        |
 | 多智能体         | `mac_[action]` / `airy_mac_[action]` | `mac_framework_create`          | \[SS]        |
@@ -760,7 +760,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 规范       | 规则                                           |
 | -------- | -------------------------------------------- |
 | 子仓目录     | `[domain]/`（如 `kernel/`、`tests-linux/`） |
-| 用户态服务目录  | `[name]_d`（如 `llm_d/`）                       |
+| 用户态服务目录  | `[name]_d`（如 `cogn_d/`）                       |
 | 源文件      | 下划线分隔 + `.c`（如 `thinking_chain.c`）           |
 | 头文件      | 下划线分隔 + `.h`（如 `cupolas.h`）                  |
 | 测试文件     | `test_[module].c`（如 `test_loop.c`）           |
@@ -775,18 +775,18 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 服务         | 功能                            | systemd unit        |
 | ---------- | ----------------------------- | ------------------- |
-| gateway\_d | API 网关（MCP/A2A/OpenAI 兼容协议）   | `gateway_d.service` |
-| llm\_d     | LLM 推理代理（缓存/计费/多 Provider 路由） | `llm_d.service`     |
-| tool\_d    | 工具调用代理（注册/执行/验证）              | `tool_d.service`    |
-| market\_d  | 市场/注册表服务（Agent/Skill 注册安装）    | `market_d.service`  |
-| sched\_d   | 任务调度服务                        | `sched_d.service`   |
-| monit\_d   | 监控服务（指标/追踪/告警）                | `monit_d.service`   |
-| channel\_d | 通道服务                          | `channel_d.service` |
-| observe\_d | 观测服务                          | `observe_d.service` |
-| notify\_d  | 通知服务                          | `notify_d.service`  |
-| info\_d    | 信息服务                          | `info_d.service`    |
-| hook\_d    | 钩子服务（事件处理与系统钩子）               | `hook_d.service`    |
-| plugin\_d  | 插件服务（外部插件管理）                  | `plugin_d.service`  |
+| gateway\_d    | API 网关（MCP/A2A/OpenAI 兼容协议）   | `gateway_d.service`     |
+| cogn\_d       | LLM 推理代理（缓存/计费/多 Provider 路由） | `cogn_d.service`        |
+| dev\_d        | 工具调用代理（注册/执行/验证）              | `dev_d.service`         |
+| gateway\_d    | 市场/注册表服务（Agent/Skill 注册安装）    | `gateway_d.service`     |
+| sched\_d      | 任务调度服务                        | `sched_d.service`       |
+| audit\_d      | 监控服务（指标/追踪/告警）                | `audit_d.service`       |
+| net\_d        | 通道服务                          | `net_d.service`         |
+| logger\_daemon| 观测服务                          | `logger_daemon.service` |
+| sec\_d        | 通知服务                          | `sec_d.service`         |
+| mem\_d        | 信息服务                          | `mem_d.service`         |
+| vfs\_d        | 钩子服务（事件处理与系统钩子）               | `vfs_d.service`         |
+| config\_daemon| 插件服务（外部插件管理）                  | `config_daemon.service` |
 
 ### B. agentrt-linux 用户态驱动服务（3 个）
 

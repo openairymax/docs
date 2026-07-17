@@ -457,7 +457,7 @@ AIRY_API int airy_sys_rovol_ctl(uint32_t op, uint32_t pid,
  * @cgroup_path: Target cgroup path.
  * @policy: Policy name (scx_realtime / scx_batch / scx_interactive / scx_agent).
  *
- * Unified scheduling control via sched_ext (SCHED_EXT=7).
+ * Unified scheduling control via user-space scheduler (Scheme C-Prime).
  *
  * Return: 0 on success, negative errno on failure.
  *
@@ -539,7 +539,7 @@ AIRY_API int airy_sys_notify(cap_t cap);
 
 ### 5.2 调度路径优化
 
-- **SCHED_EXT 调度**：通过 sched_ext（agentrt-linux 内核增强，主线 6.12+）在用户态 eBPF 程序中实现 SCHED_AGENT 策略，避免内核态策略切换开销。
+- **方案 C-Prime 调度**：通过用户态调度器（方案 C-Prime：SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）实现 Agent 调度策略，零内核调度器修改。
 - **EEVDF 调度器**：Linux 6.6 原生 EEVDF 调度器提供混合抢占模式，兼顾吞吐与响应。
 - **CoreLoopThree 阶段感知**：`airy_sys_clt_notify` 在思考阶段提升优先级，行动阶段恢复正常，减少关键路径抢占。
 
@@ -563,7 +563,7 @@ AIRY_API int airy_sys_notify(cap_t cap);
 
 ### 5.5 优先级与延迟预算
 
-agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget），由 SCHED_EXT 策略强制：
+agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget），由用户态调度器策略（方案 C-Prime）强制：
 
 | 任务类别 | cgroup | 优先级范围 | 延迟预算（P99） | 典型场景 |
 |---------|---------|-----------|----------------|---------|
@@ -643,7 +643,7 @@ if (ret < 0) {
 
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（12 核心 + 12 预留 = 24 槽位编号）+ `sched.h`（任务描述符 magic 0x41475453 'AGTS'、SCHED_EXT=7、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`struct airy_ipc_msg_hdr`）+ `security_types.h`（capability 41 ID + cap_op 7 操作）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举） |
+| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（12 核心 + 12 预留 = 24 槽位编号）+ `sched.h`（任务描述符 magic 0x41475453 'AGTS'、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`struct airy_ipc_msg_hdr`）+ `security_types.h`（capability 41 ID + cap_op 7 操作）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举） |
 | **[SS] 语义同源层** | 操作模式同源，签名独立演进 | agentrt `syscalls.h`（用户态 libc syscall 包装）↔ agentrt-linux `airy_syscalls.h`（内核 `SYSCALL_DEFINE*`）12 核心同源 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台 syscall 封装（Linux/macOS/Windows 三平台）↔ agentrt-linux 内核 syscall 表注册（`arch/x86/entry/syscalls/syscall_64.tbl` 新增段） |
 
@@ -652,7 +652,7 @@ if (ret < 0) {
 | 头文件 | 在系统调用中的角色 | 消费方 |
 |--------|-------------------|--------|
 | `syscalls.h` | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位） | 全部 12 个 syscall |
-| `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ SCHED_EXT=7 + 优先级 0-139 + MAC_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
+| `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + MAC_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
 | `ipc.h` | `struct airy_ipc_msg_hdr` 128B 消息头（magic 0x41524531 'ARE1'）+ opcode + flags | `airy_sys_call` / `airy_sys_send` / `airy_sys_recv` 等 |
 | `security_types.h` | capability 41 ID + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate） | `airy_sys_call`（security capability invocation） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
@@ -692,7 +692,7 @@ graph TB
 
     subgraph "[SC] 共享契约层"
         SC0[syscalls.h<br/>24 槽位编号]
-        SC1[sched.h<br/>AGTS magic + SCHED_EXT=7]
+        SC1[sched.h<br/>AGTS magic]
         SC2[ipc.h<br/>ARE1 magic + 128B hdr]
         SC3[security_types.h<br/>41 cap ID + 7 cap_op]
     end

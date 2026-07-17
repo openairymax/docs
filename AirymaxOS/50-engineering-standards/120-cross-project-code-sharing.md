@@ -1,7 +1,7 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）IRON-9 v2 三层共享模型落地规范
-> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 \[SC] 共享契约层（6 个头文件）、\[SS] 语义同源层、\[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。\
+> **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v2 三层代码共享模型落地规范。详细说明 \[SC] 共享契约层（10 个头文件）、\[SS] 语义同源层、\[IND] 完全独立层的实施细节，含双向 CI 校验机制与 magic 设计原理。\
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-12\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
@@ -45,7 +45,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次        | 缩写     | 共享程度               | 内容                                                        | 组织方式                             |
 | --------- | ------ | ------------------ | --------------------------------------------------------- | -------------------------------- |
-| **共享契约层** | \[SC]  | 完全共享代码             | 6 个头文件，定义数据结构、magic、操作码、枚举                                | `include/airymax/` 独立头文件库，两端共同依赖 |
+| **共享契约层** | \[SC]  | 完全共享代码             | 10 个头文件，定义数据结构、magic、操作码、枚举                                | `include/airymax/` 独立头文件库，两端共同依赖 |
 | **语义同源层** | \[SS]  | 高层 API 语义同源，签名独立演进 | 调度语义、安全模型、IPC 传输、记忆模型                                     | 各自独立实现，通过 \[SC] 保证互操作            |
 | **完全独立层** | \[IND] | 完全独立               | 内核驱动/Kbuild/内核 API（agentrt-linux）；跨平台用户态/SDK 四语言（agentrt） | 各自独立仓库，无依赖                       |
 
@@ -53,7 +53,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 维度    | 旧版 IRON-9 | IRON-9 v2        |
 | ----- | --------- | ---------------- |
-| 契约层代码 | 不共享，仅语义同源 | **完全共享**（6 个头文件） |
+| 契约层代码 | 不共享，仅语义同源 | **完全共享**（10 个头文件） |
 | 互操作方式 | 同源语义无适配层  | **共享代码无适配层**（增强） |
 | CI 校验 | 无         | 契约层变更双向校验        |
 
@@ -61,29 +61,26 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. \[SC] 共享契约层
 
-### 2.1 6 个 \[SC] 头文件清单
+### 2.1 10 个 \[SC] 头文件清单
 
-\[SC] 层包含**6 个**共享头文件，**唯一物理宿主**于 `kernel/include/airymax/` 目录（其他子仓通过 `-I../kernel/include` 引用，禁止物理副本，OS-IRON-014 落地），两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**：
+\[SC] 层包含**10 个**共享头文件，**唯一物理宿主**于 `kernel/include/airymax/` 目录（其他子仓通过 `-I../kernel/include` 引用，禁止物理副本，OS-IRON-014 落地），两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**：
 
 | 序号 | 文件                  | 共享内容                                                                                                    | magic 值               | 落地路径                                |
 | -- | ------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------- |
-| 1  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
-| 2  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
-| 3  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/airymax/cognition_types.h` |
-| 4  | `sched.h`           | SCHED\_EXT 约束（复用 7）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL                 | `0x41475453` ('AGTS') | `include/airymax/sched.h`           |
-| 5  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/airymax/ipc.h`             |
-| 6  | `syscalls.h`        | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
+| 1  | `error.h`           | UEF 统一错误码（AIRY_E* POSIX 负值 + AIRY_FAULT_* 0x1000+ 故障码）+ [DSL] 降级块                                      | —                     | `include/airymax/error.h`           |
+| 2  | `log_types.h`       | ULPS 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射）                                                     | —                     | `include/airymax/log_types.h`       |
+| 3  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
+| 4  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
+| 5  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/airymax/cognition_types.h` |
+| 6  | `sched.h`           | 方案 C-Prime 调度约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL | `0x41475453` ('AGTS') | `include/airymax/sched.h`           |
+| 7  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/airymax/ipc.h`             |
+| 8  | `syscalls.h`        | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
+| 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/airymax/uapi_compat.h`    |
+| 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/airymax/lsm_types.h`       |
 
-**补充内容**（不属于上述 6 个头文件，但两端共享语义）：
+**补充内容**（不属于上述 10 个 [SC] 核心头文件，但两端共享语义）：
 
 - capability 令牌格式
-- **错误码 SSoT（方案 A：POSIX errno 负值，唯一权威方案）**：
-  - `airy_err_t` 类型定义于 `agentrt/commons/include/airy_types.h:41`（`typedef int32_t airy_err_t`）。
-  - 成功码：`AIRY_EOK = 0`（与 `AIRY_SUCCESS = 0` 等价，推荐使用 `AIRY_EOK`）。
-  - 错误码值为 POSIX errno 负值（参考 Linux errno.h）：`AIRY_EINVAL=(-22)`、`AIRY_ENOMEM=(-12)`、`AIRY_ETIMEDOUT=(-110)`、`AIRY_EPERM=(-1)`、`AIRY_ENOENT=(-2)`、`AIRY_EBUSY=(-16)`、`AIRY_EIO=(-5)`、`AIRY_EEXIST=(-17)` 等。无对应 POSIX errno 的保留自定义负值（如 `AIRY_ENOTINIT=(-9)`、`AIRY_ECANCELLED=(-10)`）。
-  - 权威源文件：`agentrt/commons/utils/error/include/error.h`（定义 `AIRY_ERR_*` 扩展码 + 错误链/i18n 接口）+ `agentrt/commons/include/airy_types.h`（定义 `airy_err_t` 类型 + `AIRY_E*` POSIX 码）。**注意**：`airymax/error.h` 为规划中的 [SC] 共享头文件路径，当前尚未创建；在创建前，以 `agentrt/commons/utils/error/include/error.h` 为实际权威源。
-  - **已废弃方案**：方案 B（runtime_interfaces.md 的 -1/-2/-11 自定义序列）、方案 C（coding_conventions.md 的 -2/-4/-6 旧值）、方案 D（project_erp.md 的位掩码 0x00010000，仅用于 ERP 分类，非错误码方案）均已废弃，禁止在新代码中使用。
-  - 任何文档、代码不得另起定义，必须引用此权威源。详见 `180-i18n/03-error-message-i18n.md` §2.2。
 - 规则编号体系（IRON/BAN/STD/ACC）
 - 五维正交 24 原则
 
@@ -119,34 +116,43 @@ enum airy_struct_ops_state {
 #endif /* _AIRY_BPF_STRUCT_OPS_H */
 ```
 
-> **定位说明**：`bpf_struct_ops.h` 是 agentrt 与 agentrt-linux 之间的**补充共享文件**（SDK 网关状态管理共享结构），两端共享代码但**不属于 6 个 [SC] 核心头文件**。其 `struct airy_struct_ops_value` 和 `enum airy_struct_ops_state` 用于 agentrt 用户态 BPF loader 与 agentrt-linux 内核 struct_ops 框架之间的状态同步。
+> **定位说明**：`bpf_struct_ops.h` 是 agentrt 与 agentrt-linux 之间的**补充共享文件**（SDK 网关状态管理共享结构），两端共享代码但**不属于 10 个 [SC] 核心头文件**。其 `struct airy_struct_ops_value` 和 `enum airy_struct_ops_state` 用于 agentrt 用户态 BPF loader 与 agentrt-linux 内核 struct_ops 框架之间的状态同步。
 
-### 2.2.1 跨平台 UAPI 类型兼容：uapi\_compat.h（辅助文件）
+### 2.2.1 [SC] 核心头文件 9：uapi\_compat.h（三路类型桥接）
 
-所有 6 个 [SC] 核心头文件 + `bpf_struct_ops.h` + `error.h` 均通过 `#include <airymax/uapi_compat.h>` 获取 `__u8`/`__u16`/`__u32`/`__u64`/`__s32`/`__s64` 等 UAPI 类型。该辅助文件在 Linux 上直接包含 `<linux/types.h>`，在 macOS/Windows 上通过 `<stdint.h>` + typedef 提供等价类型，确保 [SC] 头文件在 agentrt 用户态跨平台（Linux/macOS/Windows）和 agentrt-linux 内核态均能逐字节相同地编译。
+> **定位说明**：`uapi_compat.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级），提供三路类型桥接：内核态（`__u32` 等，通过 `<linux/types.h>`）、用户态 Linux（`uint32_t` 等，通过 `<stdint.h>` + typedef）、第三方平台（`uint32_t` with stdint.h）。
+
+所有 10 个 [SC] 核心头文件 + `bpf_struct_ops.h`（补充）均通过 `#include <airymax/uapi_compat.h>` 获取 `__u8`/`__u16`/`__u32`/`__u64`/`__s32`/`__s64` 等 UAPI 类型。该文件在 Linux 内核态直接包含 `<linux/types.h>`，在用户态 Linux 上通过 `<stdint.h>` + typedef 提供等价类型，在 macOS/Windows 上通过 `<stdint.h>` 提供等价类型，确保 [SC] 头文件在 agentrt 用户态跨平台（Linux/macOS/Windows）和 agentrt-linux 内核态均能逐字节相同地编译。
 
 > **设计约束**：[SC] 头文件中**禁止**直接 `#include <linux/types.h>`（macOS/Windows 无此头文件），**必须**通过 `<airymax/uapi_compat.h>` 间接获取 UAPI 类型。
 
-### 2.2.2 补充共享文件 2：error.h（非 [SC] 核心头文件）
+### 2.2.2 [SC] 核心头文件 1：error.h（UEF 统一错误码）
 
-> **定位说明**：`error.h` 是 agentrt 与 agentrt-linux 之间的**补充共享文件**（错误码 SSoT），两端共享代码但**不属于 6 个 [SC] 核心头文件**。物理宿主为 `kernel/include/airymax/error.h`（[SC] 物理宿主目录内），agentrt 用户态通过 `-I` 引用。
+> **定位说明**：`error.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级，UEF 模块），物理宿主为 `kernel/include/airymax/error.h`，agentrt 用户态通过 `-I` 引用，禁止物理副本。
 
-**权威源文件迁移路径**（2026-07-15 登记）：
+**错误码体系**（UEF 统一错误码与故障定义体系）：
 
-- **当前实际权威源**：`agentrt/commons/utils/error/include/error.h`（定义 `AIRY_ERR_*` 扩展码 + 错误链/i18n 接口）+ `agentrt/commons/include/airy_types.h`（定义 `airy_err_t` 类型 + `AIRY_E*` POSIX 码）
-- **规划 SSoT 路径**：`kernel/include/airymax/error.h`（[SC] 物理宿主，当前尚未创建；创建后 agentrt 用户态通过 `-I` 引用，禁止物理副本）
-- **SSoT 登记**：`09-ssot-registry.md §2 OS-IRON-014`（[SC] 6 核心 + 2 补充单一数据源）
-
-**错误码体系**：
-
-- `airy_err_t` 类型定义于 `agentrt/commons/include/airy_types.h:41`（`typedef int32_t airy_err_t`）
+- `airy_err_t` 类型定义（`typedef int32_t airy_err_t`）
 - 成功码：`AIRY_EOK = 0`（与 `AIRY_SUCCESS = 0` 等价，推荐使用 `AIRY_EOK`）
-- 错误码值为 POSIX errno 负值（参考 Linux errno.h）：`AIRY_EINVAL=(-22)`、`AIRY_ENOMEM=(-12)`、`AIRY_ETIMEDOUT=(-110)`、`AIRY_EPERM=(-1)`、`AIRY_ENOENT=(-2)`、`AIRY_EBUSY=(-16)`、`AIRY_EIO=(-5)`、`AIRY_EEXIST=(-17)` 等
-- 无对应 POSIX errno 的保留自定义负值（如 `AIRY_ENOTINIT=(-9)`、`AIRY_ECANCELLED=(-10)`）
+- Error 码（负数，可恢复）：5 子空间
+  - `[-1, -40]` POSIX errno 负值（`AIRY_EINVAL=(-22)`、`AIRY_ENOMEM=(-12)` 等）
+  - `[-41, -70]` IPC 错误码
+  - `[-71, -100]` Capability 错误码
+  - `[-101, -200]` [SC] 契约错误码
+  - `[-201, -300]` [DSL] 降级错误码
+- Fault 码（正数 0x1000+，不可恢复）：`AIRY_FAULT_CAP_FAULT` / `AIRY_FAULT_VM_FAULT` / `AIRY_FAULT_IPC_FAULT` / `AIRY_FAULT_TIMEOUT` / `AIRY_FAULT_ABNORMAL_CAP`
+- [DSL] 降级块：`#ifdef AIRY_SC_FALLBACK` → 仅保留 38 个 POSIX 码
+
+**权威源迁移状态**（2026-07-17 完成）：
+
+- **当前权威源**：`kernel/include/airymax/error.h`（[SC] 物理宿主，已创建，195 行）
+- **历史源**：`agentrt/commons/utils/error/include/error.h` + `agentrt/commons/include/airy_types.h`（迁移完成后废弃）
+- **SSoT 登记**：`09-ssot-registry.md §2 OS-IRON-014`（[SC] 10 个头文件单一数据源）
+- **CI 校验**：`sc-dual-ci.yml` 逐字节验证两端 error.h 相同
 
 **已废弃方案**：方案 B（runtime_interfaces.md 的 -1/-2/-11 自定义序列）、方案 C（coding_conventions.md 的 -2/-4/-6 旧值）、方案 D（project_erp.md 的位掩码 0x00010000，仅用于 ERP 分类，非错误码方案）均已废弃，禁止在新代码中使用。
 
-任何文档、代码不得另起定义，必须引用此权威源。详见 `180-i18n/03-error-message-i18n.md` §2.2。
+任何文档、代码不得另起定义，必须引用此权威源。详见 `180-i18n/03-error-message-i18n.md` §2.2 和 `30-interfaces/08-sc-error-contract.md`。
 
 ### 2.3 头文件 1：memory\_types.h
 
@@ -553,7 +559,7 @@ static void test_ipc_hdr_serialize(void)
 
 ### 6.1 校验流程
 
-\[SC] 层（6 个头文件）的任何变更必须经过**双向 CI 校验**，确保两端均能编译通过：
+\[SC] 层（10 个头文件）的任何变更必须经过**双向 CI 校验**，确保两端均能编译通过：
 
 ```
 开发者提交 [SC] 变更 MR（agentrt-linux 仓库）
@@ -658,7 +664,7 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 
 | 层次     | 共享程度 | 内容              | 落地路径               | CI 校验  |
 | ------ | ---- | --------------- | ------------------ | ------ |
-| \[SC]  | 完全共享 | 6 个头文件 + magic  | `include/airymax/` | 双向 CI  |
+| \[SC]  | 完全共享 | 10 个头文件 + magic  | `include/airymax/` | 双向 CI  |
 | \[SS]  | 语义同源 | 调度/安全/IPC/记忆    | 各自实现               | 行为契约测试 |
 | \[IND] | 完全独立 | 内核驱动/Kbuild/SDK | 各自仓库               | 各自 CI  |
 
@@ -683,7 +689,7 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 
 | 日期         | 版本    | 变更摘要                                           | 责任人          |
 | ---------- | ----- | ---------------------------------------------- | ------------ |
-| 2026-07-09 | 0.1.1 | 初始创建，定义 IRON-9 v2 三层模型 + 6 个 \[SC] 头文件 + 双向 CI | SPHARX 工程标准组 |
+| 2026-07-09 | 0.1.1 | 初始创建，定义 IRON-9 v2 三层模型 + 10 个 \[SC] 头文件 + 双向 CI | SPHARX 工程标准组 |
 
 ***
 

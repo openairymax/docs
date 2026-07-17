@@ -65,7 +65,7 @@ CONFIG_FTRACE=y
 
 ```c
 /* kernel/livepatches/lp_sched_agent_fix.c */
-/* 示例：修复 SCHED_AGENT BPF 调度器的 vtime 计算错误 */
+/* 示例：修复 AIRY_SCHED_AGENT 用户态调度器的 vtime 计算错误 */
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/livepatch.h>
@@ -133,7 +133,7 @@ module_init(lp_vtime_fix_init);
 module_exit(lp_vtime_fix_exit);
 MODULE_LICENSE("GPL");
 MODULE_INFO(livepatch, "Y");
-MODULE_DESCRIPTION("agentrt-linux SCHED_AGENT vtime fix");
+MODULE_DESCRIPTION("agentrt-linux AIRY_SCHED_AGENT vtime fix");
 ```
 
 ### 2.3 livepatch 应用流程
@@ -279,7 +279,7 @@ echo "[完成] rpm-ostree 系统已初始化"
 │    └→ 重启后进入新部署                                  │
 ├──────────────────────────────────────────────────────────┤
 │ 6. 重启后验证                                            │
-│    └→ 健康检查：12 daemon + SCHED_AGENT + MemoryRovol   │
+│    └→ 健康检查：12 daemon + AIRY_SCHED_AGENT + MemoryRovol   │
 ├──────────────────────────────────────────────────────────┤
 │ 7a. 验证通过 → 保留新部署                                │
 │ 7b. 验证失败 → 自动回滚到前一版本                       │
@@ -419,19 +419,19 @@ echo "[健康检查] 开始..."
 KERNEL_VER=$(uname -r)
 echo "  [1/5] 内核版本: $KERNEL_VER"
 
-# 检查 2：SCHED_AGENT 调度器
-if cat /sys/kernel/sched_ext/state | grep -q "enabled"; then
-    echo "  [2/5] SCHED_AGENT: OK"
+# 检查 2：AIRY_SCHED_AGENT 用户态调度器
+if systemctl is-active --quiet airymaxos-sched-agent; then
+    echo "  [2/5] AIRY_SCHED_AGENT: OK"
     CHECK_PASSES=$((CHECK_PASSES + 1))
 else
-    echo "  [2/5] SCHED_AGENT: FAIL"
+    echo "  [2/5] AIRY_SCHED_AGENT: FAIL"
     CHECK_FAILS=$((CHECK_FAILS + 1))
 fi
 
 # 检查 3：12 个 daemon 状态
 DOWN_DAEMONS=0
-for svc in gateway_d llm_d tool_d market_d sched_d monit_d \
-           channel_d observe_d notify_d info_d hook_d plugin_d; do
+for svc in gateway_d cogn_d dev_d gateway_d sched_d audit_d \
+           net_d logger_daemon sec_d mem_d vfs_d config_daemon; do
     if ! systemctl is-active --quiet "$svc.service"; then
         DOWN_DAEMONS=$((DOWN_DAEMONS + 1))
     fi
@@ -578,13 +578,13 @@ echo "[完成] MemoryRovol 数据已迁移至 $TARGET_VERSION"
 set -euo pipefail
 
 # 重启顺序：从底层到上层
-# 1. 基础服务（memory_d / observe_d）
-# 2. 中间服务（sched_d / monit_d / notify_d / info_d）
-# 3. 业务服务（gateway_d / llm_d / tool_d / market_d / channel_d / hook_d / plugin_d）
+# 1. 基础服务（memory_d / logger_daemon）
+# 2. 中间服务（sched_d / audit_d / sec_d / mem_d）
+# 3. 业务服务（gateway_d / cogn_d / dev_d / gateway_d / net_d / vfs_d / config_daemon）
 
-PHASE1="memory_d observe_d"
-PHASE2="sched_d monit_d notify_d info_d"
-PHASE3="gateway_d llm_d tool_d market_d channel_d hook_d plugin_d"
+PHASE1="memory_d logger_daemon"
+PHASE2="sched_d audit_d sec_d mem_d"
+PHASE3="gateway_d cogn_d dev_d gateway_d net_d vfs_d config_daemon"
 
 restart_phase() {
     local phase_name=$1

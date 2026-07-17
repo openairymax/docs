@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-13\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
-> **核心约束**：IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 6 个头文件（syscalls.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
+> **核心约束**：IRON-9 v2 同源且部分代码共享——[SC] 共享契约层 10 个头文件（syscalls.h/memory_types.h/security_types.h/cognition_types.h/sched.h/ipc.h）落地于 include/airymax/，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现；安全为横切关注点，贯穿全部 4 大数据流
 
 ---
 
@@ -16,7 +16,7 @@ agentrt-linux 数据流程设计层聚焦于「数据如何流动」，是「接
 1. **认知循环数据流（Cognition Flow）**：用户意图 → 认知层 → 规划 → 执行 → 记忆 → 反馈，对应 System 1 快思考 + System 2 慢思考双系统协同，落地于 `cognition` 子仓（同源 agentrt coreloopthree）。
 2. **记忆卷载数据流（Memory Flow）**：L1 原始 → L2 特征 → L3 结构 → L4 模式，四层递进 + 遗忘机制 + CXL/PMEM/MGLRU 多代 LRU（Linux 6.6）硬件协同，落地于 `memory` 子仓（同源 agentrt memoryrovol + heapstore）。
 3. **IPC 消息流（IPC Flow）**：进程 A → io_uring 零拷贝 → 进程 B，128B 定长消息头同源 agentrt AgentsIPC，落地于 `kernel`（同源 agentrt atoms/corekern IPC）。
-4. **调度数据流（Scheduling Flow）**：任务提交 → SCHED_AGENT → EEVDF → 执行，基于 sched_ext（agentrt-linux 内核增强，主线 6.12+）实现可插拔调度策略，落地于 `kernel`。
+4. **调度数据流（Scheduling Flow）**：任务提交 → AIRY_SCHED_AGENT → EEVDF → 执行，基于方案 C-Prime（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）实现可插拔调度策略，落地于 `kernel`。
 
 4 大数据流通过 `trace_id` 贯穿 OpenTelemetry 全链路追踪，满足 NFR-O-002 Tracing 覆盖率与 NFR-O-001 Metrics 完整性。
 
@@ -31,7 +31,7 @@ agentrt-linux 数据流程设计层聚焦于「数据如何流动」，是「接
 | 认知循环 | cognition + memory + kernel | 用户意图 → 认知 → 规划 → 执行 → 记忆 → 反馈 | NFR-P-001 < 100ms |
 | 记忆卷载 | memory + kernel | L1 原始 → L2 特征 → L3 结构 → L4 模式 | NFR-R-001 数据持久 |
 | IPC 消息 | kernel + services | 进程 A → io_uring → 进程 B | NFR-P-002 > 100K msg/s |
-| 调度 | kernel + cognition | 任务提交 → SCHED_AGENT → EEVDF → 执行 | NFR-P-001 < 100ms |
+| 调度 | kernel + cognition | 任务提交 → AIRY_SCHED_AGENT → EEVDF → 执行 | NFR-P-001 < 100ms |
 
 **横向关系**：
 
@@ -81,7 +81,7 @@ agentrt-linux 数据流程设计层聚焦于「数据如何流动」，是「接
 | 1 | [01-cognition-flow.md](01-cognition-flow.md) | 认知循环 | System 1/2 双系统 + CoreLoopThree kthread + 增量规划 + 补偿事务 |
 | 2 | [02-memory-flow.md](02-memory-flow.md) | 记忆卷载 | L1→L4 四层递进 + CXL 池化 + MGLRU 多代 LRU + 遗忘机制 |
 | 3 | [03-ipc-flow.md](03-ipc-flow.md) | IPC 消息 | io_uring 零拷贝 + 128B 消息头 + 5 种 payload + 跨节点 IPC |
-| 4 | [04-scheduling-flow.md](04-scheduling-flow.md) | 调度 | EEVDF + sched_ext + SCHED_AGENT + 策略可插拔 |
+| 4 | [04-scheduling-flow.md](04-scheduling-flow.md) | 调度 | EEVDF + 方案 C-Prime + AIRY_SCHED_AGENT + 策略可插拔 |
 
 每个文档均包含：
 
@@ -100,8 +100,8 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 |---|---|---|---|
 | 认知循环 | coreloopthree | 三层认知循环：认知→执行→记忆 | 内核态 kthread + System 1/2 双系统切换 |
 | 记忆卷载 | memoryrovol + heapstore | 四层递进 + 堆存储 | CXL 池化 + MGLRU 多代 LRU（Linux 6.6）+ 持久同调 |
-| IPC 消息 | atoms/corekern IPC | 128B 消息头 + 零拷贝 | io_uring 原生 + sched_ext 集成 |
-| 调度 | atoms/corekern Task | 微核心调度 | EEVDF + SCHED_AGENT（sched_ext BPF） |
+| IPC 消息 | atoms/corekern IPC | 128B 消息头 + 零拷贝 | io_uring 原生 + 方案 C-Prime 集成 |
+| 调度 | atoms/corekern Task | 微核心调度 | EEVDF + AIRY_SCHED_AGENT（方案 C-Prime 用户态调度器） |
 
 **同源红利**：
 
@@ -123,11 +123,11 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 | 版本 | 数据流特征 | 关键能力 |
 |---|---|---|
 | 0.1.1 | 4 大数据流框架定义 + [SC]/[SS]/[IND] 三层标注 | 文档体系建立 |
-| 1.0.1 | 4 大数据流完整实现 | CoreLoopThree kthread + MemoryRovol + io_uring IPC + SCHED_AGENT |
+| 1.0.1 | 4 大数据流完整实现 | CoreLoopThree kthread + MemoryRovol + io_uring IPC + AIRY_SCHED_AGENT |
 
 **演进约束**：
 
-1. **协议稳定性**：128B IPC 消息头、L1→L4 记忆层模型、SCHED_EXT 调度类编号（复用内核 SCHED_EXT=7，禁止 SCHED_AGENT 宏）在主版本内保持稳定，跨版本变更需 ADR 评审。
+1. **协议稳定性**：128B IPC 消息头、L1→L4 记忆层模型、方案 C-Prime 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）在主版本内保持稳定，跨版本变更需 ADR 评审。
 2. **向后兼容**：新版本数据流必须兼容旧版本的消息格式与调度语义，保证滚动升级不影响运行任务。
 3. **可观测性兼容**：Metrics 名称与 OpenTelemetry span 属性命名遵循向后兼容原则，新增字段不破坏旧消费者。
 4. **安全不变性**：capability 检查点、LSM hook 位置、审计哈希链结构在所有版本中保持不变（NFR-S 系列）。

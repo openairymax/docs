@@ -231,7 +231,7 @@ static void __init ordered_lsm_parse(const char *order, const char *origin)
 
 LSM 框架分两阶段初始化：
 
-1. **early_security_init()**：在 slab 可用之前调用，初始化所有钩子链表头为空，并启动 `__early_lsm_info` 段中的 early LSM（如 lockdown、bpf-lsm 早期阶段）。
+1. **early_security_init()**：在 slab 可用之前调用，初始化所有钩子链表头为空，并启动 `__early_lsm_info` 段中的 early LSM（如 lockdown、纯 C LSM 模块（对齐 openEuler，SELinux/Landlock 纯 C 模式））。
 2. **security_init()**：在 slab 可用之后由 `start_kernel()` 末尾调用，执行 `ordered_lsm_init()`，依次 `prepare_lsm()` + `initialize_lsm()` 完成所有可延迟 LSM 的初始化。
 
 ```c
@@ -1067,7 +1067,7 @@ enum lsm_order {
  * @setup: 包含 .name/.init 的初始化结构
  *
  * 放入 __early_lsm_info 段，由 early_security_init() 遍历。
- * 用于 lockdown、bpf-lsm 早期阶段。
+ * 用于 lockdown、纯 C LSM 模块（对齐 openEuler，SELinux/Landlock 纯 C 模式）。
  */
 #define DEFINE_EARLY_LSM(name, setup) \
     static struct lsm_info __early_lsm_info_##name \

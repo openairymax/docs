@@ -571,7 +571,7 @@ int airy_budget_consume(uint32_t agent_id, uint32_t tokens,
 
 ### 9.1 Token 预算感知权重计算
 
-Token 预算水位影响 SCHED_AGENT 调度权重，对齐 [170-performance/01-scheduling-performance.md](../170-performance/01-scheduling-performance.md) 第 3.3 节：
+Token 预算水位影响 AIRY_SCHED_AGENT 调度权重，对齐 [170-performance/01-scheduling-performance.md](../170-performance/01-scheduling-performance.md) 第 3.3 节：
 
 ```
 weight = base_weight * stage_factor * token_factor / 65536 / 65536
@@ -609,7 +609,7 @@ static airy_weight_t airy_budget_compute_token_factor(
 
 ### 9.3 与 EEVDF 调度器的集成
 
-Token 预算感知权重通过 SCHED_AGENT 的 `agent_enqueue` 回调注入 EEVDF 调度器：
+Token 预算感知权重通过 AIRY_SCHED_AGENT 的 `agent_enqueue` 回调注入 EEVDF 调度器：
 
 1. Agent 入队时，`agent_enqueue` 回调计算 `token_factor`
 2. `token_factor` 与 `base_weight`、`stage_factor` 相乘得到最终 `weight`
@@ -987,7 +987,7 @@ Token 预算的 `airy_token_budget` 结构体定义在 `include/airymax/sched.h`
 ### 15.3 [IND] 层独立
 
 agentrt-linux 独有的维度：
-- 调度权重感知（token_factor 注入 SCHED_AGENT）
+- 调度权重感知（token_factor 注入 AIRY_SCHED_AGENT）
 - sysfs 统计导出
 - 内核态审计日志（SHA-256 哈希链）
 
@@ -1023,7 +1023,7 @@ agentrt-linux 独有的维度：
 ### 17.3 关联模块
 
 - [170-performance/README.md](../170-performance/README.md) — Token 能效工程（Token/Watt）
-- [20-modules/01-kernel.md](../20-modules/01-kernel.md) — 内核设计（SCHED_AGENT 调度器）
+- [20-modules/01-kernel.md](../20-modules/01-kernel.md) — 内核设计（AIRY_SCHED_AGENT 调度器）
 - [90-observability/README.md](../90-observability/README.md) — 可观测性（Token 消费上报）
 
 ---

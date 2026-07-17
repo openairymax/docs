@@ -266,7 +266,7 @@ jobs:
   - MemoryRovol / 记忆卷载
   - CoreLoopThree / 认知三阶段循环
   - Thinkdual / 双思考系统
-  - SCHED_AGENT / Agent 调度类
+  - AIRY_SCHED_AGENT / Agent 用户态调度器策略
   - IRON-9 v2 / 同源且部分代码共享
   - ...
 
@@ -480,7 +480,7 @@ int main(void)
 | 情况 | 处理方式 | 示例 |
 |------|---------|------|
 | 有标准中文名 | 用中文名 | MicroCoreRT → 微核心运行时 |
-| 无标准中文名 | 保留英文 | sched_ext → sched_ext |
+| 无标准中文名 | 保留英文 | 方案 C-Prime → 方案 C-Prime |
 | 代码标识符 | 保留原文 | `airy_err_t` → `airy_err_t` |
 | 文件路径 | 保留原文 | `include/airymax/error.h` → `include/airymax/error.h` |
 

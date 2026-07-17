@@ -88,9 +88,9 @@ flowchart TB
 
 ### 2.1 顶层 Makefile 与子目录
 
-`tools/testing/selftests/Makefile` 通过 `TARGETS +=` 列出所有测试集（alsa/bpf/breakpoints/cgroup/cpu-hotplug/damon/ftrace/futex/ipc/kvm/landlock/livepatch/membarrier/memfd/mqueue/net/nsfs/perf_events/pidfd/prctl/resctrl/rseq/sched_ext/seccomp/sigaltstack/sync/tc-testing/timers/tpm2/tty/user_events/vDSO 等）。
+`tools/testing/selftests/Makefile` 通过 `TARGETS +=` 列出所有测试集（alsa/bpf/breakpoints/cgroup/cpu-hotplug/damon/ftrace/futex/ipc/kvm/landlock/livepatch/membarrier/memfd/mqueue/net/nsfs/perf_events/pidfd/prctl/resctrl/rseq/seccomp/sigaltstack/sync/tc-testing/timers/tpm2/tty/user_events/vDSO 等）。
 
-每个子目录典型结构：`Makefile`（编译规则）+ `config`（所需 CONFIG_* 选项）+ `*.c`/`*.sh`（测试程序）+ `README`/`settings`（文档与运行配置）。`config` 文件列出测试所需的内核配置（如 `tools/testing/selftests/sched_ext/config` 包含 `CONFIG_SCHED_CLASS_EXT=y`/`CONFIG_BPF_SYSCALL=y`/`CONFIG_BPF_JIT=y`/`CONFIG_DEBUG_INFO_BPF=y`）。
+每个子目录典型结构：`Makefile`（编译规则）+ `config`（所需 CONFIG_* 选项）+ `*.c`/`*.sh`（测试程序）+ `README`/`settings`（文档与运行配置）。`config` 文件列出测试所需的内核配置（如 `tools/testing/selftests/cgroup/config` 包含 `CONFIG_CGROUPS=y`/`CONFIG_CGROUP_SCHED=y`/`CONFIG_SCHED_AUTOGROUP=y`/`CONFIG_MEMCG=y`）。
 
 **OS-STD-006**：所有 agentrt-linux 扩展子目录必须有 `config` 文件列出依赖 CONFIG_*；缺失 `config` 导致测试在 CI 上无法启用的，禁止合入。
 
@@ -106,7 +106,7 @@ flowchart TB
 make -C tools/testing/selftests                                          # 编译并运行所有 TARGETS
 make -C tools/testing/selftests all                                      # 仅编译
 make -C tools/testing/selftests run_tests                                # 仅运行（已编译）
-make -C tools/testing/selftests TARGETS="sched_ext net"                  # 仅运行特定 TARGETS
+make -C tools/testing/selftests TARGETS="cgroup net"                    # 仅运行特定 TARGETS
 make -C tools/testing/selftests INSTALL_PATH=/tmp/kselftest install     # 安装到目录
 make -C tools/testing/selftests gen_kselftest_tar.sh                     # 生成 tar 包
 ```
@@ -171,11 +171,11 @@ stateDiagram-v2
 
 ## 4. 子系统测试集
 
-Linux 6.6 内核基线在 `tools/testing/selftests/` 下提供 100+ 子系统测试集，覆盖 sched_ext、mm、filesystems、net、bpf、cgroup、livepatch、resctrl、rseq、seccomp、tpm2 等。本节仅以 sched_ext（与 MicroCoreRT 共享调度器扩展机制）为例说明 agentrt-linux 系统级测试范式。
+Linux 6.6 内核基线在 `tools/testing/selftests/` 下提供 100+ 子系统测试集，覆盖 sched、mm、filesystems、net、bpf、cgroup、livepatch、resctrl、rseq、seccomp、tpm2 等。本节仅以 MicroCoreRT（agentrt-linux 用户态调度器，方案 C-Prime）调度系统测试为例说明 agentrt-linux 系统级测试范式。
 
-### 4.1 sched_ext 与 MicroCoreRT 调度系统测试
+### 4.1 MicroCoreRT 调度系统测试
 
-`tools/testing/selftests/sched_ext/` 测试 sched_class_ext（agentrt-linux 与 MicroCoreRT 共享的调度器扩展机制），包含 `create_dsq`、`ddsp_bogus_dsq_fail`、`enq_last_no_enq_fails`、`exit`、`hotplug` 等 BPF + 用户态主程序对。MicroCoreRT 调度算法的系统级验证通过 `airy_microcorert/` 测试集承载：
+MicroCoreRT 调度算法的系统级验证通过 `airy_microcorert/` 测试集承载，基于方案 C-Prime（SCHED_FIFO/SCHED_DEADLINE/EEVDF + seL4 MCS 映射，标准 6.6 用户态调度器），包含 `fifo_priority_slice`、`deadline_bandwidth`、`eevdf_vtime`、`cgroup_cpuset`、`hotplug` 等用户态主程序对：
 
 ```c
 /* tools/testing/selftests/airy_microcorert/microcorert_sched.c */
@@ -209,7 +209,7 @@ TEST_F(microcorert_sched, fifo_priority_slice) {
 TEST_HARNESS_MAIN
 ```
 
-**OS-TEST-016**：MicroCoreRT 调度算法的每个策略（FIFO/RR/DEADLINE）必须有 sched_ext 风格系统测试；时间片测量允许 ±5% 容差（QEMU 时钟精度限制）。
+**OS-TEST-016**：MicroCoreRT 调度算法的每个策略（FIFO/RR/DEADLINE）必须有 kselftest 风格系统测试；时间片测量允许 ±5% 容差（QEMU 时钟精度限制）。
 
 ### 4.2 完整 TARGETS 列表
 
@@ -439,11 +439,11 @@ TEST_HARNESS_MAIN
 - **独立**：agentrt-linux 扩展子目录以 `airy_*` 前缀命名，独立 `config`/`settings`/`Makefile`，独立 Kconfig 依赖。
 - **互操作**：agentrt-linux 套件与上游套件共享同一 `run_kselftest.sh` 调度器，CI 通过 `--filter` 选择性运行。
 
-**OS-KER-098**：agentrt-linux 子目录禁止引入对上游测试集源码的依赖（`#include "../sched_ext/..."` 等）；扩展测试自包含，避免上游重构时被破坏。
+**OS-KER-098**：agentrt-linux 子目录禁止引入对上游测试集源码的依赖（`#include "../cgroup/..."` 等）；扩展测试自包含，避免上游重构时被破坏。
 
 ### 9.2 IRON-9 v2 三层共享模型
 
-本节将 §9.1 的"同源 / 独立 / 互操作"三要素进一步细化为 **IRON-9 v2 三层共享模型**，明确测试集层在用户态（agentrt）与内核态（agentrt-linux）之间的代码共享边界。三层分别为：**[SC] 共享契约层**（共享头文件 / 数据结构定义）、**[SS] 语义同源层**（设计模式同源但实现独立）、**[IND] 完全独立层**（双方各自独立实现）。该模型由 6 个 [SC] 头文件契约、跨态语义对照表与独立实现清单共同支撑。
+本节将 §9.1 的"同源 / 独立 / 互操作"三要素进一步细化为 **IRON-9 v2 三层共享模型**，明确测试集层在用户态（agentrt）与内核态（agentrt-linux）之间的代码共享边界。三层分别为：**[SC] 共享契约层**（共享头文件 / 数据结构定义）、**[SS] 语义同源层**（设计模式同源但实现独立）、**[IND] 完全独立层**（双方各自独立实现）。该模型由 10 个 [SC] 头文件契约、跨态语义对照表与独立实现清单共同支撑。
 
 #### 9.2.1 三层模型概览表
 
@@ -457,7 +457,7 @@ TEST_HARNESS_MAIN
 
 **无直接 [SC] 共享头文件**。
 
-测试集层不属于 IRON-9 v2 的 6 个 [SC] 共享头文件清单（`syscalls.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h`）。测试集是验证基础设施，两端运行目标截然不同（agentrt 用户态集成测试 vs agentrt-linux 内核态系统级测试），其 Makefile 模式与运行器各自定义，源码层无共享头文件依赖。这一约束确保 agentrt 用户态集成测试演进时不会被动牵连 agentrt-linux kselftest，反之亦然——测试集层的演进由各自的 **OS-TEST 评审** 独立裁决。两端仅通过 **TAP 13 格式** 与 **AgentsIPC** 实现跨态协作而非代码共享。
+测试集层不属于 IRON-9 v2 的 10 个 [SC] 共享头文件清单（`syscalls.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h`）。测试集是验证基础设施，两端运行目标截然不同（agentrt 用户态集成测试 vs agentrt-linux 内核态系统级测试），其 Makefile 模式与运行器各自定义，源码层无共享头文件依赖。这一约束确保 agentrt 用户态集成测试演进时不会被动牵连 agentrt-linux kselftest，反之亦然——测试集层的演进由各自的 **OS-TEST 评审** 独立裁决。两端仅通过 **TAP 13 格式** 与 **AgentsIPC** 实现跨态协作而非代码共享。
 
 #### 9.2.3 [SS] 语义同源层
 
@@ -556,7 +556,7 @@ CI 矩阵覆盖 `arch: [x86_64, arm64, riscv64] × role: [root, non_root]`，简
 ```bash
 make defconfig && make -j$(nproc)
 make -C tools/testing/selftests \
-     TARGETS="sched_ext net airy_ipc airy_microcorert airy_agent_contract"
+     TARGETS="cgroup net airy_ipc airy_microcorert airy_agent_contract"
 virtme-run --kdir=$PWD \
   --script='./run_kselftest.sh --summary --role=${ROLE}' \
   2>&1 | tee kselftest-${ARCH}-${ROLE}.tap
@@ -600,7 +600,7 @@ kselftest 输出 TAP（version 13），形如 `ok <num> <suite>:<case>` / `not o
 - Linux 6.6 `tools/testing/selftests/kselftest.h`（低层 API）
 - Linux 6.6 `tools/testing/selftests/kselftest_harness.h`（高层 API）
 - Linux 6.6 `Documentation/dev-tools/kselftest.rst`（kselftest 文档）
-- Linux 6.6 `tools/testing/selftests/sched_ext/`（sched_ext 测试参考）
+- Linux 6.6 `tools/testing/selftests/sched/`（调度测试参考）
 
 ---
 

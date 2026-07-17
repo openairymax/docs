@@ -187,9 +187,9 @@ static const struct airy_kmsg_entry kmsg_table[] = {
 	 "agentrt-linux（AirymaxOS，极境智能体操作系统）启动中...",
 	 "agentrt-linux（AirymaxOS）を起動しています..."},
 	{KMSG_SCHED_LOADED,
-	 "SCHED_AGENT scheduler loaded successfully",
-	 "SCHED_AGENT 调度器加载成功",
-	 "SCHED_AGENT スケジューラを正常にロードしました"},
+	 "User-space scheduler (Scheme C-Prime) loaded successfully",
+	 "用户态调度器（方案 C-Prime）加载成功",
+	 "ユーザースペーススケジューラ（スキームC-Prime）を正常にロードしました"},
 	{KMSG_MEMORY_INIT,
 	 "MemoryRovol L1-L4 initialized, capacity=%lu MB",
 	 "MemoryRovol L1-L4 已初始化，容量=%lu MB",
@@ -207,9 +207,9 @@ static const struct airy_kmsg_entry kmsg_table[] = {
 	 "MemoryRovol 层 L1=%u L2=%u L3=%u L4=%u 页已加载",
 	 "MemoryRovol レイヤ L1=%u L2=%u L3=%u L4=%u ページをロードしました"},
 	{KMSG_SCHED_TIMEOUT,
-	 "SCHED_AGENT watchdog timeout, fallback to default scheduler",
-	 "SCHED_AGENT 看门狗超时，降级到默认调度器",
-	 "SCHED_AGENT ウォッチドッグがタイムアウト、デフォルトスケジューラに切り替えます"},
+	 "AIRY_SCHED_AGENT watchdog timeout, fallback to default scheduler",
+	 "AIRY_SCHED_AGENT 看门狗超时，降级到默认调度器",
+	 "AIRY_SCHED_AGENT ウォッチドッグがタイムアウト、デフォルトスケジューラに切り替えます"},
 };
 
 static DEFINE_SPINLOCK(kmsg_locale_lock);
@@ -310,7 +310,7 @@ int main(void)
 	/* dmesg 将输出中文 */
 	/* 输出示例：
 	 * [    0.123456] agentrt-linux（AirymaxOS，极境智能体操作系统）启动中...
-	 * [    0.234567] SCHED_AGENT 调度器加载成功
+	 * [    0.234567] 用户态调度器（方案 C-Prime）加载成功
 	 * [    0.345678] MemoryRovol L1-L4 已初始化，容量=16384 MB
 	 */
 	return 0;
@@ -326,14 +326,14 @@ int main(void)
 每个 daemon 通过 systemd unit 配置独立的 locale 环境：
 
 ```ini
-# /etc/systemd/system/llm_d.service —— llm_d daemon 的 locale 配置
+# /etc/systemd/system/cogn_d.service —— cogn_d daemon 的 locale 配置
 [Unit]
-Description=agentrt-linux LLM Inference Daemon (llm_d)
+Description=agentrt-linux LLM Inference Daemon (cogn_d)
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/lib/airymaxos/services/llm_d
+ExecStart=/usr/lib/airymaxos/services/cogn_d
 Environment=LANG=zh_CN.UTF-8
 Environment=LC_MESSAGES=zh_CN.UTF-8
 Environment=LC_CTYPE=zh_CN.UTF-8
@@ -450,9 +450,9 @@ enum airy_locale_id airy_locale_from_accept_language(const char *accept)
 /usr/share/locale/
 ├── zh_CN/LC_MESSAGES/
 │   ├── airymaxos.mo              # 主消息目录
-│   ├── airymaxos-llm_d.mo        # llm_d daemon
+│   ├── airymaxos-cogn_d.mo        # cogn_d daemon
 │   ├── airymaxos-sched_d.mo      # sched_d daemon
-│   └── airymaxos-tool_d.mo       # tool_d daemon
+│   └── airymaxos-dev_d.mo       # dev_d daemon
 ├── en_US/LC_MESSAGES/
 │   ├── airymaxos.mo
 │   └── ...

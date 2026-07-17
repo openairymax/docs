@@ -40,7 +40,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 - Agent 任务从提交到开始执行的调度延迟必须 < 100ms
 - 实时反馈场景（如工业控制、具身智能）必须 < 10ms
-- 调度延迟通过 EEVDF + sched_ext 调度器保证
+- 调度延迟通过 EEVDF + 方案 C-Prime 用户态调度器保证
 - 延迟分布 P99 < 100ms，P99.9 < 200ms
 
 **验证方法**：
@@ -747,7 +747,7 @@ airy_active_sessions 1500
   at coreloopthree/cognition/planner.c:142 (airy_planner_expand)
   at coreloopthree/cognition/cognition.c:87 (airy_cognition_process)
   at syscalls/syscall.c:234 (airy_sys_task_submit)
-  context: requested=256MB, available=128MB, process=airy_llm_d, pid=1234
+  context: requested=256MB, available=128MB, process=airy_cogn_d, pid=1234
   suggestion: 1) 减少批量大小 2) 启用内存压缩 3) 增加系统内存
 ```
 

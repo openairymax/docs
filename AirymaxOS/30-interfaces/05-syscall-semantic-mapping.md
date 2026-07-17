@@ -103,7 +103,7 @@ graph TB
 
 | 层次 | agentrt 侧 | agentrt-linux 侧 | 共享程度 |
 |------|-----------|-----------------|---------|
-| **[SC] 共享契约层** | 6 个头文件（`include/airymax/`） | 同一 6 个头文件（`kernel/include/airymax/`） | 完全共享代码 |
+| **[SC] 共享契约层** | 10 个头文件（`include/airymax/`） | 同一 10 个头文件（`kernel/include/airymax/`） | 完全共享代码 |
 | **[SS] 语义同源层** | JSON-RPC 高层 API（27 函数，8 域） | 编号 syscall（512-631，6 类 120 调用） | 概念操作一致，签名独立演进 |
 | **[IND] 完全独立层** | 跨平台 syscall 封装（libc syscall()） | 内核 syscall 表注册（`syscall_64.tbl`） | 完全独立 |
 
@@ -240,12 +240,12 @@ agentrt 在 agentrt-linux 上运行时，系统调用经过两条路径：
 | #555 | `airy_sys_cxl_tier_set()` | CXL 内存分层策略，内核态硬件接口 |
 | #556 | `airy_sys_mglru_config()` | MGLRU（多代 LRU）配置，内核态页回收策略 |
 
-### 5.3 调度内核机制（sched_ext + eBPF）
+### 5.3 分层用户态调度器机制（方案 C-Prime）
 
 | OS syscall # | 内核 API | 独有原因 |
 |-------------|---------|---------|
-| #572 | `airy_sys_sched_set_policy()` | 设置 sched_ext 策略，内核态 eBPF 机制 |
-| #573 | `airy_sys_sched_get_policy()` | 查询当前策略，内核态 eBPF 机制 |
+| #572 | `airy_sys_sched_set_policy()` | 设置用户态调度器策略（SCHED_FIFO/SCHED_DEADLINE + cgroup cpuset） |
+| #573 | `airy_sys_sched_get_policy()` | 查询当前用户态调度器策略（SCHED_FIFO/SCHED_DEADLINE + cgroup cpuset） |
 
 ### 5.4 安全内核机制（capability + LSM）
 

@@ -1538,9 +1538,9 @@ done
 
 ### 2.4 [SC] 头文件清单一致性检查
 
-**规则 OS-CHK-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 6 个头文件清单一致。
+**规则 OS-CHK-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 10 个头文件清单一致。
 
-**6 个 [SC] 头文件清单**（权威定义见 [120-cross-project-code-sharing.md §2.1](./120-cross-project-code-sharing.md)，SSoT 规则登记为 [OS-IRON-014](./09-ssot-registry.md)；`00-engineering-standards-handbook.md §4.2` 为公开镜像，内容与权威定义逐项一致）：
+**10 个 [SC] 头文件清单**（权威定义见 [120-cross-project-code-sharing.md §2.1](./120-cross-project-code-sharing.md)，SSoT 规则登记为 [OS-IRON-014](./09-ssot-registry.md)；`00-engineering-standards-handbook.md §4.2` 为公开镜像，内容与权威定义逐项一致）：
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
@@ -1551,7 +1551,7 @@ done
 | 5 | `include/airymax/sched.h` | 调度 | SCHED_EXT 约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
 | 6 | `include/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |
 
-**检查方法**：grep `include/airymax/` 引用，核对是否与上述 6 个头文件一致。
+**检查方法**：grep `include/airymax/` 引用，核对是否与上述 10 个头文件一致。
 
 ### 2.5 链接完整性检查
 
@@ -1873,7 +1873,7 @@ echo "OK: seL4 scope check passed (only ES-SEL4-1~5 architecture layer allowed)"
 
 ### 4.1 [SC] 共享契约层一致性检查
 
-**规则 OS-CHK-IRON-01**：[SC] 共享契约层的 6 个头文件必须 agentrt 与 agentrt-linux 完全一致。
+**规则 OS-CHK-IRON-01**：[SC] 共享契约层的 10 个头文件必须 agentrt 与 agentrt-linux 完全一致。
 
 **检查方法**：
 ```bash
@@ -1897,7 +1897,7 @@ for h in $SC_HEADERS; do
 done
 ```
 
-**合格标准**：6 个头文件 MD5 哈希完全一致。
+**合格标准**：10 个头文件 MD5 哈希完全一致。
 
 ### 4.2 [SS] 语义同源层 API 一致性检查
 
@@ -2280,7 +2280,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 许可证策略 | 说明 |
 |------|-----------|------|
-| **[SC] 共享契约层** | `GPL-2.0-only WITH Linux-syscall-note` | 6 个头文件含 UAPI 定义，遵循内核 UAPI 许可证 |
+| **[SC] 共享契约层** | `GPL-2.0-only WITH Linux-syscall-note` | 10 个头文件含 UAPI 定义，遵循内核 UAPI 许可证 |
 | **[SS] 语义同源层** | 各自独立许可证 | agentrt 端用户态用 AGPL-3.0 OR Apache-2.0；agentrt-linux 端内核态用 GPL-2.0 WITH Linux-syscall-note |
 | **[IND] 完全独立层** | 各自独立许可证 | 按文件类型适用本矩阵 §1.1 |
 
@@ -2615,7 +2615,7 @@ agentrt-linux CI 同时运行：
 | **K-2 接口契约化** | UAPI 头文件许可证采用 `Linux-syscall-note` 例外，明确接口契约的可引用边界 |
 | **E-7 文档即代码** | 许可证策略矩阵本身纳入版本控制，与代码同源审查 |
 | **A-4 完美主义** | 三套历史策略并存与两文档间许可证字符串不一致是"隐藏瑕疵"，本卷消解为统一的 5 类矩阵 |
-| **IRON-9 v2 同源且部分代码共享** | [SC] 共享契约层 6 个头文件的许可证遵循内核 UAPI 规范，与 agentrt 端引用方式兼容 |
+| **IRON-9 v2 同源且部分代码共享** | [SC] 共享契约层 10 个头文件的许可证遵循内核 UAPI 规范，与 agentrt 端引用方式兼容 |
 
 ---
 

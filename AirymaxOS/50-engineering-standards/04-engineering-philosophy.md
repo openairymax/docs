@@ -42,7 +42,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | OS-IRON-005 | 审查优先文化 | §6 | OS-IRON-004 | 已改标 |
 | OS-IRON-006 | 不破坏用户空间原则 | §9 | OS-IRON-005 | 已改标 |
 | OS-IRON-007 | DCO Signed-off-by 强制 | §7 | （§7 可追溯性覆盖） | 内容覆盖 |
-| OS-IRON-008 | [SC] 共享契约层 6 核心 + 2 补充头文件双向 CI | — | — | SSoT 专属，本文档不涉及 |
+| OS-IRON-008 | [SC] 共享契约层 10 个 [SC] 核心头文件双向 CI | — | — | SSoT 专属，本文档不涉及 |
 | OS-IRON-009~014 | 工程规范委员会专属铁律 | — | — | SSoT 专属，本文档不涉及 |
 
 ### 0.2 历史标签处置
@@ -209,15 +209,15 @@ agentrt-linux 作为 Linux 6.6 内核衍生工程，内核态代码使用 GCC/Cl
 
 agentrt-linux 在内核态提供三类策略可插拔机制：
 
-- **sched_ext BPF 调度器**（§3.3）：CPU 调度策略完全可由用户态 BPF 程序定义。
+- **方案 C-Prime 用户态调度器（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）**（§3.3）：CPU 调度策略完全可由用户态调度器定义。
 - **LSM 钩子机制**（§3.4）：安全策略通过 LSM 钩子链加载，运行时增删。
 - **Cupolas 安全策略可插拔**（§3.5）：agentrt-linux 专属的安全策略可插拔框架。
 
-### 3.3 sched_ext BPF 调度器作为极端范式
+### 3.3 方案 C-Prime 用户态调度器作为极端范式
 
-sched_ext 是 Linux 6.6 内核基线引入的 sched_ext BPF 调度器框架，它代表了策略与机制分离的极端形态：**整个 CPU 调度策略可以用 BPF 程序从用户空间定义**，而无需修改内核任何代码。
+方案 C-Prime 是 agentrt-linux 基于 Linux 6.6 原生调度类（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ seL4 MCS 映射构建的用户态调度器框架，它代表了策略与机制分离的极端形态：**整个 CPU 调度策略可以在用户空间定义**，而无需修改内核任何代码。
 
-agentrt-linux 将 sched_ext 视为策略可插拔的范式案例。在智能体工作负载场景下，不同智能体任务对调度的需求差异巨大——批处理任务需要吞吐优先，交互式任务需要延迟优先，长链推理任务需要公平性优先。这些策略差异不应锁死在内核 C 代码中，而应由用户空间的 BPF 调度器动态决定。agentrt-linux 默认提供一个 `airy_agent_sched` BPF 调度器，针对智能体工作负载优化（认知任务优先、IO 等待让步、长推理任务保护），但任何用户都可以加载自己的 BPF 调度器替代它。
+agentrt-linux 将方案 C-Prime 视为策略可插拔的范式案例。在智能体工作负载场景下，不同智能体任务对调度的需求差异巨大——批处理任务需要吞吐优先，交互式任务需要延迟优先，长链推理任务需要公平性优先。这些策略差异不应锁死在内核 C 代码中，而应由用户空间的调度器动态决定。agentrt-linux 默认提供一个 `airy_agent_sched` 用户态调度器，针对智能体工作负载优化（认知任务优先、IO 等待让步、长推理任务保护），但任何用户都可以加载自己的用户态调度器替代它。
 
 ### 3.4 LSM 钩子机制
 
@@ -611,13 +611,13 @@ agentrt-linux 作为一个新建的智能体操作系统发行版，其工程组
 | OS-IRON-005 | §6 | 审查优先文化（Reviewed-by 强制，out-of-tree 是低质量状态） |
 | OS-IRON-006 | §9 | 不破坏用户空间原则（regression 零容忍，导出后永不破坏兼容） |
 | OS-IRON-007 | 07 §5 | DCO Signed-off-by 链强制 |
-| OS-IRON-008 | 120 §SC | 共享契约层 6 个头文件双向 CI 验证 |
+| OS-IRON-008 | 120 §SC | 共享契约层 10 个头文件双向 CI 验证 |
 | OS-IRON-009 | 120 / 07 §1.4 | 代码共享边界：仅 agentrt ↔ AirymaxOS |
 | OS-IRON-010 | §12 | "Linux 6.6 为基、seL4 为鉴"工程取向 |
 | OS-IRON-011 | §12 | 双源边界声明（技术参考非代码共享） |
 | OS-IRON-012 | §12 | seL4 借鉴仅限架构层（ES-SEL4-1~5） |
 | OS-IRON-013 | §13 | 8 子仓独立 git 仓库 + submodule 管理 |
-| OS-IRON-014 | 120 §SC | [SC] 共享契约层 6 核心 + 2 补充头文件单一数据源（禁止物理副本） |
+| OS-IRON-014 | 120 §SC | [SC] 共享契约层 10 个 [SC] 核心头文件单一数据源（禁止物理副本） |
 | OS-IRON-015 | 90-obs/02 §14.2 | 编号管理元规则——编号一经分配不得复用 |
 | OS-IRON-016 | §2.4 | UAPI 头文件编译器无关原则（C11 标准，禁止编译器扩展） |
 | OS-KER-060 | §2.2 | API 改动者必须修复所有调用点 |
@@ -645,7 +645,7 @@ agentrt-linux 作为一个新建的智能体操作系统发行版，其工程组
 | K-1 内核极简 | MicroCoreRT 极简内核、机制留在内核 | OS-IRON-003 / OS-KER-061 |
 | K-2 接口契约化 | 双层稳定性哲学、4 层分级 | OS-IRON-001/002/006 |
 | K-3 服务隔离 | Cupolas 安全策略可插拔 | OS-KER-061 |
-| K-4 可插拔策略 | sched_ext BPF、LSM 钩子、Cupolas | OS-IRON-003 / OS-KER-061 |
+| K-4 可插拔策略 | 纯 C LSM 钩子、Cupolas | OS-IRON-003 / OS-KER-061 |
 | C-2 增量演化 | 补丁序列可编译、bisect 友好 | OS-IRON-004 / OS-KER-062/063/064 |
 | E-1 安全内生 | Cupolas L4 审计不可插拔 | OS-KER-061 |
 | E-6 错误可追溯 | regression 不可接受、Fixes/Link/Closes/DCO | OS-IRON-006、OS-KER-067/068 |

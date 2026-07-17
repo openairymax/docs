@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # seL4 风格 Capability 安全模型
 > **文档定位**：agentrt-linux（AirymaxOS）Capability 安全模型的完整工程契约，定义 CNode/MDB 数据模型、派生算法、POSIX capability 集成、令牌生命周期、Cupolas blob 布局、策略裁决与 Vault backend 抽象\
-> **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **文档版本**：v1.0\
+> **最后更新**：2026-07-17\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：seL4 `src/object/cnode.c`（CNode 操作）+ `src/object/cnode.c:cteRevoke`（递归撤销）+ Linux 6.6 `security/commoncap.c`（POSIX capability）+ agentrt Cupolas 权限模型\
 > **文档性质**：实现方案文档（非设计文档）。本契约在 [01-lsm-framework.md](01-lsm-framework.md) 第 7 章 LSM 与 capability 共存的基础上，补充完整的 capability 数据模型、派生算法、生命周期与接口定义\
@@ -1056,6 +1056,44 @@ static void test_cap_revoke_recursive(struct kunit *test)
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。定义 seL4 风格 + POSIX 混合 capability 模型：CNode/CSpace 数据结构、MDB 派生链、四种派生操作（mint/mintcopy/derive/revoke）、POSIX 41 ID 枚举、令牌 7 状态生命周期、Cupolas blob 四类布局（cred/inode/file/task）、4 值策略裁决（ALLOW/DENY/AUDIT/DENY_AUDIT）、Vault backend 抽象（memory/TPM/CVM）、系统调用集成（592-600）、LSM_ORDER_FIRST 集成、capability 守卫流程、IPC 传递、KUnit 测试 |
 | 1.0.1 | 2027-XX-XX | 内核实现完成，TPM Vault 封存落地，形式化验证探索 |
+
+---
+
+## 附录：v1.0 升级说明
+
+> **升级背景**：本次 v1.0 升级将本文档对齐 Airymax Unify Design（见 [10-unify-design.md](../10-architecture/10-unify-design.md)）5 模块设计与 IRON-9 v3 四层模型，补充 v0.1.1 缺失的离线缓存、Reconciliation 与 MDB 完整性约束设计。升级内容如下。
+
+### A.1 已新增离线缓存校验机制
+
+v0.1.1 §3 capability 派生模型与 §7 策略裁决均依赖实时查询 CSpace radix tree，未覆盖 capability 离线（daemon 不可达 / [DSL] 降级模式）场景的校验。v1.0 新增 **离线缓存校验机制**：
+
+- **per-cpu capability 缓存**：每个 CPU 维护近期校验过的 capability badge 掩码缓存，fastpath（如 [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) §3 C-S9）直接读缓存，不查询 daemon
+- **缓存校验**：离线时缓存条目带 HMAC 签名，校验签名通过方可使用，防止缓存被篡改
+- **缓存失效**：capability revoke / mint 时通过 IPI 失效目标 CPU 的缓存行；离线期间失效请求入队列，daemon 恢复后批量处理
+- **[DSL] 降级兼容**：[DSL] 降级模式下离线缓存退化为仅 POSIX capability 位图校验（见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §5.2）
+
+### A.2 已新增 Reconciliation 设计
+
+v0.1.1 §5 令牌生命周期未定义"capability 在 daemon 离线期间被撤销，恢复后如何对账"的 Reconciliation 流程。v1.0 新增 **Reconciliation 设计**：
+
+- **对账触发**：capability daemon 重启或网络恢复后，发起 Reconciliation 扫描，比对内核 CSpace 与 daemon 持久化视图
+- **三阶段对账**：
+  1. **Diff 阶段**：枚举内核活跃 capability 集合，与 daemon 持久化记录 diff
+  2. **Reconcile 阶段**：对 diff 中"内核有 daemon 无"的孤儿 capability 执行 revoke；对"daemon 有内核无"的失效记录执行清理
+  3. **Verify 阶段**：对账后重新计算 MDB 派生链哈希，与 daemon 持久化哈希比对，不一致则告警
+- **一致性保证**：Reconciliation 全程持 CSpace 读写锁，对账期间新 capability 操作降级至 slowpath
+- 该设计对齐 Airymax Unify Design USV 模块的"内核冷酷执法，用户温情裁决"哲学
+
+### A.3 已新增 MDB（Memory Database）完整性约束
+
+v0.1.1 §2.3 MDB 派生链仅描述 parent/children 指针关系，未定义完整性约束与不变式。v1.0 新增 **MDB 完整性约束**，对齐 seL4 `src/kernel/mdb.c` 的派生链不变式：
+
+- **约束 I1（权限单调递减）**：子 capability 的 badge 必须 ≤ 父 capability 的 badge（权限只减不增），mint/mintcopy 时强制 `child.badge = parent.badge & mask`
+- **约束 I2（派生链无环）**：MDB 派生链是树结构，禁止成环；cteInsert 时校验 parent 不在 child 的子树中
+- **约束 I3（撤销原子性）**：revoke 递归撤销时，要么全部子 capability 撤销成功，要么回滚至撤销前状态（对齐 §3.5 preemptionPoint 分块撤销的原子语义）
+- **约束 I4（refcount 一致性）**：capability 的 refcount 必须 = MDB 子树中引用此 cap 的节点数；revoke 后 refcount 归零方可物理删除
+- **约束 I5（哈希链完整性）**：MDB 派生链维护 Merkle 哈希链，每个节点的哈希 = SHA-256(自身 cap_id + badge + 子节点哈希)；reconciliation 时整链哈希校验，检测任何篡改
+- **CI 校验**：KUnit 测试覆盖 5 项约束（§14.1），违反任一约束的 revoke/mint 操作必须返回 `AIRY_EINVAL`
 
 ---
 

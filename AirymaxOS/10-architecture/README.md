@@ -227,7 +227,7 @@ agentrt-linux 架构设计层包含 6 个核心文档，覆盖系统架构、五
 | 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | 已存在 |
 | 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | 已存在 |
 | 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~014（14 个核心决策） | 新增 |
-| 6 | [06-directory-structure.md](06-directory-structure.md) | 源码目录结构设计（ES-OLK-1~13 落地 + seL4 设计模式对齐 + [SC] 物理隔离 + 8 子仓 submodule + 模型 A 完整 fork） | 新增 |
+| 6 | [07-directory-structure.md](07-directory-structure.md) | 源码目录结构设计（ES-OLK-1~13 落地 + seL4 设计模式对齐 + [SC] 物理隔离 + 8 子仓 submodule + 模型 A 完整 fork） | 新增 |
 
 ### 5.1 文档阅读顺序建议
 
@@ -238,17 +238,17 @@ agentrt-linux 架构设计层包含 6 个核心文档，覆盖系统架构、五
 | 应用开发者 | README → 01 → 02 → 04 |
 | 安全工程师 | README → 02（E-1）→ 05（ADR-004）→ 01 |
 
-### 5.2 目录结构设计（[06-directory-structure.md](06-directory-structure.md)）
+### 5.2 目录结构设计（[07-directory-structure.md](07-directory-structure.md)）
 
-`06-directory-structure.md` 是新增文档（v0.2.4 生产级修正版，~583 行），作为 agentrt-linux 源码目录结构设计的**技术阐述载体**，沉淀源码级分析成果。**本文档不是规则编号 SSoT**——所有规则编号（OS-IRON-013/014/015 等）的**唯一权威来源**为 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)：
+`07-directory-structure.md` 是新增文档（v0.2.4 生产级修正版，~583 行），作为 agentrt-linux 源码目录结构设计的**技术阐述载体**，沉淀源码级分析成果。**本文档不是规则编号 SSoT**——所有规则编号（OS-IRON-013/014/015 等）的**唯一权威来源**为 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)：
 
 - **设计原则（6 条）**：ES-OLK-1 关注点分离 + ES-OLK-2 架构正交 + ES-OLK-3/6 UAPI 分离 + seL4 单编译单元（可选）+ IRON-9 v2 三层模型 + **OS-IRON-013 8 子仓 submodule 管理**，每条均有源码级标杆证据（Linux 6.6 内核基线顶层目录、seL4 `CMakeLists.txt:355-363`）。
 - **管理仓 + 8 子仓 submodule**：agentrt-linux 管理仓通过 `.gitmodules` 聚合 8 个独立 leaf 仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux），对齐 OS-IRON-013。
 - **kernel/ 子仓模型 A 完整 fork**：含完整 Linux 6.6 源码树（~60K 文件 1.6GB），Airymax 修改直接写入上游目录（如 `mm/airymax_mm.c`），不使用 `patches/` 隔离层。
 - **[SC] 头文件物理隔离**：6 个共享契约头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）**唯一物理宿主**于 `kernel/include/airymax/`，其他子仓通过 `-I../kernel/include` 引用（OS-IRON-014 落地）；Tab 8 缩进 + 最小 typedef + 双向 CI 校验（OS-IRON-008）。
-- **代码引用**：[file:///home/spharx/SpharxWorks/airymaxhub/docs/AirymaxOS/10-architecture/06-directory-structure.md](file:///home/spharx/SpharxWorks/airymaxhub/docs/AirymaxOS/10-architecture/06-directory-structure.md)
+- **代码引用**：[file:///home/spharx/SpharxWorks/airymaxhub/docs/AirymaxOS/10-architecture/07-directory-structure.md](file:///home/spharx/SpharxWorks/airymaxhub/docs/AirymaxOS/10-architecture/07-directory-structure.md)
 
-> **缩进验证**：本目录 4 个文档的 [SC] 代码段（`02-five-dimensional-principles.md` / `03-microkernel-strategy.md` / `04-engineering-baseline.md` / `06-directory-structure.md`）Tab 8 缩进已全部对齐通过。
+> **缩进验证**：本目录 4 个文档的 [SC] 代码段（`02-five-dimensional-principles.md` / `03-microkernel-strategy.md` / `04-engineering-baseline.md` / `07-directory-structure.md`）Tab 8 缩进已全部对齐通过。
 
 ---
 
@@ -294,7 +294,7 @@ agentrt-linux 架构设计严格遵循 `docs/AirymaxRT/00-architectural-principl
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-06 | 初始占位版本（含架构层 5 文档索引） |
-| 0.1.1 | 2026-07-13 | 新增 `06-directory-structure.md`，架构层文档数 5 → 6；[SC] 头文件 Tab 8 缩进验证通过 |
+| 0.1.1 | 2026-07-13 | 新增 `07-directory-structure.md`，架构层文档数 5 → 6；[SC] 头文件 Tab 8 缩进验证通过 |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步） |
 
 ---

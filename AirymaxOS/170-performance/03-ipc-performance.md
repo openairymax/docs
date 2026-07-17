@@ -539,7 +539,7 @@ echo "[完成] 结果保存于 $RESULT_DIR"
 
 ### 5.3 性能指标采集
 
-通过 user_events 上报 IPC 指标到 monit_d 守护进程：
+通过 user_events 上报 IPC 指标到 audit_d 守护进程：
 
 ```c
 /* IPC 性能指标上报 */
@@ -664,7 +664,7 @@ out_err:
 ### 7.2 seccomp 与 capability 隔离
 
 ```bash
-# /etc/airymaxos/seccomp/llm_d.seccomp —— llm_d daemon 的 seccomp 策略
+# /etc/airymaxos/seccomp/cogn_d.seccomp —— cogn_d daemon 的 seccomp 策略
 # 仅允许 io_uring + IPC 相关系统调用
 {
     "defaultAction": "SCMP_ACT_ERRNO",

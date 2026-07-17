@@ -68,7 +68,8 @@ kunit_test_suite(my_test_suite);
 kselftest 从用户态测试内核特性：
 ```bash
 make -C tools/testing/selftests TARGETS=sched
-./tools/testing/selftests/sched/sched_ext
+# 方案 C-Prime（SCHED_DEADLINE/SCHED_FIFO/EEVDF）调度类测试
+./tools/testing/selftests/sched
 ```
 
 ### 2.3 lib/test_*（内核自检）

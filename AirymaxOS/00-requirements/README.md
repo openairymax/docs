@@ -48,7 +48,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **版本基线锁定战略决策说明**：
 
-1. **1.x.x 锁定 Linux 6.6**：Linux 6.6 是 LTS 内核（维护至 2026 年底+），agentrt-linux 1.x.x 全系列版本长期锁定此基线，确保：(a) ABI 稳定性（生产环境不破坏二进制兼容）(b) 硬件支持成熟度（30 年积累）(c) sched_ext / io_uring / eBPF / EEVDF / MGLRU 等关键特性已验证。
+1. **1.x.x 锁定 Linux 6.6**：Linux 6.6 是 LTS 内核（维护至 2026 年底+），agentrt-linux 1.x.x 全系列版本长期锁定此基线，确保：(a) ABI 稳定性（生产环境不破坏二进制兼容）(b) 硬件支持成熟度（30 年积累）(c) 方案 C-Prime / io_uring / eBPF / EEVDF / MGLRU 等关键特性已验证。
 2. **2.x.x 升级 Linux 7.1**：Linux 7.1 作为下一代 LTS 候选，agentrt-linux 2.x.x 将升级至此基线，前瞻性预留设计包括：(a) 新调度特性适配 (b) 内存管理演进 (c) 安全模型增强 (d) AI 原生特性。迁移路径在 1.x.x 最后一个版本（1.x.x EOL 版本）提供兼容层与迁移指南。
 3. **迁移路径规划**：1.x.x → 2.x.x 迁移遵循「兼容层先行 → 渐进式迁移 → 旧基线 EOL」三阶段路径，确保生产环境平滑过渡。详细迁移方案见 `10-architecture/04-engineering-baseline.md` §Linux 7.1 前瞻性预留设计。
 
@@ -163,7 +163,7 @@ graph TB
 业务需求 → 功能需求的「一对多」追溯关系：
 
 ```
-BR-001 科研 Agent 工作负载  ──>  FR-001 内核调度（EEVDF + sched_ext）
+BR-001 科研 Agent 工作负载  ──>  FR-001 内核调度（EEVDF + 方案 C-Prime）
                             ──>  FR-005 认知循环 CoreLoopThree
                             ──>  FR-013 记忆持久化 MemoryRovol
 

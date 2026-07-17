@@ -69,7 +69,7 @@ spec:
     layers: [L1, L2, L3, L4]
   cognition:
     cycle: CoreLoopThree
-    scheduler: SCHED_AGENT
+    scheduler: AIRY_SCHED_AGENT
 ```
 
 ### 2.3 MemoryRovol CSI
@@ -122,7 +122,7 @@ spec:
 |------|------|
 | `airymaxos.agent.token-budget` | Token 预算声明 |
 | `airymaxos.agent.memory-rovol` | 记忆卷载声明 |
-| `airymaxos.agent.scheduler` | 调度类声明（SCHED_AGENT） |
+| `airymaxos.agent.scheduler` | 调度类声明（AIRY_SCHED_AGENT） |
 | `airymaxos.agent.cognition-cycle` | 认知循环类型 |
 
 ### 4.2 超节点 OS

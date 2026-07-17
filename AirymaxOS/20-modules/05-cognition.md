@@ -414,7 +414,7 @@ typedef struct airy_token_efficiency_metric {
 遵循微内核"机制在内核，策略在用户态"原则（Liedtke minimality principle）：
 
 - 内核提供 CoreLoopThree kthread 机制（调度、加速）\[IND]。
-- 认知策略（思考模型、决策逻辑）在用户态（与 `services/daemons/llm_d` 协作）\[SS]。
+- 认知策略（思考模型、决策逻辑）在用户态（与 `services/daemons/cogn_d` 协作）\[SS]。
 - 阶段枚举与上下文结构 \[SC] 两端共享，确保语义一致。
 
 ### 5.2 算力调度解耦
@@ -486,7 +486,7 @@ sequenceDiagram
     participant CLT_U as agentrt CoreLoopThree (用户态)
     participant IPC as io_uring / AgentsIPC
     participant CLT_K as agentrt-linux CoreLoopThree kthread (内核态)
-    participant SCHED as sched_ext sub-scheduler
+    participant SCHED as 方案 C-Prime 用户态调度器
     participant GPU as GPU/NPU 设备
 
     AGENT->>CLT_U: 发起认知循环
@@ -552,7 +552,7 @@ sequenceDiagram
 | 协作子仓          | 协作内容                                          | 同源标注           |
 | ------------- | --------------------------------------------- | -------------- |
 | `kernel`      | 提供 CoreLoopThree kthread 机制、Wasm runtime 内核支持 | \[SS] + \[IND] |
-| `services`    | 与 llm\_d/sched\_d 协作，调度策略在用户态                 | \[SS]          |
+| `services`    | 与 cogn\_d/sched\_d 协作，调度策略在用户态                 | \[SS]          |
 | `security`    | 提供 Wasm 沙箱、LLM 推理 TEE 保护                      | \[SS] + \[IND] |
 | `memory`      | 提供 MemoryRovol 快照、超节点沙箱迁移                     | \[IND]         |
 | `cloudnative` | 提供 Agent 容器化、超节点 OS 集成                        | \[IND]         |

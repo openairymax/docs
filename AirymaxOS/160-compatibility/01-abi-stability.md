@@ -373,14 +373,14 @@ struct airy_feature_query {
 	uint32_t feature_version;
 };
 
-#define AIRY_FEATURE_SCHED_AGENT    1
+#define AIRY_FEATURE_USER_SCHED     1
 #define AIRY_FEATURE_MEMORY_ROVOL   2
 #define AIRY_FEATURE_CXL_POOL       3
 
 int ret = syscall(AIRY_SYS_FEATURE_QUERY,
-	AIRY_FEATURE_SCHED_AGENT, &version);
+	AIRY_FEATURE_USER_SCHED, &version);
 if (ret == 0) {
-	/* 支持 SCHED_AGENT，启用该特性 */
+	/* 支持 AIRY_SCHED_AGENT 用户态调度器，启用该特性 */
 } else {
 	/* 不支持，降级至普通调度 */
 }

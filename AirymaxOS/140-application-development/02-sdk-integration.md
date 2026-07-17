@@ -466,7 +466,7 @@ import json
 
 class CognitionClient:
     """认知客户端（16 嵌套客户端之一）"""
-    LLM_DAEMON_ID = 2  # llm_d 服务 Agent ID
+    LLM_DAEMON_ID = 2  # cogn_d 服务 Agent ID
 
     def __init__(self, token_budget: int = 10000, client: Client = None):
         self._client = client or Client()
@@ -489,7 +489,7 @@ class CognitionClient:
 
         # SDK 内部检测宿主：
         #   - agentrt-linux -> syscall(AIRY_SYS_COGNITION_PROCESS)
-        #   - agentrt 用户态 -> AgentsIPC 调用 llm_d
+        #   - agentrt 用户态 -> AgentsIPC 调用 cogn_d
         resp = self._client.call(self.LLM_DAEMON_ID,
                                   "cognition.process", payload)
         result = json.loads(resp)
@@ -523,11 +523,11 @@ class CognitionClient:
    io_uring 提交队列接收 SQE
        |
        v
-[内核态 SCHED_AGENT]
-   调度 llm_d kthread 处理
+[用户态 AIRY_SCHED_AGENT]
+   调度 cogn_d kthread 处理
        |
        v
-[llm_d daemon]
+[cogn_d daemon]
    解析 128B 消息头 + payload
    执行 LLM 推理
        |
@@ -552,18 +552,18 @@ class CognitionClient:
 
 | 客户端 | 子客户端 | 主要方法 | 目标 daemon |
 |--------|----------|----------|-------------|
-| CognitionClient | CognitionStreamClient | process / process_stream | llm_d |
-| | CognitionReflectClient | reflect / critique | llm_d |
-| | CognitionPlanClient | plan / decompose | llm_d |
+| CognitionClient | CognitionStreamClient | process / process_stream | cogn_d |
+| | CognitionReflectClient | reflect / critique | cogn_d |
+| | CognitionPlanClient | plan / decompose | cogn_d |
 | | CognitionCoordClient | coordinate / dispatch | sched_d |
 | SafetyClient | PermissionClient | check / grant / revoke | Cupolas |
-| | SandboxClient | enter / exit / exec | tool_d |
-| | AuditClient | log / query / verify | monit_d |
+| | SandboxClient | enter / exit / exec | dev_d |
+| | AuditClient | log / query / verify | audit_d |
 | | CryptoClient | sign / verify / encrypt | Cupolas |
-| ToolClient | ToolRegistryClient | register / list / unregister | market_d |
-| | ToolExecClient | execute / validate / compensate | tool_d |
-| | ToolMarketClient | search / install / publish | market_d |
-| | ToolVersionClient | pin / upgrade / rollback | market_d |
+| ToolClient | ToolRegistryClient | register / list / unregister | gateway_d |
+| | ToolExecClient | execute / validate / compensate | dev_d |
+| | ToolMarketClient | search / install / publish | gateway_d |
+| | ToolVersionClient | pin / upgrade / rollback | gateway_d |
 | ChatClient | ChatSessionClient | open / send / close | gateway_d |
 | | ChatStreamClient | stream / interrupt / resume | gateway_d |
 | | ChatHistoryClient | save / load / search | vfs_d |

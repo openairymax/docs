@@ -153,7 +153,7 @@ pie showData
 | 角色 | 人数 | 职责 | 投入度 |
 |------|------|------|--------|
 | 总架构师 | 1 | 统筹 9 Part 优先级、技术决策、关键路径管理 | 100%（全程） |
-| 内核工程师 | 1 | kernel 微内核化改造、SCHED_AGENT、Rust 模块 | 100%（M1-M5） |
+| 内核工程师 | 1 | kernel 微内核化改造、AIRY_SCHED_AGENT、Rust 模块 | 100%（M1-M5） |
 | 系统服务工程师 | 1 | services / system 子仓、12 daemons 集成 | 100%（M2-M6） |
 | 安全工程师 | 1 | security 子仓、capability + LSM、机密计算 | 80%（M2-M5） |
 | 测试工程师 | 1 | tests-linux、KUnit / kselftest / 形式化 | 80%（M3-M6） |
@@ -218,7 +218,7 @@ pie showData
 
 | 子仓 | 实施工时(h) | 占比 | 主要工作 |
 |------|-----------|------|---------|
-| kernel | 180 | 31.0% | sched_ext + io_uring + eBPF + Rust 模块 |
+| kernel | 180 | 31.0% | 方案 C-Prime + io_uring + eBPF + Rust 模块 |
 | services | 80 | 13.8% | VFS + 网络 + 12 daemons |
 | security | 90 | 15.5% | capability + LSM + 国密 |
 | memory | 60 | 10.3% | CXL + PMEM + MGLRU |

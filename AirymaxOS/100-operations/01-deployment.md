@@ -261,10 +261,10 @@ sequenceDiagram
 Description=agentrt-linux 12 daemons aggregated target
 Requires=sysinit.target
 After=sysinit.target network-online.target
-Wants=agentrt-gateway.service agentrt-llm.service agentrt-tool.service
-Wants=agentrt-sched.service agentrt-market.service agentrt-monit.service
-Wants=agentrt-channel.service agentrt-info.service agentrt-notify.service
-Wants=agentrt-observe.service agentrt-hook.service agentrt-plugin.service
+Wants=agentrt-macro-superv.service agentrt-logger.service agentrt-config.service
+Wants=agentrt-gateway.service agentrt-sched.service agentrt-vfs.service
+Wants=agentrt-net.service agentrt-mem.service agentrt-cogn.service
+Wants=agentrt-sec.service agentrt-audit.service agentrt-dev.service
 
 [Install]
 WantedBy=multi-user.target
@@ -278,22 +278,22 @@ WantedBy=multi-user.target
 
 ### 8.1 daemon 到 systemd unit 映射
 
-agentrt 的 12 个 daemons 在 agentrt-linux 中以 systemd 服务运行，遵循 IRON-9 v2 同源且部分代码共享原则——二进制名保持 `*_d` 后缀（同源），systemd 服务名采用 `agentrt-*.service` 格式（独立）。
+agentrt 的 12 个 daemons 在 agentrt-linux 中以 systemd 服务运行，遵循 IRON-9 v2 同源且部分代码共享原则——二进制名与 agentrt 同源（`macro_superv`/`logger_daemon`/`config_daemon` 及 `*_d` 后缀守护进程），systemd 服务名采用 `agentrt-*.service` 格式（独立）。
 
 | 二进制 | systemd unit | 职责 | 启动顺序 |
 |--------|--------------|------|---------|
-| `gateway_d` | `agentrt-gateway.service` | 网关，对外入口 | 1 |
-| `llm_d` | `agentrt-llm.service` | LLM 推理 | 2 |
-| `tool_d` | `agentrt-tool.service` | 工具执行 | 2 |
-| `sched_d` | `agentrt-sched.service` | 调度 | 1 |
-| `market_d` | `agentrt-market.service` | 市场（Agent 注册） | 3 |
-| `monit_d` | `agentrt-monit.service` | 监控 | 4 |
-| `channel_d` | `agentrt-channel.service` | 通道 | 2 |
-| `info_d` | `agentrt-info.service` | 信息汇聚 | 4 |
-| `notify_d` | `agentrt-notify.service` | 通知 | 5 |
-| `observe_d` | `agentrt-observe.service` | 观测 | 4 |
-| `hook_d` | `agentrt-hook.service` | 钩子 | 3 |
-| `plugin_d` | `agentrt-plugin.service` | 插件 | 3 |
+| `macro_superv` | `agentrt-macro-superv.service` | 主监管守护进程 | 1 |
+| `logger_daemon` | `agentrt-logger.service` | 日志消费守护进程 | 2 |
+| `config_daemon` | `agentrt-config.service` | 配置管理守护进程 | 3 |
+| `gateway_d` | `agentrt-gateway.service` | 网关，对外入口（含 Agent 注册） | 1 |
+| `sched_d` | `agentrt-sched.service` | 调度守护进程 | 1 |
+| `vfs_d` | `agentrt-vfs.service` | VFS 用户态服务守护进程 | 2 |
+| `net_d` | `agentrt-net.service` | 网络策略守护进程 | 2 |
+| `mem_d` | `agentrt-mem.service` | 记忆管理守护进程 | 4 |
+| `cogn_d` | `agentrt-cogn.service` | 认知调度守护进程 | 2 |
+| `sec_d` | `agentrt-sec.service` | 安全策略守护进程 | 5 |
+| `audit_d` | `agentrt-audit.service` | 审计守护进程 | 4 |
+| `dev_d` | `agentrt-dev.service` | 设备驱动守护进程 | 3 |
 
 ### 8.2 daemon systemd unit 模板
 
@@ -469,7 +469,7 @@ stateDiagram-v2
 | BUILD | BUILD_FAILED | `rpmbuild -ba` 返回非 0，编译失败 | 记录 `RPM_E_SPEC_INVALID` / `RPM_E_DEPS_UNRESOLVED` 等错误码，中止流水线 |
 | BUILD_FAILED | BUILD | 修正 spec 文件或源码后重新触发编译 | 清理 mock 构建根，重新执行 `rpmbuild -ba` |
 | TEST | STAGE | KUnit + kselftest 全部用例通过 | 推入 staging 环境，执行 `dnf upgrade --downloadonly`（OS-OPS-019） |
-| TEST | TEST_FAILED | KUnit 或 kselftest 存在失败用例 | 记录失败用例 ID，告警路由到 monit_d，中止推进 |
+| TEST | TEST_FAILED | KUnit 或 kselftest 存在失败用例 | 记录失败用例 ID，告警路由到 audit_d，中止推进 |
 | TEST_FAILED | BUILD | 修复代码后重新编译 | 回到 BUILD 状态重新走编译→测试流程 |
 | STAGE | DEPLOY | staging 环境 12 daemons 全部 healthy + 80-testing 验收通过 | 执行 `dnf system-upgrade reboot` 原子切换到新版本（OS-OPS-019） |
 | STAGE | STAGE_FAILED | staging 健康检查失败（daemon unhealthy 或 watchdog 超时） | 记录失败 daemon 诊断码（DAEMON_E_*），中止生产部署 |
@@ -628,17 +628,17 @@ graph LR
 | 启动序号 | daemon | systemd unit | 依赖的 daemon | After= | Requires= | Wants= |
 |---------|--------|--------------|---------------|--------|-----------|--------|
 | 1 | `gateway_d` | `agentrt-gateway.service` | 无 | `network-online.target` | — | — |
-| 2 | `llm_d` | `agentrt-llm.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
-| 3 | `tool_d` | `agentrt-tool.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 2 | `cogn_d` | `agentrt-cogn.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 3 | `dev_d` | `agentrt-dev.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
 | 4 | `sched_d` | `agentrt-sched.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
-| 5 | `market_d` | `agentrt-market.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
-| 6 | `monit_d` | `agentrt-monit.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
-| 7 | `channel_d` | `agentrt-channel.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
-| 8 | `info_d` | `agentrt-info.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
-| 9 | `notify_d` | `agentrt-notify.service` | `monit_d` | `agentrt-monit.service` | `agentrt-monit.service` | — |
-| 10 | `observe_d` | `agentrt-observe.service` | `monit_d` | `agentrt-monit.service` | `agentrt-monit.service` | — |
-| 11 | `hook_d` | `agentrt-hook.service` | `channel_d` + `notify_d` | `agentrt-channel.service agentrt-notify.service` | — | `agentrt-channel.service agentrt-notify.service` |
-| 12 | `plugin_d` | `agentrt-plugin.service` | `hook_d` | `agentrt-hook.service` | — | `agentrt-hook.service` |
+| 5 | `macro_superv` | `agentrt-macro-superv.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 6 | `audit_d` | `agentrt-audit.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 7 | `net_d` | `agentrt-net.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 8 | `mem_d` | `agentrt-mem.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 9 | `sec_d` | `agentrt-sec.service` | `audit_d` | `agentrt-audit.service` | `agentrt-audit.service` | — |
+| 10 | `logger_daemon` | `agentrt-logger.service` | `audit_d` | `agentrt-audit.service` | `agentrt-audit.service` | — |
+| 11 | `vfs_d` | `agentrt-vfs.service` | `net_d` + `sec_d` | `agentrt-net.service agentrt-sec.service` | — | `agentrt-net.service agentrt-sec.service` |
+| 12 | `config_daemon` | `agentrt-config.service` | `vfs_d` | `agentrt-vfs.service` | — | `agentrt-vfs.service` |
 
 #### 13.4.2 systemd 崩溃恢复策略表
 
@@ -646,10 +646,10 @@ graph LR
 |---------|-------------|------------|-------------|---------|---------|
 | daemon 进程退出码非 0 | `on-failure` | `5s` | `30s` | `sd_notify(WATCHDOG)` + AgentsIPC probe | 重启 daemon，最多 5 次/10 分钟 |
 | daemon 无心跳（watchdog 超时） | `on-failure` | `5s` | `30s` | `sd_notify` 30s 无心跳 | systemd 强制重启，触发 `DAEMON_E_WATCHDOG` |
-| daemon OOM kill | `on-failure` | `10s` | `30s` | `MemoryMax` 触发 + cgroup OOM | 重启并降低 `MemoryMax`，告警 `monit_d` |
+| daemon OOM kill | `on-failure` | `10s` | `30s` | `MemoryMax` 触发 + cgroup OOM | 重启并降低 `MemoryMax`，告警 `audit_d` |
 | AgentsIPC 协议版本不匹配 | `on-failure` | `5s` | `30s` | IPC handshake 失败 | 拒绝启动，输出 `DAEMON_E_IPC`，触发版本锁校验 |
 | 依赖 daemon 未就绪 | — | — | `30s` | `Requires=` 依赖检查 | systemd 自动等待依赖，超时则标记失败 |
-| daemon 段错误（SIGSEGV） | `on-failure` | `5s` | `30s` | coredump 捕获 + journal 记录 | 重启，coredump 上报 `observe_d`，3 次连续崩溃触发告警 |
+| daemon 段错误（SIGSEGV） | `on-failure` | `5s` | `30s` | coredump 捕获 + journal 记录 | 重启，coredump 上报 `logger_daemon`，3 次连续崩溃触发告警 |
 
 #### 13.4.3 systemd target 依赖 Mermaid 图
 
@@ -667,64 +667,64 @@ graph TD
     end
 
     subgraph L2["第 2 层（序号 2-4）"]
-        LLM["llm_d<br/>agentrt-llm.service<br/>序号 2"]
-        TOOL["tool_d<br/>agentrt-tool.service<br/>序号 3"]
+        COGN["cogn_d<br/>agentrt-cogn.service<br/>序号 2"]
+        DEV["dev_d<br/>agentrt-dev.service<br/>序号 3"]
         SCHED["sched_d<br/>agentrt-sched.service<br/>序号 4"]
     end
 
     subgraph L3["第 3 层（序号 5-8）"]
-        MARKET["market_d<br/>序号 5"]
-        MONIT["monit_d<br/>序号 6"]
-        CHANNEL["channel_d<br/>序号 7"]
-        INFO["info_d<br/>序号 8"]
+        MS["macro_superv<br/>序号 5"]
+        AUDIT["audit_d<br/>序号 6"]
+        NET["net_d<br/>序号 7"]
+        MEM["mem_d<br/>序号 8"]
     end
 
     subgraph L4["第 4 层（序号 9-10）"]
-        NOTIFY["notify_d<br/>序号 9"]
-        OBSERVE["observe_d<br/>序号 10"]
+        SEC["sec_d<br/>序号 9"]
+        LOGGER["logger_daemon<br/>序号 10"]
     end
 
     subgraph L5["第 5 层（序号 11-12）"]
-        HOOK["hook_d<br/>序号 11"]
-        PLUGIN["plugin_d<br/>序号 12"]
+        VFS["vfs_d<br/>序号 11"]
+        CONFIG["config_daemon<br/>序号 12"]
     end
 
     AT --> GW
-    GW --> LLM
-    GW --> TOOL
+    GW --> COGN
+    GW --> DEV
     GW --> SCHED
-    SCHED --> MARKET
-    SCHED --> MONIT
-    GW --> CHANNEL
-    SCHED --> CHANNEL
-    GW --> INFO
-    SCHED --> INFO
-    MONIT --> NOTIFY
-    MONIT --> OBSERVE
-    CHANNEL --> HOOK
-    NOTIFY --> HOOK
-    HOOK --> PLUGIN
+    SCHED --> MS
+    SCHED --> AUDIT
+    GW --> NET
+    SCHED --> NET
+    GW --> MEM
+    SCHED --> MEM
+    AUDIT --> SEC
+    AUDIT --> LOGGER
+    NET --> VFS
+    SEC --> VFS
+    VFS --> CONFIG
 
     style MT fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     style AT fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
     style SI fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
     style GW fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
-    style LLM fill:#fce4ec,stroke:#c62828,color:#000
-    style TOOL fill:#fce4ec,stroke:#c62828,color:#000
+    style COGN fill:#fce4ec,stroke:#c62828,color:#000
+    style DEV fill:#fce4ec,stroke:#c62828,color:#000
     style SCHED fill:#fce4ec,stroke:#c62828,color:#000
-    style MARKET fill:#e8f5e9,stroke:#2e7d32,color:#000
-    style MONIT fill:#e8f5e9,stroke:#2e7d32,color:#000
-    style CHANNEL fill:#e8f5e9,stroke:#2e7d32,color:#000
-    style INFO fill:#e8f5e9,stroke:#2e7d32,color:#000
-    style NOTIFY fill:#fff3e0,stroke:#e65100,color:#000
-    style OBSERVE fill:#fff3e0,stroke:#e65100,color:#000
-    style HOOK fill:#e1f5fe,stroke:#01579b,color:#000
-    style PLUGIN fill:#e1f5fe,stroke:#01579b,color:#000
+    style MS fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style AUDIT fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style NET fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style MEM fill:#e8f5e9,stroke:#2e7d32,color:#000
+    style SEC fill:#fff3e0,stroke:#e65100,color:#000
+    style LOGGER fill:#fff3e0,stroke:#e65100,color:#000
+    style VFS fill:#e1f5fe,stroke:#01579b,color:#000
+    style CONFIG fill:#e1f5fe,stroke:#01579b,color:#000
 ```
 
 #### 13.4.4 agentrt-linux 扩展深化规则
 
-**OS-OPS-025**：所有 12 daemons 的 systemd unit 必须设置 `RestartSec=5s`（OOM kill 场景 `RestartSec=10s`），避免崩溃后立即重启导致抖动；连续重启次数上限 5 次/10 分钟，超限触发 `monit_d` 告警并停止自动重启。
+**OS-OPS-025**：所有 12 daemons 的 systemd unit 必须设置 `RestartSec=5s`（OOM kill 场景 `RestartSec=10s`），避免崩溃后立即重启导致抖动；连续重启次数上限 5 次/10 分钟，超限触发 `audit_d` 告警并停止自动重启。
 
 **OS-OPS-026**：所有 12 daemons 的 `WatchdogSec` 必须为 `30s`，daemon 二进制必须通过 `sd_notify(WATCHDOG=1, "READY=1")` 每 15 秒上报心跳；30 秒无心跳 systemd 自动重启并输出 `DAEMON_E_WATCHDOG` 诊断码。
 
@@ -867,19 +867,19 @@ struct daemon_config {
  * agentrt 12 daemons 名称常量（agentrt-linux 专属）
  * 对齐表 8.1 daemon 到 systemd unit 映射
  */
-#define AIRY_DAEMON_COUNT     12
-#define AIRY_DAEMON_GATEWAY   "gateway_d"
-#define AIRY_DAEMON_LLM       "llm_d"
-#define AIRY_DAEMON_TOOL      "tool_d"
-#define AIRY_DAEMON_SCHED     "sched_d"
-#define AIRY_DAEMON_MARKET    "market_d"
-#define AIRY_DAEMON_MONIT     "monit_d"
-#define AIRY_DAEMON_CHANNEL   "channel_d"
-#define AIRY_DAEMON_INFO      "info_d"
-#define AIRY_DAEMON_NOTIFY    "notify_d"
-#define AIRY_DAEMON_OBSERVE   "observe_d"
-#define AIRY_DAEMON_HOOK      "hook_d"
-#define AIRY_DAEMON_PLUGIN    "plugin_d"
+#define AIRY_DAEMON_COUNT          12
+#define AIRY_DAEMON_MACRO_SUPERV   "macro_superv"
+#define AIRY_DAEMON_LOGGER         "logger_daemon"
+#define AIRY_DAEMON_CONFIG         "config_daemon"
+#define AIRY_DAEMON_GATEWAY        "gateway_d"
+#define AIRY_DAEMON_SCHED          "sched_d"
+#define AIRY_DAEMON_VFS            "vfs_d"
+#define AIRY_DAEMON_NET            "net_d"
+#define AIRY_DAEMON_MEM            "mem_d"
+#define AIRY_DAEMON_COGN           "cogn_d"
+#define AIRY_DAEMON_SEC            "sec_d"
+#define AIRY_DAEMON_AUDIT          "audit_d"
+#define AIRY_DAEMON_DEV            "dev_d"
 ```
 
 #### A.1.4 iso_image_spec — ISO 镜像规格

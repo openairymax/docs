@@ -528,7 +528,7 @@ typedef enum {
 | 12 | `security_socket_bind()`            | socket bind 检查   | 用户态拦截      | 内核 LSM 钩子               |
 | 13 | `security_cred_prepare()`           | 凭据复制             | 用户态模拟      | 内核 LSM 钩子               |
 | 14 | `security_cred_transfer()`          | 凭据转移             | 用户态模拟      | 内核 LSM 钩子               |
-| 15 | `bpf_lsm_##NAME` trampoline         | BPF\_LSM 钩子      | 用户态 eBPF   | 内核 X-macro 生成           |
+| 15 | `bpf_lsm_##NAME` trampoline         | 纯 C LSM 钩子（对齐 openEuler）      | 用户态 eBPF   | 内核 X-macro 生成           |
 | 16 | `task_no_new_privs()`               | NNP 检查           | 用户态模拟      | 内核标志位                   |
 | 17 | `ns_capable_noaudit()`              | capability 无审计检查 | 用户态模拟      | 内核 `commoncap.c`        |
 

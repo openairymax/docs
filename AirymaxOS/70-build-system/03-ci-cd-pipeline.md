@@ -27,7 +27,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|
 | 7 层自动化验证体系 | OS-STD-TOOL-001~161 定义的端到端验证链：L1 编译期检查 / L2 静态分析 / L3 预提交 / L4 CI 门禁 / L5 连接验证 / L6 协议验证 / L7 发布验证 |
 | CI 矩阵 | 配置 × 架构 × 编译器的笛卡尔积构建矩阵（3×3×2=18） |
-| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 6+2 头文件层（OS-IRON-014），物理宿主 `kernel/include/airymax/` |
+| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014），物理宿主 `kernel/include/airymax/` |
 | 双向 CI | kernel CI 通过 → 触发 agentrt 镜像 PR → agentrt CI 通过 → L1 审查 → L3 审批（OS-IRON-008） |
 | SSoT | Single Source of Truth，规则编号唯一权威来源（`09-ssot-registry.md`/`.yaml`） |
 | 门禁（Gate） | CI 中阻断 PR 合并的硬性检查点，失败即禁止合并 |
@@ -93,10 +93,6 @@ CI 覆盖范围遵循 OS-IRON-013（8 子仓独立 git 仓库 + submodule 管理
 ```
 agentrt-linux/.github/workflows/
 ├── ci-kernel.yml            # kernel 子仓 CI（Kbuild + checkpatch + sparse + Coccinelle + KUnit + kselftest）
-├── ci-meson.yml             # Meson 子仓 CI（C/C++ 用户态）
-├── ci-cargo.yml             # Cargo 子仓 CI（Rust）
-├── ci-go.yml                # Go 子仓 CI
-├── ci-tsc.yml               # tsc 子仓 CI（TypeScript）
 ├── ssot-validate.yml        # SSoT 规则 ID 校验（全仓）
 ├── sc-dual-ci.yml           # [SC] 共享契约层双向 CI（OS-IRON-008）
 ├── nightly.yml              # develop nightly build（L5/L6 连接/协议验证）
@@ -109,7 +105,7 @@ agentrt-linux/.github/workflows/
 管理仓 CI 串行执行 4 类校验，任一失败即阻断：
 
 1. **SSoT 校验**：扫描全仓 `.md` 文件中的 `OS-*-NNN` 规则 ID，与 `ssot-registry.yaml`（管理仓根）比对（详见 §6）。
-2. **文件完整性**：校验 `.gitmodules` 中声明的 8 子仓 submodule 指针与实际 checkout 一致；校验 `kernel/include/airymax/` 下 6+2 头文件物理存在（OS-IRON-014）。
+2. **文件完整性**：校验 `.gitmodules` 中声明的 8 子仓 submodule 指针与实际 checkout 一致；校验 `kernel/include/airymax/` 下 10 个头文件物理存在（OS-IRON-014）。
 3. **子仓状态**：聚合 8 子仓最近一次 CI 状态，任一子仓主干红则管理仓 CI 红。
 4. **文档格式**：校验 markdownlint + front-matter 版权头 + 父文档链接有效性。
 
@@ -144,7 +140,7 @@ jobs:
         with: { submodules: recursive }
       - name: Verify 8 subrepo submodule pointers
         run: python3 agentrt-linux/tools/check-submodules.py --expected 8
-      - name: Verify [SC] 6+2 shared headers exist
+      - name: Verify [SC] 10 shared headers exist
         run: |
           test -f kernel/include/airymax/airy_agent.h
           test -f kernel/include/airymax/airy_ipc.h
@@ -284,19 +280,21 @@ jobs:
           python3 agentrt-linux/tools/parse-tap.py --input kselftest.tap --fail-on-not-ok
 ```
 
-### 2.4 其他子仓 CI（按构建系统分类）
+### 2.4 其他子仓 CI（按构建系统分类，子仓级 workflow）
+
+> **归属说明**：下列 workflow 模板位于**各子仓自身的** `.github/workflows/` 目录中，不在管理仓 `agentrt-linux/.github/workflows/` 的 6 个 workflow 之内（§2.1）。每个子仓按自身构建系统选用对应模板，管理仓通过 `mgmt-orchestrator.yml` 聚合各子仓 CI 状态（§2.2）。
 
 非 kernel 子仓按构建系统分类，每类一个 workflow 模板，子仓按自身归属选用：
 
-| 构建系统 | workflow | 典型语言 | 关键 job |
-|---------|---------|---------|---------|
+| 构建系统 | workflow（子仓级） | 典型语言 | 关键 job |
+|---------|------------------|---------|---------|
 | **Meson** | `ci-meson.yml` | C/C++ 用户态 | meson setup + ninja + meson test + clang-tidy |
 | **Cargo** | `ci-cargo.yml` | Rust | cargo fmt --check + clippy --deny warnings + cargo test |
 | **Go** | `ci-go.yml` | Go | go vet + golangci-lint + go test -race |
 | **tsc** | `ci-tsc.yml` | TypeScript | tsc --noEmit + eslint + jest |
 
 ```yaml
-# agentrt-linux/.github/workflows/ci-cargo.yml（节选）
+# <subrepo>/.github/workflows/ci-cargo.yml（节选，子仓级 workflow）
 jobs:
   cargo-build-test:
     runs-on: ubuntu-latest
@@ -312,7 +310,7 @@ jobs:
 
 ### 2.5 [SC] 共享契约层双向 CI（OS-IRON-008）
 
-[SC] 层是 agentrt ↔ agentrt-linux 之间逐字节相同的 6+2 头文件层（OS-IRON-014）。任一端的 [SC] 头文件变更必须触发对端的镜像 PR 并通过其 CI，详见 §7。
+[SC] 层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。任一端的 [SC] 头文件变更必须触发对端的镜像 PR 并通过其 CI，详见 §7。
 
 ---
 
@@ -685,7 +683,7 @@ SSoT 校验独立于 7 层验证体系，是横切关注点：它不验证代码
 
 ### 7.1 触发条件
 
-[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 6+2 头文件层（OS-IRON-014）。物理宿主为 `kernel/include/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。
+[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。物理宿主为 `kernel/include/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。
 
 当以下 8 个文件中任一发生变更时，触发双向 CI：
 
@@ -719,7 +717,7 @@ on:
 
 ```mermaid
 flowchart LR
-    A[kernel PR 触及<br/>6+2 头文件] --> B{kernel CI<br/>18 矩阵+全套验证}
+    A[kernel PR 触及<br/>10 个头文件] --> B{kernel CI<br/>18 矩阵+全套验证}
     B -->|fail| Z[阻断 kernel PR 合并]
     B -->|pass| C[触发 agentrt 镜像 PR]
     C --> D{agentrt CI<br/>用户态全量验证}
@@ -760,7 +758,7 @@ jobs:
         env:
           AGENTRT_TOKEN: ${{ secrets.AGENTRT_CI_TOKEN }}
         run: |
-          # 导出 6+2 头文件变更补丁
+          # 导出 10 个头文件变更补丁
           git format-patch origin/${{ github.base_ref }} HEAD -- \
             kernel/include/airymax/ -o /tmp/patches
           # 在 agentrt 仓创建镜像 PR
@@ -1085,7 +1083,7 @@ CI 失败通过 GitHub PR review comment 精准通知，避免全局噪音：
 - [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)（SSoT 规则编号权威注册表，文档体系 Markdown 源）
 - [`agentrt-linux/ssot-registry.yaml`](../../../agentrt-linux/ssot-registry.yaml)（SSoT 机器可读 Schema，管理仓根）
 - [`50-engineering-standards/05-development-process.md`](../50-engineering-standards/05-development-process.md)（补丁生命周期 + 7 层验证前 4 层强制）
-- [`50-engineering-standards/120-cross-project-code-sharing.md`](../50-engineering-standards/120-cross-project-code-sharing.md)（[SC] 共享契约层 6+2 头文件，OS-IRON-014）
+- [`50-engineering-standards/120-cross-project-code-sharing.md`](../50-engineering-standards/120-cross-project-code-sharing.md)（[SC] 共享契约层 10 个头文件，OS-IRON-014）
 - [`80-testing/01-kunit-framework.md`](../80-testing/01-kunit-framework.md)（KUnit，OS-TEST-001~012）
 - [`80-testing/02-kselftest.md`](../80-testing/02-kselftest.md)（kselftest，OS-TEST-013~022 + OS-STD-TEST-011）
 

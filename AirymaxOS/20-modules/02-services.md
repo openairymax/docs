@@ -62,7 +62,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次               | 共享程度                               | 服务子系统内容                                                                                                                                                                                                                                    | 组织方式                                 |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
 | **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码与标志位、ring 创建/注册参数                                                                                                                                        | `include/airymax/ipc.h`（与 kernel 共享） |
-| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（gateway\_d/llm\_d/tool\_d/sched\_d/market\_d/monit\_d/channel\_d/info\_d/notify\_d/observe\_d/hook\_d/plugin\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
+| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（macro\_superv/logger\_daemon/config\_daemon/gateway\_d/sched\_d/vfs\_d/net\_d/mem\_d/cogn\_d/sec\_d/audit\_d/dev\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
 | **\[IND] 完全独立层** | 完全独立                               | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF\_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs）                                                                                        | 各自独立仓库                               |
 
 ### 2.1 维度对比
@@ -70,7 +70,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 维度        | agentrt（daemons）                | agentrt-linux（services）         | 同源标注   |
 | --------- | ------------------------------- | ------------------------------- | ------ |
 | 服务数量      | 12 daemons                      | 12 daemons + VFS/Net/Drivers    | \[SS]  |
-| daemon 语义 | gateway\_d/llm\_d/tool\_d/...   | gateway\_d/llm\_d/tool\_d/...   | \[SS]  |
+| daemon 语义 | macro\_superv/logger\_daemon/...   | macro\_superv/logger\_daemon/...   | \[SS]  |
 | IPC 消息头   | `struct airy_ipc_msg_hdr`（128B） | `struct airy_ipc_msg_hdr`（128B） | \[SC]  |
 | IPC magic | 0x41524531 'ARE1'               | 0x41524531 'ARE1'               | \[SC]  |
 | 通信方式      | 进程间消息队列                         | io\_uring 零拷贝 IPC               | \[SS]  |
@@ -81,7 +81,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.2 同源传承要点
 
-- 保留 agentrt 的 12 daemons 语义（gateway\_d/llm\_d/tool\_d 等）\[SS]。
+- 保留 agentrt 的 12 daemons 语义（macro\_superv/logger\_daemon/config\_daemon/gateway\_d/sched\_d/vfs\_d/net\_d/mem\_d/cogn\_d/sec\_d/audit\_d/dev\_d 等）\[SS]。
 - 保留 agentrt 的"消息传递"通信范式（升级为 io\_uring 零拷贝实现）\[SS]。
 - 保留 agentrt 的 capability 令牌传递语义（升级为内核态强制）\[SS]。
 - IPC 消息头与操作码 \[SC] 共享，确保两端通信协议一致。
@@ -96,19 +96,19 @@ services/
 ├── vfs/                   # 用户态 VFS [IND]
 ├── net/                   # 用户态网络栈（DPDK/AF_XDP）[IND]
 ├── drivers/               # 用户态驱动框架（VFIO/libvfio）[IND]
-├── daemons/               # 12 daemons 集成（agentrt 同源）[SS]
-│   ├── gateway_d/
-│   ├── llm_d/
-│   ├── tool_d/
-│   ├── sched_d/
-│   ├── market_d/
-│   ├── monit_d/
-│   ├── channel_d/
-│   ├── info_d/
-│   ├── notify_d/
-│   ├── observe_d/
-│   ├── hook_d/
-│   └── plugin_d/
+├── daemons/               # 12 daemons 集成（USV 统一生命周期）[SS]
+│   ├── macro_superv/        # USV：Macro-Supervisor
+│   ├── logger_daemon/       # ULPS：Logger Daemon
+│   ├── config_daemon/       # UCF：配置管理守护
+│   ├── gateway_d/           # 网关守护
+│   ├── sched_d/             # 调度守护
+│   ├── vfs_d/               # VFS 用户态服务
+│   ├── net_d/               # 网络策略守护
+│   ├── mem_d/               # 记忆管理守护
+│   ├── cogn_d/              # 认知调度守护
+│   ├── sec_d/               # 安全策略守护
+│   ├── audit_d/             # 审计守护
+│   └── dev_d/               # 设备驱动守护
 ├── systemd/               # systemd 集成（agentrt-linux 标准）[IND]
 ├── ipc/                   # 消息传递通信（基于 io_uring）[SS]
 └── docs/
@@ -150,22 +150,22 @@ services/
 - 资源限制（cgroup v2）\[IND]。
 - 日志输出（journald 集成）\[IND]。
 
-**12 daemons 清单**（与 agentrt 完全同源 \[SS]）：
+**12 daemons 清单**（统一归属 `services/daemons/`，USV 统一生命周期 \[SS]）：
 
-| 序号 | daemon      | 职责         | 同源标注  |
-| -- | ----------- | ---------- | ----- |
-| 1  | `gateway_d` | 网关守护进程     | \[SS] |
-| 2  | `llm_d`     | LLM 推理守护进程 | \[SS] |
-| 3  | `tool_d`    | 工具守护进程     | \[SS] |
-| 4  | `sched_d`   | 调度守护进程     | \[SS] |
-| 5  | `market_d`  | 市场守护进程     | \[SS] |
-| 6  | `monit_d`   | 监控守护进程     | \[SS] |
-| 7  | `channel_d` | 通道守护进程     | \[SS] |
-| 8  | `info_d`    | 信息守护进程     | \[SS] |
-| 9  | `notify_d`  | 通知守护进程     | \[SS] |
-| 10 | `observe_d` | 观测守护进程     | \[SS] |
-| 11 | `hook_d`    | 钩子守护进程     | \[SS] |
-| 12 | `plugin_d`  | 插件守护进程     | \[SS] |
+| 序号 | daemon           | 职责              | 同源标注  |
+| -- | ---------------- | --------------- | ----- |
+| 1  | `macro_superv`   | 主监管守护进程（USV）    | \[SS] |
+| 2  | `logger_daemon`  | 日志消费守护进程（ULPS）  | \[SS] |
+| 3  | `config_daemon`  | 配置管理守护进程（UCF）   | \[SS] |
+| 4  | `gateway_d`      | 网关守护进程           | \[SS] |
+| 5  | `sched_d`        | 调度守护进程           | \[SS] |
+| 6  | `vfs_d`          | VFS 用户态服务守护进程    | \[SS] |
+| 7  | `net_d`          | 网络策略守护进程         | \[SS] |
+| 8  | `mem_d`          | 记忆管理守护进程         | \[SS] |
+| 9  | `cogn_d`         | 认知调度守护进程         | \[SS] |
+| 10 | `sec_d`          | 安全策略守护进程         | \[SS] |
+| 11 | `audit_d`        | 审计守护进程           | \[SS] |
+| 12 | `dev_d`          | 设备驱动守护进程         | \[SS] |
 
 ### 3.5 systemd/（systemd 集成）\[IND]
 
@@ -308,7 +308,7 @@ WantedBy=airymaxos.target
 
 - 进程间通信通过内核仲裁的消息传递 \[SS]。
 - 消息携带 capability 令牌 \[SS]。
-- 零拷贝通过 page flipping 实现 \[SS]。
+- 零拷贝通过 IORING_OP_URING_CMD + registered buffer 实现 \[SS]。
 
 ### 5.3 服务隔离 \[IND]
 
@@ -345,18 +345,18 @@ WantedBy=airymaxos.target
 
 | 序号 | daemon      | 职责         | agentrt 实现 | agentrt-linux 实现          |
 | -- | ----------- | ---------- | ---------- | ------------------------- |
-| 1  | `gateway_d` | 网关守护进程     | 用户态进程      | systemd unit + capability |
-| 2  | `llm_d`     | LLM 推理守护进程 | 用户态进程      | systemd unit + capability |
-| 3  | `tool_d`    | 工具守护进程     | 用户态进程      | systemd unit + capability |
-| 4  | `sched_d`   | 调度守护进程     | 用户态进程      | systemd unit + capability |
-| 5  | `market_d`  | 市场守护进程     | 用户态进程      | systemd unit + capability |
-| 6  | `monit_d`   | 监控守护进程     | 用户态进程      | systemd unit + capability |
-| 7  | `channel_d` | 通道守护进程     | 用户态进程      | systemd unit + capability |
-| 8  | `info_d`    | 信息守护进程     | 用户态进程      | systemd unit + capability |
-| 9  | `notify_d`  | 通知守护进程     | 用户态进程      | systemd unit + capability |
-| 10 | `observe_d` | 观测守护进程     | 用户态进程      | systemd unit + capability |
-| 11 | `hook_d`    | 钩子守护进程     | 用户态进程      | systemd unit + capability |
-| 12 | `plugin_d`  | 插件守护进程     | 用户态进程      | systemd unit + capability |
+| 1  | `macro_superv`  | 主监管守护进程     | 用户态进程      | systemd unit + capability |
+| 2  | `logger_daemon` | 日志消费守护进程    | 用户态进程      | systemd unit + capability |
+| 3  | `config_daemon` | 配置管理守护进程    | 用户态进程      | systemd unit + capability |
+| 4  | `gateway_d`     | 网关守护进程      | 用户态进程      | systemd unit + capability |
+| 5  | `sched_d`       | 调度守护进程      | 用户态进程      | systemd unit + capability |
+| 6  | `vfs_d`         | VFS 用户态服务守护进程 | 用户态进程      | systemd unit + capability |
+| 7  | `net_d`         | 网络策略守护进程     | 用户态进程      | systemd unit + capability |
+| 8  | `mem_d`         | 记忆管理守护进程     | 用户态进程      | systemd unit + capability |
+| 9  | `cogn_d`        | 认知调度守护进程     | 用户态进程      | systemd unit + capability |
+| 10 | `sec_d`         | 安全策略守护进程     | 用户态进程      | systemd unit + capability |
+| 11 | `audit_d`       | 审计守护进程       | 用户态进程      | systemd unit + capability |
+| 12 | `dev_d`         | 设备驱动守护进程     | 用户态进程      | systemd unit + capability |
 
 **6.2.2 io\_uring IPC 通信原语同源（8 项）**
 
@@ -367,7 +367,7 @@ WantedBy=airymaxos.target
 | 3  | FIFO              | 单向面向消息          | 用户态 FIFO       | io\_uring ring 单向             |
 | 4  | Eventpair         | 事件同步            | 用户态 eventfd    | io\_uring + eventfd           |
 | 5  | capability 令牌传递   | 消息携带 capability | 用户态 capability | 内核态 capability \[SS]          |
-| 6  | 零拷贝 page flipping | page 引用传递       | 用户态 mmap       | io\_uring registered buffer   |
+| 6  | 零拷贝 IORING_OP_URING_CMD | page 引用传递       | 用户态 mmap       | io\_uring registered buffer   |
 | 7  | trace\_id 贯穿      | 链路追踪            | user\_data 字段  | io\_uring user\_data 字段 \[SC] |
 | 8  | daemon 生命周期       | init→run→stop   | 自研 supervisor  | systemd unit lifecycle        |
 
@@ -393,19 +393,19 @@ sequenceDiagram
     participant APP as Agent 应用
     participant GW as gateway_d (用户态)
     participant IPC as io_uring ring
-    participant LLM as llm_d (用户态)
+    participant COGN as cogn_d (用户态)
     participant SCHED as sched_d (用户态)
     participant SYS as systemd (用户态)
 
     APP->>GW: 提交请求（struct airy_ipc_msg_hdr [SC]）
     GW->>IPC: io_uring 提交（MSG_RING [SS]）
-    IPC->>LLM: 零拷贝传递（registered buffer [SS]）
-    LLM->>IPC: 推理结果（trace_id [SC] 贯穿）
+    IPC->>COGN: 零拷贝传递（registered buffer [SS]）
+    COGN->>IPC: 推理结果（trace_id [SC] 贯穿）
     IPC->>GW: 结果返回
     GW-->>APP: 响应
 
     SYS->>GW: 生命周期管理（Restart=always [IND]）
-    SYS->>LLM: cgroup 资源限制 [IND]
+    SYS->>COGN: cgroup 资源限制 [IND]
     SYS->>SCHED: 依赖关系（After/Requires [IND]）
 ```
 
@@ -417,10 +417,10 @@ graph TD
         IPC_HDR[include/airymax/ipc.h<br/>magic ARE1 + 128B msg_hdr]
     end
     subgraph SS["[SS] 语义同源层"]
-        DAEMONS[12 daemons<br/>gateway_d / llm_d / tool_d / ...]
+        DAEMONS[12 daemons<br/>macro_superv / logger_daemon / cogn_d / dev_d / ...]
         PRIMITIVES[io_uring IPC 原语<br/>channel / socket / fifo / eventpair]
         CAP_TOKEN[capability 令牌传递]
-        ZERO_COPY[零拷贝 page flipping]
+        ZERO_COPY[零拷贝 IORING_OP_URING_CMD]
     end
     subgraph IND["[IND] 独立层"]
         VFS[用户态 VFS<br/>seL4 服务用户态化参考]
@@ -458,7 +458,7 @@ graph TD
 | **K-3 服务隔离**  | 每个服务独立地址空间 + capability + seccomp + Landlock |
 | **S-1 反馈闭环**  | systemd Restart=always + journald 日志反馈       |
 | **C-1 双系统协同** | io\_uring 零拷贝 + 用户态服务协同                      |
-| **E-2 可观测性**  | journald + uprobe/tracepoint + observe\_d    |
+| **E-2 可观测性**  | journald + uprobe/tracepoint + logger\_daemon    |
 | **A-1 极简主义**  | 服务最小权限 + capability 令牌                       |
 
 ***
@@ -485,7 +485,7 @@ graph TD
 | `kernel`      | 提供 VFS/网络/驱动用户态服务所需的内核侧接口  | \[IND] |
 | `security`    | 为每个服务颁发 capability 令牌      | \[SS]  |
 | `memory`      | 提供 VFS 持久化层、MemoryRovol 卷载 | \[IND] |
-| `cognition`   | llm\_d/sched\_d 与认知循环协作    | \[SS]  |
+| `cognition`   | cogn\_d/sched\_d 与认知循环协作    | \[SS]  |
 | `cloudnative` | gateway\_d/sdk 与 K8s 集成    | \[IND] |
 | `system`      | systemd unit 管理、配置工具       | \[IND] |
 | `tests-linux` | 服务集成测试、Soak Test           | \[SS]  |
@@ -522,7 +522,7 @@ graph TD
 
 | 维度            | agentrt                         | agentrt-linux services          | 一致性        |
 | ------------- | ------------------------------- | ------------------------------- | ---------- |
-| daemon 名称     | gateway\_d/llm\_d/tool\_d/...   | gateway\_d/llm\_d/tool\_d/...   | \[SS] 同源语义 |
+| daemon 名称     | macro\_superv/logger\_daemon/...   | macro\_superv/logger\_daemon/...   | \[SS] 同源语义 |
 | IPC magic     | 0x41524531 'ARE1'               | 0x41524531 'ARE1'               | \[SC] 共享契约 |
 | IPC 消息头       | `struct airy_ipc_msg_hdr`（128B） | `struct airy_ipc_msg_hdr`（128B） | \[SC] 共享契约 |
 | 通信原语          | channel/socket/fifo/eventpair   | channel/socket/fifo/eventpair   | \[SS] 同源语义 |

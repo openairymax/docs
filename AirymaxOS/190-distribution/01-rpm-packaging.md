@@ -37,7 +37,7 @@ agentrt-linux（AirymaxOS）RPM 打包设计旨在为发行版构建提供可重
 | 类别 | 包名前缀 | 数量 | 备注 |
 |------|----------|------|------|
 | 内核 | airymaxos-kernel | 5 | kernel / modules / headers / devel / tools |
-| 用户态服务 | airymaxos-services | 12 | gateway_d / llm_d / tool_d 等 |
+| 用户态服务 | airymaxos-services | 12 | gateway_d / cogn_d / dev_d 等 |
 | 认知运行时 | airymaxos-cognition | 3 | cognition / taskflow / mac |
 | 记忆卷载 | airymaxos-memory | 4 | core / regions / forgetting / tiering |
 | 安全穹顶 | airymaxos-security | 3 | cupolas / capability / lsm |
@@ -67,10 +67,10 @@ airymaxos-base (虚拟组)
 │   └── airymaxos-kernel-tools
 ├── airymaxos-services            # 用户态服务组
 │   ├── airymaxos-services-gateway
-│   ├── airymaxos-services-llm
-│   ├── airymaxos-services-tool
+│   ├── airymaxos-services-cogn
+│   ├── airymaxos-services-dev
 │   ├── airymaxos-services-sched
-│   ├── airymaxos-services-monit
+│   ├── airymaxos-services-audit
 │   └── ... (共 12 个)
 ├── airymaxos-cognition           # 认知运行时
 ├── airymaxos-memory              # 记忆卷载
@@ -93,8 +93,8 @@ airymaxos-base (虚拟组)
 │   └── modules/6.6.0-agentrt/
 ├── services/                    # daemon 二进制
 │   ├── gateway_d
-│   ├── llm_d
-│   ├── tool_d
+│   ├── cogn_d
+│   ├── dev_d
 │   └── ...
 ├── cognition/                   # 认知运行时库
 ├── memory/                      # 记忆卷载库
@@ -102,7 +102,7 @@ airymaxos-base (虚拟组)
 
 /usr/lib/systemd/system/
 ├── gateway_d.service
-├── llm_d.service
+├── cogn_d.service
 └── ...
 
 /etc/airymaxos/
@@ -143,17 +143,17 @@ airymaxos-base (虚拟组)
 %global airy_release 1
 %global kernel_version 6.6.0
 %global kernel_patchlevel 0
-%global sched_ext_version 7
+%global sched_cprime_version 1
 
 Name:           airymaxos-kernel
 Version:        %{airy_version}
 Release:        %{airy_release}%{?dist}
-Summary:        agentrt-linux (AirymaxOS) Linux 6.6 kernel with sched_ext
+Summary:        agentrt-linux (AirymaxOS) Linux 6.6 kernel with 方案 C-Prime
 License:        GPL-2.0-only OR AGPL-3.0-or-later
 URL:            https://github.com/spharx/agentrt-linux
 Source0:        airymaxos-kernel-%{version}.tar.gz
 Source1:        airymaxos-kernel.config
-Source2:        sched_agent_bpf.c
+Source2:        sched_agent_cprime.c
 
 BuildRequires:  bc, binutils, elfutils-libelf-devel, gcc, make
 BuildRequires:  bison, flex, openssl-devel
@@ -164,8 +164,8 @@ ExclusiveArch:  x86_64 aarch64 riscv64
 
 %description
 The agentrt-linux (AirymaxOS) kernel package contains the Linux 6.6 kernel
-with sched_ext framework forward-ported from mainline 6.12+. This enables
-the SCHED_AGENT scheduling class for Agent workloads.
+with 方案 C-Prime (SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS mapping) user-space
+scheduler. This enables the AIRY_SCHED_AGENT scheduling strategy for Agent workloads.
 
 %package core
 Summary:        agentrt-linux kernel core (vmlinuz + initramfs)
@@ -193,12 +193,12 @@ Requires:       airymaxos-kernel-core = %{version}-%{release}
 %prep
 %setup -q -n airymaxos-kernel-%{version}
 
-# 应用 sched_ext 向前移植补丁
-%patch0 -p1 -b .sched_ext
+# 应用方案 C-Prime 内核支持补丁（暴露 SCHED_DEADLINE/SCHED_FIFO 调度类属性）
+%patch0 -p1 -b .sched_cprime
 %patch1 -p1 -b .sched_agent
 
-# 准备 BPF 程序源码
-cp %{SOURCE2} tools/sched_ext/sched_agent_bpf.c
+# 准备用户态调度器源码
+cp %{SOURCE2} services/sched_agent_cprime.c
 
 # 复制默认内核配置
 cp %{SOURCE1} .config
@@ -217,11 +217,10 @@ make -j$(nproc) KCFLAGS="-Werror -Wmissing-prototypes" \
      HOSTCFLAGS="-Werror" \
      bzImage modules
 
-# 构建 sched_agent BPF 程序
-make -C tools/sched_ext \
-     CC=clang \
-     LLC=llc \
-     sched_agent_bpf.o
+# 构建 sched_agent 用户态调度器
+make -C services \
+     CC=gcc \
+     sched_agent_cprime
 
 # 构建内核工具
 make -j$(nproc) -C tools/perf
@@ -245,10 +244,10 @@ make INSTALL_MOD_PATH=%{buildroot} INSTALL_MOD_STRIP=1 \
 make INSTALL_HDR_PATH=%{buildroot}/usr \
      headers_install
 
-# 安装 sched_agent BPF 程序
-mkdir -p %{buildroot}/usr/lib/airymaxos/sched_ext
-install -m 644 tools/sched_ext/sched_agent_bpf.o \
-        %{buildroot}/usr/lib/airymaxos/sched_ext/
+# 安装 sched_agent 用户态调度器
+mkdir -p %{buildroot}/usr/lib/airymaxos/sched
+install -m 755 services/sched_agent_cprime \
+        %{buildroot}/usr/lib/airymaxos/sched/
 
 # 安装内核工具
 install -m 755 tools/perf/perf \
@@ -268,7 +267,7 @@ install -m 644 airymaxos-kernel-load-bpf.service \
 %files core
 /boot/vmlinuz-%{kernel_version}-agentrt
 /boot/initramfs-%{kernel_version}-agentrt.img
-%attr(0644, root, root) /usr/lib/airymaxos/sched_ext/sched_agent_bpf.o
+%attr(0755, root, root) /usr/lib/airymaxos/sched/sched_agent_cprime
 /usr/lib/systemd/system/airymaxos-kernel-load-bpf.service
 
 %files modules
@@ -290,8 +289,8 @@ install -m 644 airymaxos-kernel-load-bpf.service \
 %changelog
 * Wed Jul 09 2026 SPHARX <dev@spharx.com> - 1.0.1-1
 - Initial agentrt-linux (AirymaxOS) 1.0.1 release
-- Forward-port sched_ext from Linux 6.12+ to 6.6 baseline
-- Add SCHED_AGENT BPF scheduler with Q16.16 vtime
+- 应用方案 C-Prime（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）
+- Add AIRY_SCHED_AGENT user-space scheduler with Q16.16 vtime
 - Add MemoryRovol L1-L4 tiered memory with CXL/PMEM support
 ```
 
@@ -299,17 +298,17 @@ install -m 644 airymaxos-kernel-load-bpf.service \
 
 ## 4. daemon 包 spec 文件示例
 
-### 4.1 llm_d daemon spec 文件
+### 4.1 cogn_d daemon spec 文件
 
 ```spec
-# airymaxos-services-llm.spec —— llm_d daemon 包
+# airymaxos-services-cogn.spec —— cogn_d daemon 包
 %global airy_version 1.0.1
 %global airy_release 1
 
-Name:           airymaxos-services-llm
+Name:           airymaxos-services-cogn
 Version:        %{airy_version}
 Release:        %{airy_release}%{?dist}
-Summary:        agentrt-linux LLM Inference Daemon (llm_d)
+Summary:        agentrt-linux LLM Inference Daemon (cogn_d)
 License:        AGPL-3.0-or-later
 URL:            https://github.com/spharx/agentrt-linux
 Source0:        airymaxos-services-%{version}.tar.gz
@@ -327,9 +326,9 @@ Requires(preun): systemd
 ExclusiveArch:  x86_64 aarch64
 
 %description
-The llm_d daemon provides LLM inference proxy for agentrt-linux (AirymaxOS).
+The cogn_d daemon provides LLM inference proxy for agentrt-linux (AirymaxOS).
 Features include multi-provider routing, token caching, billing, and
-SCHED_AGENT-aware task scheduling.
+AIRY_SCHED_AGENT-aware task scheduling.
 
 %prep
 %setup -q -n airymaxos-services-%{version}
@@ -349,36 +348,36 @@ make DESTDIR=%{buildroot} install
 
 # 安装 systemd unit
 mkdir -p %{buildroot}/usr/lib/systemd/system
-install -m 644 ../systemd/llm_d.service \
+install -m 644 ../systemd/cogn_d.service \
         %{buildroot}/usr/lib/systemd/system/
 
 # 安装默认配置
 mkdir -p %{buildroot}/etc/airymaxos/services
-install -m 644 ../config/llm_d.conf \
+install -m 644 ../config/cogn_d.conf \
         %{buildroot}/etc/airymaxos/services/
 
 # 安装 locale 数据
 mkdir -p %{buildroot}/usr/share/locale/zh_CN/LC_MESSAGES
 msgfmt ../po/zh_CN.po -o \
-        %{buildroot}/usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-llm_d.mo
+        %{buildroot}/usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-cogn_d.mo
 
 %post
-%systemd_post llm_d.service
+%systemd_post cogn_d.service
 
 %preun
-%systemd_preun llm_d.service
+%systemd_preun cogn_d.service
 
 %postun
-%systemd_postun_with_restart llm_d.service
+%systemd_postun_with_restart cogn_d.service
 
 %files
 %defattr(-, root, root, -)
-/usr/lib/airymaxos/services/llm_d
-/usr/lib/systemd/system/llm_d.service
-%config(noreplace) /etc/airymaxos/services/llm_d.conf
-/usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-llm_d.mo
-/usr/share/locale/en_US/LC_MESSAGES/airymaxos-llm_d.mo
-/usr/share/locale/ja_JP/LC_MESSAGES/airymaxos-llm_d.mo
+/usr/lib/airymaxos/services/cogn_d
+/usr/lib/systemd/system/cogn_d.service
+%config(noreplace) /etc/airymaxos/services/cogn_d.conf
+/usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-cogn_d.mo
+/usr/share/locale/en_US/LC_MESSAGES/airymaxos-cogn_d.mo
+/usr/share/locale/ja_JP/LC_MESSAGES/airymaxos-cogn_d.mo
 ```
 
 ---

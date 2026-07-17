@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）性能工程体系主索引\
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-13\
-> **同源映射**：agentrt 性能基线 + Linux 6.6 性能子系统（perf / sched_ext / MGLRU / io_uring）\
+> **同源映射**：agentrt 性能基线 + Linux 6.6 性能子系统（perf / 方案 C-Prime（SCHED_DEADLINE/SCHED_FIFO/EEVDF）/ MGLRU / io_uring）\
 > **理论根基**：Linux 内核性能工程 + Airymax S-1 反馈闭环 + A-4 完美主义\
 > **优先级**：P1（6 文档）
 
@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 模块定位
 
-agentrt-linux 性能工程体系是系统在高负载场景下稳定运行的工程保障。它继承 Linux 内核 30+ 年沉淀的性能工程哲学（perf 剖析 + sched_ext 可插拔调度 + MGLRU 内存回收 + io_uring 零拷贝 I/O），并在其上扩展智能体操作系统专属的 Token 能效工程、Agent 延迟 SLO、记忆卷载性能等。
+agentrt-linux 性能工程体系是系统在高负载场景下稳定运行的工程保障。它继承 Linux 内核 30+ 年沉淀的性能工程哲学（perf 剖析 + 方案 C-Prime 可插拔调度 + MGLRU 内存回收 + io_uring 零拷贝 I/O），并在其上扩展智能体操作系统专属的 Token 能效工程、Agent 延迟 SLO、记忆卷载性能等。
 
 性能工程不是「调优」的代名词，而是「可测量、可预测、可保障」的工程体系。agentrt-linux 性能工程的核心理念是：**一切性能指标必须可测量，一切性能回归必须可追溯，一切性能 SLO 必须可保障**。这要求从设计阶段就将性能纳入考量，而非在开发末期才进行「调优」。
 
@@ -20,7 +20,7 @@ agentrt-linux 性能工程体系是系统在高负载场景下稳定运行的工
 
 | 层级 | 类型 | 机制 | 范围 |
 |------|------|------|------|
-| L1 | CPU 性能 | perf + sched_ext + EEVDF | CPU 调度 |
+| L1 | CPU 性能 | perf + 方案 C-Prime + EEVDF | CPU 调度 |
 | L2 | 内存性能 | MGLRU 多代 LRU + CXL + PMEM | 内存管理 |
 | L3 | I/O 性能 | io_uring + zero-copy | I/O 子系统 |
 | L4 | 网络性能 | AF_XDP + DPDK | 网络栈 |
@@ -53,15 +53,16 @@ perf stat -e context-switches,scheduler:events
 perf stat -e cycles,instructions,cache-misses
 ```
 
-### 2.2 sched_ext 可插拔调度
+### 2.2 方案 C-Prime 可插拔调度
 
 ```c
-// SCHED_AGENT 策略（eBPF 程序）
-SEC("struct_ops/agent_enqueue")
-int BPF_PROG(agent_enqueue, struct task_struct *p, u64 enq_flags) {
-    // Agent 任务入队，按 Token 预算排序
-    return 0;
-}
+// AIRY_SCHED_AGENT 用户态调度器策略
+static struct airy_sched_ops airy_agent_sched = {
+    .enqueue = agent_sched_enqueue,  /* Agent 任务入队，按 Token 预算排序 */
+    .dispatch = agent_sched_dispatch,
+};
+
+ret = airy_sched_register(&airy_agent_sched);
 ```
 
 ### 2.3 MGLRU 多代 LRU 内存回收
@@ -94,7 +95,7 @@ io_uring_submit(&ring);
 ```
 170-performance/
 ├── README.md                       # 本文件
-├── 01-scheduling-performance.md   # 调度性能（sched_ext + EEVDF）
+├── 01-scheduling-performance.md   # 调度性能（方案 C-Prime + EEVDF）
 ├── 02-memory-performance.md       # 内存性能（MGLRU 多代 LRU + CXL）
 ├── 03-ipc-performance.md          # IPC 性能（AgentsIPC + io_uring）
 ├── 04-token-efficiency.md         # Token 能效工程 
@@ -104,7 +105,7 @@ io_uring_submit(&ring);
 
 ### 3.1 0.1.1 版本范围
 
-完成 README + 01-scheduling-performance.md（sched_ext 可插拔调度 + EEVDF + vtime 衰减）+ 02-memory-performance.md（MGLRU 多代 LRU + CXL 内存分层 + PMEM DAX）+ 03-ipc-performance.md（AgentsIPC 零拷贝 + io_uring 批量提交）+ 04-token-efficiency.md（Token/Watt + Token/Latency + Token/Dollar 三大能效指标 + RAPL 功耗测量 + LLM 推理阶段能效 + 能效回归检测）+ 05-agent-latency-slo.md（L1/L2/L3 三级延迟 SLO + SLO 保障机制 + 违约处理 + 延迟预算管理）+ 06-benchmark-suite.md（4 层分层体系 L1 微基准/L2 子系统/L3 端到端/L4 压力 + 回归检测 + CI/CD 集成）。
+完成 README + 01-scheduling-performance.md（方案 C-Prime 可插拔调度 + EEVDF + vtime 衰减）+ 02-memory-performance.md（MGLRU 多代 LRU + CXL 内存分层 + PMEM DAX）+ 03-ipc-performance.md（AgentsIPC 零拷贝 + io_uring 批量提交）+ 04-token-efficiency.md（Token/Watt + Token/Latency + Token/Dollar 三大能效指标 + RAPL 功耗测量 + LLM 推理阶段能效 + 能效回归检测）+ 05-agent-latency-slo.md（L1/L2/L3 三级延迟 SLO + SLO 保障机制 + 违约处理 + 延迟预算管理）+ 06-benchmark-suite.md（4 层分层体系 L1 微基准/L2 子系统/L3 端到端/L4 压力 + 回归检测 + CI/CD 集成）。
 
 ### 3.2 1.0.1 版本范围
 
@@ -202,7 +203,7 @@ agentrt 的性能基线与 agentrt-linux 同源：
 - Linux 6.6 `kernel/sched/`（调度子系统）
 - Linux 6.6 `mm/`（内存管理）
 - Linux 6.6 `io_uring/`（io_uring 子系统）
-- sched_ext 文档（`Documentation/scheduler/sched-ext.rst`）
+- 方案 C-Prime 调度基础（Linux 6.6 `kernel/sched/deadline.c`/`rt.c`/`fair.c` + seL4 MCS 时间隔离）
 
 ---
 

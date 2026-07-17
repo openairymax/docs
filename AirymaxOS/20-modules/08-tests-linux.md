@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度                               | 测试子系统内容                                                                                                                                                                                                                                                                                                                  | 组织方式                                    |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 测试验证的消息头格式（magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr`）；调度器测试验证的 task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式；安全形式化验证的 capability 41 ID 枚举 + LSM 252 ID 枚举；struct\_ops 状态机验证（INIT/REGISTERED/ACTIVE/DRAINING）；MemoryRovol 快照一致性验证的 L1-L4 数据结构 + GFP 掩码语义；认知测试验证的 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 | `include/airymax/` 6 个头文件（测试框架验证这些共享类型） |
+| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 测试验证的消息头格式（magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr`）；调度器测试验证的 task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式；安全形式化验证的 capability 41 ID 枚举 + LSM 252 ID 枚举；struct\_ops 状态机验证（INIT/REGISTERED/ACTIVE/DRAINING）；MemoryRovol 快照一致性验证的 L1-L4 数据结构 + GFP 掩码语义；认知测试验证的 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 | `include/airymax/` 10 个头文件（测试框架验证这些共享类型） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 单元测试框架语义（agentrt cargo test/go test/googletest → OS 级同框架）、集成测试模式（agentrt 集成测试 → OS 级集成测试）、性能基准指标（IPC 延迟/调度延迟/内存吞吐/I/O 吞吐——两端同指标）、覆盖率目标（≥90%/≥80%/≥70%——两端同标准）、回归测试方法（性能不退化——两端同方法）等 8+ 项                                                                                                                                 | 各自独立实现                                  |
 | **\[IND] 完全独立层** | 完全独立                               | 形式化验证框架（seL4 Isabelle/HOL + Coq——OS 专属）、Soak Test 框架（72h 持续运行——OS 专属）、混沌工程框架（Chaos Mesh 类似——OS 专属）、eBPF 可观测性验证（OS 专属）、agentrt-linux 集成测试框架（OS 专属）、测试运行器与报告生成（OS 专属）                                                                                                                                                      | 各自独立仓库                                  |
 
@@ -91,7 +91,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - 保留 agentrt 的性能基准指标（IPC 延迟/调度延迟/内存吞吐——两端同指标）\[SS]。
 - 保留 agentrt 的覆盖率目标（≥90%/≥80%/≥70%——两端同标准）\[SS]。
 - 保留 agentrt 的回归测试方法（性能不退化——两端同方法）\[SS]。
-- 测试框架验证 \[SC] 共享契约层的 6 个头文件类型，确保两端契约一致。
+- 测试框架验证 \[SC] 共享契约层的 10 个头文件类型，确保两端契约一致。
 - 升级为 OS 级测试，引入形式化验证 + Soak + 混沌工程 + eBPF 验证 \[IND]。
 
 ***
@@ -216,7 +216,7 @@ tests-linux/
 - 工具代码：≥ 70% \[SS]。
 
 **\[SC] 共享契约层验证**：
-单元测试验证 6 个 \[SC] 头文件类型的正确性：
+单元测试验证 10 个 \[SC] 头文件类型的正确性：
 
 - `include/airymax/ipc.h`：验证 128B msg\_hdr 格式 + magic 0x41524531 \[SC]。
 - `include/airymax/sched.h`：验证 task\_desc magic 0x41475453 + vtime 衰减 \[SC]。
@@ -383,7 +383,7 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 
 ### 5.4 共享契约层验证 \[SC]
 
-测试框架验证 \[SC] 共享契约层的 6 个头文件，确保 agentrt 与 agentrt-linux 两端契约一致：
+测试框架验证 \[SC] 共享契约层的 10 个头文件，确保 agentrt 与 agentrt-linux 两端契约一致：
 
 - 单元测试验证类型正确性 \[SC]。
 - 形式化验证验证性质正确性 \[SC]。
@@ -394,9 +394,9 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 
 ## 6. IRON-9 v2 三层共享模型落地
 
-### 6.1 \[SC] 共享契约层——6 个头文件验证
+### 6.1 \[SC] 共享契约层——10 个头文件验证
 
-测试模块验证 6 个 \[SC] 头文件的正确性与一致性：
+测试模块验证 10 个 \[SC] 头文件的正确性与一致性：
 
 | 头文件                                 | 验证内容                                                      | 测试方式                             |
 | ----------------------------------- | --------------------------------------------------------- | -------------------------------- |
@@ -582,7 +582,7 @@ graph TD
 | 命名一致性          | 核心表述使用 `agentrt-linux（AirymaxOS）` 全角括号配对                          | PASS |
 | 语义同源标注         | 单元测试框架/性能基准指标/覆盖率目标/回归测试标注 \[SS]                                  | PASS |
 | IRON-9 v2 三层合规 | \[SC] 6 头文件验证 + \[SS] 8 API + \[IND] 10 项独立实现                     | PASS |
-| \[SC] 头文件引用    | 6 个头文件均在 §1.1/§3.3/§4.1/§4.3/§6.1 引用                              | PASS |
+| \[SC] 头文件引用    | 10 个头文件均在 §1.1/§3.3/§4.1/§4.3/§6.1 引用                              | PASS |
 | 不移植特性声明        | 无 KABI\_RESERVE/BPF\_SCHED/KMSAN/etmem/dynamic\_pool/numa\_remote | PASS |
 | 横切关注点声明        | §1.1 声明测试贯穿 4 大数据流                                                | PASS |
 | Mermaid 图      | §6.4 sequenceDiagram + §6.5 graph TD（≥2）                          | PASS |

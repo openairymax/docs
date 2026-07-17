@@ -44,7 +44,7 @@ agentrt-linux（AirymaxOS）的超节点 OS 能力解决以下核心问题：
 2. **CXL 内存池化**：L1 原始卷与 L4 模式层驻留 CXL 池，跨 die 共享读取零拷贝
 3. **超节点 Token 预算池**：跨 die Token 调度，单 die Token 耗尽时从池中借用
 4. **整机快照恢复**：超节点整机状态快照，故障切换 RTO < 30s
-5. **微内核思想借鉴**：服务用户态化——超节点管理 daemon 运行在用户态，内核仅提供机制（参考 seL4 Liedtke minimality principle）
+5. **微内核思想借鉴**：服务用户态化——超节点生命周期由 USV（macro_superv）统一管理，运行在用户态，内核仅提供机制（参考 seL4 Liedtke minimality principle）
 
 ### 1.4 五维原则映射
 
@@ -52,7 +52,7 @@ agentrt-linux（AirymaxOS）的超节点 OS 能力解决以下核心问题：
 |------|---------------|
 | **S-1 反馈闭环** | NUMA fault 统计反馈到 Agent 亲和性调度策略 |
 | **S-4 涌现性管理** | 超节点级 Token 预算池管理多 die 涌现性 |
-| **K-3 服务隔离** | 超节点管理 daemon 用户态化，内核仅提供机制 |
+| **K-3 服务隔离** | 超节点生命周期由 USV（macro_superv）统一管理（用户态），内核仅提供机制 |
 | **E-2 可观测性** | NUMA balancing + CXL tier 全栈可观测 |
 | **IRON-9 v2** | MemoryRovol L1-L4 数据结构 [SC] 共享，超节点 OS 实现 [IND] 独立 |
 
@@ -151,7 +151,7 @@ typedef struct airy_supernode_topology {
 
 Linux 6.6 通过 `sched_init_numa()`（`kernel/sched/topology.c:2068`）构建 NUMA 调度域层次。该函数读取 ACPI SRAT/SLIT 表，为每个 NUMA 距离层级构建 `sched_domain`，最终形成 NUMA balancing 的调度域拓扑。
 
-超节点 OS 不修改 `sched_init_numa()` 本身（保持 Linux 6.6 工程基线不变），而是在其构建的调度域之上注入 Agent 亲和性策略——通过 sched_ext（SCHED_EXT 策略，而非已删除的 SCHED_AGENT 宏）实现。
+超节点 OS 不修改 `sched_init_numa()` 本身（保持 Linux 6.6 工程基线不变），而是在其构建的调度域之上注入 Agent 亲和性策略——通过方案 C-Prime（SCHED_DEADLINE/SCHED_FIFO/EEVDF 用户态调度器，不依赖 sched_ext 或已删除的 SCHED_AGENT 内核宏）实现。
 
 ### 3.2 NUMA balancing 故障统计
 
@@ -190,7 +190,7 @@ static void numa_migrate_preferred(struct task_struct *p)
 }
 ```
 
-超节点 OS 在 `numa_migrate_preferred()` 迁移前注入 Agent 级检查（通过 ftrace hook 或 sched_ext 策略）：
+超节点 OS 在 `numa_migrate_preferred()` 迁移前注入 Agent 级检查（通过 ftrace hook 或方案 C-Prime 用户态调度策略）：
 
 1. **Token 预算检查**：目标 die 的 Token 池是否有余量
 2. **MemoryRovol 状态检查**：Agent 是否正在快照/迁移（`AIRY_ROVOL_STATE_MIGRATING` 状态禁止跨 die 迁移）
@@ -198,10 +198,10 @@ static void numa_migrate_preferred(struct task_struct *p)
 
 ### 3.4 Agent NUMA 亲和性调度策略
 
-超节点 OS 通过 sched_ext 策略 `scx_agent`（SCHED_EXT 策略名，非宏）实现 Agent NUMA 亲和性：
+超节点 OS 通过方案 C-Prime 用户态调度策略 `airy_agent`（SCHED_DEADLINE/SCHED_FIFO 策略名，非宏）实现 Agent NUMA 亲和性：
 
 ```c
-/* sched_ext 策略：scx_agent（eBPF 程序） */
+/* 方案 C-Prime 用户态调度策略：airy_agent（用户态调度程序） */
 SEC("struct_ops/agent_enqueue")
 int BPF_PROG(agent_enqueue, struct task_struct *p, u64 enq_flags)
 {
@@ -565,7 +565,7 @@ agentctl supernode affinity --agent <agent_id>
 | 554 | `airy_sys_rovol_migrate` | MemoryRovol 跨 die 迁移 |
 | 555 | `airy_sys_cxl_tier_set` | CXL 内存分层策略 |
 
-超节点 Token 池 API 通过用户态 daemon（`supernode_d`）提供，不新增系统调用（遵循"机制在内核、策略在用户态"的微内核原则）。
+超节点 Token 池 API 通过 USV（`services/daemons/macro_superv/`）统一管理，不新增系统调用（遵循"机制在内核、策略在用户态"的微内核原则）。超节点生命周期由 USV 统一监管，与 Agent 8 态生命周期同构（见 [30-interfaces/10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md)），消除超节点功能三方交叉。
 
 ### 9.3 超节点拓扑 sysfs 接口
 
@@ -701,8 +701,8 @@ if (ret == -AIRY_EBUSY) {
 | 层次 | 共享内容 | 超节点 OS 使用方式 |
 |------|---------|-------------------|
 | **[SC] 共享契约层** | MemoryRovol L1-L4 数据结构（`include/airymax/memory_types.h`） | 跨 die 迁移使用 [SC] 数据结构 |
-| **[SC] 共享契约层** | IPC 消息头（`include/airymax/ipc.h`） | supernode_d 与 Agent 通信 |
-| **[SS] 语义同源层** | gateway 多节点协调语义 | agentrt gateway → supernode_d |
+| **[SC] 共享契约层** | IPC 消息头（`include/airymax/ipc.h`） | macro_superv 与 Agent 通信 |
+| **[SS] 语义同源层** | gateway 多节点协调语义 | agentrt gateway → macro_superv |
 | **[IND] 完全独立层** | 超节点拓扑/调度/迁移/CXL 池化 | agentrt-linux 专属 |
 
 ---
@@ -837,11 +837,11 @@ KUNIT_DEFINE_TEST(test_supernode_topology_discovery) {
 
 ### 18.2 微内核思想来源
 
-超节点 OS 的微内核设计思想**仅来源于 seL4**（Liedtke minimality principle + 服务用户态化），不引入 Zircon 或 Minix3（遵循 [10-architecture/03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) 决策）。超节点管理 daemon（`supernode_d`）运行在用户态，内核仅提供机制（NUMA 调度域 + 页迁移 + CXL 驱动）。
+超节点 OS 的微内核设计思想**仅来源于 seL4**（Liedtke minimality principle + 服务用户态化），不引入 Zircon 或 Minix3（遵循 [10-architecture/03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) 决策）。超节点生命周期由 USV（`services/daemons/macro_superv/`）统一管理，运行在用户态，内核仅提供机制（NUMA 调度域 + 页迁移 + CXL 驱动）。USV 是 12 daemons 之一（见 [20-modules/10-user-supervisor-daemon.md](../20-modules/10-user-supervisor-daemon.md)），统一监管 Agent 与超节点生命周期，消除功能三方交叉。
 
-### 18.3 SCHED_EXT 约束
+### 18.3 方案 C-Prime 调度约束
 
-超节点 OS 使用 sched_ext 策略名 `scx_agent`（SCHED_EXT=7），**不使用** `SCHED_AGENT` 宏（已删除，统一使用 SCHED_EXT）。`SCHED_AGENT` 仅作为 sched_ext 策略名称引用，不作为内核宏定义。
+超节点 OS 使用方案 C-Prime 用户态调度策略名 `airy_agent`（SCHED_DEADLINE/SCHED_FIFO/EEVDF），**不使用** `SCHED_AGENT` 内核宏（已删除，统一使用方案 C-Prime 用户态调度器）。`AIRY_SCHED_AGENT` 仅作为用户态调度策略名称引用，不作为内核宏定义。
 
 ---
 

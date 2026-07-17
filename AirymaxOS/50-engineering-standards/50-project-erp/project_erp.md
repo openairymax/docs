@@ -882,7 +882,7 @@ IPC 错误码由 kernel 和 services 联合定义：
 
 ##### 3.1.1 [SC] 共享契约层 — 错误码内嵌定义
 
-错误码定义内嵌在 `include/airymax/` 的 6 个 [SC] 共享契约层头文件中，agentrt 和 agentrt-linux 使用相同的错误码数值和语义：
+错误码定义内嵌在 `include/airymax/` 的 10 个 [SC] 共享契约层头文件中，agentrt 和 agentrt-linux 使用相同的错误码数值和语义：
 
 | [SC] 头文件 | 错误码分类 | 说明 |
 |------------|-----------|------|

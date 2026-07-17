@@ -246,7 +246,7 @@ GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_TERMINAL="console"
 GRUB_CMDLINE_LINUX="crashkernel=auto \
-    sched_ext.enable=1 \
+    agentrt.sched_cprime=1 \
     agentrt.memoryrovol=1 \
     agentrt.cxl=1 \
     agentrt.mglru=1 \
@@ -269,7 +269,7 @@ menuentry "agentrt-linux (AirymaxOS) 1.0.1 (Linux 6.6.0-agentrt)" {
     linux /boot/vmlinuz-6.6.0-agentrt \
         root=/dev/mapper/airymaxos--vg-root \
         ro crashkernel=auto \
-        sched_ext.enable=1 \
+        agentrt.sched_cprime=1 \
         agentrt.memoryrovol=1 \
         agentrt.cxl=1 \
         agentrt.mglru=1 \
@@ -378,7 +378,7 @@ btrfs /opt --subvol --name=@opt btrfs.01
 btrfs /.snapshots --subvol --name=@snapshots btrfs.01
 
 bootloader --location=mbr --boot-drive=sda \
-    --append="sched_ext.enable=1 agentrt.memoryrovol=1"
+    --append="agentrt.sched_cprime=1 agentrt.memoryrovol=1"
 
 %packages --nobase
 @core
@@ -428,7 +428,7 @@ logvol /var --vgname=airymaxos-vg --name=var --fstype=xfs --size=204800
 logvol /var/lib/airymaxos --vgname=airymaxos-vg --name=airymaxos --fstype=xfs --size=102400
 logvol swap --vgname=airymaxos-vg --name=swap --fstype=swap --size=16384
 
-bootloader --location=mbr --append="crashkernel=auto rd.agentrt.sched_ext=1 rd.agentrt.memoryrovol=1"
+bootloader --location=mbr --append="crashkernel=auto rd.agentrt.sched_cprime=1 rd.agentrt.memoryrovol=1"
 
 %packages
 @airymaxos-base
@@ -459,12 +459,12 @@ ibus-libpinyin
 
 %post --log=/var/log/airymaxos-install.log
 
-# 启用 SCHED_AGENT BPF 调度器
-systemctl enable airymaxos-kernel-load-bpf.service
+# 启用 AIRY_SCHED_AGENT 用户态调度器（方案 C-Prime）
+systemctl enable airymaxos-sched-agent.service
 
 # 启用 12 个 daemon
-for svc in gateway_d llm_d tool_d market_d sched_d monit_d \
-           channel_d observe_d notify_d info_d hook_d plugin_d; do
+for svc in gateway_d cogn_d dev_d gateway_d sched_d audit_d \
+           net_d logger_daemon sec_d mem_d vfs_d config_daemon; do
     systemctl enable "$svc.service"
 done
 
@@ -545,7 +545,7 @@ fi
 │    └→ grub2-install + grub2-mkconfig + Secure Boot 签名       │
 ├───────────────────────────────────────────────────────────────┤
 │ 8. 后置配置                                                   │
-│    └→ locale + 时区 + 用户 + 网络 + SCHED_AGENT BPF + 快照    │
+│    └→ locale + 时区 + 用户 + 网络 + AIRY_SCHED_AGENT 用户态调度器 + 快照 │
 ├───────────────────────────────────────────────────────────────┤
 │ 9. 重启进入系统                                              │
 │    └→ 加载 airymaxos-kernel + 启动 systemd + 启动 12 daemon   │
@@ -565,7 +565,7 @@ fi
 2026-07-09 10:00:15 [INFO] 开始安装包（1240 个）
 2026-07-09 10:08:30 [INFO] 包安装完成
 2026-07-09 10:08:35 [INFO] GRUB 配置完成
-2026-07-09 10:08:40 [INFO] 服务启用: gateway_d, llm_d, ...
+2026-07-09 10:08:40 [INFO] 服务启用: gateway_d, cogn_d, ...
 2026-07-09 10:08:45 [INFO] dnf 仓库配置完成
 2026-07-09 10:08:50 [INFO] MGLRU 配置完成
 2026-07-09 10:08:55 [INFO] 安装后快照创建完成
@@ -666,7 +666,7 @@ qemu-system-${ARCH} \
     -initrd /boot/initramfs-6.6.0-agentrt.img \
     -append "inst.ks=file:/isolinux/ks.cfg \
              console=ttyS0 \
-             sched_ext.enable=1" \
+             agentrt.sched_cprime=1" \
     -nographic \
     -serial mon:stdio
 
@@ -726,15 +726,15 @@ timezone: Asia/Shanghai
 
 packages:
   - airymaxos-services-gateway
-  - airymaxos-services-llm
-  - airymaxos-services-tool
+  - airymaxos-services-cogn
+  - airymaxos-services-dev
   - airymaxos-cognition-core
 
 runcmd:
   - systemctl enable airymaxos-kernel-load-bpf.service
   - systemctl enable gateway_d.service
-  - systemctl enable llm_d.service
-  - systemctl enable tool_d.service
+  - systemctl enable cogn_d.service
+  - systemctl enable dev_d.service
   - |
     echo "y" > /sys/kernel/mm/lru_gen/enabled
     echo "1000" > /sys/kernel/mm/lru_gen/min_ttl_ms
@@ -757,7 +757,7 @@ users:
       - ssh-rsa AAAA... user@example.com
 
 write_files:
-  - path: /etc/airymaxos/services/llm_d.conf
+  - path: /etc/airymaxos/services/cogn_d.conf
     content: |
       [llm]
       provider = openai
@@ -766,7 +766,7 @@ write_files:
 
 runcmd:
   - echo "agentrt-linux (AirymaxOS) cloud-init 完成"
-  - systemctl restart llm_d.service
+  - systemctl restart cogn_d.service
 ```
 
 ---

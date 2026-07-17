@@ -433,7 +433,7 @@ l2_capacity_pressure = 90
 # 迁移批大小（kfifo 批量读取数量）
 migrate_batch_size = 16
 
-# 迁移 kthread 优先级（SCHED_AGENT 策略）
+# 迁移 kthread 优先级（AIRY_SCHED_AGENT 用户态调度器策略）
 migrate_prio = "agent_low"
 ```
 

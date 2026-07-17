@@ -108,7 +108,7 @@ agentrt-linux（AirymaxOS）编码规范与 agentrt 编码规范遵循 **IRON-9 
 
 | IRON-9 v2 层级 | 定义 | 编码规范关系 | 示例 |
 |---------------|------|-------------|------|
-| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/airymax/` 6 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
+| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/airymax/` 10 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
 | **[SS] 语义同源层** | 高层 API 语义同源，签名独立演进 | 共享命名约定（`airy_` 前缀）、错误码体系、注释风格；但 C 内核态用 kernel-doc，Rust 用户态用 rustdoc | SDK 层 `airy_ipc_send()` 签名同源（同一份源码两端编译），其他层语义同源 |
 | **[IND] 完全独立层** | 完全独立 | 各自独立的编码规范——agentrt-linux（AirymaxOS）覆盖内核态 C 和内核模块 Rust，agentrt 覆盖用户态 Python/TS/Rust | agentrt-linux 专属：goto 集中出口模式、kmalloc/kfree 惯用法、内核锁规范 |
 
@@ -247,7 +247,7 @@ graph LR
 | API 类别 | agentrt-linux 实现 | agentrt 实现 | 同源保证 |
 |----------|-------------------|-------------|---------|
 | `airy_ipc_send()` | io_uring + 内核固定 OP | 用户态消息队列 | 签名一致（SDK 层），协议兼容 |
-| `airy_task_submit()` | kthread + sched_ext | pthread + 用户态调度器 | 语义等价，调度模型同源 |
+| `airy_task_submit()` | kthread + 方案 C-Prime | pthread + 用户态调度器 | 语义等价，调度模型同源 |
 | `airy_capability_check()` | LSM hook + kernel capability | 用户态 ACL | 语义等价，判定逻辑同源 |
 
 [SS] 层编码规范核心约束：

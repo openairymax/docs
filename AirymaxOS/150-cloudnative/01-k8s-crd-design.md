@@ -19,7 +19,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 agentrt-linux（AirymaxOS）将 Agent 应用建模为 Kubernetes 自定义资源（Custom Resource），实现声明式管理。CRD 设计达成以下工程目标：
 
 1. **声明式 Agent 管理**：通过 YAML 声明 Agent 的镜像、Token 预算、记忆卷载、认知循环等属性
-2. **OS 级调度联动**：CRD controller 与 agentrt-linux 节点的 SCHED_AGENT 调度器联动
+2. **OS 级调度联动**：CRD controller 与 agentrt-linux 节点的 AIRY_SCHED_AGENT 用户态调度器联动
 3. **记忆卷载 CSI 集成**：Agent CRD 自动声明 MemoryRovol CSI 卷并挂载至容器
 4. **Cupolas 安全策略联动**：CRD 安全字段映射至 Cupolas capability 令牌与 Landlock 规则
 5. **水平弹性伸缩**：基于 Token 预算消耗与认知负载的 HPA 自动伸缩
@@ -41,7 +41,7 @@ agentrt-linux（AirymaxOS）将 Agent 应用建模为 Kubernetes 自定义资源
 | 资源声明 | CPU/Memory | CPU/Memory + Token 预算 |
 | 存储 | PVC | MemoryRovol CSI 卷 |
 | 安全 | SecurityContext | Cupolas capability + Landlock |
-| 调度类 | CFS（默认） | SCHED_AGENT |
+| 调度类 | CFS（默认） | AIRY_SCHED_AGENT（用户态调度器策略） |
 | 生命周期 | RestartPolicy | Agent 状态机（8 状态） |
 
 ---
@@ -143,8 +143,8 @@ spec:
                       default: CoreLoopThree
                     scheduler:
                       type: string
-                      enum: [SCHED_AGENT, SCHED_NORMAL]
-                      default: SCHED_AGENT
+                      enum: [AIRY_SCHED_AGENT, SCHED_NORMAL]
+                      default: AIRY_SCHED_AGENT
                     thinkMode:
                       type: string
                       enum: [t2, t1-f, t1-p, dual]
@@ -245,7 +245,7 @@ spec:
 
   cognition:
     cycle: CoreLoopThree
-    scheduler: SCHED_AGENT
+    scheduler: AIRY_SCHED_AGENT
     thinkMode: dual
 
   security:
@@ -265,7 +265,7 @@ spec:
 
   nodeSelector:
     airymaxos.dev/node-type: agentrt-linux
-    airymaxos.dev/sched-ext: "true"
+    airymaxos.dev/user-sched: "true"
 ```
 
 ---
@@ -292,7 +292,7 @@ spec:
 │ │  ┌───────────────────────────────────────────┐ │
 │ │  │ Node Allocator                            │ │ │
 │ │  │  - 选择 agentrt-linux 节点                │ │ │
-│ │  │  - 与 SCHED_AGENT 调度器联动               │ │ │
+│ │  │  - 与 AIRY_SCHED_AGENT 用户态调度器联动     │ │ │
 │ │  └───────────────────────────────────────────┘ │
 │ │           |                                     │
 │ │           v                                     │
@@ -306,13 +306,13 @@ spec:
 │         |                                           │
 └─────────|───────────────────────────────────────────┘
           v
-   ┌──────────────────────────┐
-   │ agentrt-linux Node        │
-   │  - kubelet + containerd   │
-   │  - SCHED_AGENT 策略     │
-   │  - MemoryRovol CSI 插件   │
-   │  - Cupolas 安全穹顶       │
-   └──────────────────────────┘
+   ┌────────────────────────────────────┐
+   │ agentrt-linux Node                  │
+   │  - kubelet + containerd             │
+   │  - AIRY_SCHED_AGENT 用户态调度器    │
+   │  - MemoryRovol CSI 插件             │
+   │  - Cupolas 安全穹顶                 │
+   └────────────────────────────────────┘
 ```
 
 ### 3.2 Controller 伪代码
@@ -454,7 +454,7 @@ func (r *AgentReconciler) allocateNode(ctx context.Context,
 	var nodes corev1.NodeList
 	labelSelector := client.MatchingLabels{
 		"airymaxos.dev/node-type": "agentrt-linux",
-		"airymaxos.dev/sched-ext": "true",
+		"airymaxos.dev/user-sched": "true",
 	}
 	if err := r.List(ctx, &nodes, labelSelector); err != nil {
 		return "", err
@@ -482,8 +482,8 @@ agentrt-linux 节点通过标签声明能力：
 # agentrt-linux 节点标签
 airymaxos.dev/node-type: agentrt-linux       # 节点类型
 airymaxos.dev/kernel-version: "6.6-airymax"   # 内核版本
-airymaxos.dev/sched-ext: "true"               # 支持 sched_ext
-airymaxos.dev/sched-agent: "true"             # 支持 SCHED_AGENT
+airymaxos.dev/user-sched: "true"               # 支持方案 C-Prime 用户态调度器
+airymaxos.dev/sched-agent: "true"             # 支持 AIRY_SCHED_AGENT 策略
 airymaxos.dev/memoryrovol: "true"             # 支持 MemoryRovol
 airymaxos.dev/cupolas: "true"                 # 部署 Cupolas
 airymaxos.dev/cxl-pool: "true"                # CXL 内存池化
@@ -512,17 +512,17 @@ scheduling:
       effect: NoSchedule
 overhead:
   podFixed:
-    cpu: "100m"      # SCHED_AGENT 调度开销
+    cpu: "100m"      # AIRY_SCHED_AGENT 调度开销
     memory: "128Mi"  # MicroCoreRT 额外内存
 ```
 
-### 4.3 SCHED_AGENT 联动
+### 4.3 AIRY_SCHED_AGENT 联动
 
-Controller 通过节点的 daemonset 与 SCHED_AGENT 调度器联动：
+Controller 通过节点的 daemonset 与 AIRY_SCHED_AGENT 用户态调度器联动：
 
 ```go
 /* agentrt-sched-agent-agent: daemonset 运行于 agentrt-linux 节点
- * 监听 Pod 创建事件，向内核 SCHED_AGENT 提交调度参数 */
+ * 监听 Pod 创建事件，向内核 AIRY_SCHED_AGENT 用户态调度器提交调度参数 */
 func handlePodCreate(pod *corev1.Pod) error {
 	if pod.Labels["app"] != "agentrt-agent" {
 		return nil
@@ -532,8 +532,8 @@ func handlePodCreate(pod *corev1.Pod) error {
 	budget := pod.Annotations["agentrt.token/budget"]
 	schedClass := pod.Annotations["agentrt.cognition/scheduler"]
 
-	/* 通过 /proc/agentrt/sched_agent 注册调度参数 */
-	return writeProcFile("/proc/agentrt/sched_agent/register",
+	/* 通过 /proc/agentrt/user_sched 注册调度参数 */
+	return writeProcFile("/proc/agentrt/user_sched/register",
 		fmt.Sprintf("%s %s %s", agentID, budget, schedClass))
 }
 ```

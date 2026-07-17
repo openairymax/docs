@@ -399,7 +399,7 @@ echo madvise > /sys/kernel/mm/transparent_hugepage/shmem_enabled
 遵循微内核"机制在内核，策略在用户态"原则（Liedtke minimality principle）：
 
 - 内核提供 MemoryRovol 机制（snapshot、restore、migrate）\[SS]。
-- 记忆管理策略（何时快照、何时迁移）在用户态 daemon（`memoryrovol_d`）\[SS]。
+- 记忆管理策略（何时快照、何时迁移）在用户态 daemon（`macro_superv`）\[SS]。
 - L1-L4 数据结构 \[SC] 两端共享，确保记忆层级语义一致。
 
 ### 5.2 内存分层解耦

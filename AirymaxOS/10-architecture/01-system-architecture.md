@@ -119,7 +119,7 @@ agentrt-linux 不是从零开发微内核，而是基于 Linux 内核进行**微
 
 | 传统 Linux（宏内核） | agentrt-linux（微内核化） |
 |---|---|
-| VFS 在内核态 | VFS 用户态化（services） |
+| VFS 框架内核态（路径解析）| FS 实现可用户态化（services/FUSE 模型） |
 | 网络栈在内核态 | 网络栈部分用户态化（DPDK/AF_XDP） |
 | 驱动在内核态 | 部分驱动用户态化（VFIO/libvfio） |
 | 安全模块在内核态 | capability + LSM 用户态化 |
@@ -240,17 +240,17 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 ## 6. IRON-9 v2 三层共享模型
 
-> **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v2 三层共享模型——[SC] 共享契约层完全共享代码（6 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
+> **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v2 三层共享模型——[SC] 共享契约层完全共享代码（10 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
 
 ### 6.1 三层模型概览
 
 | 层次 | 共享程度 | 本文档涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 6 个头文件 `kernel/include/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
+| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_ext/io_uring/eBPF） |
 
-### 6.2 [SC] 共享契约层——6 个头文件在本架构层的角色
+### 6.2 [SC] 共享契约层——10 个头文件在本架构层的角色
 
 | 头文件 | 在系统架构中的角色 | 消费方 |
 |--------|-------------------|--------|
@@ -329,7 +329,7 @@ graph TB
     style OS_KERN fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-ARCH-002**： 跨态协作遵循"零适配层天然契合"原则——agentrt 与 agentrt-linux 通过 [SC] 共享契约层 6 个头文件直接对接，不生成 `airy_compat_aliases.h` 或任何兼容层。在 Linux 平台上，agentrt 可选启用 agentrt-linux 内核加速路径（通过 ops 注入机制，非强制）；在 macOS/Windows 上仅走用户态路径。
+> **OS-ARCH-002**： 跨态协作遵循"零适配层天然契合"原则——agentrt 与 agentrt-linux 通过 [SC] 共享契约层 10 个头文件直接对接，不生成 `airy_compat_aliases.h` 或任何兼容层。在 Linux 平台上，agentrt 可选启用 agentrt-linux 内核加速路径（通过 ops 注入机制，非强制）；在 macOS/Windows 上仅走用户态路径。
 
 ---
 

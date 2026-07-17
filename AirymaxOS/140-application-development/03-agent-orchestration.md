@@ -8,7 +8,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **同源映射**：agentrt 用户态运行时 MAC 框架 + TaskFlow 引擎（IRON-9 v2 [SS] 语义同源层）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
-> **IRON-9 v2 层次**：[SS] 语义同源层（协作模式高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进——agentrt-linux 基于内核 kthread + SCHED_AGENT，agentrt 基于用户态线程）
+> **IRON-9 v2 层次**：[SS] 语义同源层（协作模式高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进——agentrt-linux 基于内核 kthread + AIRY_SCHED_AGENT，agentrt 基于用户态线程）
 
 ---
 
@@ -18,7 +18,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 agentrt-linux（AirymaxOS）将多 Agent 编排视为操作系统级一等公民能力。Agent 编排设计达成以下工程目标：
 
-1. **OS 级编排**：编排引擎运行于内核态（kthread），获得 SCHED_AGENT 调度优先级与确定性延迟
+1. **OS 级编排**：编排引擎运行于内核态（kthread），获得 AIRY_SCHED_AGENT 调度优先级与确定性延迟
 2. **DAG 工作流**：支持有向无环图（DAG）表达复杂任务依赖，超步（superstep）执行
 3. **四种协作模式**：独立/协作/共识/委托，覆盖单 Agent 到多 Agent 协作全场景
 4. **容错恢复**：基于检查点的超步容错，单 Agent 失败可回滚至最近检查点
@@ -31,7 +31,7 @@ agentrt-linux（AirymaxOS）将多 Agent 编排视为操作系统级一等公民
 | L1 | 单 Agent 任务 | 单进程执行 | 顺序认知循环 |
 | L2 | DAG 工作流 | TaskFlow 超步 | 任务依赖编排 |
 | L3 | 多 Agent 协作 | MAC 框架 | 跨 Agent 协同 |
-| **L4** | **OS 级编排** | **内核 kthread + SCHED_AGENT** | **agentrt-linux 专属** |
+| **L4** | **OS 级编排** | **内核 kthread + AIRY_SCHED_AGENT** | **agentrt-linux 专属** |
 
 ### 1.3 与 agentrt 同源关系
 
@@ -39,7 +39,7 @@ agentrt 用户态运行时的 MAC 框架与 TaskFlow 引擎与本设计遵循 IR
 
 | 维度 | agentrt（微核心） | agentrt-linux（微内核） |
 |------|-------------------|------------------------|
-| 编排引擎 | 用户态线程池 | 内核 kthread + SCHED_AGENT |
+| 编排引擎 | 用户态线程池 | 内核 kthread + AIRY_SCHED_AGENT |
 | 协作模式 API | `mac_*` | `mac_*`（同源签名） |
 | DAG 引擎 | 用户态 TaskFlow | OS 级 TaskFlow（内核态） |
 | 通信 | 用户态消息队列 | AgentsIPC（io_uring） |
@@ -158,7 +158,7 @@ DAG 按超步（superstep）执行，每个超步内并行执行就绪节点：
  *   1. 扫描所有 PENDING 节点
  *   2. 检查依赖是否全部 COMPLETED
  *   3. 就绪节点置为 READY
- *   4. 并行提交至 SCHED_AGENT
+ *   4. 并行提交至 AIRY_SCHED_AGENT
  *
  * 返回：本超步就绪节点数
  */
@@ -325,7 +325,7 @@ static struct task_struct *taskflow_kthread;
 /**
  * airy_taskflow_kthread - TaskFlow 引擎内核线程
  *
- * 作为 SCHED_AGENT 策略的常驻 kthread
+ * 作为 AIRY_SCHED_AGENT 策略的常驻 kthread
  * 周期性扫描工作流队列，调度就绪超步
  * 通过 kfifo + wait_event_interruptible 与其他 kthread 通信
  */

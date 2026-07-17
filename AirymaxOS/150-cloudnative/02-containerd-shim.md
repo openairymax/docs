@@ -19,7 +19,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 agentrt-linux（AirymaxOS）提供专属 containerd shim v2 实现，作为 Agent 容器与 OS 内核之间的桥梁。shim 设计达成以下工程目标：
 
 1. **Agent workload 感知**：shim 在容器创建时向内核注册 Agent，签订 Token 预算契约
-2. **SCHED_AGENT 集成**：shim 将容器内主进程的调度类切换为 SCHED_AGENT
+2. **AIRY_SCHED_AGENT 用户态调度器集成**：shim 将容器内主进程的调度类切换为 AIRY_SCHED_AGENT（SCHED_FIFO + 用户态策略）
 3. **MemoryRovol 卷挂载**：shim 在容器启动前挂载 MemoryRovol CSI 卷至指定路径
 4. **Cupolas 安全注入**：shim 在容器创建时注入 capability 令牌与 Landlock 规则
 5. **生命周期联动**：shim 将容器生命周期事件（start/stop/exit）上报至内核 Agent 状态机
@@ -42,7 +42,7 @@ agentrt-linux（AirymaxOS）提供专属 containerd shim v2 实现，作为 Agen
 │ │   - 注册 Agent 至内核                        │ │
 │ │   - 挂载 MemoryRovol 卷                      │ │
 │ │   - 注入 Cupolas 安全策略                     │ │
-│ │   - 切换 SCHED_AGENT 策略                  │ │
+│ │   - 切换至方案 C-Prime 调度策略                       │ │
 │ └──────────────────────────────────────────────┘ │
 │     |                                            │
 │     v                                            │
@@ -50,7 +50,7 @@ agentrt-linux（AirymaxOS）提供专属 containerd shim v2 实现，作为 Agen
 │     |                                            │
 │     v                                            │
 │ Linux 6.6 内核（agentrt-linux）                  │
-│   - SCHED_AGENT 策略                          │
+│   - AIRY_SCHED_AGENT 用户态调度器                      │
 │   - MemoryRovol CSI                             │
 │   - Cupolas 安全穹顶                            │
 └──────────────────────────────────────────────────┘
@@ -61,7 +61,7 @@ agentrt-linux（AirymaxOS）提供专属 containerd shim v2 实现，作为 Agen
 | 维度 | io.containerd.runc.v2 | io.containerd.airymaxos.v2 |
 |------|----------------------|----------------------------|
 | Agent 注册 | 无 | 容器创建时注册至内核 |
-| 调度类 | CFS（默认） | SCHED_AGENT |
+| 调度类 | CFS（默认） | AIRY_SCHED_AGENT（SCHED_FIFO + 用户态策略） |
 | 存储卷 | 标准 PVC | MemoryRovol CSI |
 | 安全 | 标准 SecurityContext | Cupolas + Landlock |
 | 生命周期 | 标准 | 联动 Agent 状态机 |
@@ -204,7 +204,7 @@ func (s *AirymaxosShim) Create(ctx context.Context,
 	}, nil
 }
 
-/* Start 启动 Agent 容器并切换 SCHED_AGENT 策略 */
+/* Start 启动 Agent 容器并切换至方案 C-Prime 调度策略 */
 func (s *AirymaxosShim) Start(ctx context.Context,
 	req *task.StartRequest) (*task.StartResponse, error) {
 	s.mu.Lock()
@@ -219,9 +219,9 @@ func (s *AirymaxosShim) Start(ctx context.Context,
 		return nil, fmt.Errorf("runc start failed: %w", err)
 	}
 
-	/* 2. 切换容器主进程调度类为 SCHED_AGENT */
-	if err := setSchedAgent(container.Pid); err != nil {
-		return nil, fmt.Errorf("set SCHED_AGENT failed: %w", err)
+	/* 2. 切换容器主进程调度类为 AIRY_SCHED_AGENT */
+	if err := setUserSched(container.Pid); err != nil {
+		return nil, fmt.Errorf("set AIRY_SCHED_AGENT failed: %w", err)
 	}
 
 	/* 3. 更新内核 Agent 状态为 Ready */
@@ -408,22 +408,22 @@ func registerAgentToKernel(meta *AgentMeta) (uint32, error) {
 }
 ```
 
-### 4.2 SCHED_AGENT 切换
+### 4.2 方案 C-Prime 调度切换
 
 shim 在容器启动后切换主进程调度类：
 
 ```go
-/* setSchedAgent 将 PID 切换至 SCHED_AGENT 策略 */
-func setSchedAgent(pid int) error {
-	/* 通过 /proc/<pid>/sched_agent 写入调度类 */
-	path := fmt.Sprintf("/proc/%d/sched_agent", pid)
+/* setUserSched 将 PID 切换至 AIRY_SCHED_AGENT 用户态调度器策略 */
+func setUserSched(pid int) error {
+	/* 通过 /proc/<pid>/user_sched 写入调度类 */
+	path := fmt.Sprintf("/proc/%d/user_sched", pid)
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	_, err = f.WriteString("SCHED_AGENT")
+	_, err = f.WriteString("AIRY_SCHED_AGENT")
 	return err
 }
 ```
@@ -534,7 +534,7 @@ Agent 容器镜像通过 OCI 标签声明 agentrt-linux 专属属性：
 |------|------|------|
 | `airymaxos.agent.token-budget` | 默认 Token 预算 | `"1000000"` |
 | `airymaxos.agent.memory-rovol` | 默认记忆卷载层 | `"L1,L2,L3,L4"` |
-| `airymaxos.agent.scheduler` | 调度类 | `"SCHED_AGENT"` |
+| `airymaxos.agent.scheduler` | 调度类 | `"AIRY_SCHED_AGENT"` |
 | `airymaxos.agent.cognition-cycle` | 认知循环类型 | `"CoreLoopThree"` |
 | `airymaxos.agent.capabilities` | 默认 capability | `"MEMORY_READ,MEMORY_WRITE"` |
 
@@ -610,7 +610,7 @@ shim 维护本地容器状态与内核 Agent 状态的一致性：
 | 容器状态 | 内核 Agent 状态 | 触发动作 |
 |----------|------------------|----------|
 | created | Registered | 注册完成 |
-| running | Running | SCHED_AGENT 切换 |
+| running | Running | 方案 C-Prime 调度切换 |
 | paused | Suspended | 预算暂停 |
 | stopped | Terminating | 优雅销毁 |
 | deleted | Dead | 资源回收 |
@@ -656,7 +656,7 @@ shim 与内核共享 MemoryRovol 页面，避免数据拷贝：
 | 测试用例 | 验证目标 | 预期结果 |
 |----------|----------|----------|
 | 创建 Agent 容器 | 注册 + 契约签订 | Agent ID 分配成功 |
-| 启动 Agent 容器 | SCHED_AGENT 切换 | 调度类切换成功 |
+| 启动 Agent 容器 | 方案 C-Prime 调度切换 | 调度类切换成功 |
 | 销毁 Agent 容器 | 资源全部回收 | 内核 Agent 状态 Dead |
 | 创建失败回滚 | 集中清理 | 无资源泄漏 |
 | MemoryRovol 挂载 | 卷挂载 + 持久化 | 容器可读写记忆 |

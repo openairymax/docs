@@ -142,7 +142,7 @@ annotations:
   airymaxos.agent.version: "1.0.1"
   airymaxos.agent.token-budget: "1000000"
   airymaxos.agent.memory-rovol: "L1,L2,L3,L4"
-  airymaxos.agent.scheduler: "SCHED_AGENT"
+  airymaxos.agent.scheduler: "AIRY_SCHED_AGENT"
   airymaxos.agent.cognition-cycle: "CoreLoopThree"
   airymaxos.agent.min-kernel: "1.0.1"
   airymaxos.agent.capabilities: "CAP_ROVOL_SNAPSHOT,CAP_IPC_SEND"
@@ -251,7 +251,7 @@ spec:
 
   # === 调度 ===
   scheduler:
-    policy: scx_agent          # SCHED_AGENT 策略
+    policy: airy_sched_agent          # AIRY_SCHED_AGENT 策略（方案 C-Prime）
     priority: 100             # 优先级（0-139）
     nodeSelector:
       airymaxos.dev/cxl: "true"  # 要求 CXL 节点

@@ -267,8 +267,8 @@ git diff
 
 # 解决冲突：保留上游修复 + 保留 agentrt-linux 专属扩展
 # 例如：上游修复了 sched_core 中的内存泄漏
-#       agentrt-linux 在同一文件扩展了 SCHED_AGENT
-# 解决方式：应用上游修复 + 保留 SCHED_AGENT 代码
+#       agentrt-linux 在同一文件扩展了 AIRY_SCHED_AGENT
+# 解决方式：应用上游修复 + 保留 AIRY_SCHED_AGENT 代码
 
 # 标记冲突已解决
 git add kernel/sched/core.c
@@ -459,7 +459,7 @@ agentrt-linux 在 Linux 6.6 基线上有大量专属补丁，需在 merge 时保
 
 | 补丁类别 | 估计数量 | 冲突风险 |
 |----------|----------|----------|
-| SCHED_AGENT 策略 | ~50 补丁 | 高（与 sched/ 冲突） |
+| AIRY_SCHED_AGENT 策略 | ~50 补丁 | 高（与 sched/ 冲突） |
 | Cupolas 安全穹顶 | ~80 补丁 | 中（与 security/ 冲突） |
 | MemoryRovol 记忆卷载 | ~60 补丁 | 中（与 mm/ 冲突） |
 | AgentsIPC io_uring | ~40 补丁 | 高（与 io_uring/ 冲突） |
@@ -480,7 +480,7 @@ CHANGED_FILES=$(git show --name-only --format= $UPSTREAM_COMMIT)
 for file in $CHANGED_FILES; do
     # 检查该文件是否有 agentrt-linux 专属修改
     if git log --oneline agentrt-linux-6.6 -- $file | \
-       grep -qiE "agentrt|airymax|cupolas|memoryrov|sched_agent"; then
+       grep -qiE "agentrt|airymax|cupolas|memoryrov|user_sched"; then
         echo "HIGH RISK: $file (has agentrt-linux changes)"
     fi
 done
@@ -496,8 +496,8 @@ done
 
 set -e
 
-echo "=== SCHED_AGENT 测试 ==="
-./test_sched_agent --all
+echo "=== AIRY_SCHED_AGENT 测试 ==="
+./test_user_sched --all
 
 echo "=== Cupolas 安全测试 ==="
 ./test_cupolas --all

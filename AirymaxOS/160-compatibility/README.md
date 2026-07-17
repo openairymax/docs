@@ -101,7 +101,7 @@ if (header.version > SUPPORTED_VERSION) {
 
 ### 3.1 0.1.1 版本范围
 
-完成 README + 01-abi-stability.md（UAPI 稳定性 + KABI 保留域）+ 02-posix-compat.md（POSIX 兼容性 + SCHED_EXT 约束）+ 03-upstream-tracking.md（Linux 6.6 上游跟踪策略 + backport 规范）+ 04-ipc-versioning.md（协议版本演进 + 运行时协商 + 降级策略 + 操作码版本化）+ 05-cross-distro.md（发行版支持矩阵 + glibc 兼容 + 内核模块兼容 + FHS 适配 + 主流 Linux 发行版标准兼容）。
+完成 README + 01-abi-stability.md（UAPI 稳定性 + KABI 保留域）+ 02-posix-compat.md（POSIX 兼容性 + 方案 C-Prime 调度约束）+ 03-upstream-tracking.md（Linux 6.6 上游跟踪策略 + backport 规范）+ 04-ipc-versioning.md（协议版本演进 + 运行时协商 + 降级策略 + 操作码版本化）+ 05-cross-distro.md（发行版支持矩阵 + glibc 兼容 + 内核模块兼容 + FHS 适配 + 主流 Linux 发行版标准兼容）。
 
 ### 3.2 1.0.1 版本范围
 

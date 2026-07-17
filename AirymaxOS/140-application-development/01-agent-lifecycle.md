@@ -138,7 +138,7 @@ struct airy_agent_params {
  * 3. 设置 Landlock 沙箱——文件访问控制
  * 4. 设置 seccomp 过滤器——系统调用白名单
  * 5. 分配 Wasm 运行时——创建 Wasm 3.0 沙箱实例
- * 6. 注册到 MicroCoreRT 调度器——SCHED_AGENT 策略排队
+ * 6. 注册到 MicroCoreRT 调度器——AIRY_SCHED_AGENT 策略排队
  * 7. 状态切换到 RUNNING
  */
 int airy_agent_start(u32 agent_id);
@@ -392,7 +392,7 @@ int airy_cap_revoke(u32 agent_id);
 
 ### 7.1 分级错误响应
 
-借鉴 主流 Linux 发行版 sched_ext watchdog 的分级退出设计：
+借鉴 主流 Linux 发行版 sched_ext watchdog（Linux 6.12+）的分级退出设计，方案 C-Prime 用户态调度器采用等效的 watchdog 机制：
 
 | 错误级别 | 处理方式 | 触发条件 |
 |---------|---------|---------|

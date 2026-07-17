@@ -99,7 +99,7 @@ Agent 间通信基于 128B 定长消息头 + 5 种 payload 类型。
 |------|---------|----------------|
 | 资源隔离 | 进程级 | cgroup v2 + Landlock + capability |
 | 通信 | socket / pipe | AgentsIPC 128B 协议 |
-| 调度 | CFS | MicroCoreRT（sched_ext + eBPF） |
+| 调度 | CFS | MicroCoreRT（方案 C-Prime + eBPF） |
 | 记忆 | 文件系统 | MemoryRovol 四层卷载 |
 | 安全 | 用户权限 | Cupolas 安全穹顶 |
 

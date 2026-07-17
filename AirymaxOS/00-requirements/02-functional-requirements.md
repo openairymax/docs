@@ -27,7 +27,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 子仓 | 核心功能 | 同源 agentrt 模块 | 关键能力 |
 |---|---|---|---|
-| kernel | 内核调度、IPC、内存管理 | atoms/corekern (MicroCoreRT) | EEVDF + sched_ext + io_uring |
+| kernel | 内核调度、IPC、内存管理 | atoms/corekern (MicroCoreRT) | EEVDF + 方案 C-Prime + io_uring |
 | services | VFS、网络、驱动、daemons | daemons (12 daemons) | systemd + io_uring 消息传递 |
 | security | capability、LSM、国密 | cupolas | capability(seL4) + Landlock + 机密计算 |
 | memory | 记忆持久化、CXL、PMEM | heapstore + memoryrovol | MemoryRovol 内核态 + MGLRU |
@@ -46,11 +46,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |---|---|---|---|
 | atoms/corekern (MicroCoreRT) | kernel | 微核心基础：IPC/Mem/Task/Time | 调度语义同源，无适配层 |
 | atoms/corekern IPC | kernel | IPC 子系统：128B 消息头同源 | 协议同源，低延迟 |
-| daemons/llm_d | services | LLM 守护进程：模型管理 | 服务同源，行为一致 |
-| daemons/market_d | services | 市场守护进程：Agent 注册发现 | 服务同源 |
-| daemons/monit_d | services | 监控守护进程：可观测性 | 服务同源 |
+| daemons/cogn_d | services | 认知调度守护进程：模型管理 | 服务同源，行为一致 |
+| daemons/gateway_d | services | 网关守护进程：Agent 注册发现 | 服务同源 |
+| daemons/audit_d | services | 审计守护进程：可观测性 | 服务同源 |
 | daemons/sched_d | services | 调度守护进程：任务调度 | 服务同源 |
-| daemons/tool_d | services | 工具守护进程：执行单元 | 服务同源 |
+| daemons/dev_d | services | 设备驱动守护进程：执行单元 | 服务同源 |
 | cupolas (安全穹顶) | security | capability + LSM 安全模型 | 模型同源，安全内生 |
 | cupolas/permission | security | 权限裁决引擎：capability + 策略 | 模型同源（ADR-004 确立 capability-based 安全模型，RBAC 已被拒绝） |
 | cupolas/sanitizer | security | 输入净化管道：四阶段 | 模型同源 |
@@ -71,8 +71,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 编号 | 功能需求 | 输入 | 输出 | 同源 agentrt | 验收标准 |
 |---|---|---|---|---|---|
-| FR-001 | 内核调度（EEVDF + sched_ext） | 任务描述 + 调度策略 | 调度结果 | atoms/corekern Task | 调度延迟 < 100ms |
-| FR-002 | SCHED_AGENT 策略 | Agent 任务 + 优先级 | 调度决策 | MicroCoreRT 调度器 | Agent 优先级抢占正确 |
+| FR-001 | 内核调度（EEVDF + 方案 C-Prime） | 任务描述 + 调度策略 | 调度结果 | atoms/corekern Task | 调度延迟 < 100ms |
+| FR-002 | AIRY_SCHED_AGENT 策略 | Agent 任务 + 优先级 | 调度决策 | MicroCoreRT 调度器 | Agent 优先级抢占正确 |
 | FR-003 | IPC 子系统（io_uring 零拷贝） | 消息（128B 头 + payload） | 接收确认 | atoms/corekern IPC | 吞吐 > 100K msg/s |
 | FR-004 | 内存管理（MGLRU，Linux 6.6 多代 LRU） | 内存分配请求 | 内存指针 | atoms/corekern Mem | 多代 LRU 正确回收 |
 | FR-005 | 时间服务（时钟 + 定时器） | 定时器请求 | 定时器触发 | atoms/corekern Time | 定时器精度 < 1ms |

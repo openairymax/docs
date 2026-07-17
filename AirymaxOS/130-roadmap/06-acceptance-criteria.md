@@ -116,7 +116,7 @@ agentrt-linux 1.0.1 共定义约 110 项 OS-ACC 验收标准，覆盖 9 个 Part
 | OS-ACC-022 ★ | 70-build-system/ 8 文档完成 | `find docs/AirymaxOS/70-build-system/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
 | OS-ACC-023 | 微内核设计文档 | `find docs/AirymaxOS/ -name "*microkernel*" -o -name "*10-architecture*" \| wc -l` | ≥1 个 | P0 | M1 |
 | OS-ACC-024 ★ | 8 子仓设计文档 | `find docs/AirymaxOS/20-modules/ -name "*.md" \| wc -l` | ≥8 | P0 | M1 |
-| OS-ACC-025 | SCHED_AGENT 策略定义 | `grep -rE "SCHED_AGENT\|sched_ext" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
+| OS-ACC-025 | AIRY_SCHED_AGENT 策略定义 | `grep -rE "AIRY_SCHED_AGENT\|方案 C-Prime" docs/AirymaxOS/` | ≥5 处 | P0 | M1 |
 | OS-ACC-026 | AgentsIPC 128B 消息头定义 | `grep -rE "AgentsIPC\|128B 消息头" docs/AirymaxOS/` | ≥3 处 | P0 | M1 |
 | OS-ACC-027 | capability 安全模型定义 | `grep -rE "capability" docs/AirymaxOS/110-security/` | ≥10 处 | P0 | M1 |
 | OS-ACC-028 ★ | 4 层接口稳定性分级 | `grep -rE "L1\|L2\|L3\|L4" docs/AirymaxOS/50-engineering-standards/04-engineering-philosophy.md` | ≥4 层定义 | P0 | M1 |
