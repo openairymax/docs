@@ -2,12 +2,22 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # LSM 框架详解
 > **文档定位**：agentrt-linux（AirymaxOS）安全工程体系第 1 主题文档——Linux 安全模块（LSM）框架深度剖析\
-> **文档版本**：v1.0\
+> **文档版本**：v1.1（Capability Folding 集成版）\
 > **最后更新**：2026-07-18\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生\
-> **核心约束**：IRON-9 v3 同源且部分代码共享
+> **核心约束**：IRON-9 v3 同源且部分代码共享；v1.1 起 Capability Badge 校验由 fastpath C-S9 内联完成（LSM 钩子仅 slowpath 接管）
+
+---
+
+## SSoT 声明
+
+> **单一权威源声明**：本文件是 **LSM 框架在 agentrt-linux 中的集成方式** 的唯一权威源。LSM 钩子链表（`security_hook_heads`）、blob 分配（`lsm_blob_sizes`）、排序机制（`LSM_ORDER_FIRST`）、初始化流程（`ordered_lsm_init`）、Cupolas（airy LSM）注册模式、`airy_*_security` blob 结构、`airy_security_verdict` 4 值枚举均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 LSM 框架机制与 Cupolas 集成模式。
+>
+> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，**Capability Badge 校验从 LSM 钩子中剥离**——fastpath C-S9 在 io_uring 数据面内联完成 Badge 校验（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)），**LSM 钩子不再在正常路径上执行 capability 校验**。LSM 钩子（如 `security_uring_cmd`）仅在 slowpath（C-S9 失败时）被调用，做策略裁决与冷酷执法（详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md)）。纯 C LSM 的职责不变——依然负责 inode/file/task/cred 钩子链的 4 值裁决（ALLOW/DENY/AUDIT/COMPLAIN），只是 capability 校验这部分从 LSM 钩子前置到 fastpath C-S9，避免 LSM 钩子在 hot path 上的开销。
+>
+> 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
 
 ---
 
@@ -347,7 +357,7 @@ Cupolas 在 `file_open` 之后追加一层 Agent 主体校验：先让 Landlock 
 LSM_HOOK(int, 0, task_alloc, struct task_struct *task, unsigned long clone_flags)
 ```
 
-Cupolas 在此钩子中决定子 Agent 是否继承父 Agent 的 Cupolas 域，并在 `task_alloc` 后期通过 `AgentsIPC` 总线向 Workbench 虚拟工作台上报"Agent fork"事件。
+Cupolas 在此钩子中决定子 Agent 是否继承父 Agent 的 Cupolas 域，并在 `task_alloc` 后期通过 `A-IPC` 总线向 Workbench 虚拟工作台上报"Agent fork"事件。
 
 ### 6.4 cred 钩子
 
@@ -407,7 +417,7 @@ struct lsm_blob_sizes airy_blob_sizes __ro_after_init = {
 static int __init airy_lsm_init(void) {
     airy_add_cred_hooks(); airy_add_inode_hooks();
     airy_add_file_hooks(); airy_add_task_hooks();
-    airy_add_ipc_hooks();  /* 与 AgentsIPC 集成 */
+    airy_add_ipc_hooks();  /* 与 A-IPC 集成 */
     pr_info("Cupolas security dome (airy LSM) up and running.\n");
     return 0;
 }
@@ -423,9 +433,29 @@ DEFINE_LSM(airy) = {
 
 Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"白名单内。任何新增钩子都需经 RFC 评审、ABI 稳定性确认（OS-IRON-001）、五维原则映射检查（OS-STD-007）三道关。这是 IRON-9 v3 同源且部分代码共享原则的硬性要求：agentrt 端的 Cupolas 用户态 API（`airy_cupolas_*`）在 agentrt-linux 内核态对应实现必须独立维护，但语义必须同源。
 
-### 8.3 与 AgentsIPC 的桥接
+### 8.3 与 A-IPC（Capability Folding）的桥接
 
-Cupolas 在内核态除了消费 LSM 钩子，还通过 `AgentsIPC` 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。AgentsIPC 的 128B 消息头由 MicroCoreRT 锁定字段布局，保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ AgentsIPC 内核端 → agentrt → Audit/Workbench。
+Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 44-51，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
+
+### 8.4 Capability Folding 与 LSM 钩子的职责分割（v1.1 新增）
+
+**v1.1 新增**：Capability Folding 引入 fastpath/slowpath 职责分割，明确"哪些校验在 fastpath 内联，哪些在 LSM 钩子中执行"：
+
+| 校验类型 | 执行位置 | 时机 | 延迟 | 说明 |
+|---------|---------|------|------|------|
+| **Badge 64-bit Native Word 校验** | fastpath C-S9（io_uring 数据面内联） | 每次 IPC 操作 | ~10ns | `airy_cap_badge_ok()` 3×READ_ONCE + 位运算 + 比较，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md) |
+| **Ring 冻结检查**（C-S0） | fastpath 内联 | 每次 IPC 操作 | ~1ns | `unlikely(ring->frozen)` 分支预测优化 |
+| **CRC32 校验**（C-S12） | fastpath 内联 | 每次 IPC 操作 | ~5ns | 消息完整性校验 |
+| **inode/file/task/cred 策略裁决** | LSM 钩子（slowpath） | 内核对象访问 | ~100ns-1μs | 4 值枚举裁决，**与 IPC fastpath 无关** |
+| **Badge 异常接管** | LSM 钩子（`security_uring_cmd`，slowpath） | C-S9 失败时 | ~100ns+ | Micro-Supervisor 冷酷执法，详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md) |
+| **Agent 行为审计** | LSM 钩子（`security_audit_rule_match` 等） | 内核对象访问 | 异步 | 通过 A-IPC 上报用户态 Audit 子系统 |
+
+**职责分割原则**：
+- **fastpath C-S9** 负责"能力校验"（Badge 64-bit Native Word）——这是 IPC 消息级的能力校验，必须在 fastpath 内联以避免 LSM 钩子在 hot path 上的开销
+- **LSM 钩子** 负责"策略裁决"（inode/file/task/cred 4 值枚举）——这是内核对象访问级的策略裁决，与 IPC fastpath 无关，依然由纯 C LSM 钩子链完成
+- **LSM 钩子（`security_uring_cmd`）** 在 slowpath 接管 Badge 异常——当 fastpath C-S9 返回 `-AIRY_ECAP_FORGED` (-80) 等 Badge 错误码时，Micro-Supervisor 通过 LSM 钩子执行冷酷执法（冻结 Ring + 通知 Macro-Supervisor）
+
+**设计哲学**：这是乔布斯/艾夫"简约就是美"在安全工程的落地——将"能力校验"与"策略裁决"分离，fastpath 仅做最简单的 Badge 位运算（~10ns），LSM 钩子保留完整的 4 值裁决语义。这避免了 LSM 钩子在 IPC hot path 上的开销，同时保留了 LSM 框架的策略灵活性。Capability Folding 不是"绕过 LSM"——而是"将能力校验前置到 fastpath，让 LSM 钩子专注于策略裁决"。
 
 ---
 
@@ -456,7 +486,7 @@ DEFINE_LSM(demo) = { .name = "demo", .init = demo_init };
 
 ### 9.1 钩子回调签名约定
 
-所有钩子回调的签名严格由 `lsm_hook_defs.h` 中的 `LSM_HOOK(RET, DEFAULT, NAME, ARGS...)` 宏决定。Cupolas 必须按签名实现，禁止通过包装宏篡改签名——这是 OS-IRON-002（内核内部 API 不稳定但改动者需自行修复所有调用点）的延伸约束。错误码语义统一：`-EACCES`（权限拒绝，最常用）、`-EPERM`（操作不允许）、`-ENOMEM`（内存不足）、`-ENOSYS`（不支持）；Cupolas 在拒绝时优先返回 `-EACCES`，并在 `AgentsIPC` 总线上以 `CUPOLAS_DENY` 事件类型上报，由用户态 Audit 子系统落盘。
+所有钩子回调的签名严格由 `lsm_hook_defs.h` 中的 `LSM_HOOK(RET, DEFAULT, NAME, ARGS...)` 宏决定。Cupolas 必须按签名实现，禁止通过包装宏篡改签名——这是 OS-IRON-002（内核内部 API 不稳定但改动者需自行修复所有调用点）的延伸约束。错误码语义统一：`-EACCES`（权限拒绝，最常用）、`-EPERM`（操作不允许）、`-ENOMEM`（内存不足）、`-ENOSYS`（不支持）；Cupolas 在拒绝时优先返回 `-EACCES`，并在 `A-IPC` 总线上以 `CUPOLAS_DENY` 事件类型上报，由用户态 Audit 子系统落盘。
 
 ---
 
@@ -490,12 +520,12 @@ agentrt 的 `cupolas/` 模块与 agentrt-linux 内核态 Cupolas 同源，遵循
 | **Guards 守卫** | `airy_cupolas_guard_enter()` 入口防护 | `security_file_open` / `security_task_alloc` 钩子 |
 | **Permission 权限裁决** | `airy_cupolas_perm_check()` 策略裁决 | `security_inode_permission` 钩子 + capability |
 | **Sanitizer 输入净化** | `airy_cupolas_sanitize()` 输入验证 | `security_sb_mount` / `security_path_*` 钩子 |
-| **Audit 审计追踪** | `airy_cupolas_audit_emit()` 行为审计 | LSM 钩子拒绝时通过 `AgentsIPC` 上报 |
+| **Audit 审计追踪** | `airy_cupolas_audit_emit()` 行为审计 | LSM 钩子拒绝时通过 `A-IPC` 上报 |
 | **Workbench 虚拟工作台** | `airy_cupolas_workbench_spawn()` 沙箱 | 配合 Landlock 实现进程级隔离 |
 | **Security Vault 安全金库** | `airy_cupolas_vault_seal()` 密封 | TPM + 模块签名 + Lockdown |
 | **Network Security 网络安全** | `airy_cupolas_net_filter()` 网络过滤 | `security_socket_*` 钩子 |
 
-两端通过 `AgentsIPC` 总线（128B 消息头由 MicroCoreRT 锁定）传递安全策略与审计事件，无任何适配层。这是 IRON-9 v3 同源且部分代码共享原则的工程兑现：同源在语义层，独立在实现层。
+两端通过 `A-IPC` 总线（128B 消息头由 MicroCoreRT 锁定）传递安全策略与审计事件，无任何适配层。这是 IRON-9 v3 同源且部分代码共享原则的工程兑现：同源在语义层，独立在实现层。
 
 ### 11.1 IRON-9 v3 四层共享模型
 
@@ -547,7 +577,7 @@ enum airy_security_verdict {
 | 钩子注册 | `airy_cupolas_hook_register()` | `security_add_hooks()` | 注册模式同源 |
 | 钩子链遍历 | 应用层策略链 | `hlist_for_each_entry_rcu()` | 链遍历语义同源 |
 | blob 生命周期 | 用户态 arena 分配 | `kmem_cache` 分配 | 生命周期管理同源 |
-| 拒绝上报 | `AgentsIPC` 上报审计事件 | `AgentsIPC` 上报审计事件 | 上报通道同源 |
+| 拒绝上报 | `A-IPC` 上报审计事件 | `A-IPC` 上报审计事件 | 上报通道同源 |
 | 策略裁决 | 4 值枚举（ALLOW/DENY/AUDIT/COMPLAIN） | 4 值枚举 | 裁决语义同源（[SC]） |
 | Guard 入口 | `airy_cupolas_guard_enter()` | `security_hook_heads` 钩子入口 | 入口防护语义同源 |
 
@@ -571,13 +601,13 @@ graph LR
     A[agentrt Cupolas 策略引擎] -->|读取 [SC] hook_id + blob_offset| B[security_types.h]
     C[内核态 LSM 钩子触发] --> D[security_hook_heads 链遍历]
     D --> E[Cupolas LSM 模块回调]
-    E -->|拒绝时| F[AgentsIPC 上报审计事件]
+    E -->|拒绝时| F[A-IPC 上报审计事件]
     A -->|策略下发| F
     style B fill:#bbf7d0,stroke:#15803d
     style F fill:#fde68a,stroke:#b45309
 ```
 
-agentrt Cupolas 策略引擎通过 [SC] 共享契约层读取 `security_types.h` 中的钩子 ID 与 blob 偏移，解析内核 LSM 事件，无需进入内核私有数据结构。两端通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）传递安全策略与审计事件，无适配层。MicroCoreRT 极简内核契约要求：内核态 LSM 钩子不解析用户态策略 payload，仅按 [SC] 钩子 ID 透传裁决请求；用户态 Cupolas 守护进程负责跨态策略聚合与审计。
+agentrt Cupolas 策略引擎通过 [SC] 共享契约层读取 `security_types.h` 中的钩子 ID 与 blob 偏移，解析内核 LSM 事件，无需进入内核私有数据结构。两端通过 A-IPC 总线（128B 消息头，magic `0x41524531`）传递安全策略与审计事件，无适配层。MicroCoreRT 极简内核契约要求：内核态 LSM 钩子不解析用户态策略 payload，仅按 [SC] 钩子 ID 透传裁决请求；用户态 Cupolas 守护进程负责跨态策略聚合与审计。
 
 ### 11.2 LSM 与 Cupolas 集成深化
 
@@ -588,7 +618,7 @@ LSM 与 Cupolas 集成的目标是将 Cupolas 7 大子系统映射到 LSM 钩子
 | Cupolas 子系统 | LSM 钩子名 | 钩子 ID（[SC]） | 裁决行为 |
 |----------------|------------|------------------|----------|
 | **Guards 守卫** | `security_task_create` / `security_task_kill` | `HOOK_TASK_CREATE` / `HOOK_TASK_KILL` | DENY 时返回 `-EACCES` 阻断 Agent 生命周期 |
-| **Permission 权限裁决** | `security_inode_permission` / `security_file_open` | `HOOK_INODE_PERMISSION` / `HOOK_FILE_OPEN` | 4 值枚举（ALLOW/DENY/ASK/LOG）裁决 |
+| **Permission 权限裁决** | `security_inode_permission` / `security_file_open` | `HOOK_INODE_PERMISSION` / `HOOK_FILE_OPEN` | 4 值枚举（ALLOW/DENY/AUDIT/COMPLAIN）裁决 |
 | **Sanitizer 输入净化** | `security_bpf_check` / `security_socket_sendmsg` | `HOOK_BPF_CHECK` / `HOOK_SOCKET_SENDMSG` | DENY 时丢弃违规 BPF/socket payload |
 | **Audit 审计追踪** | `security_audit_rule_match` | `HOOK_AUDIT_RULE_MATCH` | 仅记录 LOG，不改变控制流 |
 | **Workbench 虚拟工作台** | `security_task_setrlimit` | `HOOK_TASK_SETRLIMIT` | DENY 时拒绝越界资源申请 |
@@ -601,17 +631,17 @@ LSM 与 Cupolas 集成的目标是将 Cupolas 7 大子系统映射到 LSM 钩子
 
 ```mermaid
 graph LR
-    A["Cupolas daemon<br/>(用户态策略引擎)"] -->|"AgentsIPC 128B 消息"| B["AgentsIPC 总线"]
+    A["Cupolas daemon<br/>(用户态策略引擎)"] -->|"A-IPC 128B 消息"| B["A-IPC 总线"]
     B --> C["内核 LSM 钩子<br/>security_hook_heads"]
-    C --> D["策略裁决<br/>4 值枚举<br/>ALLOW/DENY/ASK/LOG"]
-    D -->|"ASK 询问 daemon"| A
-    D -->|"LOG/AUDIT"| E["审计日志<br/>Audit 子系统"]
+    C --> D["策略裁决<br/>4 值枚举<br/>ALLOW/DENY/AUDIT/COMPLAIN"]
+    D -->|"COMPLAIN 询问 daemon"| A
+    D -->|"AUDIT"| E["审计日志<br/>Audit 子系统"]
     style A fill:#bbf7d0,stroke:#15803d
     style D fill:#fde68a,stroke:#b45309
     style E fill:#bfdbfe,stroke:#1d4ed8
 ```
 
-Cupolas daemon 作为用户态策略引擎通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）下发策略；内核 LSM 钩子在 `security_hook_heads` 链上执行策略裁决。ASK 裁决需要回询 daemon 时，5 秒超时后回退 ALLOW 并记录 LOG（OS-SEC-009）；所有裁决结果通过 Audit 子系统持久化。
+Cupolas daemon 作为用户态策略引擎通过 A-IPC 总线（128B 消息头，magic `0x41524531` 'ARE1'）下发策略；内核 LSM 钩子在 `security_hook_heads` 链上执行策略裁决。COMPLAIN 裁决（学习模式）需要回询 daemon 时，5 秒超时后回退 ALLOW 并记录 AUDIT（OS-SEC-009）；所有裁决结果通过 Audit 子系统持久化。v1.1 起，Badge 64-bit Native Word 校验由 fastpath C-S9 内联完成，不进入 LSM 钩子链——LSM 钩子仅处理 inode/file/task/cred 策略裁决与 slowpath Badge 异常接管（§8.4）。
 
 #### 11.2.3 审计事件格式定义
 
@@ -626,19 +656,23 @@ struct airy_cupolas_audit_event {
     uint8_t  reserved;      /* 对齐填充 */
     uint64_t subject;       /* 主体标识（cred pointer 或 agent handle） */
     uint64_t object;        /* 客体标识（inode/file/socket 句柄） */
-} __attribute__((packed));  /* 128B 对齐 AgentsIPC 消息头 */
+} __attribute__((packed));  /* 128B 对齐 A-IPC 消息头 */
 ```
 
-事件结构 128B 对齐 AgentsIPC 消息头，由内核态 Cupolas 钩子填充并通过 `AgentsIPC` 上报用户态 Audit 子系统。`ruling` 字段取值严格遵循 [SC] 4 值枚举（`AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN`），与 agentrt 用户态 Cupolas 裁决语义完全相同（OS-IRON-003）。
+事件结构 128B 对齐 A-IPC 消息头，由内核态 Cupolas 钩子填充并通过 `A-IPC` 上报用户态 Audit 子系统。`ruling` 字段取值严格遵循 [SC] 4 值枚举（`AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN`），与 agentrt 用户态 Cupolas 裁决语义完全相同（OS-IRON-003）。
 
-#### 11.2.4 OS-SEC 规则集（agentrt-linux 专属扩展深化）
+#### 11.2.4 OS-SEC 规则集（agentrt-linux 专属扩展深化，v1.1 对齐 4 值枚举）
 
 | 规则编号 | 类型 | 描述 |
 |----------|------|------|
-| OS-SEC-008 | 安全规范 | Cupolas 钩子回调必须返回 [SC] 4 值枚举之一（ALLOW/DENY/ASK/LOG），禁止返回其他值 |
-| OS-SEC-009 | 安全规范 | ASK 裁决必须通过 `AgentsIPC` 询问 daemon，5 秒超时后回退 ALLOW 并记录 LOG |
+| OS-SEC-008 | 安全规范 | Cupolas 钩子回调必须返回 [SC] 4 值枚举之一（**ALLOW/DENY/AUDIT/COMPLAIN**，对齐 `airy_security_verdict`），禁止返回其他值 |
+| OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
 | OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
 | OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] 钩子 ID 一一对应，新增子系统必须扩展映射表 |
+| OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
+| OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
+
+> **编号说明**：v1.1 新增规则原使用 OS-SEC-012/013，因与 02-landlock-sandbox.md 的 OS-SEC-012（3 层域叠加）/OS-SEC-013（访问掩码合并）冲突，重编号为 OS-SEC-016/017（SSoT 注册表下一可用编号）。详见 [09-ssot-registry.md §9.1](../50-engineering-standards/09-ssot-registry.md)。
 
 上述规则在 IRON-9 v3 [SC] 共享契约层约束下，保证 agentrt 用户态 Cupolas 与 agentrt-linux 内核态 LSM 钩子的语义同源；任何对钩子映射表的修改必须经 RFC 评审与 ABI 稳定性确认（OS-IRON-001）及五维原则映射检查（OS-STD-007）。
 
@@ -659,10 +693,16 @@ struct airy_cupolas_audit_event {
 | OS-STD-002 | 工程标准 | 钩子回调签名严格由 `LSM_HOOK` 宏决定 |
 | OS-STD-003 | 工程标准 | blob 生命周期由 kmem_cache 自动管理 |
 | OS-STD-004 | 工程标准 | `init_debug` 默认开启，便于启动审计 |
-| OS-STD-005 | 工程标准 | 拒绝路径必须通过 `AgentsIPC` 上报可读原因 |
+| OS-STD-005 | 工程标准 | 拒绝路径必须通过 A-IPC 上报可读原因 |
 | OS-SEC-001 | 安全规范 | LSM 钩子内置每一关键路径，不可外挂补丁替代 |
 | OS-SEC-002 | 安全规范 | 钩子链表 RCU 不变量需通过形式化检查 |
 | OS-SEC-003 | 安全规范 | Cupolas 必须在 capability 之后初始化 |
+| OS-SEC-008 | 安全规范 | Cupolas 钩子回调必须返回 [SC] 4 值枚举之一（ALLOW/DENY/AUDIT/COMPLAIN） |
+| OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
+| OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
+| OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] 钩子 ID 一一对应 |
+| OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
+| OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
 ---
 
@@ -670,8 +710,12 @@ struct airy_cupolas_audit_event {
 
 - `110-security/README.md`（安全加固体系主索引）
 - `110-security/02-landlock-sandbox.md`（Landlock 用户态沙箱）
-- `110-security/03-capability-model.md`（capability 模型）
+- `110-security/03-capability-model.md`（v1.1: capability 模型，Badge 64-bit Native Word）
 - `110-security/07-airy-lsm-design.md`（纯 C LSM 模块设计，唯一权威源）
+- `20-modules/09-kernel-agent-supervisor.md`（v1.1: Micro-Supervisor，fastpath C-S9 + slowpath LSM 接管）
+- `30-interfaces/02-ipc-protocol.md`（v1.1: A-IPC 协议，Layout C v4 128B + capability_badge offset 44）
+- `30-interfaces/07-ipc-fastpath.md`（v1.1: fastpath C-S9 Badge 校验实现，~10ns）
+- `30-interfaces/08-sc-error-contract.md`（v1.1: Error/Fault 码，-78~-82 Badge 码 + 0x1001-0x1006 Fault 码）
 - `50-engineering-standards/04-engineering-philosophy.md`（双层稳定性哲学）
 - `20-modules/03-security.md`（security 子仓设计）
 - Linux 6.6 `security/security.c`、`include/linux/lsm_hooks.h`、`include/linux/lsm_hook_defs.h`
@@ -683,19 +727,18 @@ struct airy_cupolas_audit_event {
 | 字段 | 值 |
 |------|------|
 | 文档定位 | LSM 框架详解 |
-| 当前版本 | v1.0 |
+| 当前版本 | v1.1（Capability Folding 集成版） |
 | 最后更新 | 2026-07-18 |
 | 维护者 | agentrt-linux 安全工程组 |
 | 同源映射 | agentrt Cupolas + Linux 6.6 LSM/Landlock/capability |
 | 理论根基 | Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生 |
-| 核心约束 | IRON-9 v3 同源且部分代码共享 |
+| 核心约束 | IRON-9 v3 同源且部分代码共享；v1.1 起 Capability Badge 校验由 fastpath C-S9 内联完成 |
 
 **变更历史**：
 
 - v0.1.1（2026-07-06）：初版占位，覆盖 LSM 框架核心机制
-- v1.0.1（开发中）：补充 Cupolas 钩子全集、形式化不变量、性能基准
-
-**待办**：补充 MicroCoreRT 锁定契约最小子集；补充 Cupolas 钩子审计与 `AgentsIPC` 事件类型映射表；补充 LSM 顺序对 benchmark 的影响数据。
+- v1.0（2026-07-17）：LSM 框架完整版——钩子链表、blob 分配、排序机制、初始化流程、Cupolas 集成、IRON-9 v3 四层共享模型、Cupolas 7 子系统映射、OS-SEC 规则集、接口契约附录
+- v1.1（2026-07-18）：**Capability Folding 集成版**——① §8.3 AgentsIPC→A-IPC（128B Layout C v4，magic 0x41524531）；② §8.4 新增 fastpath C-S9 与 LSM 钩子职责分割表；③ §11.2.2 修正 4 值枚举（ASK/LOG→AUDIT/COMPLAIN），A-IPC 替代 AgentsIPC；④ §11.2.4 新增 OS-SEC-016/017（fastpath C-S9 内联 Badge 校验 + LSM slowpath 接管，原拟用 OS-SEC-012/013 因与 02-landlock-sandbox.md 冲突而重编号）；⑤ §12 规则编号集补齐 OS-SEC-008~011、OS-SEC-016~017；⑥ §13 相关文档新增 v1.1 引用；⑦ 全文 AgentsIPC→A-IPC（统一术语，对齐 v1.1 Capability Folding 单平面架构）
 
 ---
 
@@ -1136,7 +1179,7 @@ DEFINE_LSM(airy) = {
  * airy 裁决结果（对齐 security_types.h [SC] 4 值枚举 airy_security_verdict）
  *
  * 与 AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN 一致（对齐 07-airy-lsm-design.md §1.3），
- * 通过 AgentsIPC 总线上报审计事件。
+ * 通过 A-IPC 总线上报审计事件。
  */
 #define AIRY_VERDICT_ALLOW       0  /* 允许，不记录 */
 #define AIRY_VERDICT_DENY       1  /* 拒绝，不记录 */
@@ -1146,4 +1189,4 @@ DEFINE_LSM(airy) = {
 
 ---
 
-> **文档结束** |  LSM 框架核心机制
+> **文档结束** | LSM 框架核心机制 | v1.1 | 2026-07-18

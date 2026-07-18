@@ -78,7 +78,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 5  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
 | 6  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
 | 7  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/airymax/cognition_types.h` |
-| 8  | `syscalls.h`        | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
+| 8  | `syscalls.h`        | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
 | 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/airymax/uapi_compat.h`    |
 | 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/airymax/lsm_types.h`       |
 
@@ -144,7 +144,7 @@ enum airy_struct_ops_state {
   - `[-71, -100]` Capability 错误码
   - `[-101, -200]` [SC] 契约错误码
   - `[-201, -300]` [DSL] 降级错误码
-- Fault 码（正数 0x1000+，不可恢复）：`AIRY_FAULT_CAP_FAULT` / `AIRY_FAULT_VM_FAULT` / `AIRY_FAULT_IPC_FAULT` / `AIRY_FAULT_TIMEOUT` / `AIRY_FAULT_ABNORMAL_CAP`
+- Fault 码（正数 0x1000+，不可恢复）：`AIRY_FAULT_CAP_FORGED`(0x1001) / `AIRY_FAULT_CAP_LEAK`(0x1002) / `AIRY_FAULT_RING_CORRUPT`(0x1003) / `AIRY_FAULT_TIMEOUT`(0x1004) / `AIRY_FAULT_ABNORMAL_CAP`(0x1005) / `AIRY_FAULT_VM_FAULT`(0x1006)
 - [DSL] 降级块：`#ifdef AIRY_SC_FALLBACK` → 仅保留 38 个 POSIX 码
 
 **权威源迁移状态**（2026-07-17 完成）：
@@ -328,30 +328,50 @@ struct airy_task_desc {
 
 ### 2.7 头文件 5：ipc.h
 
+> **SSoT 权威源声明**：本头文件为 A-IPC `Layout C v4` 消息头与 Badge 位布局的 [SC] 共享契约层物理宿主。Layout C v4 字段语义权威源为 [02-ipc-protocol.md §2](../30-interfaces/02-ipc-protocol.md)；fastpath 校验语义（C-S9 等）属于 [SS] 语义同源层，不在本头文件中定义，权威源为 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)；Badge 64-bit Native Word 安全模型权威源为 [03-capability-model.md §3](../110-security/03-capability-model.md)。
+
 ```c
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_IPC_H
-#define _AIRY_IPC_H
+/*
+ * kernel/include/airymax/ipc.h —— [SC] 共享契约层，物理宿主
+ * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
+ * 校验机制属于 [SS] 语义同源层，不在本头文件中定义
+ */
+#ifndef AIRYMAX_IPC_H
+#define AIRYMAX_IPC_H
 
-#include <airymax/uapi_compat.h>
+#include <airymax/types.h>  /* __u32, __u64, __u8 */
 
-/* IPC magic: 0x41524531 = 'ARE1' (Airymax Runtime Engine v1) */
-#define AIRY_IPC_MAGIC	0x41524531u
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* Fixed 128-byte message header */
-#define AIRY_IPC_HDR_SZ	128
+/* ===== Layout C v4 — 128 字节定长消息头 ===== */
+/* magic: 0x41524531 'ARE1' ——一经发布即冻结（本文件 §7.5）*/
 
-/* SQE/CQE operation codes */
-enum airy_ipc_op {
-	AIRY_IPC_OP_SEND		= 0,
-	AIRY_IPC_OP_RECV		= 1,
-	AIRY_IPC_OP_SEND_BATCH	= 2,
-	AIRY_IPC_OP_CANCEL		= 3,
-};
+#define AIRY_IPC_MAGIC		0x41524531u  /* 'ARE1' (Airymax Runtime Engine v1) */
+#define AIRY_IPC_HDR_SIZE	128
 
-/* Message flags */
-#define AIRY_IPC_F_NOWAIT	(1u << 0)
-#define AIRY_IPC_F_SIGNAL	(1u << 1)
+/* Ring capacity constants */
+#define AIRY_IPC_RING_DEF_ENTRIES	256
+#define AIRY_IPC_RING_MAX_ENTRIES	32768
+
+/* opcode 定义（见 02-ipc-protocol.md §4） */
+#define AIRY_IPC_OP_SEND		0x0001
+#define AIRY_IPC_OP_RECV		0x0002  /* 仅用于接收方声明的 expected opcode */
+#define AIRY_IPC_OP_SEND_BATCH		0x0003
+#define AIRY_IPC_OP_CANCEL		0x0004
+#define AIRY_IPC_OP_FREEZE		0x0005  /* A-ULS 触发 ring 冻结 */
+#define AIRY_IPC_OP_CAP_REQUEST	0x0010  /* 自举：请求 Badge，无 Badge */
+#define AIRY_IPC_OP_CAP_RESPONSE	0x0011  /* sec_d 返回编译好的 Badge */
+
+/* flags 定义 */
+#define AIRY_IPC_F_ZEROCOPY		0x0001
+#define AIRY_IPC_F_CAP_CARRY		0x0002  /* 携带 Badge（agentrt-linux 内核必置） */
+#define AIRY_IPC_F_ENCRYPT		0x0004  /* 保留，0.1.1 不启用 */
+#define AIRY_IPC_F_COMPRESS		0x0008  /* 保留，0.1.1 不启用 */
+#define AIRY_IPC_F_BATCH_TAIL		0x0010  /* SEND_BATCH 的最后一个 SQE */
+#define AIRY_IPC_F_RESERVED		0xFFE0  /* 必须为零 */
 
 /* SQE flags for io_uring IPC operations */
 #define AIRY_IPC_SQE_F_FIXED_BUF	(1u << 0)
@@ -360,80 +380,154 @@ enum airy_ipc_op {
 #define AIRY_IPC_SQE_F_SKIP_CQE	(1u << 3)
 
 /* CQE flags for io_uring IPC operations */
-#define AIRY_IPC_CQE_F_BUFFER	(1u << 0)
+#define AIRY_IPC_CQE_F_BUFFER		(1u << 0)
 #define AIRY_IPC_CQE_F_MORE		(1u << 1)
 #define AIRY_IPC_CQE_F_NOTIF		(1u << 2)
 
-/* Ring capacity constants */
-#define AIRY_IPC_RING_DEF_ENTRIES	256
-#define AIRY_IPC_RING_MAX_ENTRIES	32768
-
 /**
  * struct airy_ipc_msg_hdr - IPC message header (128 bytes, [SC] shared)
- * @magic: Must be AIRY_IPC_MAGIC (0x41524531 'ARE1').
- * @opcode: Operation code; see enum airy_ipc_op.
+ * @magic:            Must be AIRY_IPC_MAGIC (0x41524531 'ARE1').
+ * @opcode:           Operation code; see AIRY_IPC_OP_* above.
+ * @flags:            Message flags; see AIRY_IPC_F_* above.
+ * @trace_id:         OpenTelemetry trace ID, end-to-end tracing.
+ * @timestamp_ns:     CLOCK_REALTIME nanoseconds, sender fills.
+ * @src_task:         Source Agent/daemon task_id, bound to Badge at compile.
+ * @dst_task:         Destination task_id, decides kfifo routing.
+ * @payload_len:      Payload length, excluding header.
+ * @capability_badge: [SS] semantic-aligned: agentrt-linux uses (compiled by
+ *                    sec_d), agentrt user-space always 0 (H3).
+ * @crc32:            CRC32 over header[0:52) + payload.
+ * @reserved:         Reserved, must be zero (C-S4 checks).
  *
- * Fixed 128-byte header, layout never changes. Shared between
- * agentrt and agentrt-linux via [SC] contract layer.
+ * Layout C v4 — 128-byte fixed header. Shared between agentrt and
+ * agentrt-linux via [SC] contract layer. magic is frozen post-release.
  */
 struct airy_ipc_msg_hdr {
-	__u32	magic;			/* offset 0, 'ARE1' */
-	__u16	opcode;			/* offset 4 */
-	__u16	flags;			/* offset 6 */
-	__u64	trace_id;		/* offset 8 */
-	__u64	timestamp_ns;		/* offset 16 */
-	__u64	src_task;		/* offset 24 */
-	__u64	dst_task;		/* offset 32 */
-	__u32	payload_len;		/* offset 40 */
-	__u8	reserved[84];		/* offset 44, 84 bytes */
+	__u32	magic;			/* offset  0, 'ARE1' 0x41524531 */
+	__u16	opcode;			/* offset  4, see AIRY_IPC_OP_* */
+	__u16	flags;			/* offset  6, see AIRY_IPC_F_* */
+	__u64	trace_id;		/* offset  8, OpenTelemetry trace ID */
+	__u64	timestamp_ns;		/* offset 16, CLOCK_REALTIME nanoseconds */
+	__u64	src_task;		/* offset 24, source Agent/daemon task_id */
+	__u64	dst_task;		/* offset 32, destination Agent/daemon task_id */
+	__u32	payload_len;		/* offset 40, payload length (excluding header) */
+	__u64	capability_badge;	/* offset 44, [SS] agentrt-linux uses, agentrt=0 */
+	__u32	crc32;			/* offset 52, CRC32 over header[0:52) + payload */
+	__u8	reserved[72];		/* offset 56, must be zero */
 } __attribute__((packed));
 
-_Static_assert(sizeof(struct airy_ipc_msg_hdr) == 128,
-	"IPC message header must be exactly 128 bytes");
+_Static_assert(sizeof(struct airy_ipc_msg_hdr) == AIRY_IPC_HDR_SIZE,
+	"airy_ipc_msg_hdr must be exactly 128 bytes");
 
-#endif /* _AIRY_IPC_H */
+/* ===== Badge 位布局（仅 [SS] 语义同源，定义在内核实现侧）===== */
+/* agentrt 用户态：capability_badge 始终为 0（H3） */
+/* agentrt-linux 内核：capability_badge 由 sec_d 编译（H4） */
+/* [DSL] 降级模式：capability_badge = 0，跳过 C-S9（H6） */
+
+#define AIRY_BADGE_EPOCH_SHIFT		48
+#define AIRY_BADGE_EPOCH_MASK		0xFFFF000000000000ULL
+#define AIRY_BADGE_RANDTAG_SHIFT	16
+#define AIRY_BADGE_RANDTAG_MASK		0x0000FFFFFFFF0000ULL
+#define AIRY_BADGE_PERMS_SHIFT		0
+#define AIRY_BADGE_PERMS_MASK		0x000000000000FFFFULL
+
+/* Badge 提取宏（仅内核侧使用，[SS] 语义同源层） */
+#define AIRY_BADGE_EPOCH(b)	(((b) & AIRY_BADGE_EPOCH_MASK)   >> AIRY_BADGE_EPOCH_SHIFT)
+#define AIRY_BADGE_RANDTAG(b)	(((b) & AIRY_BADGE_RANDTAG_MASK) >> AIRY_BADGE_RANDTAG_SHIFT)
+#define AIRY_BADGE_PERMS(b)	(((b) & AIRY_BADGE_PERMS_MASK)   >> AIRY_BADGE_PERMS_SHIFT)
+
+/* Badge 编译宏（仅 sec_d 使用） */
+#define AIRY_BADGE_COMPILE(epoch, randtag, perms) \
+	((((__u64)(epoch)   & 0xFFFF) << AIRY_BADGE_EPOCH_SHIFT)   | \
+	 (((__u64)(randtag) & 0xFFFFFFFF) << AIRY_BADGE_RANDTAG_SHIFT) | \
+	 (((__u64)(perms)   & 0xFFFF) << AIRY_BADGE_PERMS_SHIFT))
+
+/* Capability 权限位（低 16 位） */
+#define AIRY_CAP_PERM_SEND	0x0001
+#define AIRY_CAP_PERM_RECV	0x0002
+#define AIRY_CAP_PERM_CALL	0x0004  /* airy_sys_call 权限 */
+#define AIRY_CAP_PERM_GRANT	0x0008  /* 派生能力（mint/derive） */
+#define AIRY_CAP_PERM_REVOKE	0x0010  /* 撤销能力（仅 sec_d） */
+#define AIRY_CAP_PERM_FREEZE	0x0020  /* 冻结 ring */
+#define AIRY_CAP_PERM_BATCH	0x0040  /* 批量发送 */
+#define AIRY_CAP_PERM_RESERVED	0xFF80  /* 必须为零 */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* AIRYMAX_IPC_H */
 ```
+
+**[SC] 与 [SS] 的精确边界（H2）**：
+
+- **[SC] 共享契约层（本头文件）**：`struct airy_ipc_msg_hdr` 数据结构、字段偏移与大小、magic 值、opcode 枚举、flags 位定义、Badge 位布局宏、Capability 权限位、`_Static_assert(sizeof == 128)`。
+- **[SS] 语义同源层（不在本头文件）**：`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、`airy_cap_global_epoch` atomic_t、Random Tag 生成、C-S9 校验逻辑、sec_d Badge 编译流程。
+- **[IND] 完全独立层**：agentrt 用户态不使用 `capability_badge`（始终为 0），使用传统 `cap_t` 引用；agentrt-linux 内核使用 `capability_badge` + C-S9 内联校验。
+- **[DSL] 降级生存层**：`capability_badge` 字段存在但被忽略（值=0），C-S9 跳过，退化到 radix tree 兜底路径。
 
 ### 2.8 头文件 6：syscalls.h
 
+> **SSoT 权威源声明**：本头文件为 agentrt-linux syscall 接口的 [SC] 共享契约层物理宿主。Capability Folding 单平面架构将原 12 syscall 精简为 4 syscall（IPC 数据传递全部走 io_uring 数据面），权威源为 [01-syscalls.md §1](../30-interfaces/01-syscalls.md)。
+
 ```c
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_SYSCALLS_H
-#define _AIRY_SYSCALLS_H
+/*
+ * kernel/include/airymax/syscalls.h —— [SC] 共享契约层，物理宿主
+ * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
+ */
+#ifndef AIRYMAX_SYSCALLS_H
+#define AIRYMAX_SYSCALLS_H
+
+#include <airymax/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
- * Agent syscall architecture: 12 core + 12 reserved = 24 slots total
+ * Agent syscall architecture (Capability Folding 单平面架构):
+ *   4 core + 20 reserved = 24 slots total
  *
- * Core 12:
- *   IPC Primitives (8): Call/Send/Recv/NBSend/NBRecv/ReplyRecv/Yield/Reply
- *   Control Primitives (3): RovolCtl/SchedCtl/CltNotify
- *   Notification (1): Notify
+ *   Control plane (4 syscalls, low-frequency management operations):
+ *     AIRY_SYS_CALL       — Capability invocation (sec_d compiles Badge)
+ *     AIRY_SYS_ROVOL_CTL  — MemoryRovol snapshot/restore/tier
+ *     AIRY_SYS_SCHED_CTL  — sched_tac scheduling policy config
+ *     AIRY_SYS_CLT_NOTIFY — CoreLoopThree phase + kthread notify
  *
- * LsmCtl and WasmLoad are subsumed under Call via capability invocation:
- *   - LSM policy load -> airy_sys_call(security_cap, &msg)
- *   - Wasm module load -> airy_sys_call(module_cap, &msg)
+ *   Data plane (io_uring, zero syscall):
+ *     IORING_OP_URING_CMD → airy_uring_cmd()
+ *       ├─ airy_ipc_validate()   [C-S0~C-S11, 含 C-S9 Badge]
+ *       ├─ airy_ipc_deliver_fast()  [NONBLOCK, ~158ns]
+ *       └─ airy_ipc_deliver_full()  [io-wq, wake_up]
  *
- * Inspired by seL4's 8-activity syscall model — all capability
- * operations are encoded in IPC messages, not as separate syscalls.
- * Data plane I/O is handled by io_uring (zero syscall).
- * Reply completes the seL4 8-activity set (Reply without Recv).
- * Notify provides async inter-agent signaling (seL4 Notification).
+ *   Original 12 → 4 精确映射（见 01-syscalls.md §1.3）:
+ *     airy_sys_send        → 移除，改用 io_uring URING_CMD (cmd_op=SEND)
+ *     airy_sys_recv        → 移除，改用 io_uring CQE poll
+ *     airy_sys_call        → 保留（仅 sec_d 调用，编译 Badge）
+ *     airy_sys_reply       → 移除，改用 io_uring URING_CMD (cmd_op=SEND 反向)
+ *     airy_sys_delegate    → 移除，由 sec_d 重编译 Badge (airy_sys_call + COMPILE_BADGE)
+ *     airy_sys_mint        → 移除，由 sec_d 编译 Badge (airy_sys_call + COMPILE_BADGE)
+ *     airy_sys_revoke      → 移除，由 sec_d 撤销 + atomic_inc (airy_sys_call + REVOKE_BADGE)
+ *     airy_sys_call_batch  → 移除，改用 io_uring SQE 链（多个 URING_CMD）
+ *     airy_sys_rovol_ctl   → 保留
+ *     airy_sys_sched_ctl   → 保留
+ *     airy_sys_clt_notify  → 保留
+ *     airy_sys_lsm_ctl     → 合并到 airy_sys_call (airy_sys_call + LSM_CTL)
+ *
+ *   Linux 512-535 槽位注册号（4 个使用，其余 reserved）:
  */
-#define AIRY_SYS_CALL		0	/* Unified capability invocation */
-#define AIRY_SYS_SEND		1	/* Blocking synchronous send */
-#define AIRY_SYS_RECV		2	/* Blocking synchronous receive */
-#define AIRY_SYS_NBSEND	3	/* Non-blocking send */
-#define AIRY_SYS_NBRECV	4	/* Non-blocking receive */
-#define AIRY_SYS_REPLY_RECV	5	/* Reply and wait for next */
-#define AIRY_SYS_YIELD	6	/* Yield CPU */
-#define AIRY_SYS_ROVOL_CTL	7	/* Memory snapshot/restore/tier */
-#define AIRY_SYS_SCHED_CTL	8	/* Scheduling policy config */
-#define AIRY_SYS_CLT_NOTIFY	9	/* CoreLoopThree phase + kthread */
-#define AIRY_SYS_REPLY	10	/* Standalone reply (no wait) */
-#define AIRY_SYS_NOTIFY	11	/* Async notification signal */
-/* Reserved slots 12-23 for future expansion */
+#define AIRY_SYS_CALL		512	/* Capability Invocation (sec_d compiles Badge) */
+#define AIRY_SYS_ROVOL_CTL	513	/* MemoryRovol control */
+#define AIRY_SYS_SCHED_CTL	514	/* sched_tac scheduling policy control */
+#define AIRY_SYS_CLT_NOTIFY	515	/* Client event notification */
+/* Reserved slots 516-535 for future expansion */
 
-#endif /* _AIRY_SYSCALLS_H */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* AIRYMAX_SYSCALLS_H */
 ```
 
 ***
@@ -560,20 +654,28 @@ _Static_assert(sizeof(struct airy_ipc_msg_hdr) == 128,
 \[SS] 层的语义一致性通过**行为契约测试**验证。两端针对相同输入验证输出一致：
 
 ```c
-/* 行为契约测试示例：IPC 消息头序列化 */
+/* 行为契约测试示例：IPC 消息头序列化（Layout C v4） */
 static void test_ipc_hdr_serialize(void)
 {
 	struct airy_ipc_msg_hdr hdr = {
-		.magic		= AIRY_IPC_MAGIC,	/* 'ARE1' */
-		.opcode		= AIRY_IPC_OP_SEND,
-		.flags		= AIRY_IPC_F_NOWAIT,
+		.magic		= AIRY_IPC_MAGIC,	/* 'ARE1' 0x41524531 */
+		.opcode		= AIRY_IPC_OP_SEND,	/* 0x0001 */
+		.flags		= AIRY_IPC_F_CAP_CARRY,	/* 携带 Badge */
 		.trace_id	= 0x1234,
+		.timestamp_ns	= 0,
+		.src_task	= 0x100,
+		.dst_task	= 0x200,
 		.payload_len	= 256,
+		.capability_badge = 0,		/* agentrt 用户态始终为 0 */
+		.crc32		= 0,			/* 由发送方计算填入 */
 	};
 
 	/* 两端断言：序列化后字节序一致 */
-	assert(sizeof(hdr) == 128);
+	assert(sizeof(hdr) == AIRY_IPC_HDR_SIZE);	/* 128 */
 	assert(hdr.magic == 0x41524531u);
+	/* offset 44 处 capability_badge 字段存在且对齐 */
+	assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 44);
+	assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52);
 }
 ```
 

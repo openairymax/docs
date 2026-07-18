@@ -1086,7 +1086,7 @@ agentrt-linux 的微内核设计思想**唯一来源：seL4**。不引入 Zircon
 | ------------------- | ------- | -------------------------------------------------------------------------------- | ------------------ |
 | `sched.h`           | ADR-010 | magic 0x41475453 'AGTS' + SCHED\_EXT=7（禁用 SCHED\_AGENT 宏）+ MAC\_MAX\_AGENTS=1024 | kernel / cognition |
 | `ipc.h`             | ADR-005 | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）                    | kernel / services  |
-| `syscalls.h`        | ADR-010 | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位）                                              | kernel / cognition |
+| `syscalls.h`        | ADR-010 | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                              | kernel / cognition |
 | `security_types.h`  | ADR-004 | 41 cap + 252 LSM + Cupolas blob + capability 派生                                  | kernel / security  |
 | `memory_types.h`    | ADR-007 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
 | `cognition_types.h` | ADR-006 | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual                                     | kernel / cognition |

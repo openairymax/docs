@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §4 + [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.1（A-UEF [SC] 设计）+ §6.2.1 C-04（[SC] 头文件数量不一致修正）
+> **设计依据**：综合修正方案 §4.2.1（A-UEF [SC] 设计）+ §6.2.1 C-04（[SC] 头文件数量不一致修正）
 
 ---
 
@@ -377,7 +377,7 @@ jobs:
 - [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— A-UEF [SC] error.h 契约（使用 uapi_compat.h）
 - [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— A-ULP [SC] log_types.h 契约
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2 —— [DSL] 降级块（不依赖 uapi_compat.h）
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.1 / §6.2.1 C-04 —— 设计依据
+- 综合修正方案 §4.2.1 / §6.2.1 C-04 —— 设计依据
 
 ---
 

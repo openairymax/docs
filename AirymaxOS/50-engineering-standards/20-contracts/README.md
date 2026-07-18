@@ -96,7 +96,7 @@ graph TB
 | `cognition_types.h` | `include/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | syscall API 契约 |
 | `sched.h` | `include/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | syscall API 契约 |
 | `ipc.h` | `include/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（struct airy_ipc_msg_hdr）+ SQE/CQE 操作码与标志位 | IPC 协议契约 |
-| `syscalls.h` | `include/airymax/syscalls.h` | 12 核心 syscall 编号（AIRY_SYS_CALL/SEND/RECV/NBSEND/NBRECV/REPLY_RECV/YIELD/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY/REPLY/NOTIFY）+ 12 预留槽位 | syscall API 契约 |
+| `syscalls.h` | `include/airymax/syscalls.h` | v1.1: 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位 | syscall API 契约 |
 | `uapi_compat.h` | `include/airymax/uapi_compat.h` | 用户态-内核态 ABI 兼容性定义 + 类型映射（`__u32`/`__u16` 等）+ 字节序与对齐规范 | ABI 兼容契约 |
 
 **共享规则**：

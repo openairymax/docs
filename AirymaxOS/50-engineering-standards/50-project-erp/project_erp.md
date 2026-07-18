@@ -890,7 +890,7 @@ IPC 错误码由 kernel 和 services 联合定义：
 | `security_types.h` | capability 错误码 | capability 相关错误码（令牌无效、权限不足、撤销失败） |
 | `memory_types.h` | 记忆错误码 | MemoryRovol 相关错误码（快照失败、层级越界、迁移超时） |
 | `sched.h` | 调度错误码 | 调度相关错误码（策略无效、优先级越界、vtime 溢出） |
-| `syscalls.h` | 12 核心 syscall 编号 + 12 预留槽位| 用户态调度器注册相关错误码 |
+| `syscalls.h` | v1.1: 4 核心 syscall 编号 + 20 预留槽位| 用户态调度器注册相关错误码 |
 | `cognition_types.h` | 认知错误码 | CoreLoopThree 相关错误码（阶段无效、kthread 注册失败） |
 
 通用错误码（`AIRY_E*`）属于 [SS] 语义同源层，agentrt 和 agentrt-linux 使用相同的错误码前缀和语义，但具体数值实现各自独立（详见 3.1.2 节）。

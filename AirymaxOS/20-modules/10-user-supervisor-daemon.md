@@ -2,16 +2,18 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Macro-Supervisor 用户态守护进程设计
 > **文档定位**：A-ULS（统一生命周期管理）模块的用户态监管组件唯一权威设计\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-18\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.4（A-ULS 设计）+ §1（sched_tac）
+> **设计依据**：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）+ A-IPC v1.1（Capability Folding 单平面架构）
 
 ---
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **Macro-Supervisor 用户态守护进程** 的唯一权威源。systemd unit 管理 12 个 daemon、心跳检查、Capability 注入（io_uring_cmd）、故障裁决（警告/降级/暂停/终止）、"用户温情裁决"策略、单点故障 fallback（内核 watchdog 直接重启）、io_uring_cmd 执行裁决均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Macro-Supervisor 职责与裁决流程。
+> **单一权威源声明**：本文件是 **Macro-Supervisor 用户态守护进程** 的唯一权威源。systemd unit 管理 12 个 daemon、心跳检查、**v1.1 Badge 请求与撤销**（通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 请求 sec_d 编译 Badge，通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码撤销所有 Badge）、故障裁决（警告/降级/暂停/终止）、"用户温情裁决"策略、单点故障 fallback（内核 watchdog 直接重启 + 全局 Epoch 撤销）、io_uring_cmd 执行裁决均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Macro-Supervisor 职责与裁决流程。
+>
+> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，Macro-Supervisor 不再直接注入 CNode 到 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge，sec_d 编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 通过 io_uring_cmd 执行裁决（不新增 syscall），所有裁决指令通过 `AIRY_IPC_OP_ADJUDICATE` opcode 传递到内核 Micro-Supervisor。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1) 立即失效所有已发出 Badge（无 drain、无 bitmap、无 IPI），详见 [09-kernel-agent-supervisor.md §6.4](09-kernel-agent-supervisor.md)。
 >
 > 技术选型声明：IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（**不使用 page flipping**）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
 
@@ -245,64 +247,115 @@ static void heartbeat_loop(void)
 
 ---
 
-## §4 Capability 注入：通过 io_uring_cmd 向内核注入 Capability
+## §4 v1.1 Badge 请求：通过 io_uring_cmd 向 sec_d 请求 Badge 编译
 
-### 4.1 注入流程
+### 4.1 v1.1 请求流程（替代 v1.0 CNode 注入）
 
-Macro-Supervisor 通过 io_uring_cmd 向内核 Micro-Supervisor 注入 Capability，避免新增 syscall：
+**v1.1 重构**：Macro-Supervisor 不再直接构造 CNode 并插入 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge 编译。sec_d 是 Badge 的**唯一写者**，编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 仅持有 Badge 的 opaque handle（不接触 RandomTag 生成、不接触 agent_caps[] 写入）。
 
 ```
-Macro-Supervisor                     内核 Micro-Supervisor
+Macro-Supervisor                     内核 sec_d（Badge 唯一写者）
     │                                    │
-    │  1. 构造 Capability（CNode）        │
+    │  1. 构造 CAP_REQUEST 请求           │
+    │     （agent_id + perms 位掩码）     │
     │                                    │
-    │  2. io_uring_cmd(CAP_INJECT) ──────▶│
-    │     registered buffer 携带 CNode    │
-    │                                    │  3. 校验 CNode 完整性
-    │                                    │  4. 插入 radix tree
-    │  5. 接收返回码 ◀──────────────────  │  返回 cap_id 或 Error
+    │  2. io_uring_cmd(CAP_REQUEST) ─────▶│
+    │     opcode=0x0010                  │
+    │                                    │  3. sec_d 编译 Badge
+    │                                    │     epoch = atomic_read(global_epoch)
+    │                                    │     get_random_bytes_wait(&randtag)
+    │                                    │     badge = (epoch<<48)|(randtag<<16)|perms
+    │                                    │  4. WRITE_ONCE(agent_caps[agent_id])
+    │  5. 接收 CAP_RESPONSE ◀────────────│  返回 Badge opaque handle
+    │     opcode=0x0011                  │
     │                                    │
-    │  6. 记录授权日志                    │
+    │  6. Macro-Supervisor 持有 Badge    │
+    │     （opaque handle，用于后续 IPC） │
+    │                                    │
+    │  7. 记录授权日志（A-ULP）            │
 ```
 
-### 4.2 注入实现
+### 4.2 v1.1 请求实现
 
 ```c
-/* services/daemons/macro_superv/cap_inject.c —— Capability 注入 */
-static int macro_superv_cap_inject(struct airy_cnode *cap)
+/* services/daemons/macro_superv/cap_inject.c —— v1.1 Badge 请求
+ * Macro-Supervisor 不再构造 CNode，而是请求 sec_d 编译 Badge
+ */
+static int macro_superv_cap_request(__u32 agent_id, __u16 perms)
 {
     struct airy_ipc_cmd cmd = {
-        .op = AIRY_IPC_OP_CAP_INJECT,
-        .cap_type = cap->cap_type,
-        .badge = cap->badge,
-        .owner_agent = cap->owner_agent,
-        .expires_ns = cap->expires_ns,
+        .opcode = AIRY_IPC_OP_CAP_REQUEST,   /* 0x0010 */
+        .agent_id = agent_id,
+        .perms = perms,                       /* AIRY_BADGE_PERM_* 位掩码 */
     };
 
-    /* 通过 IORING_OP_URING_CMD 注入（不新增 syscall） */
+    /* 通过 IORING_OP_URING_CMD 请求 Badge 编译（不新增 syscall）
+     * sec_d 是 agent_caps[] 静态数组的唯一写者
+     * 详见 110-security/07-airy-lsm-design.md §3.5
+     */
     int ret = airy_uring_cmd_exec(&cmd, sizeof(cmd));
     if (ret < 0) {
-        syslog(LOG_ERR, "airy: cap inject failed: %d", ret);
+        syslog(LOG_ERR, "airy: cap request failed: %d (agent=%u perms=0x%x)",
+               ret, agent_id, perms);
         return ret;
     }
 
-    /* 内核返回分配的 cap_id */
-    cap->cap_id = ret;
-    syslog(LOG_INFO, "airy: cap injected id=%u agent=%u",
-           cap->cap_id, cap->owner_agent);
+    /* 内核返回 Badge opaque handle（用户态持有，不暴露内部结构） */
+    __u64 badge = (__u64)ret;
+    syslog(LOG_INFO, "airy: badge compiled agent=%u perms=0x%x badge=0x%llx",
+           agent_id, perms, (unsigned long long)badge);
     return 0;
 }
 ```
 
-### 4.3 注入的 Capability 类型
+### 4.3 v1.1 Badge Perms 位掩码（替代 v1.0 Capability 类型）
 
-| 类型 | 用途 | 授权方 |
-|------|------|--------|
-| IPC_SEND | 允许向特定 Ring 发送消息 | Macro-Supervisor |
-| IPC_RECV | 允许从特定 Ring 接收消息 | Macro-Supervisor |
-| RING_CREATE | 允许创建新 Ring | Macro-Supervisor |
-| CAP_MINT | 允许派生子 Capability | Macro-Supervisor |
-| CAP_REVOKE | 允许撤销 Capability | Macro-Supervisor |
+**v1.1 变更**：原 v1.0 的 `IPC_SEND/IPC_RECV/RING_CREATE/CAP_MINT/CAP_REVOKE` 五种 Capability 类型已废弃，改为 Badge Perms 16-bit 位掩码（详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md)）：
+
+| Perms 位 | 位掩码 | 含义 | 对应 v1.0 类型 |
+|---------|--------|------|---------------|
+| AIRY_BADGE_PERM_SEND | 0x0001 | 允许向 Ring 发送消息（SEND/SEND_BATCH opcode） | IPC_SEND |
+| AIRY_BADGE_PERM_RECV | 0x0002 | 允许从 Ring 接收消息（RECV opcode） | IPC_RECV |
+| AIRY_BADGE_PERM_FREEZE | 0x0004 | 允许冻结 Ring（FREEZE opcode） | —（v1.1 新增） |
+| AIRY_BADGE_PERM_CANCEL | 0x0008 | 允许取消 IPC 操作（CANCEL opcode） | —（v1.1 新增） |
+| AIRY_BADGE_PERM_CAP_REQUEST | 0x0010 | 允许请求 Badge 编译（CAP_REQUEST opcode） | CAP_MINT |
+| AIRY_BADGE_PERM_CAP_REVOKE | 0x0020 | 允许撤销 Badge（atomic_inc 全局 Epoch） | CAP_REVOKE |
+| AIRY_BADGE_PERM_RING_CREATE | 0x0040 | 允许创建新 Ring | RING_CREATE |
+| AIRY_BADGE_PERM_ADMIN | 0x8000 | 管理员权限（包含所有 Perms） | —（v1.1 新增） |
+
+### 4.4 v1.1 Badge 撤销（一行代码 O(1)）
+
+**v1.1 新增**：Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码完成，立即失效所有已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，全局 Epoch 自增后所有 fastpath C-S9a 检查（`badge_epoch == global_epoch`）立即失败。
+
+```c
+/* services/daemons/macro_superv/cap_revoke.c —— v1.1 Badge 撤销
+ * 一行代码撤销所有 Badge，O(1) 复杂度
+ */
+static int macro_superv_cap_revoke_all(void)
+{
+    /* 1. 全局 Epoch 自增——立即失效所有已发出 Badge
+     * 所有 fastpath C-S9a 检查（badge_epoch == global_epoch）立即失败
+     * 详见 09-kernel-agent-supervisor.md §6.4
+     */
+    atomic_inc(&airy_cap_global_epoch);
+
+    /* 2. 记录撤销日志 */
+    syslog(LOG_WARNING, "airy: all badges revoked (epoch incremented)");
+    airy_audit_emit(AGENT_CAP_REVOKE_ALL, 0, 0);
+
+    return 0;
+}
+
+/* 撤销单个 Agent 的 Badge（通过重新编译覆盖） */
+static int macro_superv_cap_revoke_one(__u32 agent_id)
+{
+    /* 重新编译 Badge 时，WRITE_ONCE 会覆盖 agent_caps[agent_id].randtag
+     * 旧 Badge 的 RandomTag 立即失效（C-S9b 检查失败）
+     * 详见 110-security/07-airy-lsm-design.md §3.5
+     */
+    return macro_superv_cap_request(agent_id, 0);  /* perms=0 即撤销 */
+}
+```
 
 ---
 
@@ -339,14 +392,20 @@ eventfd 唤醒
 5. 记录裁决日志（A-ULP Ring Buffer）
 ```
 
-### 5.2 裁决策略矩阵
+### 5.2 裁决策略矩阵（v1.1: 对齐 Fault 码 0x1001~0x1006）
 
-| Fault 码 | 首次 | 第二次 | 第三次+ | 严重场景 |
-|---------|------|--------|---------|---------|
-| `AIRY_FAULT_CAP_FAULT` | 警告 | 降级 | 暂停 | 终止 |
-| `AIRY_FAULT_ABNORMAL_CAP` | 暂停 | 终止 | 终止 | 终止 |
-| `AIRY_FAULT_TIMEOUT` | 降级 | 暂停 | 终止 | 终止 |
-| `AIRY_FAULT_VM_FAULT` | 暂停 | 终止 | 终止 | 终止 |
+**v1.1 变更**：原 `AIRY_FAULT_CAP_FAULT` 已废弃，对齐 v1.1 Fault 码段（0x1001~0x1006，详见 [08-sc-error-contract.md §3](../30-interfaces/08-sc-error-contract.md)）：
+
+| Fault 码 | 数值 | 首次 | 第二次 | 第三次+ | 严重场景 |
+|---------|------|------|--------|---------|---------|
+| `AIRY_FAULT_CAP_FORGED` | 0x1001 | 终止 | 终止 | 终止 | 终止（伪造不可恢复） |
+| `AIRY_FAULT_CAP_LEAK` | 0x1002 | 降级 | 暂停 | 终止 | 终止 |
+| `AIRY_FAULT_RING_CORRUPT` | 0x1003 | 暂停 | 终止 | 终止 | 终止 |
+| `AIRY_FAULT_TIMEOUT` | 0x1004 | 降级 | 暂停 | 终止 | 终止 |
+| `AIRY_FAULT_ABNORMAL_CAP` | 0x1005 | 警告 | 降级 | 暂停 | 终止 |
+| `AIRY_FAULT_VM_FAULT` | 0x1006 | 暂停 | 终止 | 终止 | 终止 |
+
+> **裁决原则**：`AIRY_FAULT_CAP_FORGED`（0x1001）是 Badge 伪造，**不可恢复**，首次即终止。其他 Fault 码按递进式处置（警告→降级→暂停→终止）。
 
 ### 5.3 裁决实现
 
@@ -445,12 +504,14 @@ Macro-Supervisor 是用户态单点，其故障可能导致：
 | Macro-Supervisor 死锁 | 故障通知无人处理 | 需人工干预 |
 | Macro-Supervisor 被杀 | 所有 Agent 失去监管 | systemd 重启 |
 
-### 7.2 内核 watchdog fallback
+### 7.2 内核 watchdog fallback（v1.1: 含 Badge 全局撤销）
 
-为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback：
+为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback。v1.1 起，watchdog 接管时**立即撤销所有 Badge**（`atomic_inc(&airy_cap_global_epoch)`），防止无监管期间恶意 Agent 利用已发出的 Badge 继续操作：
 
 ```c
-/* kernel/superv/airy_watchdog.c —— 内核 watchdog fallback */
+/* kernel/superv/airy_watchdog.c —— v1.1 内核 watchdog fallback
+ * 新增 Badge 全局撤销：接管时立即失效所有 Badge
+ */
 static struct timer_list airy_superv_watchdog;
 static __u64 last_macro_superv_heartbeat;
 
@@ -462,13 +523,21 @@ static void airy_superv_watchdog_fn(struct timer_list *t)
     if (now - last_macro_superv_heartbeat > 30ULL * 1000000000ULL) {
         pr_emerg("airy: Macro-Supervisor heartbeat lost, watchdog takeover\n");
 
-        /* 1. 进入 [DSL] 降级模式 */
+        /* 1. v1.1 新增：立即撤销所有 Badge（atomic_inc 一行代码 O(1)）
+         * 防止无监管期间恶意 Agent 利用已发出 Badge 操作
+         * 所有 fastpath C-S9a 检查立即失败（badge_epoch != global_epoch）
+         */
+        atomic_inc(&airy_cap_global_epoch);
+        pr_emerg("airy: all badges revoked (epoch=%u)\n",
+                 atomic_read(&airy_cap_global_epoch));
+
+        /* 2. 进入 [DSL] 降级模式 */
         airy_dsl_enter(AIRY_DSL_REASON_SUPERV_DEAD);
 
-        /* 2. 内核直接重启 Macro-Supervisor（通过 systemd 通知） */
+        /* 3. 内核直接重启 Macro-Supervisor（通过 systemd 通知） */
         orderly_poweroff_force("airy-macro-superv.service restart");
 
-        /* 3. 冻结所有活跃 Ring（防止无监管期间数据损坏） */
+        /* 4. 冻结所有活跃 Ring（防止无监管期间数据损坏） */
         airy_ipc_freeze_all(AIRY_FAULT_TIMEOUT);
     }
     mod_timer(&airy_superv_watchdog, jiffies + 10 * HZ);
@@ -583,14 +652,16 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 
 ## §9 性能与资源预算
 
-### 9.1 性能 SLO
+### 9.1 性能 SLO（v1.1: 新增 Badge 请求与撤销）
 
-| 指标 | SLO | 实测 |
-|------|-----|------|
-| eventfd 唤醒到裁决完成 | ≤50ms | ~10-20ms |
-| 心跳检查延迟 | ≤1ms/agent | ~0.5ms |
-| Capability 注入延迟 | ≤100μs | ~50μs |
-| 裁决执行延迟 | ≤10ms | ~5ms |
+| 指标 | SLO | 实测 | 说明 |
+|------|-----|------|------|
+| eventfd 唤醒到裁决完成 | ≤50ms | ~10-20ms | — |
+| 心跳检查延迟 | ≤1ms/agent | ~0.5ms | — |
+| v1.1 Badge 请求延迟（CAP_REQUEST） | ≤100μs | ~50μs | sec_d 编译 + WRITE_ONCE |
+| v1.1 Badge 全局撤销延迟 | ≤5ns | ~1ns | `atomic_inc` 一行代码 O(1) |
+| v1.1 Badge 单 Agent 撤销延迟 | ≤100μs | ~50μs | 重新编译覆盖 |
+| 裁决执行延迟 | ≤10ms | ~5ms | — |
 
 ### 9.2 资源预算
 
@@ -604,14 +675,23 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 
 ## §10 相关文档
 
+### 10.1 v1.1 Capability Folding 相关（新增）
+
+- [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)（A-IPC 协议 SSoT，Layout C v4 + 7 种 opcode）
+- [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)（A-IPC fastpath SSoT，C-S9 Badge 校验 + fastpath/slowpath 职责分割）
+- [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（错误码契约 SSoT，Fault 码 0x1001~0x1006）
+- [110-security/03-capability-model.md](../110-security/03-capability-model.md)（Capability 模型 SSoT，Badge Perms 位掩码定义）
+- [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)（纯 C LSM 模块 SSoT，§3.5 sec_d Badge 编译职责）
+- [170-performance/03-ipc-performance.md](../170-performance/03-ipc-performance.md)（IPC 性能 SSoT，Badge 请求/撤销延迟 SLO）
+
+### 10.2 A-ULS 模块相关（已有）
+
 - [10-unify-design.md](../10-architecture/10-unify-design.md) §7 —— A-ULS 模块总纲
 - [09-kernel-agent-supervisor.md](09-kernel-agent-supervisor.md) —— Micro-Supervisor（内核冷酷执法）
 - [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) —— Agent 8 态生命周期
-- [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— IPC fastpath（裁决执行通道）
 - [05-ipc-control-plane-reconciliation.md](../110-security/05-ipc-control-plane-reconciliation.md) —— Reconciliation（Macro-Supervisor 是控制面主体）
 - [04-ipc-data-plane-autonomy.md](../110-security/04-ipc-data-plane-autonomy.md) —— 数据面自治（Macro-Supervisor 故障时）
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) —— [DSL] 降级（watchdog fallback）
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.4 —— A-ULS 设计依据
 
 ---
 
@@ -620,7 +700,8 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Macro-Supervisor 用户态守护进程设计；systemd unit 管理 12 个 daemon；心跳检查（进程存活/心跳消息/响应探测）；Capability 注入（io_uring_cmd）；故障裁决四选项（警告/降级/暂停/终止）；"用户温情裁决"策略矩阵；单点故障 fallback（内核 watchdog 直接重启 + [DSL] 降级）；io_uring_cmd 执行裁决（不新增 syscall） |
+| **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) §4 重构为 Badge 请求机制（`AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge 编译，替代 v1.0 CNode 注入 radix tree）；(2) §4.3 Capability 类型改为 Badge Perms 16-bit 位掩码（8 种 Perms）；(3) §4.4 新增 Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1)）；(4) §5.2 裁决策略矩阵对齐 v1.1 Fault 码 0x1001~0x1006（`AIRY_FAULT_CAP_FORGED` 首次即终止）；(5) §7.2 watchdog fallback 新增 Badge 全局撤销；(6) §9.1 性能 SLO 新增 Badge 请求/撤销延迟；(7) §10 相关文档新增 6 份 v1.1 引用，清除内部审查路径引用 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | Macro-Supervisor 用户态守护进程设计 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | Macro-Supervisor 用户态守护进程设计 | v1.1（Capability Folding 集成版） | 2026-07-18

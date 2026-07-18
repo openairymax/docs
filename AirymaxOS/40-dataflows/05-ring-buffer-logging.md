@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.2（A-ULP 设计）+ §6.2.1 C-07（DMA 一致性内存修正）
+> **设计依据**：综合修正方案 §4.2.2（A-ULP 设计）+ §6.2.1 C-07（DMA 一致性内存修正）
 
 ---
 
@@ -31,7 +31,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 为什么不用 DMA 一致性内存
 
-[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §6.2.1 C-07 指出，14 个文件误用 DMA 一致性内存（`dma_alloc_coherent`）用于日志/IPC 共享内存。这是错误的，原因有二：
+综合修正方案 §6.2.1 C-07 指出，14 个文件误用 DMA 一致性内存（`dma_alloc_coherent`）用于日志/IPC 共享内存。这是错误的，原因有二：
 
 1. **场景不匹配**：DMA 一致性内存的设计目标是为 DMA 设备（网卡、磁盘控制器）提供与 CPU 缓存一致的内存映射。日志场景的生产者是 CPU（内核态），消费者也是 CPU（用户态 Logger Daemon），**没有 DMA 设备参与**，使用 DMA 一致性内存是语义错配。
 2. **性能损耗**：在 x86_64 架构下，CPU 默认缓存一致（cache-coherent），`dma_alloc_coherent` 会额外设置 `PAGE_KERNEL_NOCACHE` 或类似属性，禁用 cache 反而**降低** CPU 访问性能。
@@ -421,7 +421,7 @@ A-ULP 的延迟 SLO（受 [170-performance/05-agent-latency-slo.md](../170-perfo
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §3 —— Panic 回退与 printk_safe
 - [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— IPC fastpath（与日志 fastpath 设计同源）
 - [170-performance/02-memory-performance.md](../170-performance/02-memory-performance.md) —— 内存性能 SLO
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.2 / §6.2.1 C-07 —— 设计依据
+- 综合修正方案 §4.2.2 / §6.2.1 C-07 —— 设计依据
 
 ---
 

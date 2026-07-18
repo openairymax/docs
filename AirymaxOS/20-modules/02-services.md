@@ -330,7 +330,7 @@ WantedBy=airymaxos.target
 | 内容                                                         | 说明                                                                                                                |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `AIRY_IPC_MAGIC`（0x41524531 'ARE1'）                        | IPC 消息头 magic（同源 agentrt）                                                                                         |
-| `AIRY_IPC_HDR_SZ`（128）                                     | 128B 消息头大小                                                                                                        |
+| `AIRY_IPC_HDR_SIZE`（128）                                     | 128B 消息头大小                                                                                                        |
 | `AIRY_IPC_RING_DEF/MAX_ENTRIES`（256/32768）                 | ring 默认/最大条目数                                                                                                     |
 | `AIRY_IPC_OP_*` 宏（SEND/RECV/SEND\_BATCH/CANCEL）            | SQE 操作码                                                                                                           |
 | `AIRY_IPC_SQE_*` 宏（FIXED\_BUF/ASYNC/BUF\_SELECT/SKIP\_CQE） | SQE 标志位                                                                                                           |

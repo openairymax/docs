@@ -3225,12 +3225,12 @@ $ ./scripts/kernel-doc -Wall -internal \
 #include <linux/types.h>
 
 #define AIRY_IPC_MAGIC		0x41524531	/* 'ARE1' */
-#define AIRY_IPC_HDR_SZ		128
+#define AIRY_IPC_HDR_SIZE		128
 
 /**
  * struct airy_ipc_msg_hdr - IPC message header (128 bytes)
  * @magic: Magic 0x41524531 ('ARE1'); validates protocol version.
- * @opcode: Operation code; see enum airy_ipc_opcode.
+ * @opcode: Operation code; see AIRY_IPC_OP_* macros in [SC] ipc.h.
  * @flags: Message flags, bitwise OR of %AIRY_IPC_F_*.
  * @trace_id: Trace identifier; propagates across hops for debugging.
  * @timestamp_ns: Sender timestamp in nanoseconds (CLOCK_MONOTONIC).

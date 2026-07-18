@@ -348,27 +348,32 @@ payload 版本化遵循"只追加不修改"原则：
 
 ### 8.1 操作码编号约束
 
-操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），4 个基础操作码在所有版本中保持稳定，永不重定义、永不复用：
+操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.1 起保持稳定，永不重定义、永不复用：
 
 ```c
 /* include/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
-enum airy_ipc_op {
-    AIRY_IPC_OP_SEND       = 0,
-    AIRY_IPC_OP_RECV       = 1,
-    AIRY_IPC_OP_SEND_BATCH = 2,
-    AIRY_IPC_OP_CANCEL     = 3,
-};
+/* v1.1: opcode 已升级为宏定义，非 enum（见 [SC] ipc.h） */
+#define AIRY_IPC_OP_SEND          0x0001
+#define AIRY_IPC_OP_RECV          0x0002
+#define AIRY_IPC_OP_SEND_BATCH    0x0003
+#define AIRY_IPC_OP_CANCEL        0x0004
+#define AIRY_IPC_OP_FREEZE        0x0005
+#define AIRY_IPC_OP_CAP_REQUEST   0x0010
+#define AIRY_IPC_OP_CAP_RESPONSE  0x0011
 ```
 
 | 操作码 | 名称 | 层次 | 版本兼容性 |
 |--------|------|------|-----------|
-| 0 | AIRY_IPC_OP_SEND | [SC] SSoT | 全版本稳定 |
-| 1 | AIRY_IPC_OP_RECV | [SC] SSoT | 全版本稳定 |
-| 2 | AIRY_IPC_OP_SEND_BATCH | [SC] SSoT | 全版本稳定 |
-| 3 | AIRY_IPC_OP_CANCEL | [SC] SSoT | 全版本稳定 |
+| 0x0001 | AIRY_IPC_OP_SEND | [SC] SSoT | v1.1+ 稳定 |
+| 0x0002 | AIRY_IPC_OP_RECV | [SC] SSoT | v1.1+ 稳定 |
+| 0x0003 | AIRY_IPC_OP_SEND_BATCH | [SC] SSoT | v1.1+ 稳定 |
+| 0x0004 | AIRY_IPC_OP_CANCEL | [SC] SSoT | v1.1+ 稳定 |
+| 0x0005 | AIRY_IPC_OP_FREEZE | [SC] SSoT | v1.1+ 稳定 |
+| 0x0010 | AIRY_IPC_OP_CAP_REQUEST | [SC] SSoT | v1.1+ 稳定 |
+| 0x0011 | AIRY_IPC_OP_CAP_RESPONSE | [SC] SSoT | v1.1+ 稳定 |
 | >= 0x100 | [IND] 独立扩展 | [IND] agentrt-linux 专属 | 版本协商中按需引入 |
 
-> **SSoT 约束**：基础操作码（0-3）由 SSoT 权威定义，本文档不重定义。agentrt-linux 专属扩展操作码（如 Agent 生命周期管理等）必须使用 >= 0x100 的值并标注 [IND] 独立扩展，避免与 SSoT 基础值（0-3）冲突。
+> **SSoT 约束**：操作码（0x0001-0x0011）由 SSoT 权威定义，本文档不重定义。agentrt-linux 专属扩展操作码（如 Agent 生命周期管理等）必须使用 >= 0x100 的值并标注 [IND] 独立扩展，避免与 SSoT 基础值（0x0001-0x0011）冲突。
 
 ### 8.2 未识别操作码处理
 

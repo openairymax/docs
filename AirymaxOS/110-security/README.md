@@ -51,8 +51,8 @@ agentrt-linux v1.0 安全加固体系在内核调度、IPC 传输、安全钩子
 |---|---------|---------|----------------|--------------|
 | 1 | **内核调度** | **sched_tac**：复用 Linux 6.6 原生 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 调度类 | **不使用 sched_ext**（不引入 eBPF 调度器、不使用 `SCHED_EXT=7` 调度类） | 安全审计线程（`audit_d`）通过 `SCHED_FIFO` 注入优先级，确保审计不丢失；调度策略变更通过 capability 校验 |
 | 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | io_uring 加固——命令操作码白名单、registered buffer 完整性校验、Ring 冻结机制（`ring->frozen`） |
-| 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | **本目录的核心选型**——纯 C `airy_lsm` 模块（对齐 openEuler 纯 C 模式），252 个 LSM 钩子 ID，`DEFINE_LSM(airy)` 骨架，`LSM_ORDER_FIRST` 共存；capability 分层校验（fastpath `static_key` 跳过 + slowpath radix tree 完整查找） |
-| 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | capability 缓存（radix tree）节点通过 `kalloc` 分配；IPC Ring Buffer 共享页通过 `alloc_pages + mmap`（不使用 DMA 一致性内存） |
+| 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | **本目录的核心选型**——纯 C `airy_lsm` 模块（对齐 openEuler 纯 C 模式），252 个 LSM 钩子 ID，`DEFINE_LSM(airy)` 骨架，`LSM_ORDER_FIRST` 共存；v1.1 Capability Folding——fastpath C-S9 内联 Badge 校验（~10ns，3 个 `READ_ONCE` + 位运算）+ LSM slowpath 接管（仅 C-S9 失败时触发） |
+| 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | v1.1 `agent_caps[1024]` 静态数组（16KB，无锁多读者）替代 v1.0 radix tree；IPC Ring Buffer 共享页通过 `alloc_pages + mmap`（不使用 DMA 一致性内存） |
 | 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | [SC] `security_types.h`（POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局）+ [SC] `lsm_types.h`（纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构）双端逐字节一致 |
 
 ### 2.1 纯 C LSM 权威声明（不使用 BPF LSM，对齐 openEuler）
@@ -122,11 +122,11 @@ agentrt-linux v1.0 安全加固体系在内核调度、IPC 传输、安全钩子
 
 | Unify 模块 | 关系 | 在本目录的体现 |
 |-----------|------|--------------|
-| **A-UEF** | 辅助 | 安全事件错误码统一使用 A-UEF 的 `AIRY_E*`（如 `AIRY_EPERM=-1`）与 `AIRY_FAULT_*`（如 `AIRY_FAULT_CAP_FAULT=0x1001` / `AIRY_FAULT_ABNORMAL_CAP=0x1005`）码空间 |
+| **A-UEF** | 辅助 | 安全事件错误码统一使用 A-UEF 的 `AIRY_E*`（如 `AIRY_EPERM=-1`）与 `AIRY_FAULT_*`（如 `AIRY_FAULT_CAP_FORGED=0x1001` / `AIRY_FAULT_ABNORMAL_CAP=0x1005`）码空间 |
 | **A-ULP** | 辅助 | 安全审计日志通过 A-ULP Ring Buffer 写入（128B 固定记录）；`audit_d` daemon 消费审计事件 |
 | **A-UCS** | 辅助 | 安全策略参数（capability 缓存超时、Ring 冻结阈值）通过 A-UCS 的 sysctl/JSON 双向热重载 |
 | **A-ULS** | **核心** | Capability 系统 + 纯 C LSM——`airy_lsm` 的 Micro-Supervisor 冷酷执法（检测伪造/越权 capability → 立即冻结 Ring → 返回 `AIRY_FAULT_ABNORMAL_CAP` → eventfd 通知 Macro-Supervisor）；Agent 8 态生命周期中的权限就绪校验 |
-| **A-IPC** | **核心** | IPC 安全 + io_uring 加固——capability 分层校验（fastpath `static_key` 跳过 99%+ 正常请求 + slowpath radix tree 完整查找）、IPC 数据面自治三原则、控制面 Reconciliation、io_uring 命令白名单与 Ring 冻结机制 |
+| **A-IPC** | **核心** | IPC 安全 + io_uring 加固——v1.1 Capability Folding（fastpath C-S9 内联 Badge 校验 ~10ns + LSM slowpath 接管仅失败时触发）、IPC 数据面自治三原则、控制面 Reconciliation、io_uring 命令白名单与 Ring 冻结机制 |
 
 ### 4.1 Unify Design 权威源引用
 

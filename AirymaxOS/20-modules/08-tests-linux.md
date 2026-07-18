@@ -220,7 +220,7 @@ tests-linux/
 
 - `include/airymax/ipc.h`：验证 128B msg\_hdr 格式 + magic 0x41524531 \[SC]。
 - `include/airymax/sched.h`：验证 task\_desc magic 0x41475453 + vtime 衰减 \[SC]。
-- `include/airymax/syscalls.h`：验证 12 核心 syscall 编号 + 24 槽位 \[SC]。
+- `include/airymax/syscalls.h`：验证 4 核心 syscall 编号（v1.1）+ 24 槽位 \[SC]。
 - `include/airymax/memory_types.h`：验证 MemoryRovol L1-L4 数据结构 \[SC]。
 - `include/airymax/security_types.h`：验证 capability 41 ID + LSM 252 ID \[SC]。
 - `include/airymax/cognition_types.h`：验证 CoreLoopThree 阶段枚举 \[SC]。
@@ -402,7 +402,7 @@ source $OET_PATH/libs/locallibs/common_lib.sh
 | ----------------------------------- | --------------------------------------------------------- | -------------------------------- |
 | `include/airymax/ipc.h`             | 128B msg\_hdr 格式 + magic 0x41524531 'ARE1' + SQE/CQE 操作码  | 单元测试 + 形式化验证（Coq 无死锁）            |
 | `include/airymax/sched.h`           | task\_desc magic 0x41475453 'AGTS' + vtime 衰减公式 + 优先级范围   | 单元测试 + 形式化验证（Isabelle/HOL 公平性）   |
-| `include/airymax/syscalls.h`        | 12 核心 syscall 编号 + 12 预留槽位 = 24 槽位                        | 单元测试 + syscall 调用验证              |
+| `include/airymax/syscalls.h`        | v1.1: 4 核心 syscall 编号 + 20 预留槽位 = 24 槽位                        | 单元测试 + syscall 调用验证              |
 | `include/airymax/memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口            | 单元测试 + 形式化验证（Coq 快照一致性）+ Soak 监控 |
 | `include/airymax/security_types.h`  | capability 41 ID 枚举 + LSM 252 ID + Cupolas blob 布局 + 派生模型 | 单元测试 + 形式化验证（Isabelle/HOL 不可伪造）  |
 | `include/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举          | 单元测试 + 形式化验证（Coq 阶段转换）+ Soak 监控  |

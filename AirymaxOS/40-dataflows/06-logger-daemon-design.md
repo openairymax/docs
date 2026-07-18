@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.2（A-ULP 设计）+ [05-ring-buffer-logging.md](05-ring-buffer-logging.md) §5
+> **设计依据**：综合修正方案 §4.2.2（A-ULP 设计）+ [05-ring-buffer-logging.md](05-ring-buffer-logging.md) §5
 
 ---
 
@@ -483,7 +483,7 @@ static int logger_recover_state(struct airy_log_ring_header *hdr)
 - [07-panic-survival-path.md](07-panic-survival-path.md) —— Panic 生存路径（Logger Daemon 崩溃后的回退）
 - [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式契约
 - [20-modules/11-unified-config.md](../20-modules/11-unified-config.md) —— A-UCS 配置管理（过滤策略热重载）
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.2 —— A-ULP 设计依据
+- 综合修正方案 §4.2.2 —— A-ULP 设计依据
 
 ---
 

@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §2.3（日志类型 SSoT）+ §4.2.2（A-ULP 设计）
+> **设计依据**：综合修正方案 §2.3（日志类型 SSoT）+ §4.2.2（A-ULP 设计）
 
 ---
 
@@ -250,7 +250,7 @@ Linux 6.6 的 `printk` 定义 8 级日志级别（`KERN_EMERG` ~ `KERN_DEBUG`）
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §4.1.4 —— [DSL] 降级日志子集
 - [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §2 —— [SC] 共享契约层
 - [02-ipc-protocol.md](02-ipc-protocol.md) —— IPC 128B 消息头（与日志记录对比）
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §2.3 / §4.2.2 —— 设计依据
+- 综合修正方案 §2.3 / §4.2.2 —— 设计依据
 
 ---
 

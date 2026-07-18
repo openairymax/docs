@@ -83,7 +83,7 @@ IRON-9 v3 [SC] 共享契约层包含 10 个头文件，物理宿主于 `kernel/i
 | 5 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符 | **A-UEF** | kernel + cognition |
 | 6 | `sched.h` | sched_tac 调度类约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF，**禁止 SCHED_AGENT 宏**）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + AIRY_SLICE_DFL | **A-UEF** + **A-ULS** | kernel |
 | 7 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位 + IORING_OP_URING_CMD 命令码 | **A-IPC** | kernel + services |
-| 8 | `syscalls.h` | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位，`AIRY_SYS_*` 前缀） | **A-UCS** | kernel + 全部 |
+| 8 | `syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位，`AIRY_SYS_*` 前缀） | **A-UCS** | kernel + 全部 |
 | 9 | `uapi_compat.h` | UAPI 兼容性定义（`__u32`/`__u64` 用户态可见类型 + ABI 稳定性约束） | — | kernel + 全部 |
 | 10 | `lsm_types.h` | 纯 C LSM 钩子类型定义（`security_hook_list` 注册 + `airy_lsm` blob 布局）+ Landlock 规则结构 | **A-ULS** | kernel + security |
 

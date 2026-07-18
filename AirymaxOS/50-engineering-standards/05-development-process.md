@@ -1544,7 +1544,7 @@ done
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
-| 1 | `include/airymax/syscalls.h` | SYS | 12 核心 syscall 编号 + 12 预留槽位 |
+| 1 | `include/airymax/syscalls.h` | SYS | v1.1: 4 核心 syscall 编号 + 20 预留槽位 |
 | 2 | `include/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
 | 3 | `include/airymax/security_types.h` | 安全 | capability 41 ID + LSM 252 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
 | 4 | `include/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
@@ -1638,7 +1638,7 @@ if ! grep -q "AIRY_SYS_" "$SC_SYSCALL_HEADER"; then
     exit 1
 fi
 
-# 检查 2：12 核心 syscall + 12 预留槽位完整性（TODO: R-01 落地后改为 XML 解析）
+# 检查 2：v1.1: 4 核心 syscall + 20 预留槽位完整性（TODO: R-01 落地后改为 XML 解析）
 CORE_COUNT=$(grep -c "^#define AIRY_SYS_[A-Z_]*[[:space:]]" "$SC_SYSCALL_HEADER")
 if [ "$CORE_COUNT" -lt 12 ]; then
     echo "WARN: $SC_SYSCALL_HEADER has only $CORE_COUNT core syscalls (need >= 12)"
@@ -1653,7 +1653,7 @@ echo "OK: syscall.xml contract check passed (R-01 dependency: pending 1.0.1 M1)"
 ```
 
 **适用范围**：`include/airymax/syscalls.h`（[SC] 共享契约层）。
-**合格标准**：12 核心 syscall 编号 + 12 预留槽位完整定义；R-01 落地后增加 XML 一致性检查。
+**合格标准**：v1.1: 4 核心 syscall 编号 + 20 预留槽位完整定义；R-01 落地后增加 XML 一致性检查。
 **依赖**：R-01（ES-SEL4-21 syscall.xml 单一来源管理），1.0.1 M1 阶段落地。
 
 ### 2.10 seL4 structures.bf 式 bitfield codegen 检查

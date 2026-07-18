@@ -2,16 +2,18 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # A-UCS 统一配置管理体系设计
 > **文档定位**：A-UCS（Unified Configuration Subsystem）统一配置管理体系模块的唯一权威设计\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-18\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §6\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.3（A-UCS 设计）
+> **设计依据**：本文件为 SSoT（Single Source of Truth），A-UCS 配置模型、热重载机制、Capability Folding A-IPC 配置项均以本文件为唯一权威定义
 
 ---
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **A-UCS 统一配置管理体系** 的唯一权威源。[SC] 共享配置（二进制布局相关）、[SS] 语义同源配置（内核 Kconfig/sysctl ↔ 用户态 JSON/TOML 语义映射）、RCU 热重载机制（指针原子切换）、配置版本号（`AIRY_CONFIG_VERSION`）、sysctl ↔ JSON 双向同步均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 A-UCS 配置模型与热重载机制。
+> **单一权威源声明**：本文件是 **A-UCS 统一配置管理体系** 的唯一权威源。[SC] 共享配置（二进制布局相关）、[SS] 语义同源配置（内核 Kconfig/sysctl ↔ 用户态 JSON/TOML 语义映射）、RCU 热重载机制（指针原子切换）、配置版本号（`AIRY_CONFIG_VERSION`）、sysctl ↔ JSON 双向同步、**A-IPC Capability Folding 配置项**（fastpath 阈值、Badge Epoch、agent_caps 容量等）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 A-UCS 配置模型与热重载机制。
+>
+> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，A-UCS 新增 A-IPC Capability Folding 相关配置项——IPC 消息头大小（128B Layout C v4）、magic 值（0x41524531 'ARE1'）、`agent_caps[]` 静态数组容量（1024）、Badge Epoch 位宽（16-bit）、fastpath C-S9 校验超时阈值等。这些配置项是 Capability Folding 单平面架构落地的运行时参数 SSoT。详见 §7 A-IPC Capability Folding 配置项。
 >
 > 技术选型声明：整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
 
@@ -70,8 +72,11 @@ A-UCS 将配置分为两类，对应 IRON-9 v3 的 [SC] 与 [SS] 两个层级：
 /* 配置版本号 */
 #define AIRY_CONFIG_VERSION  1
 
-/* IPC 消息头大小（二进制布局，两端必须一致） */
-#define AIRY_IPC_MSG_HEADER_SIZE   64    /* IPC 消息头固定 64B */
+/* IPC 消息头大小（二进制布局，两端必须一致）
+ * v1.1: Layout C v4 定长 128B = 2 cache lines，含 capability_badge (offset 44-51)
+ * 详见 30-interfaces/02-ipc-protocol.md + 50-engineering-standards/120-cross-project-code-sharing.md §2.7
+ */
+#define AIRY_IPC_HDR_SIZE   128   /* IPC 消息头固定 128B（Layout C v4） */
 #define AIRY_IPC_MSG_MAX_PAYLOAD   (64 * 1024)  /* 最大 payload 64KB */
 
 /* Ring Buffer 布局参数（二进制布局，两端必须一致） */
@@ -79,9 +84,13 @@ A-UCS 将配置分为两类，对应 IRON-9 v3 的 [SC] 与 [SS] 两个层级：
 #define AIRY_LOG_RING_DEFAULT_CAP   4096  /* 默认 4096 条记录 */
 #define AIRY_IPC_RING_DEFAULT_CAP   1024  /* IPC Ring 默认 1024 条 */
 
-/* 魔数（二进制标识，两端必须一致） */
+/* 魔数（二进制标识，两端必须一致）
+ * v1.1: AIRY_IPC_MAGIC 从 0x41495043 'AIPC' 变更为 0x41524531 'ARE1'
+ * （AIRY Runtime Epoch），同源 agentrt AgentsIPC，标识 Capability Folding
+ * 单平面架构。magic 值一经发布即冻结（37 号 §5.2 H1 硬约束）。
+ */
 #define AIRY_LOG_MAGIC   0x414C4F47   /* 'ALOG' */
-#define AIRY_IPC_MAGIC   0x41495043   /* 'AIPC' */
+#define AIRY_IPC_MAGIC   0x41524531   /* 'ARE1' — Airymax Runtime Epoch（v1.1 Capability Folding） */
 
 #endif /* _AIRYM_CONFIG_H */
 ```
@@ -101,13 +110,13 @@ A-UCS 将配置分为两类，对应 IRON-9 v3 的 [SC] 与 [SS] 两个层级：
 
 | 配置项 | 值 | 影响 | 热重载 |
 |--------|-----|------|--------|
-| `AIRY_IPC_MSG_HEADER_SIZE` | 64B | IPC 消息头结构大小 | 否 |
+| `AIRY_IPC_HDR_SIZE` | 128B（v1.1: 64B→128B） | IPC 消息头结构大小（Layout C v4，含 capability_badge） | 否 |
 | `AIRY_IPC_MSG_MAX_PAYLOAD` | 64KB | IPC 消息最大 payload | 否 |
 | `AIRY_LOG_RING_RECORD_SIZE` | 128B | 日志记录大小 | 否 |
 | `AIRY_LOG_RING_DEFAULT_CAP` | 4096 | 日志 Ring 默认容量 | 否 |
 | `AIRY_IPC_RING_DEFAULT_CAP` | 1024 | IPC Ring 默认容量 | 否 |
 | `AIRY_LOG_MAGIC` | 0x414C4F47 | 日志魔数 | 否 |
-| `AIRY_IPC_MAGIC` | 0x41495043 | IPC 魔数 | 否 |
+| `AIRY_IPC_MAGIC` | 0x41524531 'ARE1'（v1.1: 'AIPC'→'ARE1'） | IPC 魔数（Capability Folding 单平面架构标识，发布即冻结） | 否 |
 
 ---
 
@@ -126,7 +135,7 @@ A-UCS 将配置分为两类，对应 IRON-9 v3 的 [SC] 与 [SS] 两个层级：
 
 ### 3.2 语义映射表
 
-内核 sysctl 与用户态 JSON 的语义映射：
+内核 sysctl 与用户态 JSON 的语义映射（v1.1: `cap.cache_ttl` 已废弃，替换为 Capability Folding 相关配置）：
 
 | 内核 sysctl | 用户态 JSON | 语义 | 默认值 |
 |------------|-----------|------|--------|
@@ -134,7 +143,11 @@ A-UCS 将配置分为两类，对应 IRON-9 v3 的 [SC] 与 [SS] 两个层级：
 | `kernel.airy.log_min_level` | `log.min_level` | 最低日志级别 | LOG_INFO(6) |
 | `kernel.airy.ipc_ring_size` | `ipc.ring_size` | IPC Ring 容量 | 1024 |
 | `kernel.airy.superv_heartbeat_interval` | `superv.heartbeat_interval` | 心跳间隔 | 1(秒) |
-| `kernel.airy.cap_cache_ttl` | `cap.cache_ttl` | Capability 缓存 TTL | 60(秒) |
+| `kernel.airy.cap_max_agents` | `cap.max_agents` | v1.1: `agent_caps[]` 静态数组容量（H4 硬约束） | 1024 |
+| `kernel.airy.cap_epoch_bits` | `cap.epoch_bits` | v1.1: Badge Epoch 位宽（默认 16-bit） | 16 |
+| `kernel.airy.cap_randtag_bits` | `cap.randtag_bits` | v1.1: Badge Random Tag 位宽（默认 32-bit） | 32 |
+| `kernel.airy.cap_forge_threshold` | `cap.forge_threshold` | v1.1: Badge 伪造检测阈值（连续失败次数，触发警报） | 100 |
+| `kernel.airy.ipc_fastpath_budget_ns` | `ipc.fastpath_budget_ns` | v1.1: fastpath C-S9 Badge 校验时间预算（ns） | 10 |
 
 ### 3.3 语义同源实现
 
@@ -147,7 +160,12 @@ struct airy_config {
     __u16 log_min_level;          /* ↔ JSON log.min_level */
     __u32 ipc_ring_size;          /* ↔ JSON ipc.ring_size */
     __u32 superv_heartbeat_interval; /* ↔ JSON superv.heartbeat_interval */
-    __u32 cap_cache_ttl;          /* ↔ JSON cap.cache_ttl */
+    /* v1.1: Capability Folding 配置（替代旧 cap_cache_ttl） */
+    __u32 cap_max_agents;         /* ↔ JSON cap.max_agents (agent_caps[] 容量，默认 1024) */
+    __u16 cap_epoch_bits;         /* ↔ JSON cap.epoch_bits (Badge Epoch 位宽，默认 16) */
+    __u16 cap_randtag_bits;       /* ↔ JSON cap.randtag_bits (Random Tag 位宽，默认 32) */
+    __u32 cap_forge_threshold;    /* ↔ JSON cap.forge_threshold (伪造检测阈值，默认 100) */
+    __u32 ipc_fastpath_budget_ns; /* ↔ JSON ipc.fastpath_budget_ns (C-S9 时间预算，默认 10) */
 };
 
 /* sysctl 表：内核侧配置入口 */
@@ -187,15 +205,18 @@ static struct ctl_table airy_sysctl_table[] = {
     },
     "ipc": {
         "ring_size": 1024,
-        "max_payload": 65536
+        "max_payload": 65536,
+        "fastpath_budget_ns": 10
     },
     "superv": {
         "heartbeat_interval": 1,
         "heartbeat_timeout": 30
     },
     "cap": {
-        "cache_ttl": 60,
-        "offline_tolerance": true
+        "max_agents": 1024,
+        "epoch_bits": 16,
+        "randtag_bits": 32,
+        "forge_threshold": 100
     }
 }
 ```
@@ -416,23 +437,135 @@ static void watch_json_file(void)
 
 ---
 
-## §7 相关文档
+## §7 A-IPC Capability Folding 配置项（v1.1 新增）
 
-- [10-unify-design.md](../10-architecture/10-unify-design.md) §6 —— A-UCS 模块总纲
-- [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) —— IRON-9 v3 [SC]/[SS] 分层
-- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— [SC] 日志配置
-- [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_ECFGVERSION` 错误码
-- [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) —— [DSL] 降级（配置版本不匹配时）
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §4.2.3 —— A-UCS 设计依据
+### 7.1 配置项总览
+
+A-IPC 采用 Capability Folding 单平面架构（详见 [10-unify-design.md §8](../10-architecture/10-unify-design.md)），其运行时参数由 A-UCS 统一管理。本节是 Capability Folding 配置项的 SSoT。
+
+| 配置项 | 类型 | 默认值 | 范围 | 热重载 | 物理宿主 | 说明 |
+|--------|------|--------|------|--------|---------|------|
+| `AIRY_IPC_HDR_SIZE` | [SC] | 128 | 128（冻结） | 否 | `config.h` | Layout C v4 定长，H1 硬约束 |
+| `AIRY_IPC_MAGIC` | [SC] | 0x41524531 | 'ARE1'（冻结） | 否 | `config.h` | magic 值发布即冻结，H1 硬约束 |
+| `cap_max_agents` | [SS] | 1024 | 1-1024 | 是 | sysctl + JSON | `agent_caps[]` 静态数组容量，H4 硬约束 |
+| `cap_epoch_bits` | [SS] | 16 | 8/16/32 | 否 | sysctl + JSON | Badge Epoch 位宽（1.0.1 可扩展至 32） |
+| `cap_randtag_bits` | [SS] | 32 | 16/32 | 否 | sysctl + JSON | Random Tag 位宽（防伪造强度） |
+| `cap_forge_threshold` | [SS] | 100 | 10-10000 | 是 | sysctl + JSON | 连续失败次数阈值，触发警报 |
+| `ipc_fastpath_budget_ns` | [SS] | 10 | 5-50 | 是 | sysctl + JSON | C-S9 Badge 校验时间预算（ns） |
+
+### 7.2 [SC] 层冻结配置
+
+[SC] 层的 `AIRY_IPC_HDR_SIZE` 与 `AIRY_IPC_MAGIC` 是 Capability Folding 的物理载体定义，**一经发布即冻结**（37 号 §5.2 H1 硬约束）。任何变更需走 [SC] 共享契约变更流程（详见 [08-sc-error-contract.md §6.3](../30-interfaces/08-sc-error-contract.md)）：
+
+1. 在本文件提出变更提案
+2. agentrt 与 agentrt-linux 双方维护者评审
+3. 同步修改 `kernel/include/airymax/config.h` 物理头文件
+4. `sc-dual-ci.yml` 双端校验通过
+5. 更新 `AIRY_CONFIG_VERSION`
+
+### 7.3 [SS] 层 Badge 模型配置
+
+Badge 64-bit Native Word 的位宽配置（详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md)）：
+
+```c
+/* kernel/include/airymax/config.h —— Badge 位宽配置（[SS] 语义同源） */
+
+/* Badge 64-bit Native Word 布局（默认配置）:
+ *   Epoch (16 bits)     [63:48]  全局代际快照
+ *   Random Tag (32 bits) [47:16]  per-Agent 随机标签
+ *   Perms (16 bits)      [15:0]   权限位图
+ *
+ * 1.0.1 可扩展路径: Epoch 升级至 32-bit（解决 u16 溢出风险，37 号 §9.1 R6）
+ *   Epoch (32 bits)     [63:32]
+ *   Random Tag (24 bits) [31:8]
+ *   Perms (8 bits)       [7:0]
+ */
+#define AIRY_BADGE_EPOCH_BITS_DEFAULT    16
+#define AIRY_BADGE_RANDTAG_BITS_DEFAULT  32
+#define AIRY_BADGE_PERMS_BITS_DEFAULT    16
+
+/* 编译时校验: Epoch + RandomTag + Perms 必须 ≤ 64 bit */
+#define AIRY_BADGE_TOTAL_BITS  \
+    (AIRY_BADGE_EPOCH_BITS_DEFAULT + \
+     AIRY_BADGE_RANDTAG_BITS_DEFAULT + \
+     AIRY_BADGE_PERMS_BITS_DEFAULT)
+_Static_assert(AIRY_BADGE_TOTAL_BITS <= 64,
+               "Badge total bits must not exceed 64-bit Native Word");
+```
+
+### 7.4 [SS] 层 agent_caps[] 容量配置
+
+`agent_caps[1024]` 内核静态数组容量配置（H4 硬约束，详见 [03-capability-model.md §2.4](../110-security/03-capability-model.md)）：
+
+```c
+/* kernel/security/airy/capability.c —— agent_caps[] 容量（[SS] 语义同源） */
+
+/* 默认容量 1024，可通过 sysctl kernel.airy.cap_max_agents 调整
+ * 限制: 0.1.1 阶段 Agent < 100（37 号 §9.1 R8 风险可控）
+ * 1.0.1 可扩展: 升级至动态分配 + radix tree 兜底
+ */
+#define AIRY_CAP_MAX_AGENTS_DEFAULT  1024
+
+/* 静态数组大小 = 1024 × sizeof(struct airy_cap_slot) = 16KB */
+extern struct airy_cap_slot agent_caps[AIRY_CAP_MAX_AGENTS_DEFAULT];
+```
+
+### 7.5 [SS] 层 fastpath 时间预算
+
+fastpath C-S9 Badge 校验的时间预算配置（详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)）：
+
+```c
+/* kernel/ipc/airy_uring_cmd.c —— fastpath 时间预算（[SS] 语义同源） */
+
+/* C-S9 Badge 校验时间预算（默认 10ns）
+ * 超过预算的校验会触发 SLOW_PATH（io-wq 接管）
+ * 详见 35 号 §4.3 fastpath 7 态状态机
+ */
+#define AIRY_IPC_FASTPATH_BUDGET_NS_DEFAULT  10
+
+/* fastpath 入口检查 */
+static inline bool airy_ipc_fastpath_within_budget(u64 start_ns)
+{
+    u64 elapsed = ktime_get_ns() - start_ns;
+    return elapsed <= airy_config_get()->ipc_fastpath_budget_ns;
+}
+```
+
+### 7.6 配置变更对 Capability Folding 的影响
+
+| 配置项 | 变更影响 | 兼容性 |
+|--------|---------|--------|
+| `AIRY_IPC_HDR_SIZE` | 变更破坏 [SC] 双端兼容 | **不可变更**（冻结） |
+| `AIRY_IPC_MAGIC` | 变更破坏 [SC] 双端兼容 | **不可变更**（冻结） |
+| `cap_max_agents` | 变更需重启系统（静态数组重新分配） | 重启生效 |
+| `cap_epoch_bits` | 变更需重新编译 Badge（所有 Badge 失效） | 重启 + Badge 重编译 |
+| `cap_randtag_bits` | 变更需重新编译 Badge（防伪造强度变化） | 重启 + Badge 重编译 |
+| `cap_forge_threshold` | 实时生效（热重载） | 热重载 |
+| `ipc_fastpath_budget_ns` | 实时生效（热重载） | 热重载 |
 
 ---
 
-## §8 版本历史
+## §8 相关文档
+
+- [10-unify-design.md](../10-architecture/10-unify-design.md) §6 —— A-UCS 模块总纲
+- [10-unify-design.md](../10-architecture/10-unify-design.md) §8 —— A-IPC 模块总纲（Capability Folding）
+- [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) —— IRON-9 v3 [SC]/[SS] 分层
+- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— [SC] 日志配置
+- [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_ESC_CFGVERSION` 错误码
+- [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) —— Layout C v4 消息头定义（[SC] 配置载体）
+- [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— fastpath C-S9 Badge 校验（时间预算配置）
+- [03-capability-model.md](../110-security/03-capability-model.md) —— Badge 64-bit Native Word 模型（位宽配置）
+- [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) —— [DSL] 降级（配置版本不匹配时）
+
+---
+
+## §9 版本历史
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：A-UCS 统一配置管理体系设计；[SC] 共享配置（二进制布局相关，逐字节相同）；[SS] 语义同源配置（sysctl ↔ JSON 语义映射）；RCU 热重载机制（指针原子切换）；配置版本号（AIRY_CONFIG_VERSION，不匹配拒绝加载）；sysctl ↔ JSON 双向同步 |
+| v1.1 | 2026-07-18 | Capability Folding 集成：修复 `AIRY_IPC_HDR_SIZE` 64→128（Layout C v4）；修复 `AIRY_IPC_MAGIC` 0x41495043→0x41524531 'ARE1'（H1 硬约束，发布即冻结）；废弃旧 `cap.cache_ttl`（radix tree cache 模型）；新增 §7 A-IPC Capability Folding 配置项章节（7 项配置：[SC] 冻结 2 项 + [SS] Badge 模型 3 项 + [SS] fastpath 预算 2 项）；新增 Badge 位宽配置 + `_Static_assert`；清除内部审查路径引用 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | A-UCS 统一配置管理体系设计 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | A-UCS 统一配置管理体系设计 | v1.1 | 2026-07-18

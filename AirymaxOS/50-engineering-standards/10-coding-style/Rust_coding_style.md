@@ -122,7 +122,7 @@ pub enum AgentrtTaskState { ... }
 
 // 常量：SCREAMING_SNAKE_CASE
 const AIRY_MAX_TASKS: usize = 1024;
-const AIRY_IPC_HDR_SZ: usize = 128;
+const AIRY_IPC_HDR_SIZE: usize = 128;
 ```
 
 #### 3.2 airy_ / airy_ 前缀隔离（OS-STD-034）

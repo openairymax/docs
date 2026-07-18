@@ -226,7 +226,7 @@ graph LR
 
 | 头文件 | 内容 | 共享方式 | 变更流程 |
 |--------|------|----------|----------|
-| `syscalls.h` | 12 核心 syscall 编号 + 12 预留槽位| 完全共享，双向同步 | 任一端变更需同步另一端 |
+| `syscalls.h` | v1.1: 4 核心 syscall 编号 + 20 预留槽位| 完全共享，双向同步 | 任一端变更需同步另一端 |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码 | 完全共享，双向同步 | 类型变更需兼容性评估 |
 | `security_types.h` | Cupolas capability 令牌 + POSIX cap 41 ID + LSM 252 ID | 完全共享，双向同步 | 安全审查强制 |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式 | 完全共享，双向同步 | 阶段变更需兼容性评估 |

@@ -2,18 +2,20 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # [DSL] 降级生存层统一框架
 > **文档定位**：IRON-9 v3 第四层 [DSL]（Degraded Survival Layer）的唯一权威设计框架\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding H6 集成版）\
+> **最后更新**：2026-07-18\
 > **上级文档**：[Airymax Unify Design 总纲](10-unify-design.md)\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §3.1（P0 级缺失文档 #2）+ §4.2.1（A-UEF [DSL] 降级）
+> **设计依据**：Airymax Unify Design §9 [DSL] 降级策略 + A-IPC Capability Folding H6 硬约束
 
 ---
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **[DSL] 降级生存层** 的唯一权威源。`#ifdef AIRY_SC_FALLBACK` 降级块机制、Panic 回退路径、最小可运行子集定义、与 IRON-9 v3 四层模型的关系均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [DSL] 降级策略。
+> **单一权威源声明**：本文件是 **[DSL] 降级生存层** 的唯一权威源。`#ifdef AIRY_SC_FALLBACK` 降级块机制、Panic 回退路径、最小可运行子集定义、与 IRON-9 v3 四层模型的关系、**Capability Folding H6 降级落地**均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [DSL] 降级策略。
 >
 > 本文件遵循 **sched_tac**（降级时回退到 EEVDF 默认调度）、**纯 C LSM**（不依赖 BPF）、**alloc_pages + mmap**（不依赖 DMA 一致性内存）技术选型。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+>
+> **v1.1 Capability Folding H6 集成声明**：[DSL] 降级模式下，IPC 消息头 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验（直接 `goto cap_pass`），IPC 仍可使用但仅保留 POSIX capability 校验（slowpath `airy_cap_check()`）。这是 6 条硬约束 H6 的落地，详见 §4.4。
 
 ---
 
@@ -147,14 +149,19 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/air
 |--------|----------|---------|
 | `error.h` | 38 个 POSIX 码 + `AIRY_ECFGVERSION` | 39 个错误码 |
 | `log_types.h` | 仅 `LOG_FATAL` + `LOG_ERROR` 两级 | 2 个日志级别 |
-| `ipc.h` | 最简 128B 消息头（magic + opcode + payload_len） | 3 个字段 |
+| `ipc.h` | 最简 128B 消息头（magic + opcode + payload_len + **capability_badge=0**） | 4 个字段（H6 落地） |
 | `sched.h` | 仅 `AIRY_TASK_MAGIC` + `MAC_MAX_AGENTS` | 2 个符号 |
 | `memory_types.h` | 仅 L1 记忆结构 | 1 个结构 |
-| `security_types.h` | 仅 POSIX 41 个 capability | 41 个 ID |
+| `security_types.h` | 仅 POSIX 41 个 capability + **Badge 访问宏**（H6 落地） | 41 个 ID + 3 个宏 |
 | `cognition_types.h` | 仅 `airy_cog_phase` 三阶段枚举 | 1 个枚举 |
 | `uapi_compat.h` | 仅 `__KERNEL__` / `__linux__` 两路桥接 | 2 路分支 |
-| `syscalls.h` | 仅 12 核心 syscall 编号 | 12 个编号 |
+| `syscalls.h` | **v1.1: 仅 4 核心 syscall 编号**（512-515，原 12 编号已废弃） | 4 个编号 |
 | `lsm_types.h` | 仅 `DEFINE_LSM(airy)` 最小骨架 | 1 个宏 |
+
+**v1.1 变更说明**：
+- `ipc.h` 降级块新增 `capability_badge=0` 字段（H6 落地），保证 Layout C v4 二进制布局兼容
+- `security_types.h` 降级块新增 `AIRY_BADGE_EPOCH/RANDTAG/PERMS` 三个访问宏，保证 [DSL] 模式下 Badge 字段提取编译通过（但运行时跳过校验）
+- `syscalls.h` 降级块从 12 编号缩减为 4 编号（Capability Folding syscall 12→4 精确映射）
 
 ### 2.3 构建系统自动注入
 
@@ -233,19 +240,22 @@ static void airy_log_panic(const char *fmt, ...)
 
 #### 4.1.2 IPC 消息头子集
 
-最简 128B 消息头仅保留 3 个字段，其余字段置零：
+最简 128B 消息头保留 4 个字段（v1.1: 新增 `capability_badge=0` 字段，H6 落地），其余字段置零：
 
 ```c
-/* 降级模式 IPC 消息头 */
+/* 降级模式 IPC 消息头（v1.1: Layout C v4 兼容，capability_badge=0）*/
 struct airy_ipc_msg_hdr_min {
-    __u32   magic;          /* offset 0, 'ARE1' */
-    __u16   opcode;         /* offset 4 */
-    __u32   payload_len;    /* offset 40 */
-    /* 其余 118 字节置零 */
+    __u32   magic;              /* offset  0, 'ARE1' 0x41524531 */
+    __u16   opcode;             /* offset  4 */
+    __u32   payload_len;        /* offset 40 */
+    __u64   capability_badge;   /* offset 44, v1.1 新增: 固定为 0（H6 硬约束）*/
+    /* 其余 110 字节置零（trace_id/timestamp_ns/src_task/dst_task/crc32/reserved）*/
 } __attribute__((packed));
+_Static_assert(offsetof(struct airy_ipc_msg_hdr_min, capability_badge) == 44,
+               "H1: capability_badge offset must be 44");
 ```
 
-降级模式下 IPC 仅支持 `AIRY_IPC_OP_SEND` / `AIRY_IPC_OP_RECV` 两个操作，不支持 `FREEZE` 等高级操作。
+降级模式下 IPC 仅支持 `AIRY_IPC_OP_SEND` / `AIRY_IPC_OP_RECV` 两个操作，不支持 `FREEZE` / `CAP_REQUEST` 等高级操作。fastpath C-S9 检测到 `capability_badge=0` 时直接 `goto cap_pass` 跳过 Badge 校验（H6 落地）。
 
 #### 4.1.3 调度子集
 
@@ -263,10 +273,11 @@ struct airy_ipc_msg_hdr_min {
 |---------|------|---------|
 | Fault Handler | Fault 码禁用 | 统一 Panic |
 | IPC 队列冻结 | 降级无 FREEZE 操作 | 直接 kill 进程 |
-| Capability 完整校验 | [SC] 码不可用 | 仅 POSIX capability |
+| **Capability Badge 完整校验**（v1.1 H6） | `capability_badge=0` 固定，fastpath C-S9 跳过 | 仅 POSIX capability（slowpath `airy_cap_check()`） |
 | Ring Buffer 日志 | 内存不可靠 | printk 原生 |
 | Macro-Supervisor 裁决 | io_uring_cmd 不可靠 | 内核 watchdog 直接重启 |
 | RCU 热重载 | 配置版本不可靠 | 仅默认配置 |
+| **Badge 编译/撤销**（v1.1 H6） | sec_d 不可达，`airy_sys_call` 暂停 | 恢复后批量处理 CAP_REQUEST 队列 |
 
 ### 4.3 降级模式的退出
 
@@ -276,6 +287,82 @@ struct airy_ipc_msg_hdr_min {
 2. `sc-dual-ci.yml` 校验通过
 3. 重新编译内核（去掉 `AIRY_SC_FALLBACK`）
 4. 重启系统，进入正常路径
+
+### 4.4 [DSL] 模式下 Capability Folding Badge 处理（v1.1 新增——H6 落地）
+
+**H6 硬约束**：[DSL] 降级 `capability_badge=0` 跳过 C-S9。这是 Capability Folding 6 条硬约束的最后一条，确保 [SC] 头文件损坏时 IPC 仍可用。
+
+#### 4.4.1 Badge 字段处理
+
+[DSL] 模式下，IPC 消息头 `capability_badge` 字段固定为 0：
+
+```c
+/* [DSL] 模式下 fastpath C-S9 Badge 校验逻辑 */
+static inline int airy_cap_badge_ok_dsl(u64 badge, u16 opcode)
+{
+    /* H6: [DSL] 降级模式，capability_badge=0，直接跳过 Badge 校验 */
+    if (badge == 0) {
+        /* CAP_CARRY 标志下不允许 badge=0（防绕过，与正常模式一致）*/
+        if (unlikely(airy_ipc_hdr_flags_cap_carry()))
+            return -AIRY_ECAP_BADGE;  /* -78 */
+        goto cap_pass;  /* 跳过 Epoch/RandomTag/Perms 校验 */
+    }
+    /* [DSL] 模式下 badge 非 0 视为异常（sec_d 不可达，无法编译 Badge）*/
+    return -AIRY_ECAP_BADGE;  /* -78 */
+
+cap_pass:
+    return 0;
+}
+```
+
+#### 4.4.2 [DSL] 与正常模式对比
+
+| 维度 | 正常模式 | [DSL] 降级模式 |
+|------|---------|--------------|
+| `capability_badge` | 64-bit Native Word（Epoch + RandomTag + Perms） | 固定为 0 |
+| fastpath C-S9 | 3 个 READ_ONCE + 位运算（~10ns） | 直接 `goto cap_pass`（~1ns） |
+| Capability 校验 | Badge 完整校验（Epoch/RandomTag/Perms） | 跳过，仅 POSIX cap（slowpath） |
+| sec_d 状态 | 在线，可编译/撤销 Badge | 不可达，暂停服务 |
+| `airy_cap_global_epoch` | 撤销时 atomic_inc | 冻结，避免误失效 |
+| IPC 可用性 | 完整（7 opcode） | 仅 SEND/RECV（2 opcode） |
+| CAP_REQUEST 自举 | 支持（首次 Badge 申请） | 不支持（sec_d 不可达） |
+
+#### 4.4.3 [DSL] 模式下 IPC 流程
+
+```
+[DSL] 模式下 Agent 发送 IPC 消息:
+
+1. Agent 填充消息头:
+   - magic = 0x41524531 ('ARE1')
+   - opcode = AIRY_IPC_OP_SEND (0x0001)
+   - capability_badge = 0  (H6: 固定为 0)
+   - flags = 0  (不允许 CAP_CARRY)
+   - src_task / dst_task / payload_len 正常填充
+
+2. 提交 io_uring SQE（IORING_OP_URING_CMD）
+
+3. 内核 fastpath:
+   - C-S0~C-S8: magic/opcode/flags/src_task/dst_task/payload_len 校验
+   - C-S9: airy_cap_badge_ok_dsl(badge=0, opcode) → goto cap_pass（H6 跳过）
+   - C-S10~C-S12: CRC32 校验（若 [SC] ipc.h 降级块保留 crc32 字段）
+
+4. 投递消息（airy_ipc_deliver_fast）
+
+5. 接收方:
+   - 仅校验 POSIX capability（slowpath airy_cap_check）
+   - 不执行 Badge 派生（CAP_CARRY 标志禁用）
+```
+
+#### 4.4.4 [DSL] 退出时的 Badge 恢复
+
+[DSL] 模式退出（[SC] 头文件修复 + 重启）后，Badge 恢复流程：
+
+1. 系统重启，[SC] 头文件完整
+2. sec_d 启动，初始化 `agent_caps[1024]` 静态数组
+3. sec_d 重置 `airy_cap_global_epoch = 0`
+4. Agent 通过 CAP_REQUEST opcode 向 sec_d 申请新 Badge
+5. sec_d 调用 `airy_sys_call + COMPILE_BADGE` 编译 Badge
+6. fastpath C-S9 恢复完整校验（Epoch + RandomTag + Perms）
 
 ---
 
@@ -310,12 +397,14 @@ struct airy_ipc_msg_hdr_min {
 
 ## §6 相关文档
 
-- [10-unify-design.md](10-unify-design.md) —— Airymax Unify Design 总纲（[DSL] 是其韧性领域的最后防线）
+- [10-unify-design.md](10-unify-design.md) —— Airymax Unify Design 总纲（[DSL] 是其韧性领域的最后防线，v1.1 §9 [DSL] ipc.h 降级块）
 - [06-iron9-shared-model.md](06-iron9-shared-model.md) —— IRON-9 v3 四层模型（[DSL] 是第四层）
 - [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §5 —— error.h [DSL] 降级块细节
 - [30-interfaces/09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— log_types.h 契约（降级时仅 2 级）
+- [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) §2.6 —— ipc.h Layout C v4 契约（capability_badge 字段）
+- [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— IPC fastpath C-S9 Badge 校验
+- [110-security/03-capability-model.md](../110-security/03-capability-model.md) §12.4 —— Capability Folding [DSL] 降级
 - [40-dataflows/05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) §6 —— Panic 回退路径
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §3.1 / §4.2.1 —— 设计依据
 
 ---
 
@@ -324,7 +413,8 @@ struct airy_ipc_msg_hdr_min {
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：[DSL] 降级生存层统一框架；`#ifdef AIRY_SC_FALLBACK` 机制；Panic 回退到 printk_safe；最小可运行子集（38 POSIX 码 + 最简 IPC + EEVDF 默认调度）；IRON-9 v3 第四层定义 |
+| **v1.1** | **2026-07-18** | **Capability Folding H6 集成版**：(1) §2.2 各头文件降级块职责表更新——ipc.h 新增 `capability_badge=0` 字段，security_types.h 新增 Badge 访问宏，syscalls.h 从 12 编号缩减为 4 编号；(2) §4.1.2 IPC 消息头子集更新为 Layout C v4 兼容版（4 个字段含 capability_badge=0）；(3) §4.2 降级模式能力边界表新增 Badge 校验跳过 + Badge 编译/撤销暂停；(4) §4.4 新增 [DSL] 模式下 Capability Folding Badge 处理（H6 落地详细说明，含 Badge 字段处理/正常 vs [DSL] 对比/IPC 流程/Badge 恢复）；(5) 清除所有内部审查路径引用 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | [DSL] 降级生存层统一框架 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | [DSL] 降级生存层统一框架 | v1.1 | 2026-07-18

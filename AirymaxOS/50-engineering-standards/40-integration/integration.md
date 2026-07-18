@@ -360,7 +360,7 @@ struct __attribute__((aligned(64))) airy_task_desc {
 ```c
 /* ipc.h — 共享契约（简化示意） */
 #define AIRY_IPC_MAGIC        0x41524531  /* "ARE1" */
-#define AIRY_IPC_HDR_SZ 128
+#define AIRY_IPC_HDR_SIZE 128
 #define AIRY_IPC_VERSION      0x0100
 
 typedef enum {

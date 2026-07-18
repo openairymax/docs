@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §3.1（P0 级缺失文档 #3/#4）+ §6.2.1（30-interfaces 一致性检查）
+> **设计依据**：综合修正方案 §3.1（P0 级缺失文档 #3/#4）+ §6.2.1（30-interfaces 一致性检查）
 
 ---
 

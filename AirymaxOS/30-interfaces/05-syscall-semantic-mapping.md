@@ -347,7 +347,7 @@ static int detect_kernel_accel(void)
 | `security_types.h` | capability 41 ID 枚举约束 capability_request 的语义同源 | 同上 |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构约束 memory_write/rovol_snapshot 的语义同源 | 同上 |
 | `cognition_types.h` | CoreLoopThree 三阶段枚举约束 clt_phase_notify 的语义同源 | 同上 |
-| `syscalls.h` | 12 核心 syscall 编号体系约束 airy_sys_call/send/recv 等的语义同源 | 同上 |
+| `syscalls.h` | 4 核心（v1.1） syscall 编号体系约束 airy_sys_call/rovol_ctl/sched_ctl/clt_notify 的语义同源 | 同上 |
 
 ### 8.3 [SS] 语义同源层——映射完整性
 

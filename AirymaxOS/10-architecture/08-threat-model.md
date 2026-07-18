@@ -48,8 +48,8 @@ agentrt-linux 划定三类安全边界，威胁分析以边界为坐标系展开
 
 | 边界            | 划分依据                               | 隔离机制                                          | 跨边界通信通道                                                       |
 | ------------- | ---------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
-| **内核态 / 用户态** | 特权级（ring 0 / ring 3）               | MMU + CPU 特权级 + syscall 门                     | 系统调用（`airy_sys_call` 等 12 核心 syscall）+ io\_uring + eBPF kfunc |
-| **Agent 租户间** | Agent 命名空间 + capability 空间（CSpace） | CSpace 隔离 + Landlock 域叠加 + Cupolas 命名空间标签     | IPC 消息（`airy_sys_send`/`airy_sys_recv`，需 capability 授权）       |
+| **内核态 / 用户态** | 特权级（ring 0 / ring 3）               | MMU + CPU 特权级 + syscall 门                     | 系统调用（`airy_sys_call` 等 4 核心 syscall，v1.1）+ io\_uring + eBPF kfunc |
+| **Agent 租户间** | Agent 命名空间 + capability 空间（CSpace） | CSpace 隔离 + Landlock 域叠加 + Cupolas 命名空间标签     | IPC 消息（io_uring `IORING_OP_URING_CMD`，需 Badge 授权）       |
 | **网络边界**      | 主机网络命名空间 + Cupolas 网络子系统           | 网络命名空间 + netfilter + Cupolas Network Security | 网络协议栈（受 LSM `socket_*` 钩子约束）                                  |
 
 ### 1.3 信任边界定义
@@ -79,7 +79,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 | A5 | **Agent 任务描述符（magic 0x41475453）**       | L2    | 高    | OS-IFACE-001     | 任务描述符伪造 → 身份冒充           |
 | A6 | **LLM 推理状态（CoreLoopThree kthread）**     | L2    | 高    | OS-ARCH-005/006  | 推理状态泄露 → 跨租户认知数据泄露       |
 | A7 | **密钥与凭证（vault）**                        | L1/L2 | 极高   | OS-SEC-122       | 密钥泄露 → 全量数据解密、签名伪造       |
-| A8 | **网络栈**                                 | L2    | 中高   | OS-SEC-011       | 网络栈劫持 → 流量窃听、C2 通道       |
+| A8 | **网络栈**                                 | L2    | 中高   | OS-SEC-001       | 网络栈劫持 → 流量窃听、C2 通道       |
 
 ### 2.1 资产详细说明
 
@@ -149,7 +149,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **攻击面**  | 内核资源（slab/kfifo/等待队列）、IPC 通道、capability 表、LLM 推理调度（CoreLoopThree kthread）、CPU/内存/IO                                                                                                                                                                                                                         |
 | **攻击向量** | ① 资源耗尽——恶意 Agent 耗尽 slab/kfifo 导致其他 Agent 无法分配；② IPC 风暴——高频 `AIRY_IPC_OP_SEND` 占满 fastpath 与 slowpath 队列；③ LLM 推理饥饿——恶意 Agent 持续提交推理请求占用 CoreLoopThree kthread；④ capability 表膨胀——派生大量 capability 耗尽 CSpace；⑤ 触发频繁 `cond_resched()` 路径拖慢调度                                                                   |
-| **攻击场景** | 恶意 Agent 以线速发送 IPC 消息（SEND\_BATCH 批量发送），占满 kfifo 与等待队列，导致合法 Agent 的 `airy_sys_recv` 长期阻塞，引发系统级 DoS                                                                                                                                                                                                          |
+| **攻击场景** | 恶意 Agent 以线速发送 IPC 消息（SEND\_BATCH 批量发送），占满 kfifo 与等待队列，导致合法 Agent 的 io_uring CQE poll 长期阻塞，引发系统级 DoS                                                                                                                                                                                                          |
 | **影响评估** | 中高。单租户 DoS 可降级全系统可用性，但不应影响内核 L1 稳定性                                                                                                                                                                                                                                                                         |
 | **防护措施** | ① IPC 每租户速率限制（per-Agent token bucket）；② capability 表大小上限 `MAC_MAX_AGENTS=1024`，CNode 槽位上限强制；③ CoreLoopThree kthread 公平调度（sched\_ext SCHED\_AGENT，按 Agent 配额）；④ 长循环抢占点规则——耗时 >1ms 或迭代 >1000 次必须 `cond_resched()`（OS-KER-228），防止单 Agent 独占 CPU；⑤ Landlock 沙箱限制 Agent 资源访问面；⑥ kfifo 满时 slowpath 排队而非丢消息，配合超时机制 |
 
@@ -233,7 +233,7 @@ agentrt-linux Cupolas 作为最后初始化的 LSM 注册到框架，与 capabil
 | socket | `socket_create`/`socket_connect`/`socket_bind` | 网络访问控制                            |
 | cred   | `cred_prepare`                                 | capability 位图继承校验                 |
 
-钩子回调必须返回 \[SC] 4 值枚举之一（ALLOW/DENY/ASK/LOG，OS-SEC-008）。ASK 裁决通过 AgentsIPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 LOG（OS-SEC-009）。审计事件必须包含 `agent_id` 字段（OS-SEC-010）。
+钩子回调必须返回 \[SC] 4 值枚举之一（ALLOW/DENY/AUDIT/COMPLAIN，OS-SEC-008）。COMPLAIN 裁决通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT（OS-SEC-009）。审计事件必须包含 `agent_id` 字段（OS-SEC-010）。
 
 #### 4.2.2 Landlock 用户态沙箱
 
@@ -381,7 +381,7 @@ agentrt-linux 集成 syzkaller 风格的内核 fuzzing：
 
 | Fuzzing 目标      | 覆盖 syscall                   | 关注威胁    |
 | --------------- | ---------------------------- | ------- |
-| `airy_sys_call` | 12 核心 syscall 全覆盖            | S/T/E   |
+| `airy_sys_call` | 4 核心 syscall 全覆盖（v1.1）            | S/T/E   |
 | IPC 操作码         | SEND/RECV/SEND\_BATCH/CANCEL | T/D     |
 | capability 操作   | mint/mintcopy/derive/revoke  | E       |
 | Landlock 域施加    | fork 后 restrict\_self 时序     | E（沙箱逃逸） |

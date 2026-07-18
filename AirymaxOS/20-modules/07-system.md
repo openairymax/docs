@@ -337,7 +337,7 @@ airymaxmon 通过 [SC] 共享契约层读取内核子系统状态，确保监控
 
 | 头文件 | 共享内容 | 系统使用场景 |
 |--------|---------|-------------|
-| `include/airymax/syscalls.h` | Syscall 编号体系（12 核心 + 12 预留 = 24 槽位） | airymaxmon 监控 syscall 调用统计 |
+| `include/airymax/syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位） | airymaxmon 监控 syscall 调用统计 |
 | `include/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 | airymaxmon 监控调度统计 |
 | `include/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | airymaxmon 监控分级内存 |
 | `include/airymax/security_types.h` | capability 41 ID 枚举 + LSM 钩子 252 ID + Cupolas blob 布局 | airymaxmon 安全监控 + 安全配置工具 |

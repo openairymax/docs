@@ -558,12 +558,12 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 >   `AIRY_SLICE_DFL = 20`（默认时间片）、`MAC_MAX_AGENTS = 1024`（并发上限）、
 >   `airy_vtime_t`（Q16.16 定点，非浮点）。配置文件中 `<daemon>.conf [sched]` 段的字段名
 >   与取值范围必须与上述 [SC] 常量一致。
-> - **IPC 配置参数**（引用 §2.7 `ipc.h`）：`AIRY_IPC_HDR_SZ = 128`（消息头定长）、
+> - **IPC 配置参数**（引用 §2.7 `ipc.h`）：`AIRY_IPC_HDR_SIZE = 128`（消息头定长）、
 >   `AIRY_IPC_RING_DEF_ENTRIES = 256` / `AIRY_IPC_RING_MAX_ENTRIES = 32768`（ring 容量范围）、
->   `enum airy_ipc_op`（4 操作码：SEND/RECV/SEND_BATCH/CANCEL）。
+>   `AIRY_IPC_OP_*` 宏（7 操作码：SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE，v1.1 Capability Folding）。
 >   配置文件中 `airy_ipc.conf [transport]` 段的 `queue_depth` 必须落在上述 ring 容量范围内。
 
-**约束**：`<daemon>.conf [sched].prio` 必须在 `[AIRY_PRIO_MIN, AIRY_PRIO_MAX]` 范围内，`airy_ipc.conf [protocol].header_size` 必须等于 `AIRY_IPC_HDR_SZ`（128）；任何 [SC] 参数边界的变更必须经工程规范委员会签字，且两端同步升级头文件版本。
+**约束**：`<daemon>.conf [sched].prio` 必须在 `[AIRY_PRIO_MIN, AIRY_PRIO_MAX]` 范围内，`airy_ipc.conf [protocol].header_size` 必须等于 `AIRY_IPC_HDR_SIZE`（128）；任何 [SC] 参数边界的变更必须经工程规范委员会签字，且两端同步升级头文件版本。
 
 #### 12.3.3 [SS] 语义同源层
 

@@ -181,7 +181,7 @@ int airy_ipc_channel_create(const char *name, struct airy_ipc_channel **out);
 
 /* 常量宏：UPPER_SNAKE_CASE */
 #define AIRY_MAX_TASKS         1024
-#define AIRY_IPC_HDR_SZ  128
+#define AIRY_IPC_HDR_SIZE  128
 
 /* 结构体：用 struct 关键字，不 typedef */
 struct airy_task {
@@ -389,7 +389,7 @@ include 顺序固定：系统头 → 架构头 → 本地头 → `#define CREATE
 
 ```c
 /* 结构体大小不变式——ABI 保护 */
-BUILD_BUG_ON(AIRY_IPC_HDR_SZ != 128);
+BUILD_BUG_ON(AIRY_IPC_HDR_SIZE != 128);
 
 /* 枚举值与位宽约束 */
 static_assert(AIRY_MAX_AGENT_ID < 65536, "agent_id fits in u16");
@@ -1478,7 +1478,7 @@ kfree(old);
 #### 10.1 [SC] 层定义
 
 [SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/airymax/` 下的 10 个头文件：
-- `syscalls.h`：12 核心 syscall 编号（AIRY_SYS_CALL/SEND/RECV/NBSEND/NBRECV/REPLY_RECV/YIELD/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY/REPLY/NOTIFY）+ 12 预留槽位
+- `syscalls.h`：v1.1 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位
 - `memory_types.h`：MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口
 - `security_types.h`：Cupolas capability 令牌结构、POSIX capability 41 ID 枚举、LSM 钩子 252 ID 枚举、capability 派生模型、Vault backend 抽象、策略裁决 4 值枚举
 - `cognition_types.h`：CoreLoopThree 阶段枚举、Thinkdual 模式枚举、LLM 推理阶段枚举、Token 能效指标、GPU/NPU 能力描述符
@@ -1504,7 +1504,7 @@ kfree(old);
 
 #include <stdint.h>  /* C99 标准头文件，非内核头文件 */
 
-#define AIRY_IPC_HDR_SZ  128
+#define AIRY_IPC_HDR_SIZE  128
 #define AIRY_IPC_MSG_BODY_MAX  4096
 
 enum airy_ipc_msg_type {
@@ -1724,7 +1724,7 @@ MODULE_DESCRIPTION("agentrt-linux（AirymaxOS）IPC Channel Module");
 
 #### 0.2 Linux 6.6 内核基线 源码路径标注规范
 
-本规范每条规则均以 `文件名:行号` 格式标注 Linux 6.6 内核基线 源码出处（基准路径 `/home/spharx/SpharxWorks/01Reference/kernel-Linux 6.6 内核基线/`），便于审查者复核与对齐。
+本规范每条规则均以 `文件名:行号` 格式标注 Linux 6.6 内核基线 源码出处（基准路径 Linux 6.6 内核源码），便于审查者复核与对齐。
 
 ---
 
@@ -2222,7 +2222,7 @@ static int airy_ipc_validate_hdr(const struct airy_ipc_msg_hdr *hdr)
 }
 
 /* 编译期断言：允许且鼓励 */
-BUILD_BUG_ON(AIRY_IPC_HDR_SZ != 128);
+BUILD_BUG_ON(AIRY_IPC_HDR_SIZE != 128);
 ```
 
 #### 11.4 错误示例

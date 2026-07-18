@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
-> **设计依据**：[15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §1（sched_tac）+ §4.2.4（A-ULS 设计）
+> **设计依据**：综合修正方案 §1（sched_tac）+ §4.2.4（A-ULS 设计）
 
 ---
 
@@ -45,7 +45,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.3 与sched_tac 的关系
 
-sched_tac 是本 [SC] 契约的调度机制选型依据（详见 [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §1）。sched_tac 的核心决策为：
+sched_tac 是本 [SC] 契约的调度机制选型依据（详见 综合修正方案 §1）。sched_tac 的核心决策为：
 
 1. **不使用 sched_ext**：sched_ext 在 Linux 6.6 标准内核不可用，且需要 BPF 调度器，与"纯 C LSM"原则冲突
 2. **复用主线调度器**：直接使用 `SCHED_DEADLINE` / `SCHED_FIFO` / `SCHED_NORMAL`(EEVDF) 三类已有调度策略
@@ -327,7 +327,7 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 - [20-modules/09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) —— Micro-Supervisor 设计
 - [20-modules/10-user-supervisor-daemon.md](../20-modules/10-user-supervisor-daemon.md) —— Macro-Supervisor 设计
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §3 —— [DSL] 3 态降级
-- [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §1 —— sched_tac 设计依据
+- 综合修正方案 §1 —— sched_tac 设计依据
 
 ---
 

@@ -610,7 +610,7 @@ timestamp: 1784328868912
 agent_id: 42
 action: ESCALATE
 reason: REPEATED_FAULT
-detail: AIRY_FAULT_IPC_TIMEOUT x3
+detail: AIRY_FAULT_TIMEOUT x3
 ```
 
 ### 9.4 预算监控

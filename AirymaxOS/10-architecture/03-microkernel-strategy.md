@@ -602,7 +602,7 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 | ------------------- | -------------------- | -------------------------------------------------------------------------------- | ------------------ |
 | `sched.h`           | TCB 调度               | magic 0x41475453 'AGTS' + SCHED\_EXT=7（禁用 SCHED\_AGENT 宏）+ MAC\_MAX\_AGENTS=1024 | kernel / cognition |
 | `ipc.h`             | Endpoint / Message   | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）                    | kernel / services  |
-| `syscalls.h`        | seL4 7-11 syscall 模型 | 12 核心 + 12 预留 = 24 槽位（8 IPC 原语 + 3 控制原语 + 1 通知原语）                                | kernel / cognition |
+| `syscalls.h`        | seL4 7-11 syscall 模型 | v1.1: 4 核心 + 20 预留 = 24 槽位（1 Capability Invocation + 3 控制原语）                                | kernel / cognition |
 | `security_types.h`  | CNode / Capability   | 41 cap + 252 LSM + Cupolas blob 布局 + capability 派生                               | kernel / security  |
 | `memory_types.h`    | Untyped / Frame      | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
 | `cognition_types.h` | —                    | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式                                  | kernel / cognition |
@@ -719,7 +719,7 @@ graph TB
 
 ### A.2 已删除 sched_ext 依赖，采用sched_tac
 
-v0.1.1 中 §1.4 / §2.1 / §4.5 / §9.1 多处将 `sched_ext` BPF 框架作为调度原语承载。鉴于 Linux 6.6 基线下 sched_ext 不可用（见 [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §1 C-01 冲突点），v1.0 删除 sched_ext 依赖，采用**sched_tac**：
+v0.1.1 中 §1.4 / §2.1 / §4.5 / §9.1 多处将 `sched_ext` BPF 框架作为调度原语承载。鉴于 Linux 6.6 基线下 sched_ext 不可用（见 综合修正方案 §1 C-01 冲突点），v1.0 删除 sched_ext 依赖，采用**sched_tac**：
 
 - 调度机制改为 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 三层组合，零内核调度器修改
 - seL4 MCS 语义映射（SchedContext 捐赠）通过sched_tac 的优先级继承实现，不再依赖 sched_ext

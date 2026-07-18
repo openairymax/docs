@@ -1,49 +1,56 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IPC Fastpath 状态机设计
-> **文档定位**：agentrt-linux（AirymaxOS） IPC Fastpath 状态机设计——fastpath/slowpath 双路径状态机、io_uring 与 kfifo kthread 集成、性能优化与形式化验证计划\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档定位**：agentrt-linux（AirymaxOS） IPC Fastpath 状态机设计——fastpath/slowpath 双路径状态机、Capability Folding C-S9 Badge 内联校验、io_uring `IORING_OP_URING_CMD` 复用与 kfifo kthread 集成、性能优化与形式化验证计划\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-18\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
 
-> **SSoT 依赖声明**： 本文档状态机行为以 `50-engineering-standards/09-ssot-registry.md` 登记的接口规约为权威依据，重点依赖下列条目：OS-IFACE-003 / OS-IFACE-004（128B 消息头 + magic 0x41524531 'ARE1' 经 [SC] `ipc.h` 共享）、OS-ARCH-005 / OS-ARCH-006（seL4 思想分布落地——capability/IPC 契约经 [SC] 共享，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible）、OS-KER-139（数据结构 cache line 对齐）、OS-SEC-121 / OS-SEC-122（capability 检查与令牌管理）。128B 消息头结构体 `struct airy_ipc_msg_hdr` 的物理宿主为 `include/airymax/ipc.h`（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）。
+> **SSoT 依赖声明**： 本文档状态机行为以 `50-engineering-standards/09-ssot-registry.md` 登记的接口规约为权威依据，重点依赖下列条目：OS-IFACE-003 / OS-IFACE-004（Layout C v4 128B 消息头 + magic 0x41524531 'ARE1' + `capability_badge` 字段经 [SC] `ipc.h` 共享）、OS-ARCH-005 / OS-ARCH-006（seL4 思想分布落地——capability/IPC 契约经 [SC] 共享，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible）、OS-KER-139（数据结构 cache line 对齐）、OS-SEC-121 / OS-SEC-122（capability 检查与令牌管理）。Layout C v4 消息头结构体 `struct airy_ipc_msg_hdr` 的物理宿主为 `include/airymax/ipc.h`（见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）。
 >
-> **理论根基**： seL4 fastpath 设计思想（设计借鉴来源编号 ES-SEL4-4）——seL4 在 `decodeIPC`/`sendIPC` 路径中通过极简状态机实现最小延迟 IPC，本设计将其"无调度、无阻塞、内联检查"思想迁移至 agentrt-linux 的 io_uring + kfifo 双传输通道之上。
+> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较）。本文件 §3.1 / §5.2 是 fastpath 校验链与 C-S9 实现的 SSoT 权威源。
+>
+> **理论根基**： seL4 fastpath 设计思想（设计借鉴来源编号 ES-SEL4-4）——seL4 在 `decodeIPC`/`sendIPC` 路径中通过极简状态机实现最小延迟 IPC，本设计将其"无调度、无阻塞、内联检查"思想迁移至 agentrt-linux 的 io_uring + kfifo 双传输通道之上。Capability Folding 进一步将 seL4 的 capability 校验内联到 IPC fastpath，消除独立 capability syscall。
 
 ---
 
 ## 1. 设计目标
 
-agentrt-linux IPC Fastpath 状态机是 128B 消息头（见 [02-ipc-protocol.md](02-ipc-protocol.md) §2）传输路径的核心控制逻辑。状态机决定每条 IPC 请求走 fastpath（无阻塞直通）还是 slowpath（排队/阻塞回退），目标是在 seL4 fastpath 思想（ES-SEL4-4）与 Linux 6.6 io_uring/kfifo 基础设施之间取得最优平衡。
+agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc-protocol.md](02-ipc-protocol.md) §2）传输路径的核心控制逻辑。状态机决定每条 IPC 请求走 fastpath（无阻塞直通）还是 slowpath（排队/阻塞回退），目标是在 seL4 fastpath 思想（ES-SEL4-4）与 Linux 6.6 io_uring/kfifo 基础设施之间取得最优平衡。v1.1 起，fastpath 内联 C-S9 Capability Folding Badge 校验，IPC 数据传递即能力校验。
 
 ### 1.1 目标量化
 
 | # | 目标 | 指标 | 验收方式 |
 |---|------|------|---------|
-| G-1 | 最小化 IPC 延迟 | fastpath 单次端到端延迟 < 1μs（x86_64，2.4 GHz 基频，热缓存） | §9.4 延迟直方图 + §10.4 有界延迟证明 |
+| G-1 | 最小化 IPC 延迟 | fastpath 单次端到端延迟 ~158ns（x86_64，2.4 GHz 基频，热缓存），含 C-S9 Badge 校验 | §5.3 延迟分解 + §10.4 有界延迟证明 |
 | G-2 | 优先 fastpath | fastpath 无阻塞、无等待、无调度——禁止在 fastpath 内调用 `schedule()`/`mutex_lock()`/`wait_event*()` | §8 故障注入 + KCSAN 静态扫描 |
-| G-3 | slowpath 回退 | 资源不足（kfifo 满、无匹配消息、capability 缺失）时降级至 slowpath，不丢弃消息 | §4 slowpath 回退机制 + §8 注入测试 |
+| G-3 | slowpath 回退 | 资源不足（kfifo 满、无匹配消息、跨 CPU）时降级至 slowpath，不丢弃消息 | §4 slowpath 回退机制 + §8 注入测试 |
 | G-4 | 可测性 | fastpath/slowpath 命中比例、错误率可统计，输出至 debugfs + tracepoint | §9 可观测性 |
+| G-5 | Capability Folding 内联 | C-S9 Badge 校验 ~10ns（3 个 `READ_ONCE` + 位运算 + 比较），不阻塞、不调度 | §5.2 fastpath 实现 + §5.3 延迟分解 |
 
 ### 1.2 设计约束
 
-- **传输通道双栈**：用户态 ↔ 内核态走 io_uring（`IORING_OP_IPC_SEND` / `IORING_OP_IPC_RECV`，见 [02-ipc-protocol.md](02-ipc-protocol.md) §4.4）；内核 kthread 间走 per-cpu kfifo + `wait_event_interruptible`（OS-ARCH-006）。状态机对两条通道统一建模。
-- **128B 消息头 = 2 cache lines**：fastpath 仅处理消息头（无 payload）路径，payload 路径强制走 slowpath。
+- **传输通道双栈**：用户态 ↔ 内核态走 io_uring（`IORING_OP_URING_CMD` + `cmd_op=AIRY_URING_CMD_IPC_*`，见 [02-ipc-protocol.md](02-ipc-protocol.md) §4.4）；内核 kthread 间走 per-cpu kfifo + `wait_event_interruptible`（OS-ARCH-006）。状态机对两条通道统一建模。
+- **Layout C v4 = 2 cache lines**：fastpath 仅处理消息头（无 payload）路径，payload 路径强制走 slowpath。`capability_badge` 字段（offset 44-51）在 fastpath C-S9 内联校验，不增加 cache miss（与 magic/opcode/flags 等同 cache line）。
 - **per-cpu 无锁**：fastpath 必须在 per-cpu 上下文执行，禁止跨 CPU 同步。
-- **ABI 稳定**：状态机内部状态编号不进入 UAPI；对外契约仅 4 操作码（SEND/RECV/SEND_BATCH/CANCEL）与返回码。
+- **Capability Folding H1-H6 硬约束**：fastpath C-S9 是 Badge 校验的唯一执行点（H4），agentrt 用户态 `capability_badge=0` 跳过（H3），[DSL] 降级模式跳过（H6）。
+- **ABI 稳定**：状态机内部状态编号不进入 UAPI；对外契约仅 7 操作码（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE）与返回码。
 
-### 1.3 操作码定义（4 opcode）
+### 1.3 操作码定义（7 opcode）
 
 操作码经 [SC] `ipc.h` 共享（OS-IFACE-003），与消息头 `opcode` 字段（offset 4，2 字节）对应：
 
 | opcode 值 | 宏名 | 语义 | fastpath 适用 |
 |----------|------|------|--------------|
-| 0 | `AIRY_IPC_OP_SEND` | 单条消息发送 | ✅（仅消息头） |
-| 1 | `AIRY_IPC_OP_RECV` | 单条消息接收 | ✅（有匹配消息） |
-| 2 | `AIRY_IPC_OP_SEND_BATCH` | 批量发送（≥2 条） | ⚠️（走 BATCH 状态，聚合后 fastpath） |
-| 3 | `AIRY_IPC_OP_CANCEL` | 取消已提交请求 | ✅（per-cpu 内联取消） |
+| 0x0001 | `AIRY_IPC_OP_SEND` | 单条消息发送 | ✅（仅消息头） |
+| 0x0002 | `AIRY_IPC_OP_RECV` | 单条消息接收（仅用于接收方声明的 expected opcode） | ✅（有匹配消息） |
+| 0x0003 | `AIRY_IPC_OP_SEND_BATCH` | 批量发送（≥2 条） | ⚠️（走 BATCH 状态，聚合后 fastpath） |
+| 0x0004 | `AIRY_IPC_OP_CANCEL` | 取消已提交请求 | ✅（per-cpu 内联取消） |
+| 0x0005 | `AIRY_IPC_OP_FREEZE` | 冻结 ring（A-ULS 触发，C-S0 检查） | ✅（特权操作） |
+| 0x0010 | `AIRY_IPC_OP_CAP_REQUEST` | 自举：请求 Badge（无 Badge，C-S9 跳过） | ✅（仅发给 sec_d） |
+| 0x0011 | `AIRY_IPC_OP_CAP_RESPONSE` | sec_d 返回编译好的 Badge | ✅（sec_d → 请求方） |
 
 ---
 
@@ -187,33 +194,106 @@ agentrt-linux IPC Fastpath 状态机是 128B 消息头（见 [02-ipc-protocol.md
 
 fastpath 是状态机的"热路径"，必须满足下列全部条件方可进入 `FAST_SEND` / `FAST_RECV`。任一条件不满足即触发 §4 slowpath 回退。条件检查全部内联（`__always_inline`），且按"廉价检查在前、昂贵检查在后"排序以缩短平均路径长度。
 
-### 3.1 发送方条件（进入 FAST_SEND）
+v1.1 起，fastpath 校验链为 **C-S0~C-S12 共 13 项**（含 Capability Folding C-S9 Badge 校验和 C-S12 CRC32 完整性校验），与 [08-sc-error-contract.md §2.3](08-sc-error-contract.md) 的 IPC 错误码空间精确对齐。
 
-| # | 条件 | 检查方式 | 失败后果 |
-|---|------|---------|---------|
-| C-S1 | `magic == 0x41524531`（'ARE1'） | 内联比较 | → ERROR（`AIRY_EPROTO`） |
-| C-S2 | `opcode == AIRY_IPC_OP_SEND`（=0） | 内联比较 | 走对应 opcode 分支 |
-| C-S3 | `payload_len == 0`（仅消息头，无 payload） | 内联比较 | → SLOW_SEND |
-| C-S4 | 消息总大小 ≤ 128B（= `AIRY_IPC_HDR_SZ`） | `sizeof(hdr) <= 128` | → SLOW_SEND |
-| C-S5 | src 与 dst 在同一 CPU（per-cpu fastpath 无锁） | `smp_processor_id() == dst_cpu` | → SLOW_SEND |
-| C-S6 | per-cpu kfifo 未满（`kfifo_is_full()` == false） | 内联 | → SLOW_SEND（背压） |
-| C-S7 | 无内存压力（`current->reclaim_flag` 未置 / `__GFP_MEMALLOC` 未触发） | 内联 | → SLOW_SEND |
-| C-S8 | 无需锁（per-cpu 上下文，`in_task()` && `!in_interrupt()`） | 内联 | → SLOW_SEND |
-| C-S9 | capability 检查通过（fastpath 内联 `airy_cap_check_fast()`） | 内联（OS-SEC-121） | → ERROR（`AIRY_ECAPABILITY`） |
-| C-S10 | `flags` 不含 `AIRY_IPC_F_ENCRYPT` / `COMPRESS`（fastpath 不处理加解密） | 位测试 | → SLOW_SEND |
+### 3.1 发送方条件（C-S0~C-S12 校验链，进入 FAST_SEND）
+
+| # | 条件 | 检查方式 | 失败后果 | 错误码 |
+|---|------|---------|---------|--------|
+| C-S0 | `ring->frozen == false`（ring 未冻结） | 内联 `READ_ONCE` | → ERROR | `AIRY_ECAP_FROZEN`(-82) |
+| C-S1 | `magic == 0x41524531`（'ARE1'） | 内联比较 | → ERROR | `AIRY_EIPC_MAGIC`(-41) |
+| C-S2 | `opcode` 合法（见 §1.3 7 种 opcode） | 内联 `airy_ipc_opcode_valid()` | → ERROR | `AIRY_EIPC_OPCODE`(-42) |
+| C-S3 | `payload_len <= AIRY_IPC_MAX_PAYLOAD` | 内联比较 | → ERROR | `AIRY_EIPC_PAYLOAD`(-43) |
+| C-S4 | `hdr_size == 128` 且 `reserved[72]` 全零 | 内联 + 循环检查 | → ERROR | `AIRY_EIPC_HDRSIZE`(-44) / `AIRY_EIPC_RESERVED`(-45) |
+| C-S5 | src 与 dst 在同一 CPU（per-cpu fastpath 无锁） | `smp_processor_id() == dst_cpu` | → SLOW_SEND | — |
+| C-S6 | per-cpu kfifo 未满（`kfifo_avail() >= hdr_size + payload_len`） | 内联 | → SLOW_SEND（背压） | `AIRY_EIPC_KFIFO`(-48) |
+| C-S7 | `cmd->reclaim == false`（无 reclaim flag） | 内联 | → ERROR | `AIRY_EIPC_RECLAIM`(-49) |
+| C-S8 | `in_task()`（per-cpu 上下文，非中断） | 内联 | → SLOW_SEND | `AIRY_EIPC_CONTEXT`(-50) |
+| **C-S9** | **Capability Folding Badge 校验**（见 §3.1.1 详解） | 内联 `airy_cap_badge_ok()`，~10ns | → ERROR 或 cap_pass | `AIRY_ECAP_BADGE`(-78) / `AIRY_ECAP_EPOCH`(-79) / `AIRY_ECAP_FORGED`(-80) / `AIRY_ECAP_PERM`(-81) |
+| C-S10 | `flags & AIRY_IPC_F_RESERVED == 0` 且不含 `ENCRYPT`/`COMPRESS` | 位测试 | → ERROR | `AIRY_EIPC_FLAGS`(-46) / `AIRY_EIPC_NOTSUPP`(-47) |
+| C-S11 | `preempt_disable()` 准备（保护 kfifo 操作） | 内联 | — | — |
+| C-S12 | CRC32 校验通过（覆盖 `header[0:52) + payload`，投递前） | 内联 `airy_ipc_crc32_ok()` | → ERROR + Fault | `AIRY_EIPC_CRC32`(-51) + `AIRY_FAULT_RING_CORRUPT`(0x1003) |
+
+**C-S0~C-S12 校验链总耗时**：~68ns（锁内），其中 C-S9 Badge 校验 ~10ns（3 个 `READ_ONCE` + 位运算 + 比较）。
+
+#### 3.1.1 C-S9 Capability Folding Badge 校验详解（v1.1 新增）
+
+C-S9 是 Capability Folding 的核心执行点，内联在 fastpath 校验链中。校验流程：
+
+```c
+/* C-S9: Capability Folding Badge 校验（关键步骤，~10ns） */
+/* H2: 校验机制属于 [SS] 语义同源层 */
+/* H3: agentrt 用户态 capability_badge 始终为 0 */
+/* H4: agentrt-linux 内核 capability_badge 由 sec_d 编译 */
+/* H6: [DSL] 降级模式 capability_badge=0，跳过校验 */
+
+/* (1) CAP_REQUEST 自举：无 Badge，内核路由到 sec_d */
+if (unlikely(hdr->opcode == AIRY_IPC_OP_CAP_REQUEST)) {
+    if (unlikely(hdr->dst_task != AIRY_SEC_D_TASK_ID))
+        return -AIRY_ECAP_BADGE;  /* CAP_REQUEST 只能发给 sec_d */
+    goto cap_request_pass;
+}
+
+badge = hdr->capability_badge;
+
+/* (2) [DSL] 降级模式：badge == 0 跳过校验（H6） */
+/* agentrt 用户态：badge == 0（H3） */
+if (badge == 0) {
+    if (hdr->flags & AIRY_IPC_F_CAP_CARRY) {
+        /* agentrt-linux 内核模式不应出现 badge=0 + CAP_CARRY */
+        return -AIRY_ECAP_BADGE;  /* -78 */
+    }
+    /* agentrt 用户态或 [DSL] 模式：badge=0，跳过 */
+    goto cap_pass;
+}
+
+/* (3) Badge 校验：3 个 READ_ONCE + 位运算 + 比较（~10ns） */
+badge_epoch   = AIRY_BADGE_EPOCH(badge);     /* bits 48-63 */
+badge_randtag = AIRY_BADGE_RANDTAG(badge);   /* bits 16-47 */
+badge_perms   = AIRY_BADGE_PERMS(badge);     /* bits 0-15  */
+
+/* (3a) Epoch 校验：badge_epoch == global_epoch */
+global_epoch  = airy_cap_epoch_get();        /* atomic_read */
+if (unlikely(badge_epoch != global_epoch))
+    return -AIRY_ECAP_EPOCH;  /* -79，已撤销或过期 */
+
+/* (3b) Random Tag 校验：防伪造 */
+agent_randtag = READ_ONCE(agent_caps[hdr->src_task].randtag);
+agent_perms   = READ_ONCE(agent_caps[hdr->src_task].perms);
+
+if (unlikely(badge_randtag != agent_randtag)) {
+    /* Random Tag 不匹配 → 伪造尝试，触发 Fault */
+    airy_security_fault(hdr->src_task, AIRY_FAULT_CAP_FORGED);  /* 0x1001 */
+    return -AIRY_ECAP_FORGED;  /* -80 */
+}
+
+/* (3c) 权限校验：badge_perms 必须包含 opcode 所需权限 */
+if (unlikely(!airy_cap_has_perm(badge_perms, hdr->opcode)))
+    return -AIRY_ECAP_PERM;  /* -81 */
+
+cap_request_pass:
+cap_pass:
+    /* C-S9 通过，继续 C-S10~C-S12 */
+```
+
+**C-S9 关键不变量**：
+- **纯读取零副作用**（OS-KER-225）：C-S9 不持有锁、不调度、不写共享内存（`agent_caps[]` 是只读访问），唯一副作用是检测到伪造时调用 `airy_security_fault()` 触发 Fault（异步处理）。
+- **agent_caps[] 隔离**（30 号 §3 修复）：`agent_caps[]` 是内核静态数组，用户态不可见、不可写，与 kfifo 数据结构物理隔离。
+- **badge_epoch 与 global_epoch 解耦**：badge_epoch 是 Badge 编译时的快照，global_epoch 是当前全局代际，两者解耦避免 race condition。
 
 ### 3.2 接收方条件（进入 FAST_RECV）
 
+接收方走 CQE poll 路径，已通过 C-S0~C-S12 校验的消息直接从 kfifo 出队，无需再次校验 Badge（发送方已校验）。
+
 | # | 条件 | 检查方式 | 失败后果 |
 |---|------|---------|---------|
-| C-R1 | `magic == 0x41524531` | 内联比较 | → ERROR |
-| C-R2 | `opcode == AIRY_IPC_OP_RECV`（=1） | 内联比较 | 走对应分支 |
-| C-R3 | 有匹配的待接收消息（kfifo 非空且 `dst_task` 匹配） | `kfifo_out_peek()` | → SLOW_RECV |
-| C-R4 | 接收缓冲区已就绪（用户态已 `IORING_REGISTER_BUFFERS`） | 内联查表 | → SLOW_RECV |
-| C-R5 | src 与 dst 在同一 CPU | `smp_processor_id()` | → SLOW_RECV |
-| C-R6 | 接收消息 `payload_len == 0`（仅消息头） | 内联比较 | → SLOW_RECV |
-| C-R7 | capability 检查通过（接收权限） | 内联 | → ERROR |
-| C-R8 | 无需等待（`flags` 不要求有序等待） | 位测试 | → SLOW_RECV |
+| C-R1 | kfifo 非空且 `dst_task` 匹配 | `kfifo_out_peek()` | → SLOW_RECV |
+| C-R2 | 接收缓冲区已就绪（用户态已 `IORING_REGISTER_BUFFERS`） | 内联查表 | → SLOW_RECV |
+| C-R3 | src 与 dst 在同一 CPU | `smp_processor_id()` | → SLOW_RECV |
+| C-R4 | 接收消息 `payload_len == 0`（仅消息头） | 内联比较 | → SLOW_RECV |
+| C-R5 | 接收方轮询模式（`dst_polling == true`） | 内联 | → SLOW_RECV（需 `wake_up`） |
+
+> **注意**：接收方无需重新校验 Badge。Badge 校验是发送方 fastpath C-S9 的责任，接收方信任 kfifo 中的消息已通过校验。这是 Capability Folding "IPC 就是能力校验"的语义保证——通过 C-S9 的消息已具备合法能力。
 
 ### 3.3 资源充足条件（C-S6 / C-R3 共同前提）
 
@@ -240,7 +320,7 @@ slowpath 在 §3 任一条件不满足时触发，具体降级路径如下：
 | kfifo 满 / 高水位 | SLOW_SEND | 需排队等待空位 |
 | 接收无匹配消息 | SLOW_RECV | 需等待发送方投递 |
 | `flags` 含 ENCRYPT/COMPRESS | SLOW_SEND | 需调用加密/压缩子系 |
-| capability 检查需异步询问 daemon | SLOW_SEND | OS-SEC-009：ASK 裁决需经 AgentsIPC 询问 daemon |
+| capability 检查需异步询问 daemon | SLOW_SEND | OS-SEC-009：COMPLAIN 裁决需经 A-IPC 询问 daemon（v1.1: fastpath C-S9 失败时进入 slowpath） |
 
 ### 4.2 回退动作
 
@@ -259,7 +339,7 @@ slowpath 在 §3 任一条件不满足时触发，具体降级路径如下：
 
 | 字段 | 来源 | 默认 |
 |------|------|------|
-| `timeout_ns` | 消息头无此字段，由 `flags` 高位 + `reserved` 协商或调用参数传入 | 5 s（与 OS-SEC-009 ASK 超时对齐） |
+| `timeout_ns` | 消息头无此字段，由 `flags` 高位 + `reserved` 协商或调用参数传入 | 5 s（与 OS-SEC-009 COMPLAIN 超时对齐） |
 | 超时动作 | 移出 wait queue，返回 `AIRY_ETIMEDOUT`，状态 → CANCEL | — |
 | `flags` 含 NOWAIT | 不进入 slowpath，直接返回 `AIRY_EAGAIN` | — |
 
@@ -267,35 +347,327 @@ slowpath 在 §3 任一条件不满足时触发，具体降级路径如下：
 
 ## 5. io_uring 集成
 
-io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。状态机在 `FAST_SEND` / `FAST_RECV` / `BATCH` 状态与 io_uring SQE/CQE 交互。
+io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。v1.1 起，agentrt-linux 不注册独立的 IPC 专用 io_uring OP，全部 IPC 数据传递通过 `IORING_OP_URING_CMD` 复用，由 `cmd_op` 字段区分操作类型（Capability Folding 单平面架构）。状态机在 `FAST_SEND` / `FAST_RECV` / `BATCH` 状态与 io_uring SQE/CQE 交互。
 
-### 5.1 SQE/CQE 格式适配 IPC 128B 消息头
+### 5.1 SQE/CQE 格式适配 IPC Layout C v4 128B 消息头
 
 | io_uring 字段 | IPC 用途 |
 |--------------|---------|
-| `sqe.opcode` | `IORING_OP_IPC_SEND`(0x40) / `IPC_RECV`(0x41) / `IPC_SEND_BATCH`(0x42) / `IPC_CANCEL`(0x43) |
-| `sqe.fd` | 目标 channel fd（`airy_ipc_channel_open()` 返回） |
-| `sqe.addr` | 128B 消息头用户态地址（或 registered buffer id） |
-| `sqe.len` | 固定 128（fastpath），>128（slowpath 含 payload） |
+| `sqe.opcode` | `IORING_OP_URING_CMD`（统一复用） |
+| `sqe.cmd_op` | `AIRY_URING_CMD_IPC_SEND` / `IPC_SEND_BATCH` / `IPC_CANCEL` / `IPC_FREEZE` / `IPC_CAP_REQUEST` |
+| `sqe.cmd` | 16 字节命令数据，含 `airy_ipc_cmd` 结构指针（指向消息头 + payload + 路由信息） |
+| `sqe.fd` | 目标 ring fd（`io_uring_setup()` 返回） |
 | `sqe.user_data` | 携带 `trace_id`，原样回填至 `cqe.user_data` |
-| `cqe.res` | 成功=128（fastpath），失败=`-E*` / `AIRY_E*` |
+| `cqe.res` | 成功=0（fastpath），失败=`-AIRY_E*` |
 | `cqe.flags` | 携带 fastpath/slowpath 命中标记（`AIRY_CQE_F_FASTPATH`） |
 
-> **注意**：`opcode` 字段在消息头（offset 4，`__u16`）与 io_uring SQE（`__u8`）中均存在，但分属不同层次——消息头 `opcode` 是 IPC 协议操作码（SEND/RECV/SEND_BATCH/CANCEL），io_uring `sqe.opcode` 是 io_uring 私有操作码（`IORING_OP_IPC_*`）。二者通过固定映射表转换，**禁止混用**。
+> **注意**：`opcode` 字段在消息头（offset 4，`__u16`，IPC 协议操作码 SEND/RECV/...）与 io_uring SQE（`sqe.opcode`=`IORING_OP_URING_CMD`，`sqe.cmd_op`=`AIRY_URING_CMD_IPC_*`）中均存在，但分属不同层次——消息头 `opcode` 是 IPC 协议操作码，io_uring `sqe.opcode` 是 io_uring 私有操作码。二者通过 `sqe.cmd_op` 桥接，**禁止混用**。
 
-### 5.2 注册固定缓冲区（registered buffers）
+### 5.2 fastpath 完整实现（v1.1 新增，Capability Folding C-S9 内联）
+
+以下代码是 A-IPC fastpath 的 SSoT 实现参考，物理宿主为 `kernel/ipc/airy_uring_cmd.c`。fastpath 入口 `airy_uring_cmd()` 在 io_uring 持有 `ctx->uring_lock` 时被调用，锁内仅做校验 + 快速投递（无 `wake_up`），需要唤醒时返回 `-EAGAIN`，io-wq 接管（锁外）。
+
+```c
+/* kernel/ipc/airy_uring_cmd.c */
+
+#include <linux/io_uring.h>
+#include <linux/io_uring_types.h>
+#include <linux/kfifo.h>
+#include <linux/random.h>
+#include <linux/preempt.h>
+#include <linux/atomic.h>
+#include <airymax/ipc.h>
+#include <airymax/error.h>
+#include "airy_internal.h"
+
+/**
+ * airy_uring_cmd - A-IPC fastpath 入口
+ *
+ * 调用上下文: io_uring 持有 ctx->uring_lock
+ * 锁内时间: NONBLOCK fastpath ~158ns，校验失败 ~68ns
+ *
+ * 设计原则:
+ *   1. 锁内仅做校验 + 快速投递（无 wake_up）
+ *   2. 需要唤醒时返回 -EAGAIN，io-wq 接管（锁外）
+ *   3. C-S9 Badge 校验是纯读取，零副作用（OS-KER-225）
+ */
+static int airy_uring_cmd(struct io_uring_cmd *ioucmd, unsigned int issue_flags)
+{
+    struct airy_ipc_cmd *cmd = (struct airy_ipc_cmd *)ioucmd->cmd;
+    int ret;
+
+    /* Phase 1: 完整校验链 C-S0~C-S11（锁内，~68ns） */
+    ret = airy_ipc_validate(cmd);
+    if (ret < 0)
+        return ret;  /* 立即失败，不持有额外锁时间 */
+
+    /* Phase 2: 数据投递 —— NONBLOCK 快慢路径分离 */
+    if (issue_flags & IO_URING_F_NONBLOCK) {
+        /*
+         * NONBLOCK 模式（io_uring 持有 uring_lock 时传入）:
+         * - 同 CPU + kfifo 有空位 + 接收方轮询 → FAST_SEND（锁内 ~90ns）
+         * - 否则返回 -EAGAIN → io_uring 自动排队到 io-wq
+         */
+        if (airy_ipc_can_fast_deliver(cmd)) {
+            ret = airy_ipc_deliver_fast(cmd);  /* C-S12 CRC32 + kfifo_in */
+            if (ret >= 0)
+                return ret;  /* FAST_SEND 完成，~158ns 端到端 */
+        }
+        return -EAGAIN;  /* 需要 io-wq 接管 */
+    }
+
+    /*
+     * 非 NONBLOCK 模式（已在 io-wq 线程中，不持有 uring_lock）:
+     * - 可以安全执行 wake_up（eventfd_signal）
+     * - 可以安全执行跨 CPU kfifo
+     */
+    return airy_ipc_deliver_full(cmd);
+}
+
+/**
+ * airy_ipc_validate - C-S0~C-S11 校验链
+ *
+ * 锁内执行，~68ns，纯校验，零副作用。
+ * 所有检查遵循 check-and-return 模式，前面失败不影响后面。
+ * C-S9 Badge 校验是 Capability Folding 的核心执行点（~10ns）。
+ */
+static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
+{
+    struct airy_ipc_msg_hdr *hdr = cmd->hdr;
+    u64 badge;
+    u16 badge_epoch, global_epoch;
+    u32 badge_randtag, agent_randtag;
+    u16 badge_perms;
+
+    /* C-S0: ring 冻结检查（A-ULS 通过 FREEZE opcode 设置） */
+    if (unlikely(cmd->ring->frozen))
+        return -AIRY_ECAP_FROZEN;  /* -82 */
+
+    /* C-S1: magic 检查 */
+    if (unlikely(hdr->magic != AIRY_IPC_MAGIC))
+        return -AIRY_EIPC_MAGIC;  /* -41 */
+
+    /* C-S2: opcode 合法性检查 */
+    if (unlikely(!airy_ipc_opcode_valid(hdr->opcode)))
+        return -AIRY_EIPC_OPCODE;  /* -42 */
+
+    /* C-S3: payload_len 合法性检查 */
+    if (unlikely(hdr->payload_len > AIRY_IPC_MAX_PAYLOAD))
+        return -AIRY_EIPC_PAYLOAD;  /* -43 */
+
+    /* C-S4: 头部大小 + reserved[72] 全零检查 */
+    if (unlikely(cmd->hdr_size != AIRY_IPC_HDR_SIZE))
+        return -AIRY_EIPC_HDRSIZE;  /* -44 */
+    if (unlikely(!airy_ipc_reserved_zero(hdr->reserved, 72)))
+        return -AIRY_EIPC_RESERVED;  /* -45 */
+
+    /* C-S5: CPU 匹配检查（优化条件，不是正确性条件） */
+    cmd->same_cpu = (smp_processor_id() == cmd->dst_cpu);
+
+    /* C-S6: kfifo 满检查（在 airy_ipc_can_fast_deliver() 中执行） */
+
+    /* C-S7: reclaim flag 检查 */
+    if (unlikely(cmd->reclaim))
+        return -AIRY_EIPC_RECLAIM;  /* -49 */
+
+    /* C-S8: 上下文检查（in_task()） */
+    if (unlikely(!in_task()))
+        return -AIRY_EIPC_CONTEXT;  /* -50 */
+
+    /* C-S9: Capability Folding Badge 校验（详见 §3.1.1） */
+    /* H2: 校验机制属于 [SS] 语义同源层 */
+    /* H4: agentrt-linux 内核 capability_badge 由 sec_d 编译 */
+    /* H6: [DSL] 降级模式 capability_badge=0，跳过校验 */
+
+    if (unlikely(hdr->opcode == AIRY_IPC_OP_CAP_REQUEST)) {
+        /* CAP_REQUEST 自举：无 Badge，内核路由到 sec_d */
+        if (unlikely(hdr->dst_task != AIRY_SEC_D_TASK_ID))
+            return -AIRY_ECAP_BADGE;  /* -78, CAP_REQUEST 只能发给 sec_d */
+        goto cap_request_pass;
+    }
+
+    badge = hdr->capability_badge;
+
+    /* [DSL] 降级模式：badge == 0 跳过校验（H6） */
+    /* agentrt 用户态：badge == 0（H3） */
+    if (badge == 0) {
+        if (hdr->flags & AIRY_IPC_F_CAP_CARRY) {
+            /* agentrt-linux 内核模式不应出现 badge=0 + CAP_CARRY */
+            return -AIRY_ECAP_BADGE;  /* -78 */
+        }
+        /* agentrt 用户态或 [DSL] 模式：badge=0，跳过 */
+        goto cap_pass;
+    }
+
+    /* Badge 校验：3 个 READ_ONCE + 位运算 + 比较（~10ns） */
+    badge_epoch   = AIRY_BADGE_EPOCH(badge);
+    badge_randtag = AIRY_BADGE_RANDTAG(badge);
+    badge_perms   = AIRY_BADGE_PERMS(badge);
+
+    /* (3a) Epoch 校验 */
+    global_epoch  = airy_cap_epoch_get();
+    if (unlikely(badge_epoch != global_epoch))
+        return -AIRY_ECAP_EPOCH;  /* -79, 已撤销或过期 */
+
+    /* (3b) Random Tag 校验：防伪造 */
+    agent_randtag = READ_ONCE(agent_caps[hdr->src_task].randtag);
+    if (unlikely(badge_randtag != agent_randtag)) {
+        /* Random Tag 不匹配 → 伪造尝试，触发 Fault */
+        airy_security_fault(hdr->src_task, AIRY_FAULT_CAP_FORGED);  /* 0x1001 */
+        return -AIRY_ECAP_FORGED;  /* -80 */
+    }
+
+    /* (3c) 权限校验 */
+    if (unlikely(!airy_cap_has_perm(badge_perms, hdr->opcode)))
+        return -AIRY_ECAP_PERM;  /* -81 */
+
+cap_request_pass:
+cap_pass:
+
+    /* C-S10: flags 检查 */
+    if (unlikely(hdr->flags & AIRY_IPC_F_RESERVED))
+        return -AIRY_EIPC_FLAGS;  /* -46 */
+    if (unlikely((hdr->flags & AIRY_IPC_F_ENCRYPT) ||
+                 (hdr->flags & AIRY_IPC_F_COMPRESS)))
+        return -AIRY_EIPC_NOTSUPP;  /* -47, 0.1.1 不支持 */
+
+    /* C-S11: preempt_disable 准备（实际在 deliver 中执行） */
+    return 0;
+}
+
+/**
+ * airy_ipc_can_fast_deliver - 判断是否可以走 FAST_SEND
+ *
+ * 条件: 同 CPU + kfifo 有空位 + 接收方轮询模式
+ */
+static inline bool airy_ipc_can_fast_deliver(struct airy_ipc_cmd *cmd)
+{
+    if (!cmd->same_cpu)
+        return false;  /* C-S5 失败，走 SLOW_SEND */
+
+    if (kfifo_avail(&cmd->dst_kfifo) < (AIRY_IPC_HDR_SIZE + cmd->hdr->payload_len))
+        return false;  /* C-S6 失败，走 SLOW_SEND */
+
+    if (!cmd->dst_polling)
+        return false;  /* 接收方非轮询模式，需要 wake_up */
+
+    return true;  /* FAST_SEND */
+}
+
+/**
+ * airy_ipc_deliver_fast - FAST_SEND 路径
+ *
+ * 锁内执行，~90ns，无 wake_up。
+ * C-S12 CRC32 校验 + kfifo_in + cqe_fill，preempt_disable 保护。
+ */
+static int airy_ipc_deliver_fast(struct airy_ipc_cmd *cmd)
+{
+    struct airy_ipc_msg_hdr *hdr = cmd->hdr;
+    size_t total = AIRY_IPC_HDR_SIZE + hdr->payload_len;
+    int ret;
+
+    /* C-S11: preempt_disable（保护 kfifo 操作） */
+    preempt_disable();
+
+    /* C-S12: CRC32 校验（在投递前） */
+    if (unlikely(!airy_ipc_crc32_ok(hdr, total))) {
+        preempt_enable();
+        return -AIRY_EIPC_CRC32;  /* -51 */
+    }
+
+    /* kfifo 入队（SPSC 无锁，per-cpu） */
+    ret = kfifo_in(&cmd->dst_kfifo, hdr, total);
+    if (unlikely(ret != total)) {
+        preempt_enable();
+        return -AIRY_EIPC_KFIFO;  /* -48, 不应发生，can_fast_deliver 已检查 */
+    }
+
+    preempt_enable();
+
+    /* CQE 填充（无 wake_up，接收方轮询消费） */
+    io_uring_cmd_done(cmd->ioucmd, 0, 0);
+    return 0;
+}
+
+/**
+ * airy_ipc_deliver_full - SLOW_SEND 路径
+ *
+ * io-wq 线程中执行，不持有 uring_lock。
+ * 可以安全执行跨 CPU kfifo + eventfd_signal(wake_up)。
+ */
+static int airy_ipc_deliver_full(struct airy_ipc_cmd *cmd)
+{
+    struct airy_ipc_msg_hdr *hdr = cmd->hdr;
+    size_t total = AIRY_IPC_HDR_SIZE + hdr->payload_len;
+    int ret;
+
+    /* C-S12: CRC32 校验 */
+    if (unlikely(!airy_ipc_crc32_ok(hdr, total)))
+        return -AIRY_EIPC_CRC32;  /* -51 */
+
+    /* 跨 CPU kfifo 入队（需要锁保护，但不是 uring_lock） */
+    spin_lock(&cmd->dst_kfifo_lock);
+    ret = kfifo_in(&cmd->dst_kfifo, hdr, total);
+    spin_unlock(&cmd->dst_kfifo_lock);
+
+    if (unlikely(ret != total))
+        return -AIRY_EIPC_KFIFO;  /* -48 */
+
+    /* 唤醒接收方（可能 1-5μs，在 io-wq 中，不持有 uring_lock） */
+    if (!cmd->dst_polling)
+        eventfd_signal(cmd->dst_eventfd_ctx, 1);
+
+    /* CQE 填充 */
+    io_uring_cmd_done(cmd->ioucmd, 0, 0);
+    return 0;
+}
+```
+
+### 5.3 fastpath 延迟分解
+
+```
+FAST_SEND 路径（SQPOLL + 同 CPU + kfifo 有空位 + 接收方轮询）:
+  airy_ipc_validate():     ~68ns (锁内)
+    C-S0~C-S8:             ~20ns
+    C-S9 Badge 校验:        ~10ns (3 READ_ONCE + 位运算 + 比较)
+    C-S10~C-S11:            ~5ns
+  airy_ipc_deliver_fast(): ~90ns (锁内)
+    C-S12 CRC32:            ~15ns
+    kfifo_in:               ~50ns
+    cqe_fill:               ~20ns
+    preempt_disable/enable: ~5ns
+  ────────────────────────────────────
+  锁内总计:                  ~158ns
+  端到端:                    ~158ns（接收方轮询消费）
+
+SLOW_SEND 路径（跨 CPU 或 kfifo 满或接收方阻塞）:
+  airy_ipc_validate():     ~68ns (锁内)
+  返回 -EAGAIN              → 释放 uring_lock
+  io-wq 调度:               ~500ns
+  airy_ipc_deliver_full():  ~100ns + wake_up(~1-5μs) (锁外)
+  ────────────────────────────────────
+  端到端:                    ~600ns ~5.5μs
+
+校验失败路径:
+  airy_ipc_validate():     ~68ns (锁内)
+  返回 -AIRY_E*             → 立即失败
+  ────────────────────────────────────
+  端到端:                    ~68ns
+```
+
+### 5.4 注册固定缓冲区（registered buffers）
 
 - 发送方启动时 `io_uring_register(ring_fd, IORING_REGISTER_BUFFERS, iov, n)` 预注册 128B 缓冲池，内核 pin 住 page，避免每条消息 `get_user_pages()`。
 - 接收方同理注册接收缓冲池。
-- fastpath 中 `sqe.flags |= IOSQE_FIXED_FILE | IOSQE_BUFFER_SELECT`，从固定池选取 buffer id，零拷贝 IORING_OP_URING_CMD + registered buffer（OS-IFACE-003 零拷贝优先）。
+- fastpath 中 `sqe.flags |= IOSQE_FIXED_FILE | IOSQE_BUFFER_SELECT`，从固定池选取 buffer id，零拷贝 `IORING_OP_URING_CMD` + registered buffer（OS-IFACE-003 零拷贝优先）。
 
-### 5.3 polled I/O 模式
+### 5.5 polled I/O 模式
 
 - ring 创建时设 `IORING_SETUP_IOPOLL` + `IORING_SETUP_SQPOLL`，内核轮询 SQE，消除 `io_uring_enter()` 系统调用开销。
 - fastpath 纯用户态提交 → 内核 sqpoll 线程轮询 → 内联拷贝 → CQE 回填，全程无 syscall。
 - sqpoll 纺程 idle 超时后退出，由新 SQE 唤醒（首次有 ≤1μs 唤醒开销，热路径稳定后归零）。
 
-### 5.4 批量提交（SEND_BATCH）的 io_uring 优化
+### 5.6 批量提交（SEND_BATCH）的 io_uring 优化
 
 - `BATCH` 状态聚合 N 条 128B 消息至连续缓冲（N × 128B），单次 SQE 提交（`sqe.len = N * 128`）。
 - 阈值 `AIRY_IPC_BATCH_THRESHOLD`（默认 8）：达到即 flush 走 `FAST_SEND`；或调用方显式 flush。
@@ -578,7 +950,7 @@ struct airy_ipc_stats {
 
 ### A.1 已删除 page flipping，改为 IORING_OP_URING_CMD + registered buffer + mmap
 
-v0.2.8 在 §5 io_uring 集成章节中存在 page flipping 零拷贝路径的残留表述（见 [15-comprehensive-correction-plan.md](../../docs-closed/agentrt-linux/00-reviews/_review_v2.2/15-comprehensive-correction-plan.md) §6 C-02 冲突点，6 个文件引用已废弃的 page flipping）。v1.0 彻底删除 page flipping，统一为 A-IPC 模块技术选型：
+v0.2.8 在 §5 io_uring 集成章节中存在 page flipping 零拷贝路径的残留表述（见 综合修正方案 §6 C-02 冲突点，6 个文件引用已废弃的 page flipping）。v1.0 彻底删除 page flipping，统一为 A-IPC 模块技术选型：
 
 - **零拷贝载体**：`IORING_OP_URING_CMD` + registered buffer，消除 page flipping 的页所有权反转复杂度
 - **共享内存**：`alloc_pages(GFP_KERNEL)` + mmap（不使用 DMA 一致性内存），对齐 [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) §1 内存方案
