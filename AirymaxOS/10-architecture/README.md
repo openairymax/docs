@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）架构设计
 > **文档定位**：agentrt-linux（AirymaxOS）架构设计层的总览与索引，包含系统架构、Airymax Unify Design 总纲、IRON-9 v3 共享模型、[DSL] 降级生存层、五维原则、微内核策略、工程基线、ADR、目录结构等\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-19\
 > **上级文档**：[agentrt-linux 总览](../README.md)
 
 ---
@@ -167,7 +167,7 @@ graph TB
 
 | IRON-9 v3 层次 | Unify Design 五模块映射 |
 |---------------|----------------------|
-| [SC] 共享契约层 | `include/airymax/sched.h`（A-UEF）、`include/airymax/log_types.h`（A-ULP）、`include/airymax/syscalls.h`（A-UCS）、`include/airymax/ipc.h`（A-IPC）、`include/airymax/security_types.h`（A-ULS） |
+| [SC] 共享契约层 | `include/uapi/linux/airymax/sched.h`（A-UEF）、`include/uapi/linux/airymax/log_types.h`（A-ULP）、`include/uapi/linux/airymax/syscalls.h`（A-UCS）、`include/uapi/linux/airymax/ipc.h`（A-IPC）、`include/uapi/linux/airymax/security_types.h`（A-ULS） |
 | [SS] 语义同源层 | 五模块的 API 签名在 agentrt ↔ agentrt-linux 之间保持一致 |
 | [IND] 独立实现层 | 五模块在 agentrt-linux 内核态实现与 agentrt 用户态实现各自独立 |
 | [DSL] 降级生存层 | 五模块的 `#ifdef AIRY_SC_FALLBACK` 降级生存块，提供 [SC] 损坏时最小可运行子集 |
@@ -188,7 +188,7 @@ graph TB
 
 ## 9. 与 agentrt 的架构对应关系
 
-agentrt-linux 与 agentrt 同源且部分代码共享（IRON-9 v3）。两者在多个核心模块上存在同源映射关系，共享契约层代码（`include/airymax/` 头文件库），实现层各自独立。
+agentrt-linux 与 agentrt 同源且部分代码共享（IRON-9 v3）。两者在多个核心模块上存在同源映射关系，共享契约层代码（`include/uapi/linux/airymax/` 头文件库），实现层各自独立。
 
 | agentrt 模块 | agentrt-linux 同源子仓 | 同源语义 | IRON-9 v3 层次 |
 |--------------|---------------------|----------|----------|

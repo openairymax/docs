@@ -130,7 +130,7 @@ make C=1 CF="-Wbitwise -Wno-bitwise-pointer -Wcontext -Wdecl -Wno-transparent-un
 agentrt-linux 在 `airy_defconfig` 中启用 Sparse 注解：
 
 ```c
-/* include/airymax/airy_types.h */
+/* include/uapi/linux/airymax/airy_types.h */
 #ifndef _AIRY_TYPES_H
 #define _AIRY_TYPES_H
 
@@ -463,7 +463,7 @@ sub airy_check {
 1;
 ```
 
-**OS-TEST-066**：CI PR 阶段必须运行 `airy_checkpatch_ext.pl`，扫描 `kernel/airymaxos/` 与 `include/airymax/`；任一 `error` 级别报告即阻断 PR。
+**OS-TEST-066**：CI PR 阶段必须运行 `airy_checkpatch_ext.pl`，扫描 `kernel/airymaxos/` 与 `include/uapi/linux/airymax/`；任一 `error` 级别报告即阻断 PR。
 
 ---
 
@@ -584,7 +584,7 @@ jobs:
             scripts/checkpatch.pl --strict --no-tree -f "$patch" || true
           done
           # 对 kernel/airymaxos/ 源文件运行 airy_checkpatch_ext
-          scripts/airy_checkpatch_ext.pl kernel/airymaxos/ include/airymax/
+          scripts/airy_checkpatch_ext.pl kernel/airymaxos/ include/uapi/linux/airymax/
   
   sparse:
     runs-on: ubuntu-24.04

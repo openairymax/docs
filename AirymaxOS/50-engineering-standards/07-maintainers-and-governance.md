@@ -259,7 +259,7 @@ V:	agentrt-linux 1.x / Linux 6.6
 
 #### 2.4.3 [SC] 共享契约层的特殊审批流程
 
-[SC] 层（10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件，物理宿主在 `kernel/include/airymax/`）的变更必须经过**双向 CI 校验 + 总维护者审批**：
+[SC] 层（10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件，物理宿主在 `kernel/include/uapi/linux/airymax/`）的变更必须经过**双向 CI 校验 + 总维护者审批**：
 
 ```
 开发者提交 [SC] 变更 MR

@@ -571,7 +571,7 @@ static int airymax_dma_mmap(struct file *filp, struct vm_area_struct *vma)
 VFIO 直通相关的 Capability：
 
 ```c
-/* include/uapi/airymax/capability.h */
+/* include/uapi/linux/airymax/capability.h */
 #define CAP_VFIO_ASSIGN          0x00000100  /* 允许 VFIO 设备分配 */
 #define CAP_VFIO_RELEASE         0x00000200  /* 允许 VFIO 设备释放 */
 #define CAP_VFIO_IOMMU_BYPASS    0x00000400  /* 允许绕过 IOMMU（仅 macro_superv，危险） */

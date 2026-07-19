@@ -115,7 +115,7 @@ Airymax Unify Design 五模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）在兼容性体
 
 ### 4.1 IRON-9 v3 [SC] 共享契约 ABI 稳定性
 
-兼容性体系的核心是 IRON-9 v3 **[SC] 共享契约层**的 ABI 稳定性承诺。10 个 [SC] 头文件（`error.h`/`log_types.h`/`ipc.h`/`sched.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`syscalls.h`/`uapi_compat.h`/`lsm_types.h`）的物理宿主为 `kernel/include/airymax/`，两端逐字节相同，通过 `sc-dual-ci.yml` 双端校验：
+兼容性体系的核心是 IRON-9 v3 **[SC] 共享契约层**的 ABI 稳定性承诺。10 个 [SC] 头文件（`error.h`/`log_types.h`/`ipc.h`/`sched.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`syscalls.h`/`uapi_compat.h`/`lsm_types.h`）的物理宿主为 `kernel/include/uapi/linux/airymax/`，两端逐字节相同，通过 `sc-dual-ci.yml` 双端校验：
 
 - **错误码值永不复用**：`AIRY_E*` 一旦分配，值域永不回收（[-300, -1] 五子空间）
 - **128B 消息头布局固定**：IPC/日志 128B 记录布局一经发布永不改变

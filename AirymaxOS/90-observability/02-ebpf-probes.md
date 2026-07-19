@@ -534,16 +534,16 @@ IRON-9 v3 将 agentrt 与 agentrt-linux 的 eBPF 协作划分为四层：
 
 | 层次 | 共享程度 | eBPF 内容 |
 |------|---------|----------|
-| **补充共享层** | 共享代码（非 [SC] 核心） | `include/airymax/bpf_struct_ops.h`：struct_ops 状态枚举 + common_value 结构 |
+| **补充共享层** | 共享代码（非 [SC] 核心） | `include/uapi/linux/airymax/bpf_struct_ops.h`：struct_ops 状态枚举 + common_value 结构 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | struct_ops 注册宏模式、bpf_prog 生命周期、ringbuf reserve/submit、kfunc 注册模式、bpf() cmd ABI |
 | **[IND] 完全独立层** | 完全独立 | JIT 后端、trampoline 本机码生成、verifier 实现、自定义 kfunc |
 
 ### 13.2 [SC] 共享契约层
 
-`include/airymax/bpf_struct_ops.h` 定义状态枚举与 common_value 结构（原用于 struct_ops，sched_tac 用户态调度器复用此状态枚举），agentrt 用户态策略引擎通过此头解析调度器函数表的 `state` 字段，判断用户态调度器是否在线，无需访问内核私有数据结构：
+`include/uapi/linux/airymax/bpf_struct_ops.h` 定义状态枚举与 common_value 结构（原用于 struct_ops，sched_tac 用户态调度器复用此状态枚举），agentrt 用户态策略引擎通过此头解析调度器函数表的 `state` 字段，判断用户态调度器是否在线，无需访问内核私有数据结构：
 
 ```c
-/* include/airymax/syscalls.h —— IRON-9 v3 [SC] 共享契约层 */
+/* include/uapi/linux/airymax/syscalls.h —— IRON-9 v3 [SC] 共享契约层 */
 enum airy_struct_ops_state {
     AIRY_STRUCT_OPS_STATE_INIT     = 0,  /* 已初始化，未注册 */
     AIRY_STRUCT_OPS_STATE_INUSE     = 1,  /* 已注册，使用中 */
@@ -558,7 +558,7 @@ struct airy_struct_ops_common_value {
 };
 ```
 
-**OS-STD-OBS-015: agentrt-linux eBPF 与 agentrt 共享 `include/airymax/bpf_struct_ops.h` 头文件，struct_ops state 枚举值（0/1/2/3）与字段语义两端必须一致；两端事件格式必须一致，便于跨态聚合分析。**
+**OS-STD-OBS-015: agentrt-linux eBPF 与 agentrt 共享 `include/uapi/linux/airymax/bpf_struct_ops.h` 头文件，struct_ops state 枚举值（0/1/2/3）与字段语义两端必须一致；两端事件格式必须一致，便于跨态聚合分析。**
 
 ### 13.3 [SS] 语义同源层
 

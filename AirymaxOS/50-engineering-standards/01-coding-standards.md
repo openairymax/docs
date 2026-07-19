@@ -3151,7 +3151,7 @@ kernel-doc 注释中引用其他符号时**必须**使用以下标记：
  *
  * This file implements the agentrt-linux IPC channel, which is the
  * kernel-side counterpart of the agentrt user-space IPC. The protocol
- * is defined in include/airymax/ipc.h ([SC] contract layer).
+ * is defined in include/uapi/linux/airymax/ipc.h ([SC] contract layer).
  *
  * The IPC message header magic 0x41524531 ('ARE1') is shared with
  * agentrt; see 120-cross-project-code-sharing.md.
@@ -3205,7 +3205,7 @@ $ ./scripts/kernel-doc -Wall -internal \
 
 ## 10. 完整示例：[SC] 头文件 kernel-doc 范例
 
-以下为 `include/airymax/ipc.h`（[SC] 共享契约层头文件）的 kernel-doc 注释范例：
+以下为 `include/uapi/linux/airymax/ipc.h`（[SC] 共享契约层头文件）的 kernel-doc 注释范例：
 
 ```c
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
@@ -3261,7 +3261,7 @@ struct airy_ipc_msg_hdr {
 #endif /* _AIRY_IPC_H */
 ```
 
-> **SSoT 声明**：本结构体定义以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。此处的 kernel-doc 示例与 SSoT Layout C 逐字段一致，结构体名为 `struct airy_ipc_msg_hdr`。
+> **SSoT 声明**：本结构体定义以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。此处的 kernel-doc 示例与 SSoT Layout C 逐字段一致，结构体名为 `struct airy_ipc_msg_hdr`。
 
 ---
 

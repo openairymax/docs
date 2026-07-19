@@ -748,4 +748,161 @@ int airy_coverage_agent_path_illegal_count(void)
 
 ---
 
+## 12. 性能回归 CI（v1.1 增量补强）
+
+> **补强背景**：170-performance/ 目录当前无 .md 文档落地（v1.1 待补），性能回归检测缺乏 CI 自动化。v1.1 Capability Folding 引入 fastpath C-S9 内联校验（~10ns SLA）、Badge 编译等新性能敏感路径，若无 CI 性能回归守护，延迟退化可能悄然合入主干。本章节作为 170-performance/ 文档缺位期间的临时落地，待 170-performance/03-ipc-performance.md 建立后迁移。
+
+### 12.1 基准测试集
+
+| 基准 | 测量函数 | SLA（v1.1） | 测量方法 |
+|------|---------|-----------|---------|
+| fastpath C-S9 延迟 | `airy_cap_badge_ok()` fastpath | ≤ 10ns | `bpf_perf_event` + 100 万次取 P99 |
+| io_uring 提交延迟 | `IORING_OP_URING_CMD` 提交至完成 | ≤ 160ns | `io_uring_enter` 前后 `ktime_get_ns()` 差值 |
+| Badge 编译延迟 | `airy_cap_badge_compile()` | ≤ 1μs | KUnit 内 `ktime_get_ns()` 测量 |
+| Badge 撤销延迟 | `airy_cap_badge_revoke()` | ≤ 500ns | KUnit 内 `ktime_get_ns()` 测量 |
+| `agent_caps[]` 查找延迟 | `airy_cap_lookup()` | ≤ 15ns | fastpath 内联，P99 测量 |
+
+### 12.2 CI 集成：nightly perf workflow
+
+```yaml
+# .github/workflows/nightly-perf-regression.yml
+name: nightly-perf-regression
+on:
+  schedule:
+    - cron: "0 22 * * *"  # UTC 22:00（北京 06:00）
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'kernel/airymaxos/ipc/**'
+      - 'kernel/airymaxos/cap/**'
+      - 'kernel/airymaxos/lsm/**'
+
+jobs:
+  perf-baseline:
+    runs-on: ubuntu-24.04-perf  # 固定硬件基线
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with perf defconfig
+        run: |
+          make ARCH=um defconfig airy_perf_defconfig
+          make ARCH=um -j$(nproc)
+      - name: Run perf benchmarks
+        run: |
+          timeout 1800 ./linux airy_perf_bench=on \
+            airy_perf_iterations=1000000 \
+            2>&1 | tee perf.log
+      - name: Parse perf results
+        run: |
+          python3 scripts/airy_perf_parse.py \
+            --log perf.log \
+            --output perf_current.json
+      - name: Compare with baseline
+        run: |
+          python3 scripts/airy_perf_compare.py \
+            --current perf_current.json \
+            --baseline perf_baseline.json \
+            --warn-threshold 5 \
+            --fail-threshold 10
+      - name: Upload perf report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-report
+          path: |
+            perf_current.json
+            perf.log
+```
+
+### 12.3 回归阈值
+
+| 阈值等级 | 延迟增加幅度 | 响应动作 |
+|---------|------------|---------|
+| 通过 | ≤ 5% | 无动作，更新基线 |
+| 告警 | > 5% 且 ≤ 10% | PR 评论告警，不阻断；nightly 创建 issue |
+| 阻断 | > 10% | PR 阻断合入；nightly 标记失败，24 小时内修复或回滚 |
+| 灾难 | > 50% | 立即阻断 release；触发回滚至上一稳定版本 |
+
+```json
+// perf_baseline.json（v1.1 基线，固定硬件配置下测量）
+{
+  "hardware": {
+    "cpu": "Intel Xeon Platinum 8480+ (2.0GHz, 56C/112T)",
+    "ram": "256GB DDR5-4800",
+    "disk": "Samsung PM9A3 NVMe SSD 1.92TB"
+  },
+  "benchmarks": {
+    "fastpath_c_s9_latency_ns":         { "p50": 8.2,  "p99": 9.8,  "sla": 10 },
+    "io_uring_submit_latency_ns":       { "p50": 142,  "p99": 158,  "sla": 160 },
+    "badge_compile_latency_ns":         { "p50": 850,  "p99": 950,  "sla": 1000 },
+    "badge_revoke_latency_ns":          { "p50": 380,  "p99": 450,  "sla": 500 },
+    "agent_caps_lookup_latency_ns":     { "p50": 12.5, "p99": 14.8, "sla": 15 }
+  },
+  "measured_at": "2026-07-15T03:00:00Z",
+  "kernel_version": "6.6.0-airy #1",
+  "config": "airy_perf_defconfig"
+}
+```
+
+### 12.4 硬件基线
+
+为消除硬件波动对性能测量的影响，nightly perf workflow 必须运行在固定配置的测试机上：
+
+| 硬件组件 | 规格要求 | 说明 |
+|---------|---------|------|
+| CPU | Intel Xeon Platinum 8480+（2.0GHz, 56C/112T） | 固定频率，关闭 Turbo Boost |
+| RAM | 256GB DDR5-4800 ECC | 8 通道，固定时序 |
+| 磁盘 | Samsung PM9A3 NVMe SSD 1.92TB | U.2 接口，固定队列深度 |
+| BIOS | 关闭 hyper-threading、关闭 C-states | 减少 CPU 调度噪声 |
+| 内核参数 | `cpufreq=governor=performance idle=poll` | 固定最高频率，禁止 idle |
+
+**OS-TEST-074**：nightly perf workflow 必须运行在上述固定硬件基线上；任一硬件组件更换必须重新测量基线（`perf_baseline.json` 更新 + 全员通告）。
+
+**OS-KER-132**：fastpath C-S9 延迟 P99 > 10ns SLA 即视为 fastpath 性能契约违反，PR 立即驳回；任一基准 P99 超过 SLA 即标记 nightly 失败。
+
+### 12.5 报告：Codecov Performance Trend
+
+性能数据通过 Codecov Performance Trend 模块追踪长期趋势：
+
+```yaml
+# .github/codecov.yml 扩展（性能趋势）
+codecov:
+  require_changes: false
+
+performance:
+  notify:
+    after_n_builds: 1
+  trends:
+    - name: fastpath-c-s9-latency
+      metric: p99_latency_ns
+      target: 10
+      threshold: 5
+    - name: io-uring-submit-latency
+      metric: p99_latency_ns
+      target: 160
+      threshold: 8
+    - name: badge-compile-latency
+      metric: p99_latency_ns
+      target: 1000
+      threshold: 50
+```
+
+性能趋势报告示例：
+
+```
+## Performance Trend Report
+
+| Benchmark | Today P99 | Baseline P99 | Delta | Status |
+|-----------|-----------|-------------|-------|--------|
+| fastpath_c_s9_latency       | 9.8ns   | 9.8ns   | 0.0%  | ✅ |
+| io_uring_submit_latency     | 158ns   | 158ns   | 0.0%  | ✅ |
+| badge_compile_latency       | 945ns   | 950ns   | -0.5% | ✅ |
+| badge_revoke_latency        | 448ns   | 450ns   | -0.4% | ✅ |
+| agent_caps_lookup_latency   | 14.7ns  | 14.8ns  | -0.7% | ✅ |
+```
+
+**OS-TEST-075**：CI 必须在每个 PR 评论中自动附性能趋势报告（若 PR 修改 `kernel/airymaxos/{ipc,cap,lsm}/` 路径）；性能退化 > 5% 必须在 PR 评论中显式标红告警。
+
+---
+
 > **文档结束** | agentrt-linux 测试工程体系 v1.0.1 第 6 卷 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."

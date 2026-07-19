@@ -12,6 +12,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 开发策略概述
 
+> **核心定位（极境内核标准）**：AirymaxOS 的核心定位是"**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**"，所有开发策略围绕此定位展开（详见 ADR-012 + ADR-014）。
+
 ### 1.1 总策略
 
 agentrt-linux 采用**"工程标准先行 + 模块化并行 + 渐进式发布"**的开发策略，与 agentrt 0.1.1 奠基版本并行（agentrt 在前，agentrt-linux 在后）：

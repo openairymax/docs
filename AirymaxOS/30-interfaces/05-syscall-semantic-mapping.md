@@ -103,7 +103,7 @@ graph TB
 
 | 层次 | agentrt 侧 | agentrt-linux 侧 | 共享程度 |
 |------|-----------|-----------------|---------|
-| **[SC] 共享契约层** | 10 个头文件（`include/airymax/`） | 同一 10 个头文件（`kernel/include/airymax/`） | 完全共享代码 |
+| **[SC] 共享契约层** | 10 个头文件（`include/uapi/linux/airymax/`） | 同一 10 个头文件（`kernel/include/uapi/linux/airymax/`） | 完全共享代码 |
 | **[SS] 语义同源层** | JSON-RPC 高层 API（27 函数，8 域） | 编号 syscall（512-631，6 类 120 调用） | 概念操作一致，签名独立演进 |
 | **[IND] 完全独立层** | 跨平台 syscall 封装（libc syscall()） | 内核 syscall 表注册（`syscall_64.tbl`） | 完全独立 |
 
@@ -432,7 +432,7 @@ graph TB
 当任一侧新增系统调用时，需按以下流程更新映射表：
 
 1. **评估映射类型**：新增调用是否属于直接映射、条件映射、RT 独有或 OS 独有？
-2. **更新 [SC] 契约**：若涉及共享数据结构，更新对应 [SC] 头文件（`include/airymax/`）。
+2. **更新 [SC] 契约**：若涉及共享数据结构，更新对应 [SC] 头文件（`include/uapi/linux/airymax/`）。
 3. **更新本映射表**：在 §3（[SS] 映射）或 §4/§5（[IND] 独有）中新增条目。
 4. **SDK 层适配**：若新增调用需暴露给应用层，在 SDK 4 语言中新增对应方法。
 5. **接口评审**：通过 API Review 检查映射一致性、命名规范、错误码规范。

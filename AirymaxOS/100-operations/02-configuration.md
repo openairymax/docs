@@ -541,7 +541,7 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 
 | 层次 | 共享程度 | 配置管理内容 |
 |------|---------|-------------|
-| **[SC] 共享契约层** | 头文件级代码共享 | `include/airymax/sched.h`（调度参数：优先级、vtime、时间片）、`include/airymax/ipc.h`（IPC 配置：ring 大小、操作码） |
+| **[SC] 共享契约层** | 头文件级代码共享 | `include/uapi/linux/airymax/sched.h`（调度参数：优先级、vtime、时间片）、`include/uapi/linux/airymax/ipc.h`（IPC 配置：ring 大小、操作码） |
 | **[SS] 语义同源层** | 语义两端一致，实现独立 | 配置文件格式（TOML key=value）、配置层级覆盖、运行时热更新、配置校验 |
 | **[IND] 完全独立层** | agentrt-linux 独有 | `/etc/agentrt/` 内核态配置目录、sysctl 内核参数接口、procfs 状态导出、配置变更审计日志 |
 
@@ -636,7 +636,7 @@ graph LR
 
 ## 附录 A: 接口定义
 
-> **附录定位**： 本附录汇集配置管理所需的完整接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 sysctl 接口、systemd（v254+）单元配置、主流 Linux 发行版配置管理工程实践，以及 agentrt-linux 三级配置分层专属契约（`include/airymax/config_types.h`）。
+> **附录定位**： 本附录汇集配置管理所需的完整接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 内核基线 sysctl 接口、systemd（v254+）单元配置、主流 Linux 发行版配置管理工程实践，以及 agentrt-linux 三级配置分层专属契约（`include/uapi/linux/airymax/config_types.h`）。
 
 ### A.1 核心数据结构
 

@@ -107,7 +107,7 @@ void sched_init_numa(int offline_node)
 /**
  * @brief 超节点拓扑描述符
  * @since 1.0.1
- * @location include/airymax/supernode.h
+ * @location include/uapi/linux/airymax/supernode.h
  */
 typedef struct airy_supernode_topology {
     uint32_t supernode_id;          /* 超节点 ID */
@@ -626,7 +626,7 @@ flowchart TB
 
 ### 11.1 错误码
 
-超节点 OS 复用 [140/07-syscall-registry.md](../140-application-development/07-syscall-registry.md) 定义的错误码，并扩展以下专用错误码（归入内核错误段 -200~-299，SSoT 定义于 `include/airymax/error.h`）：
+超节点 OS 复用 [140/07-syscall-registry.md](../140-application-development/07-syscall-registry.md) 定义的错误码，并扩展以下专用错误码（归入内核错误段 -200~-299，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
@@ -700,8 +700,8 @@ if (ret == -AIRY_EBUSY) {
 
 | 层次 | 共享内容 | 超节点 OS 使用方式 |
 |------|---------|-------------------|
-| **[SC] 共享契约层** | MemoryRovol L1-L4 数据结构（`include/airymax/memory_types.h`） | 跨 die 迁移使用 [SC] 数据结构 |
-| **[SC] 共享契约层** | IPC 消息头（`include/airymax/ipc.h`） | macro_superv 与 Agent 通信 |
+| **[SC] 共享契约层** | MemoryRovol L1-L4 数据结构（`include/uapi/linux/airymax/memory_types.h`） | 跨 die 迁移使用 [SC] 数据结构 |
+| **[SC] 共享契约层** | IPC 消息头（`include/uapi/linux/airymax/ipc.h`） | macro_superv 与 Agent 通信 |
 | **[SS] 语义同源层** | gateway 多节点协调语义 | agentrt gateway → macro_superv |
 | **[IND] 完全独立层** | 超节点拓扑/调度/迁移/CXL 池化 | agentrt-linux 专属 |
 

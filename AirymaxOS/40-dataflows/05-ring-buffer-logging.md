@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Airymax 日志 Ring Buffer 数据流** 的唯一权威源。内存方案（alloc_pages + mmap）、无锁 Ring Buffer 设计（reserve/commit 两阶段）、Fastpath 路径、eventfd 通知、Logger Daemon 分离、Panic 回退路径均以本文件为唯一权威定义。
 >
-> 技术选型声明：日志内存采用 **`alloc_pages(GFP_KERNEL)` + mmap**（**不使用 DMA 一致性内存**，x86_64 默认缓存一致）。本数据流遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) 的 A-ULP 模块设计与 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) 的 128B 记录格式。整体技术选型对齐 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：日志内存采用 **`alloc_pages(GFP_KERNEL)` + mmap**（**不使用 DMA 一致性内存**，x86_64 默认缓存一致）。本数据流遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) 的 A-ULP 模块设计与 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) 的 128B 记录格式。整体技术选型对齐 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 

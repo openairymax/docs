@@ -482,7 +482,7 @@ int main(void)
 | 有标准中文名 | 用中文名 | MicroCoreRT → 微核心运行时 |
 | 无标准中文名 | 保留英文 | sched_tac → sched_tac |
 | 代码标识符 | 保留原文 | `airy_err_t` → `airy_err_t` |
-| 文件路径 | 保留原文 | `include/airymax/error.h` → `include/airymax/error.h` |
+| 文件路径 | 保留原文 | `include/uapi/linux/airymax/error.h` → `include/uapi/linux/airymax/error.h` |
 
 ### 5.3 翻译质量评分
 

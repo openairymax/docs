@@ -372,7 +372,7 @@ agentrt-linux 在 kernel + services 实现 **基于 io\_uring 的 IPC 子系统*
 | magic      | 0x41524531（"ARE1"，同源）                                |
 | 版本         | 0x0100（同源）                                           |
 | payload 协议 | 5 种（JSON-RPC / MCP / A2A / OpenAI / Custom，同源）       |
-| 字段对齐       | packed 紧凑布局（Layout C SSoT，`__attribute__((packed))`） |
+| 字段对齐       | 自然对齐布局（Layout C v4 SSoT，D-9 修复后 `__attribute__((aligned(64)))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 不使用 packed） |
 | 链路追踪       | trace\_id（OpenTelemetry 兼容，同源）                       |
 
 ### 理由
@@ -742,7 +742,7 @@ agentrt-linux 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9
 | 维度   | agentrt                                                    | agentrt-linux                                     |
 | ---- | ---------------------------------------------------------- | ------------------------------------------------- |
 | 性质   | 跨平台用户态运行时（Linux/macOS/Windows）                             | Linux 发行版（仅 Linux 6.6）                            |
-| 代码   | 共享契约层（`include/airymax/`）+ 实现独立                            | 共享契约层（`include/airymax/`）+ 实现独立                   |
+| 代码   | 共享契约层（`include/uapi/linux/airymax/`）+ 实现独立                            | 共享契约层（`include/uapi/linux/airymax/`）+ 实现独立                   |
 | 设计理念 | 共享 Airymax 设计理念                                            | 共享 Airymax 设计理念                                   |
 | 同源体现 | MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 语义 | SCHED\_AGENT/128B IPC/capability/L1-L4/kthread 语义 |
 | 关系   | 可独立运行于任何平台                                                 | agentrt-linux 是 agentrt 的最佳载体                     |
@@ -750,11 +750,11 @@ agentrt-linux 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9
 
 ### 理由
 
-1. **同源定义**：同源 = 共享设计理念 + 共享契约层代码（IRON-9 v3）。agentrt 和 agentrt-linux 共享 MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 的语义，并共享契约层代码（IPC 消息头结构、syscall 编号、capability 令牌格式、MemoryRovol L1-L4 数据结构、CoreLoopThree 接口定义、错误码、规则编号体系，统一存放于 `include/airymax/` 头文件库），实现层各自独立
+1. **同源定义**：同源 = 共享设计理念 + 共享契约层代码（IRON-9 v3）。agentrt 和 agentrt-linux 共享 MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 的语义，并共享契约层代码（IPC 消息头结构、syscall 编号、capability 令牌格式、MemoryRovol L1-L4 数据结构、CoreLoopThree 接口定义、错误码、规则编号体系，统一存放于 `include/uapi/linux/airymax/` 头文件库），实现层各自独立
 2. **天然契合**：因为设计假设和实现假设一致，agentrt 在 agentrt-linux 上运行**无适配层**，天然更稳健
 3. **独立性**：agentrt 是跨平台用户态运行时，必须独立于任何特定 OS；agentrt-linux 是 Linux 发行版，专注于 Linux 6.6 优化
-4. **演进协同**：两者通过共享设计理念（00-architectural-principles.md）与共享契约层代码（`include/airymax/`）协同演进，契约层变更须经 agentrt + agentrt-linux 两端 CI 双向校验
-5. **IRON-9 v3 约束**：工程标准规范手册 IRON-9 v3 明确规定"agentrt 和 agentrt-linux 同源且部分代码共享"——共享契约层代码完全共享（`include/airymax/`），语义同源层高层 API 语义同源（概念操作一致）、签名因抽象层级不同而独立演进，完全独立层各自独立
+4. **演进协同**：两者通过共享设计理念（00-architectural-principles.md）与共享契约层代码（`include/uapi/linux/airymax/`）协同演进，契约层变更须经 agentrt + agentrt-linux 两端 CI 双向校验
+5. **IRON-9 v3 约束**：工程标准规范手册 IRON-9 v3 明确规定"agentrt 和 agentrt-linux 同源且部分代码共享"——共享契约层代码完全共享（`include/uapi/linux/airymax/`），语义同源层高层 API 语义同源（概念操作一致）、签名因抽象层级不同而独立演进，完全独立层各自独立
 6. **边界清晰**：agentrt 是用户态库 + 守护进程，agentrt-linux 是 Linux 内核 + 用户态服务，边界清晰
 
 ### 影响
@@ -902,7 +902,7 @@ agentrt-linux 的微内核化技术路线需要在"从零开发微内核"与"基
 
 ### 决策
 
-agentrt-linux **不采用从零开发微内核**的模式，而是**基于 Linux 内核进行微内核化改造**：
+agentrt-linux **不采用从零开发微内核**的模式，而是**基于 Linux 内核进行 seL4 思想借鉴的微内核化改造**：
 
 1. **基座**：Linux 6.6 内核（LTS，30 年积累，广泛硬件支持）
 2. **思想来源**：seL4 微内核工程思想（Liedtke minimality principle、capability、消息传递 IPC、服务用户态化、形式化验证）——见 ADR-014

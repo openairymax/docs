@@ -548,7 +548,7 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 
 | 层次 | 共享程度 | 部署体系内容 |
 |------|---------|-------------|
-| **[SC] 共享契约层** | 头文件级代码共享 | `include/airymax/sched.h`（任务描述符 magic 0x41475453 'AGTS'）、`include/airymax/ipc.h`（IPC magic 0x41524531 + 128B 消息头） |
+| **[SC] 共享契约层** | 头文件级代码共享 | `include/uapi/linux/airymax/sched.h`（任务描述符 magic 0x41475453 'AGTS'）、`include/uapi/linux/airymax/ipc.h`（IPC magic 0x41524531 + 128B 消息头） |
 | **[SS] 语义同源层** | 语义两端一致，实现独立 | systemd unit 文件模式、daemon 生命周期管理、依赖排序、环境变量传递 |
 | **[IND] 完全独立层** | agentrt-linux 独有 | systemd 内核集成、RPM 打包、initramfs 构建、dracut 模块、镜像构建（ISO/qcow2） |
 

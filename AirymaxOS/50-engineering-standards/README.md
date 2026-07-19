@@ -141,7 +141,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 缩写 | 名称 | 共享程度 | 内容 |
 |------|------|------|---------|------|
-| 第 1 层 | [SC] | 共享契约层（Shared-Contract） | 完全共享代码 | 10 个头文件（`include/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `uapi_compat.h` / `lsm_types.h` |
+| 第 1 层 | [SC] | 共享契约层（Shared-Contract） | 完全共享代码 | 10 个头文件（`include/uapi/linux/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `uapi_compat.h` / `lsm_types.h` |
 | 第 2 层 | [SS] | 语义同源层（Shared-Semantics） | API 签名相同，实现独立 | 调度语义（sched_tac）、安全模型（纯 C LSM）、IPC 传输（IORING_OP_URING_CMD）、记忆模型（alloc_pages + mmap）、认知循环（CoreLoopThree） |
 | 第 3 层 | [IND] | 独立实现层（Independent） | 完全独立 | agentrt-linux 专属内核驱动/Kbuild/systemd/纯 C LSM；agentrt 专属跨平台用户态运行时/SDK |
 | 第 4 层 | [DSL] | 降级生存层（Degraded Survival Layer） | [SC] 损坏时自包含降级 | `#ifdef AIRY_SC_FALLBACK` 降级生存块，提供 [SC] 损坏时最小可运行子集（详见 `11-degraded-survival-layer.md`） |

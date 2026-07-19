@@ -142,12 +142,12 @@ graph TD
 
 ### 3.1 [SC] 共享契约层引用
 
-MemoryRovol API 的所有数据结构定义在 [SC] 共享契约层头文件 `include/airymax/memory_types.h` 中，agentrt 用户态与 agentrt-linux 内核态**完全共享代码**。完整定义见 [02-memory-flow.md](../40-dataflows/02-memory-flow.md) 第 3 章。
+MemoryRovol API 的所有数据结构定义在 [SC] 共享契约层头文件 `include/uapi/linux/airymax/memory_types.h` 中，agentrt 用户态与 agentrt-linux 内核态**完全共享代码**。完整定义见 [02-memory-flow.md](../40-dataflows/02-memory-flow.md) 第 3 章。
 
 本契约仅引用关键结构，不重复定义：
 
 ```c
-/* include/airymax/memory_types.h —— IRON-9 v3 [SC] 共享契约层 */
+/* include/uapi/linux/airymax/memory_types.h —— IRON-9 v3 [SC] 共享契约层 */
 
 /* L1 原始记录条目（仅追加，PMEM 持久，SHA-256 哈希链保护） */
 typedef struct __attribute__((aligned(64))) airy_l1_record {
@@ -948,13 +948,13 @@ MemoryRovol API 的数据结构通过 [SC] 共享契约层与 agentrt 用户态*
 
 | [SC] 共享内容 | 头文件位置 | 在本 API 中的作用 |
 |--------------|-----------|------------------|
-| `airy_l1_record_t` | `include/airymax/memory_types.h` | snapshot/restore 的 L1 数据结构 |
-| `airy_l2_feature_t` | `include/airymax/memory_types.h` | snapshot/restore 的 L2 数据结构 |
-| `airy_l3_node_t` / `airy_l3_edge_t` | `include/airymax/memory_types.h` | snapshot/restore 的 L3 数据结构 |
-| `airy_l4_barcode_t` | `include/airymax/memory_types.h` | snapshot/restore 的 L4 数据结构 |
-| `AIRY_GFP_*` 宏 | `include/airymax/memory_types.h` | 内核分配标志语义 |
-| `airy_pmem_flush_fn` | `include/airymax/memory_types.h` | PMEM 持久化接口 |
-| `airy_q16_t` + 转换宏 | `include/airymax/memory_types.h` | 定点数算术（内核态禁用 float） |
+| `airy_l1_record_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L1 数据结构 |
+| `airy_l2_feature_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L2 数据结构 |
+| `airy_l3_node_t` / `airy_l3_edge_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L3 数据结构 |
+| `airy_l4_barcode_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L4 数据结构 |
+| `AIRY_GFP_*` 宏 | `include/uapi/linux/airymax/memory_types.h` | 内核分配标志语义 |
+| `airy_pmem_flush_fn` | `include/uapi/linux/airymax/memory_types.h` | PMEM 持久化接口 |
+| `airy_q16_t` + 转换宏 | `include/uapi/linux/airymax/memory_types.h` | 定点数算术（内核态禁用 float） |
 
 ### 11.2 [SS] 语义同源层
 
@@ -1630,7 +1630,7 @@ L1 原始卷与 L4 模式层在 PMEM 持久化时启用 TEE 加密：
 | **E-1 安全内生** | 记忆加密（TEE）+ SHA-256 哈希链 + capability 守卫 |
 | **E-7 文档即代码** | 本契约与 UAPI 头文件同源同审 |
 | **S-1 反馈闭环** | 检索反馈反向调整权重与衰减速率 |
-| **S-2 同源契约** | [SC] 共享契约层 `include/airymax/memory_types.h` |
+| **S-2 同源契约** | [SC] 共享契约层 `include/uapi/linux/airymax/memory_types.h` |
 | **P-1 性能可观测** | Prometheus metrics + OpenTelemetry span |
 | **R-1 持久性** | L1/L4 PMEM 持久化 |
 | **R-2 完整性** | SHA-256 哈希链保护 L1 |

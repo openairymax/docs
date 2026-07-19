@@ -17,11 +17,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ## 目录
 
 - [1. 子仓职责](#1-子仓职责)
-- [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v2-三层共享模型)
+- [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v3-四层共享模型)
 - [3. 目录结构](#3-目录结构)
 - [4. 核心特性](#4-核心特性)
 - [5. 微内核思想体现](#5-微内核思想体现)
-- [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v2-三层共享模型落地)
+- [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v3-四层共享模型落地)
 - [7. agentrt-linux 工程基线](#7-agentrt-linux-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
@@ -57,13 +57,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v3 四层共享模型）
 
-依据 IRON-9 v3 决策，agentrt（用户态 daemons）与 agentrt-linux（用户态 services）通过三层共享模型协作：
+依据 IRON-9 v3 决策，agentrt（用户态 daemons）与 agentrt-linux（用户态 services）通过四层共享模型协作（\[SC] 共享契约 + \[SS] 语义同源 + \[IND] 完全独立 + \[DSL] 降级生存）：
 
 | 层次               | 共享程度                               | 服务子系统内容                                                                                                                                                                                                                                    | 组织方式                                 |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码与标志位、ring 创建/注册参数                                                                                                                                        | `include/airymax/ipc.h`（与 kernel 共享） |
-| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（macro\_superv/logger\_daemon/config\_daemon/gateway\_d/sched\_d/vfs\_d/net\_d/mem\_d/cogn\_d/sec\_d/audit\_d/dev\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、capability 令牌传递语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
+| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`，含 `capability_badge` + `crc32` 字段）、SQE/CQE 操作码与标志位、ring 创建/注册参数、Badge 位布局宏、Capability 权限位                                                                                                                  | `include/uapi/linux/airymax/ipc.h`（与 kernel 共享） |
+| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_superv/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_daemon）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、v1.1 Capability Folding Badge 校验语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
 | **\[IND] 完全独立层** | 完全独立                               | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF\_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs）                                                                                        | 各自独立仓库                               |
+| **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 fastpath C-S9 校验、退化到 radix tree 兜底路径（`AIRY_ECAP_RADIX_MISS`/`STATIC_KEY`）、opcode 集缩减至 2 种（SEND/RECV）、Fault 码禁用统一 Panic                                                            | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
 
 ### 2.1 维度对比
 
@@ -273,22 +274,90 @@ WantedBy=airymaxos.target
 | FIFO      | 单向、面向消息 | 高吞吐单向通信 | \[SS] |
 | Eventpair | 事件同步    | 跨进程信号量  | \[SS] |
 
-**IPC 消息头** \[SC]（`include/airymax/ipc.h`，与 agentrt 共享）：
+**IPC 消息头** \[SC]（`include/uapi/linux/airymax/ipc.h`，与 agentrt 共享，Layout C v4）：
 
 ```c
 /* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
 #include <airymax/ipc.h>
-/* 结构体名称：struct airy_ipc_msg_hdr（Layout C，物理宿主见
- * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
+/* 结构体名称：struct airy_ipc_msg_hdr（Layout C v4，物理宿主见
+ * 50-engineering-standards/120-cross-project-code-sharing.md §2.7）
+ *
+ * 字段顺序（D-9 修复后 8 字节自然对齐）：
+ *   offset  0: magic            (__u32)  0x41524531 'ARE1'
+ *   offset  4: opcode           (__u16)  AIRY_IPC_OP_*
+ *   offset  6: flags            (__u16)  AIRY_IPC_F_*
+ *   offset  8: trace_id         (__u64)  OpenTelemetry trace ID
+ *   offset 16: timestamp_ns     (__u64)  CLOCK_REALTIME ns
+ *   offset 24: src_task         (__u64)  source Agent/daemon task_id
+ *   offset 32: dst_task         (__u64)  destination Agent/daemon task_id
+ *   offset 40: capability_badge (__u64)  [SS] Capability Folding Badge（sec_d 编译）
+ *   offset 48: payload_len      (__u32)  payload length
+ *   offset 52: crc32            (__u32)  CRC32 over header[0:52) + payload
+ *   offset 56: reserved[72]     (__u8)   must be zero
+ *   总计 128 字节 = 2 cache lines
+ */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，使用 `__attribute__((packed))` 对齐与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §2.7）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `__aligned(64)` 对齐（移除 packed 属性，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐的做法）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。v1.1 Capability Folding 后新增 `capability_badge`（offset 40，承载 64-bit Native Word Badge：`Epoch<<48 | RandomTag<<16 | Perms`）与 `crc32`（offset 52，覆盖 `header[0:52) + payload`）字段，`reserved` 收缩至 72 字节。
 
-**零拷贝路径** \[SS]：
+**零拷贝路径** \[SS]（不使用 page flipping，改用 `alloc_pages + mmap` + registered buffer）：
 
-- 发送方注册 page 为 io\_uring buffer \[SS]。
-- 接收方通过 `IORING_OP_IPC_RECV` 接收 page 引用 \[SS]。
-- 内核仅翻转 page table entry，不拷贝数据 \[SS]。
+- 发送方通过 `alloc_pages` 分配物理页，`vm_map_pages` / `remap_pfn_range` 映射至用户态，并注册为 io\_uring registered buffer \[SS]。
+- 接收方通过 `IORING_OP_URING_CMD`（`cmd_op=AIRY_URING_CMD_IPC_SEND/IPC_SEND_BATCH/IPC_CANCEL/IPC_FREEZE/IPC_CAP_REQUEST`）复用入口接收 registered buffer 引用，内核仅传递 page 引用，不拷贝数据、不翻转 page table entry \[SS]。
+- **禁止使用 page flipping**（不交换物理页、不破坏内存布局稳定性），对齐 `airy_defconfig` 强制 `CONFIG_IO_URING=y` 且 page flipping 相关代码路径不编译的工程规范 \[IND]。
+- **禁止使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`），共享内存构建目标绑定 `alloc_pages + mmap` 实现源文件 \[IND]。
+- 跨节点 IPC 由 `gateway_d` daemon 承载（gRPC over QUIC/TCP + mTLS），入站时重新编译 Badge，不污染单节点 fastpath C-S9（详见 [30-interfaces/02-ipc-protocol.md §9](../30-interfaces/02-ipc-protocol.md)）\[IND]。
+
+### 4.6 v1.1 Capability Folding 在 services 层的落地 \[SS]
+
+v1.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中，IPC 消息头 offset 40 的 `capability_badge` 字段承载 64-bit Native Word Badge（`Epoch<<48 | RandomTag<<16 | Perms`），由 fastpath C-S9 内联校验（~10ns），无双平面、无独立 capability syscall。services 子仓作为 12 daemon 的物理宿主，承载以下 Capability Folding 职责：
+
+**4.6.1 12 daemon 在 services 子仓中的实现** \[SS]
+
+| 序号 | daemon         | services 层职责                                          | Capability Folding 角色                         |
+| -- | -------------- | ----------------------------------------------------- | --------------------------------------------- |
+| 1  | `sec_d`        | Badge 编译/撤销/LSM\_ctl/Wasm\_load 专属管理入口（`airy_sys_call` 编号 0） | **唯一 Badge 写者**：编译 `agent_caps[src_task]`，令牌桶限流 + 50ms SLO |
+| 2  | `cogn_d`       | 认知调度守护，CoreLoopThree 阶段通知                              | Badge 携带者：推理请求经 C-S9 校验后投递至 kthread            |
+| 3  | `mem_d`        | 记忆卷载守护                                                | Badge 携带者：记忆快照 IPC 经 C-S9 校验                  |
+| 4  | `gateway_d`    | 跨节点网关守护                                               | **入站 Badge 重新编译**：跨节点消息入站时重新编译为目标节点 Badge      |
+| 5  | `logger_d`     | 日志消费守护（A-ULP）                                         | Badge 携带者：审计日志 IPC 经 C-S9 校验                  |
+| 6  | `macro_superv` | 主监管守护（A-ULS）                                          | Badge 携带者：通过 `AIRY_IPC_OP_FREEZE` 冻结违规 Agent ring |
+| 7  | `audit_d`      | 审计守护                                                  | Badge 携带者：审计事件 IPC 经 C-S9 校验                  |
+| 8  | `sched_d`      | 调度守护                                                  | Badge 携带者：调度策略 IPC 经 C-S9 校验                  |
+| 9  | `dev_d`        | 设备驱动守护                                                | Badge 携带者：设备访问 IPC 经 C-S9 校验                  |
+| 10 | `net_d`        | 网络策略守护                                                | Badge 携带者：网络策略 IPC 经 C-S9 校验                  |
+| 11 | `vfs_d`        | VFS 用户态服务守护                                           | Badge 携带者：文件操作 IPC 经 C-S9 校验                  |
+| 12 | `config_daemon`| 配置管理守护（A-UCS）                                         | Badge 携带者：配置读写 IPC 经 C-S9 校验                  |
+
+**4.6.2 sec_d 串行化 Badge 编译** \[SS]
+
+`sec_d` 是 `agent_caps[1024]` 静态数组（16KB）的**唯一写者**，通过 `airy_sys_call`（编号 0）接收 Badge 编译/撤销请求。为防止 Badge 编译风暴，sec_d 采用**令牌桶限流**：
+
+- 令牌桶容量：默认 100 req/s，突发 150（对齐 `gateway_d` 速率限制基线）
+- Badge 编译 SLO：P99 < 50ms（含 `get_random_bytes()` 生成 RandomTag + 写入 `agent_caps[]`）
+- 超限触发 `AIRY_ESEC_D_THROTTLED = -83`（扩展错误码），调用方退避重试
+- 撤销操作 O(1)：`atomic_inc(&airy_cap_global_epoch)` 全局失效，16-bit Epoch 回绕触发 `airy_cap_epoch_rollover_total` CRITICAL 告警
+
+**4.6.3 io_uring fastpath C-S9 Badge 内联校验在 services 层的体现** \[SS]
+
+services 层的 12 daemon 通过 `IORING_OP_URING_CMD` 提交 IPC 消息时，fastpath C-S9 在内核态内联校验 `capability_badge`（~10ns，3 个 `READ_ONCE` + 位运算）：
+
+1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `airy_cap_global_epoch` → 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
+2. 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`，比对 `READ_ONCE(agent_caps[src_task].randtag)` → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
+3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位 → 不满足返回 `AIRY_ECAP_PERM`(-81)
+4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_ECAP_FROZEN`(-82)
+5. slowpath LSM 钩子（`security_uring_cmd`，单参数 `struct io_uring_cmd *ioucmd`）仅在 C-S9 失败时调用，做策略裁决与冷酷执法
+
+**4.6.4 OLK 6.6 工程规范** \[IND]
+
+services 层 io\_uring IPC 实现严格遵循 OLK 6.6 工程规范：
+
+- **`io_uring_cmd_to_pdu(cmd, pdu_type)`**：访问 `struct io_uring_cmd` 的 `pdu[32]` 内联数据区的安全宏，fastpath 路径仅依赖前 32 字节时使用
+- **`io_uring_cmd_done(cmd, ret, res2, issue_flags)`**：4 参数完成接口，`issue_flags` 必须使用核心 io\_uring 代码传入的 mask（如 `IO_URING_F_NONBLOCK` / `IO_URING_F_IOWQ`），禁止硬编码
+- **`security_uring_cmd` LSM 钩子**：单参数 `struct io_uring_cmd *ioucmd`，由 `airy_lsm` 在 `LSM_ORDER_MUTABLE`（默认值，非 `LSM_ORDER_FIRST`）下注册，仅在 fastpath C-S9 失败时被调用
+- **SQE128 模式**（`IORING_SETUP_SQE128`）：`cmd` 字段从标准 16 字节扩展至 80 字节（16→80），承载 `airy_ipc_cmd` 结构体（≤ 80 字节，`BUILD_BUG_ON(sizeof(struct airy_ipc_cmd) > 80)` 编译期校验）
+- **`airy_lsm` 模块**：物理宿主 `security/airy/`（非 `security/airymax/`），`CONFIG_SECURITY_AIRY` default 'n'
+- **UAPI 标准路径**：`include/uapi/linux/airymax/`（10 个 [SC] 共享契约头文件物理宿主）
 
 ***
 
@@ -323,9 +392,9 @@ WantedBy=airymaxos.target
 
 ## 6. IRON-9 v3 四层共享模型落地
 
-### 6.1 \[SC] 共享契约层——`include/airymax/ipc.h`
+### 6.1 \[SC] 共享契约层——`include/uapi/linux/airymax/ipc.h`
 
-服务模块的 \[SC] 层通过 `include/airymax/ipc.h` 与 agentrt 共享（与 kernel 共享同一头文件）：
+服务模块的 \[SC] 层通过 `include/uapi/linux/airymax/ipc.h` 与 agentrt 共享（与 kernel 共享同一头文件）：
 
 | 内容                                                         | 说明                                                                                                                |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -335,7 +404,7 @@ WantedBy=airymaxos.target
 | `AIRY_IPC_OP_*` 宏（SEND/RECV/SEND\_BATCH/CANCEL）            | SQE 操作码                                                                                                           |
 | `AIRY_IPC_SQE_*` 宏（FIXED\_BUF/ASYNC/BUF\_SELECT/SKIP\_CQE） | SQE 标志位                                                                                                           |
 | `AIRY_IPC_CQE_F_*` 宏（BUFFER/MORE/NOTIF）                    | CQE 标志位                                                                                                           |
-| `struct airy_ipc_msg_hdr` 结构                               | 128B 消息头（magic/opcode/flags/trace\_id/timestamp\_ns/src\_task/dst\_task/payload\_len/reserved\[84]，Layout C SSoT） |
+| `struct airy_ipc_msg_hdr` 结构                               | 128B 消息头 Layout C v4（magic/opcode/flags/trace\_id/timestamp\_ns/src\_task/dst\_task/capability\_badge/payload\_len/crc32/reserved\[72]，含 v1.1 Capability Folding Badge + 完整性校验，`__aligned(64)` 对齐，D-9 修复后移除 packed） |
 
 ### 6.2 \[SS] 语义同源层——20 项 API 映射
 
@@ -366,8 +435,8 @@ WantedBy=airymaxos.target
 | 2  | Socket            | 双向面向流           | 用户态流传输         | io\_uring SEND/RECV           |
 | 3  | FIFO              | 单向面向消息          | 用户态 FIFO       | io\_uring ring 单向             |
 | 4  | Eventpair         | 事件同步            | 用户态 eventfd    | io\_uring + eventfd           |
-| 5  | capability 令牌传递   | 消息携带 capability | 用户态 capability | 内核态 capability \[SS]          |
-| 6  | 零拷贝 IORING_OP_URING_CMD | page 引用传递       | 用户态 mmap       | io\_uring registered buffer   |
+| 5  | capability 令牌传递   | 消息携带 capability | 用户态 capability（`cap_t` 引用，badge=0） | v1.1 Capability Folding：64-bit Native Word Badge 内联 `capability_badge` 字段，fastpath C-S9 校验 \[SS] |
+| 6  | 零拷贝 IORING_OP_URING_CMD | registered buffer 引用传递 | 用户态 mmap | io\_uring registered buffer（不使用 page flipping） |
 | 7  | trace\_id 贯穿      | 链路追踪            | user\_data 字段  | io\_uring user\_data 字段 \[SC] |
 | 8  | daemon 生命周期       | init→run→stop   | 自研 supervisor  | systemd unit lifecycle        |
 
@@ -391,22 +460,27 @@ WantedBy=airymaxos.target
 ```mermaid
 sequenceDiagram
     participant APP as Agent 应用
+    participant SECD as sec_d (用户态, 唯一 Badge 写者)
     participant GW as gateway_d (用户态)
     participant IPC as io_uring ring
+    participant CS9 as fastpath C-S9 (内核态)
     participant COGN as cogn_d (用户态)
-    participant SCHED as sched_d (用户态)
     participant SYS as systemd (用户态)
 
-    APP->>GW: 提交请求（struct airy_ipc_msg_hdr [SC]）
-    GW->>IPC: io_uring 提交（MSG_RING [SS]）
-    IPC->>COGN: 零拷贝传递（registered buffer [SS]）
-    COGN->>IPC: 推理结果（trace_id [SC] 贯穿）
+    APP->>SECD: AIRY_IPC_OP_CAP_REQUEST 自举请求 Badge [SS]
+    SECD-->>APP: AIRY_IPC_OP_CAP_RESPONSE 编译好的 Badge（令牌桶限流 + 50ms SLO）[SS]
+    APP->>GW: 提交请求（struct airy_ipc_msg_hdr [SC], capability_badge=Badge）
+    GW->>IPC: IORING_OP_URING_CMD 提交（cmd_op=IPC_SEND [SS]）
+    IPC->>CS9: fastpath C-S9 内联校验（~10ns, 3 个 READ_ONCE [SS]）
+    CS9->>IPC: 校验通过，投递 registered buffer 引用 [SS]
+    IPC->>COGN: 零拷贝传递（registered buffer, 不使用 page flipping [SS]）
+    COGN->>IPC: 推理结果（trace_id [SC] 贯穿, crc32 [SC] 完整性校验）
     IPC->>GW: 结果返回
     GW-->>APP: 响应
 
     SYS->>GW: 生命周期管理（Restart=always [IND]）
     SYS->>COGN: cgroup 资源限制 [IND]
-    SYS->>SCHED: 依赖关系（After/Requires [IND]）
+    SYS->>SECD: 依赖关系（After/Requires [IND]）
 ```
 
 ### 6.5 组件架构图
@@ -414,31 +488,35 @@ sequenceDiagram
 ```mermaid
 graph TD
     subgraph SC["[SC] 共享契约层"]
-        IPC_HDR[include/airymax/ipc.h<br/>magic ARE1 + 128B msg_hdr]
+        IPC_HDR[include/uapi/linux/airymax/ipc.h<br/>Layout C v4 128B msg_hdr<br/>含 capability_badge + crc32]
     end
     subgraph SS["[SS] 语义同源层"]
-        DAEMONS[12 daemons<br/>macro_superv / logger_daemon / cogn_d / dev_d / ...]
+        DAEMONS[12 daemons<br/>sec_d / cogn_d / mem_d / gateway_d / ...]
         PRIMITIVES[io_uring IPC 原语<br/>channel / socket / fifo / eventpair]
-        CAP_TOKEN[capability 令牌传递]
-        ZERO_COPY[零拷贝 IORING_OP_URING_CMD]
+        CAP_FOLD[Capability Folding<br/>64-bit Badge + fastpath C-S9]
+        ZERO_COPY[零拷贝 IORING_OP_URING_CMD<br/>registered buffer, 不使用 page flipping]
     end
     subgraph IND["[IND] 独立层"]
-        VFS[用户态 VFS<br/>seL4 服务用户态化参考]
+        VFS[用户态 VFS<br/>seL4 服务用户态化参考 ADR-014]
         NET[用户态网络栈<br/>DPDK / AF_XDP]
         DRV[用户态驱动<br/>VFIO / libvfio]
         SYSTEMD[systemd 集成<br/>units / targets / generators]
         CGROUP[cgroup v2 资源管理]
         JOURNALD[journald 日志聚合]
     end
+    subgraph DSL["[DSL] 降级生存层"]
+        FALLBACK["#ifdef AIRY_SC_FALLBACK<br/>capability_badge=0<br/>跳过 C-S9, radix tree 兜底"]
+    end
     IPC_HDR --> PRIMITIVES
     DAEMONS --> SYSTEMD
     PRIMITIVES --> VFS
     PRIMITIVES --> NET
     PRIMITIVES --> DRV
-    CAP_TOKEN --> DAEMONS
+    CAP_FOLD --> DAEMONS
     ZERO_COPY --> PRIMITIVES
     SYSTEMD --> CGROUP
     SYSTEMD --> JOURNALD
+    SC -.->|"降级时"| DSL
 ```
 
 ***
@@ -542,9 +620,10 @@ graph TD
 
 | IRON-9 v3 四层 | 本文档覆盖                                | 合规     |
 | ------------ | ------------------------------------ | ------ |
-| 共享契约层 \[SC]  | §6.1 `include/airymax/ipc.h` 完整定义    | <br /> |
-| 语义同源层 \[SS]  | §6.2 12 daemons + 8 项 IPC 原语同源（20 项） | <br /> |
+| 共享契约层 \[SC]  | §6.1 `include/uapi/linux/airymax/ipc.h` 完整定义（含 `capability_badge` + `crc32`）    | <br /> |
+| 语义同源层 \[SS]  | §6.2 12 daemons + 8 项 IPC 原语同源（20 项）+ v1.1 Capability Folding Badge 校验语义 | <br /> |
 | 完全独立层 \[IND] | §6.3 10 项独立实现明确划分                    | <br /> |
+| 降级生存层 \[DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 C-S9、退化 radix tree 兜底 | <br /> |
 
 ***
 
@@ -552,7 +631,7 @@ graph TD
 
 ### 12.1 开源设计文档
 
-- [内核模块](01-kernel.md)：kernel 子仓（io\_uring + sched\_ext + eBPF）
+- [内核模块](01-kernel.md)：kernel 子仓（io\_uring + sched\_tac + eBPF）
 - [安全模块](03-security.md)：security 子仓（Cupolas）
 - [记忆模块](04-memory.md)：memory 子仓（MemoryRovol）
 - [认知模块](05-cognition.md)：cognition 子仓（CoreLoopThree）

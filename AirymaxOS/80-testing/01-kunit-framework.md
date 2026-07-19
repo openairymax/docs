@@ -337,7 +337,8 @@ agentrt-linux 子仓遵循同目录原则：`kernel/airymaxos/airy_ipc/airy_ipc.
 # kernel/airymaxos/airy_ipc/Makefile
 obj-$(CONFIG_AIRY_IPC) += airy_ipc.o
 obj-$(CONFIG_AIRY_IPC_KUNIT_TEST) += airy_ipc_test.o
-airy_ipc_test-y := airy_ipc_test.o airy_ipc_msg_hdr_test.o
+airy_ipc_test-y += airy_ipc_test.o
+airy_ipc_test-y += airy_ipc_msg_hdr_test.o
 ```
 
 **OS-KER-097**：agentrt-linux KUnit 测试文件必须与被测源码同目录同名加 `_test` 后缀；禁止集中放于 `tests/` 目录（违反 in-tree 原则，导致测试与产品代码漂移）。
@@ -528,10 +529,10 @@ graph LR
 
 #### 11.3.1 Agent 角色 × 行为 枚举契约
 
-角色枚举与行为枚举均定义于 [SC] 共享契约层头文件 `include/airymax/cognition_types.h`（Agent 角色枚举 + Agent 行为枚举合并于 [SC] 核心，两端字节级一致）：
+角色枚举与行为枚举均定义于 [SC] 共享契约层头文件 `include/uapi/linux/airymax/cognition_types.h`（Agent 角色枚举 + Agent 行为枚举合并于 [SC] 核心，两端字节级一致）：
 
 ```c
-/* include/airymax/cognition_types.h — Agent 角色枚举 + 行为枚举（[SC] 共享契约层） */
+/* include/uapi/linux/airymax/cognition_types.h — Agent 角色枚举 + 行为枚举（[SC] 共享契约层） */
 enum airy_role {
     AIRY_ROLE_LLM     = 0,  /* 大语言模型推理角色 */
     AIRY_ROLE_TOOL    = 1,  /* 工具执行角色 */
@@ -553,7 +554,7 @@ enum airy_action {
 
 #### 11.3.2 完整测试矩阵表
 
-4 角色 × 8 行为 = 32 个测试用例。`AGENT_STATE_*` 状态名对齐 `include/airymax/cognition_types.h` 中的 `enum airy_action`：
+4 角色 × 8 行为 = 32 个测试用例。`AGENT_STATE_*` 状态名对齐 `include/uapi/linux/airymax/cognition_types.h` 中的 `enum airy_action`：
 
 | Agent 角色 | 测试行为 | 预期返回值 | 预期状态变更 | 预期副作用 |
 |-----------|---------|-----------|-------------|-----------|
@@ -720,7 +721,7 @@ static void tool_terminate_test(struct kunit *test)
 
 ## 附录 A: 接口定义
 
-> **附录定位**： 本附录汇集 KUnit 单元测试框架所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/kunit/test.h`、`lib/kunit/test.c`、`lib/kunit/assert.c`、`lib/kunit/try-catch.c`、`lib/kunit/executor.c` 及 `include/airymax/test_types.h`（[SC] 共享契约层）。KUnit 框架与 Linux 6.6 上游保持源码同源（IRON-9 v3），agentrt-linux 扩展以独立套件形式注入，禁止改写上游核心代码。
+> **附录定位**： 本附录汇集 KUnit 单元测试框架所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/kunit/test.h`、`lib/kunit/test.c`、`lib/kunit/assert.c`、`lib/kunit/try-catch.c`、`lib/kunit/executor.c` 及 `include/uapi/linux/airymax/test_types.h`（[SC] 共享契约层）。KUnit 框架与 Linux 6.6 上游保持源码同源（IRON-9 v3），agentrt-linux 扩展以独立套件形式注入，禁止改写上游核心代码。
 
 ### A.1 核心数据结构
 

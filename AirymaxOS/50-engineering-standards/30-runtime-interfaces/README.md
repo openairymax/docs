@@ -210,7 +210,7 @@ ARE Standards 采用语义版本命名：
 - 基础数据结构（消息头、能力描述符、任务描述符）
 - 公共头文件（`are_types.h`, `are_constants.h`, `security_types.h`）
 
-共享方式：agentrt-linux 直接从 agentrt 仓库复制头文件到 `include/airymax/are/` 目录，保持完全一致。任何修改必须首先在 agentrt 仓库提交，然后同步到 agentrt-linux。
+共享方式：agentrt-linux 直接从 agentrt 仓库复制头文件到 `include/uapi/linux/airymax/are/` 目录，保持完全一致。任何修改必须首先在 agentrt 仓库提交，然后同步到 agentrt-linux。
 
 ### 4.2 [SS] 语义同源层接口对齐
 

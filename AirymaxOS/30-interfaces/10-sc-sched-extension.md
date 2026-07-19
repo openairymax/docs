@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **A-ULS 模块调度扩展 [SC] 契约** 的唯一权威源。Agent 8 态生命周期枚举、3 态降级映射、sched_tac 调度接口（`sched_setattr` / `sched_setscheduler`）、seL4 MCS 语义映射（`scBudget` ↔ `sched_runtime`、`scPeriod` ↔ `sched_deadline`）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Agent 状态机与调度参数契约。
 >
-> 技术选型声明：本文件遵循 **sched_tac**（SCHED_DEADLINE / SCHED_FIFO / EEVDF + seL4 MCS 语义映射，**不使用 sched_ext**）。IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（不使用 page flipping）。安全采用 **纯 C LSM 模块**（不使用 BPF LSM）。日志内存采用 **alloc_pages + mmap**（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：本文件遵循 **sched_tac**（SCHED_DEADLINE / SCHED_FIFO / EEVDF + seL4 MCS 语义映射，**不使用 sched_ext**）。IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（不使用 page flipping）。安全采用 **纯 C LSM 模块**（不使用 BPF LSM）。日志内存采用 **alloc_pages + mmap**（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 
@@ -31,7 +31,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 契约定位
 
-`kernel/include/airymax/sched.h` 是 A-ULS 模块的 [SC] 共享契约头文件，定义 Agent 生命周期状态机与sched_tac 调度参数的统一契约。该头文件由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享，CI 通过 `sc-dual-ci.yml` 验证两端一致性。
+`kernel/include/uapi/linux/airymax/sched.h` 是 A-ULS 模块的 [SC] 共享契约头文件，定义 Agent 生命周期状态机与sched_tac 调度参数的统一契约。该头文件由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享，CI 通过 `sc-dual-ci.yml` 验证两端一致性。
 
 ### 1.2 契约边界
 
@@ -58,7 +58,7 @@ sched_tac 是本 [SC] 契约的调度机制选型依据（详见 综合修正方
 ### 2.1 8 态枚举定义
 
 ```c
-/* kernel/include/airymax/sched.h —— Agent 8 态生命周期枚举 */
+/* kernel/include/uapi/linux/airymax/sched.h —— Agent 8 态生命周期枚举 */
 #ifndef _AIRYM_SCHED_H
 #define _AIRYM_SCHED_H
 
@@ -132,7 +132,7 @@ enum airy_agent_state {
 当 [DSL] 降级生存层激活（`AIRY_SC_FALLBACK` 定义）或 Macro-Supervisor 故障时，A-ULS 将 8 态降级为 3 态，仅保留最小可运行子集：
 
 ```c
-/* kernel/include/airymax/sched.h —— [DSL] 3 态降级 */
+/* kernel/include/uapi/linux/airymax/sched.h —— [DSL] 3 态降级 */
 #ifdef AIRY_SC_FALLBACK
 /* 降级块：仅保留 3 态，对齐 EEVDF 默认调度 */
 #define AIRY_AGENT_RUNNING   3   /* 运行中 */
@@ -167,7 +167,7 @@ enum airy_agent_state {
 ### 4.1 调度参数结构
 
 ```c
-/* kernel/include/airymax/sched.h —— sched_tac 调度参数 */
+/* kernel/include/uapi/linux/airymax/sched.h —— sched_tac 调度参数 */
 /**
  * struct airy_sched_attr - Agent 调度参数（sched_tac）
  *
@@ -260,7 +260,7 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 ### 5.2 映射宏定义
 
 ```c
-/* kernel/include/airymax/sched.h —— seL4 MCS 映射宏 */
+/* kernel/include/uapi/linux/airymax/sched.h —— seL4 MCS 映射宏 */
 /**
  * seL4 MCS 字段映射宏
  * 将 seL4 sched_context_t 语义映射到 Linux sched_attr 字段
@@ -294,14 +294,14 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 
 | 项目 | 路径 | 说明 |
 |------|------|------|
-| [SC] 头文件 | `kernel/include/airymax/sched.h` | 双端逐字节共享 |
+| [SC] 头文件 | `kernel/include/uapi/linux/airymax/sched.h` | 双端逐字节共享 |
 | 内核实现 | `kernel/superv/airy_sched.c` | 调度策略实现 |
 | 用户态实现 | `services/daemons/macro_superv/sched.c` | 调度参数注入 |
 
 ### 6.2 版本号
 
 ```c
-/* kernel/include/airymax/sched.h —— 版本号 */
+/* kernel/include/uapi/linux/airymax/sched.h —— 版本号 */
 #define AIRY_SCHED_VERSION  1   /* 契约版本号，不匹配时拒绝加载 */
 
 /* 加载时校验 */
@@ -335,7 +335,7 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
-| v1.0 | 2026-07-17 | 初始版本：Agent 8 态生命周期枚举；3 态降级（RUNNING/STOPPED/DEAD）；sched_tac 接口（sched_setattr/sched_setscheduler）；seL4 MCS 映射（scBudget→sched_runtime, scPeriod→sched_deadline）；物理宿主 kernel/include/airymax/sched.h |
+| v1.0 | 2026-07-17 | 初始版本：Agent 8 态生命周期枚举；3 态降级（RUNNING/STOPPED/DEAD）；sched_tac 接口（sched_setattr/sched_setscheduler）；seL4 MCS 映射（scBudget→sched_runtime, scPeriod→sched_deadline）；物理宿主 kernel/include/uapi/linux/airymax/sched.h |
 
 ---
 

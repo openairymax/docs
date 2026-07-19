@@ -859,4 +859,364 @@ jobs:
 
 ---
 
+## 15. AirymaxOS 专属并发竞态测试（v1.1 增量补强）
+
+> **补强背景**：80-testing/ 现有 §5（KCSAN）覆盖通用并发 sanitizer，但未针对 v1.1 Capability Folding 架构引入的专属并发场景（1024 Agent 并发 Badge 编译、fastpath 多读者 + slowpath 写者、Epoch 撤销 + Badge 校验）进行专项测试。本章节定义 AirymaxOS 专属并发竞态测试矩阵（R1-R3）、内核测试模块与验证门槛，作为 §1-§14 的增量补强，不替换现有任何内容。
+
+### 15.1 竞态场景矩阵（R1/R2/R3）
+
+v1.1 Capability Folding 引入三类专属竞态场景：
+
+| 场景 | 竞态描述 | 同步机制 | 检测工具 |
+|------|---------|---------|---------|
+| **R1** | 1024 Agent 并发调用 `airy_cap_badge_compile()` 编译 Badge | `spinlock_t airy_cap_compile_lock`（串行化编译） | KCSAN + lockdep |
+| **R2** | fastpath 多读者读 `agent_caps[]` + slowpath 写者更新 cap_entry | RCU（`rcu_read_lock()` / `synchronize_rcu()`） | KCSAN |
+| **R3** | Epoch 撤销（写者递增 `airy_global_epoch`）+ Badge 校验（读者读 Epoch） | `seqlock_t airy_epoch_seqlock`（读侧不阻塞、写侧串行） | KCSAN + lockdep |
+
+### 15.2 R1：1024 Agent 并发 Badge 编译
+
+`airy_cap_badge_compile()` 必须串行化（同一 Agent 的 Badge 编译不能并发），但不同 Agent 的 Badge 编译可并行。错误实现会导致 `agent_caps[idx].random_tag` 重复或 `epoch` 错乱。
+
+```c
+/* kernel/airymaxos/cap/airy_cap_badge_compile.c（核心逻辑） */
+static DEFINE_SPINLOCK(airy_cap_compile_lock);
+
+int airy_cap_badge_compile(struct airy_agent *agent, u16 perms, u64 *badge_out)
+{
+    unsigned long flags;
+    u32 random_tag;
+    u16 epoch;
+    int idx = agent->cap_idx;
+
+    spin_lock_irqsave(&airy_cap_compile_lock, flags);
+    epoch = agent_caps[idx].epoch + 1;
+    random_tag = get_random_u32();
+    agent_caps[idx].epoch = epoch;
+    agent_caps[idx].random_tag = random_tag;
+    agent_caps[idx].perms = perms;
+    spin_unlock_irqrestore(&airy_cap_compile_lock, flags);
+
+    *badge_out = ((u64)epoch << 48) | ((u64)random_tag << 16) | perms;
+    return 0;
+}
+```
+
+竞态测试：1024 个内核线程同时调用 `airy_cap_badge_compile()`，KCSAN 检测是否存在对 `agent_caps[idx].epoch` / `random_tag` 的无锁访问。
+
+### 15.3 R2：fastpath 多读者 + slowpath 写者（RCU 保护）
+
+fastpath `airy_cap_badge_ok()` 是热路径（~10ns SLA），必须无锁读；slowpath `airy_cap_revoke()` 更新 cap_entry 时通过 RCU 保护：
+
+```c
+/* kernel/airymaxos/cap/airy_cap_check.c（fastpath 读者） */
+int airy_cap_badge_ok(u64 badge, const struct airy_cap_entry *entry)
+{
+    rcu_read_lock();
+    /* RCU 读取 entry，fastpath 不持有任何锁 */
+    u16 badge_epoch = (u16)(badge >> 48);
+    u32 badge_tag   = (u32)(badge >> 16);
+    u16 badge_perms = (u16)(badge & 0xFFFF);
+    int ret = -EACCES;
+    if (badge_epoch == READ_ONCE(entry->epoch) &&
+        badge_tag   == READ_ONCE(entry->random_tag) &&
+        (badge_perms & entry->perms) == badge_perms)
+        ret = 0;
+    rcu_read_unlock();
+    return ret;
+}
+
+/* kernel/airymaxos/cap/airy_cap_revoke.c（slowpath 写者） */
+void airy_cap_revoke(int idx)
+{
+    struct airy_cap_entry *old, *new;
+    new = kmemdup(&agent_caps[idx], sizeof(*new), GFP_KERNEL);
+    new->epoch += 1;           /* 撤销 = Epoch 递增 */
+    new->random_tag = get_random_u32();
+    old = rcu_dereference_protected(agent_caps_ref[idx],
+                                    lockdep_is_held(&airy_cap_write_lock));
+    rcu_assign_pointer(agent_caps_ref[idx], new);
+    synchronize_rcu();         /* 等待所有 fastpath 读者退出 */
+    kfree(old);
+}
+```
+
+竞态测试：1024 个读者线程循环调用 `airy_cap_badge_ok()`，1 个写者线程周期性调用 `airy_cap_revoke()`，KCSAN 检测是否存在数据竞争。
+
+### 15.4 R3：Epoch 撤销 + Badge 校验（seqlock 保护）
+
+`airy_global_epoch` 是全局单调递增计数器，撤销时递增。fastpath 读取该计数器与 Badge 中的 Epoch 比对，使用 `seqlock_t` 保证读到一致的值：
+
+```c
+/* kernel/airymaxos/cap/airy_epoch.c */
+static seqlock_t airy_epoch_seqlock = __SEQLOCK_UNLOCKED(airy_epoch_seqlock);
+u64 airy_global_epoch = 0;
+
+/* 读者（fastpath） */
+u16 airy_epoch_read(void)
+{
+    unsigned int seq;
+    u16 epoch;
+    do {
+        seq = read_seqbegin(&airy_epoch_seqlock);
+        epoch = (u16)READ_ONCE(airy_global_epoch);
+    } while (read_seqretry(&airy_epoch_seqlock, seq));
+    return epoch;
+}
+
+/* 写者（slowpath 撤销） */
+void airy_epoch_advance(void)
+{
+    write_seqlock(&airy_epoch_seqlock);
+    WRITE_ONCE(airy_global_epoch, airy_global_epoch + 1);
+    write_sequnlock(&airy_epoch_seqlock);
+}
+```
+
+竞态测试：1024 个读者线程循环调用 `airy_epoch_read()`，1 个写者线程高频调用 `airy_epoch_advance()`，KCSAN 检测是否存在 seqlock 保护外的数据竞争；lockdep 检测 seqlock 是否被错误地在 IRQ 上下文获取。
+
+### 15.5 `airy_concurrent_test.ko` 内核模块
+
+```c
+/* kernel/airymaxos/testing/airy_concurrent_test.c */
+#include <linux/module.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
+#include "../cap/airy_cap_internal.h"
+
+static int n_readers = 1024;
+module_param(n_readers, int, 0644);
+
+static int reader_thread(void *data)
+{
+    struct airy_cap_entry *entry = (struct airy_cap_entry *)data;
+    while (!kthread_should_stop()) {
+        /* R1：并发 Badge 校验 */
+        u64 badge = ((u64)entry->epoch << 48) |
+                    ((u64)entry->random_tag << 16) | entry->perms;
+        airy_cap_badge_ok(badge, entry);
+        /* R3：并发 Epoch 读 */
+        airy_epoch_read();
+        udelay(1);
+    }
+    return 0;
+}
+
+static int writer_thread(void *data)
+{
+    int idx = (int)(long)data;
+    while (!kthread_should_stop()) {
+        /* R2：RCU 写者 */
+        airy_cap_revoke(idx);
+        /* R3：Epoch 推进 */
+        airy_epoch_advance();
+        msleep(10);
+    }
+    return 0;
+}
+
+static int __init airy_concurrent_test_init(void)
+{
+    struct task_struct **readers, *writer;
+    int i;
+    readers = kcalloc(n_readers, sizeof(*readers), GFP_KERNEL);
+    for (i = 0; i < n_readers; i++)
+        readers[i] = kthread_run(reader_thread, &agent_caps[i % 1024],
+                                  "airy_reader_%d", i);
+    writer = kthread_run(writer_thread, (void *)0, "airy_writer");
+    /* 运行 30 分钟后自动退出 */
+    schedule_delayed_work(&cleanup_work, 30 * 60 * HZ);
+    return 0;
+}
+module_init(airy_concurrent_test_init);
+MODULE_LICENSE("GPL");
+```
+
+### 15.6 验证门槛
+
+`airy_concurrent_test.ko` 必须在 KCSAN + lockdep 启用的内核中运行 30 分钟，验证以下门槛：
+
+| 验证项 | 门槛 | 失败处理 |
+|--------|------|---------|
+| KCSAN data-race 报告数 | 0 | 任一报告即标记测试失败 |
+| lockdep 死锁/锁序违反 | 0 | 任一报告即标记测试失败 |
+| `agent_caps[].random_tag` 重复数 | 0 | 重复即 Badge 编译串行化失败 |
+| `airy_global_epoch` 回退次数 | 0 | 回退即 seqlock 实现错误 |
+| fastpath 平均时延 | ≤ 10ns | 超过即 RCU 读路径过重 |
+| slowpath `airy_cap_revoke()` 平均时延 | ≤ 1μs | 超过即 `synchronize_rcu()` 耗时过长 |
+
+**OS-TEST-051**：CI nightly 必须加载 `airy_concurrent_test.ko`（`CONFIG_KCSAN=y` + `CONFIG_LOCKDEP=y`），1024 读者 + 1 写者运行 30 分钟，覆盖 R1/R2/R3 三类竞态场景；任一 KCSAN data-race 报告、lockdep 死锁报告、`random_tag` 重复或 `airy_global_epoch` 回退即标记 nightly 失败。
+
+**OS-KER-116**：v1.1 Capability Folding 并发竞态测试（§15）发现的 data-race 视为 P0 级缺陷，必须在 12 小时内修复（添加 `READ_ONCE()` / `WRITE_ONCE()` / RCU / seqlock）；禁止使用 `ASSERT_EXCLUSIVE_ACCESS()` 或 `__no_kcsan` 抑制报告，除非在评审中证明为有意设计的无锁读。
+
+---
+
+## 16. Agent 生命周期内存泄漏检测（v1.1 增量补强）
+
+> **补强背景**：80-testing/ 现有 §8（kmemleak）覆盖通用内核内存泄漏检测，但未针对 v1.1 Agent 8 态生命周期（INACTIVE→SPAWNING→READY→RUNNING→BLOCKED→STOPPING→STOPPED→DEAD）的创建/销毁循环进行专项量化检测。本章节定义 10000 次创建/销毁循环 + 1MB 阈值的内存泄漏量化检测，作为 §1-§14 的增量补强，不替换现有任何内容。
+
+### 16.1 10000 次创建/销毁循环 + 1MB 阈值
+
+测试目标：验证 Agent 完整生命周期（INACTIVE→...→DEAD）的内存释放无泄漏。一次完整循环包括：
+
+1. `airy_agent_alloc()`：分配 `struct airy_agent`（含状态机、Token 账本、记忆指针）。
+2. `airy_agent_state_transition()`：7 次合法状态转换（INACTIVE→SPAWNING→READY→RUNNING→BLOCKED→STOPPING→STOPPED→DEAD）。
+3. `airy_agent_free()`：释放所有资源（含 L1-L4 记忆、Token 账本、审计记录）。
+
+10000 次循环后，内存增长必须 ≤ 1MB（允许 KASAN 隔离区等基础设施的常驻开销）。
+
+```c
+/* kernel/airymaxos/testing/airy_agent_lifecycle_stress.c */
+#include <linux/module.h>
+#include <linux/slab.h>
+#include <linux/kmemleak.h>
+#include "../agent/airy_agent_internal.h"
+
+static int cycles = 10000;
+module_param(cycles, int, 0644);
+
+static int __init airy_agent_lifecycle_stress_init(void)
+{
+    struct airy_agent *agent;
+    u64 mem_before, mem_after;
+    int i;
+
+    /* 触发一次 kmemleak 扫描，建立基线 */
+    kmemleak_scan();
+    mem_before = airy_get_total_kernel_mem();
+
+    for (i = 0; i < cycles; i++) {
+        agent = airy_agent_alloc();
+        BUG_ON(IS_ERR(agent));
+        /* 完整 8 态转换 */
+        airy_agent_state_transition(agent, INACTIVE,  SPAWNING);
+        airy_agent_state_transition(agent, SPAWNING,  READY);
+        airy_agent_state_transition(agent, READY,     RUNNING);
+        airy_agent_state_transition(agent, RUNNING,   BLOCKED);
+        airy_agent_state_transition(agent, BLOCKED,   READY);
+        airy_agent_state_transition(agent, READY,     STOPPING);
+        airy_agent_state_transition(agent, STOPPING,  STOPPED);
+        airy_agent_state_transition(agent, STOPPED,   DEAD);
+        /* DEAD 后 airy_agent_free 释放所有资源 */
+        airy_agent_free(agent);
+        if ((i % 1000) == 0)
+            schedule();  /* 避免 soft lockup */
+    }
+
+    /* 触发第二次 kmemleak 扫描 */
+    kmemleak_scan();
+    mem_after = airy_get_total_kernel_mem();
+    u64 mem_growth = mem_after - mem_before;
+
+    pr_info("airy_agent_lifecycle_stress: %d cycles, mem_growth=%llu KB\n",
+            cycles, mem_growth / 1024);
+    if (mem_growth > 1 * 1024 * 1024) {  /* 1MB 阈值 */
+        pr_err("FAIL: memory leak detected, growth=%llu KB > 1024 KB\n",
+               mem_growth / 1024);
+        return -ENOMEM;
+    }
+    pr_info("PASS: memory growth %llu KB within 1MB threshold\n",
+            mem_growth / 1024);
+    return 0;
+}
+module_init(airy_agent_lifecycle_stress_init);
+MODULE_LICENSE("GPL");
+```
+
+### 16.2 监控指标
+
+测试运行期间监控以下指标：
+
+| 指标 | 来源 | 阈值 |
+|------|------|------|
+| kmemleak 报告数 | `/sys/kernel/debug/kmemleak` | 0 |
+| `airy_agent` slab 增长 | `/proc/slabinfo` | ≤ 0（活跃对象数应回到基线） |
+| `airy_token_budget` slab 增长 | `/proc/slabinfo` | ≤ 0 |
+| `airy_cap_entry` slab 增长 | `/proc/slabinfo` | ≤ 0 |
+| `airy_agent_mem_stats.total_bytes` | `airy_agent_mem_stats` tracepoint | 增长 ≤ 1MB |
+| `agent_caps[]` 利用率 | `airy_caps_usage` debugfs | 10000 次循环后回到 0% |
+| L1-L4 记忆残留 | `airy_mem_audit` tracepoint | 0（DEAD 后全部回收） |
+| 审计日志残留 | `airy_audit_chain` tracepoint | 0（DEAD 后链路关闭） |
+
+### 16.3 通过标准
+
+**OS-TEST-052**：CI nightly 必须运行 `airy_agent_lifecycle_stress.ko`（10000 次创建/销毁循环，覆盖 Agent 8 态完整生命周期），监控 kmemleak 报告、slab 增长、`airy_agent_mem_stats.total_bytes` 增长、`agent_caps[]` 利用率、L1-L4 记忆残留、审计日志残留 6 类指标；任一指标超过阈值即标记 nightly 失败并创建 issue。
+
+**OS-KER-117**：v1.1 Agent 生命周期内存泄漏检测（§16）中，10000 次循环后 `airy_agent` / `airy_token_budget` / `airy_cap_entry` 三个 slab 缓存的活跃对象数必须回到基线值；任一 slab 残留对象即视为内存泄漏，PR 阻断，禁止通过 `kmemleak_ignore()` 抑制报告。
+
+### 16.4 `airy_agent_lifecycle_stress` 工具
+
+用户态工具 `tools/testing/airy_agent_lifecycle_stress`（封装上述内核模块）：
+
+```bash
+#!/bin/bash
+# tools/testing/airy_agent_lifecycle_stress.sh
+# 用法：airy_agent_lifecycle_stress.sh [cycles]
+
+CYCLES="${1:-10000}"
+MOD=airy_agent_lifecycle_stress
+
+# 加载内核模块
+modprobe $MOD cycles=$CYCLES
+
+# 等待完成（模块 init 函数同步执行）
+dmesg | grep "airy_agent_lifecycle_stress:" | tail -5
+
+# 检查 kmemleak
+echo scan | sudo tee /sys/kernel/debug/kmemleak > /dev/null
+sleep 60
+if [ -s /sys/kernel/debug/kmemleak ]; then
+    echo "::error::kmemleak detected leaks"
+    cat /sys/kernel/debug/kmemleak
+    exit 1
+fi
+
+# 检查 slab 残留
+slab_before=$(grep "airy_agent" /proc/slabinfo | awk '{print $2}')
+# （slab_before 应为基线值，由 airy_get_baseline_slab() 提供）
+echo "airy_agent slab active: $slab_before"
+
+# 卸载模块
+rmmod $MOD
+
+echo "PASS: airy_agent_lifecycle_stress $CYCLES cycles, no leak"
+```
+
+CI 集成至 `nightly-dynamic-analysis` workflow（§9.1）新增 `agent-lifecycle-leak` job：
+
+```yaml
+# .github/workflows/nightly-dynamic-analysis.yml 新增 job（增量）
+  agent-lifecycle-leak:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with kmemleak
+        run: |
+          make ARCH=um defconfig airy_kmemleak_defconfig
+          make ARCH=um -j$(nproc) M=kernel/airymaxos/testing
+      - name: Run agent lifecycle stress (10000 cycles)
+        run: |
+          timeout 1800 ./linux \
+            kmemleak=on \
+            airy_agent_lifecycle_stress.cycles=10000 \
+            2>&1 | tee lifecycle.log
+      - name: Parse lifecycle results
+        run: |
+          if grep -q "FAIL: memory leak" lifecycle.log; then
+            echo "::error::Agent lifecycle memory leak detected"
+            grep "FAIL" lifecycle.log
+            exit 1
+          fi
+          if [ -s /sys/kernel/debug/kmemleak ]; then
+            echo "::error::kmemleak detected leaks after lifecycle stress"
+            cat /sys/kernel/debug/kmemleak
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: lifecycle-log, path: lifecycle.log }
+```
+
+---
+
 > **文档结束** | agentrt-linux 测试工程体系 v1.0.1 第 4 卷 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."

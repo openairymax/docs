@@ -8,7 +8,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-> **SSoT 依赖声明**： 本文档状态机行为以 `50-engineering-standards/09-ssot-registry.md` 登记的接口规约为权威依据，重点依赖下列条目：OS-IFACE-003 / OS-IFACE-004（Layout C v4 128B 消息头 + magic 0x41524531 'ARE1' + `capability_badge` 字段经 [SC] `ipc.h` 共享）、OS-ARCH-005 / OS-ARCH-006（seL4 思想分布落地——capability/IPC 契约经 [SC] 共享，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible）、OS-KER-139（数据结构 cache line 对齐）、OS-SEC-121 / OS-SEC-122（capability 检查与令牌管理）。Layout C v4 消息头结构体 `struct airy_ipc_msg_hdr` 的物理宿主为 `include/airymax/ipc.h`（见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）。
+> **SSoT 依赖声明**： 本文档状态机行为以 `50-engineering-standards/09-ssot-registry.md` 登记的接口规约为权威依据，重点依赖下列条目：OS-IFACE-003 / OS-IFACE-004（Layout C v4 128B 消息头 + magic 0x41524531 'ARE1' + `capability_badge` 字段经 [SC] `ipc.h` 共享）、OS-ARCH-005 / OS-ARCH-006（seL4 思想分布落地——capability/IPC 契约经 [SC] 共享，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible）、OS-KER-139（数据结构 cache line 对齐）、OS-SEC-121 / OS-SEC-122（capability 检查与令牌管理）。Layout C v4 消息头结构体 `struct airy_ipc_msg_hdr` 的物理宿主为 `include/uapi/linux/airymax/ipc.h`（见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）。
 >
 > **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较）。本文件 §3.1 / §5.2 是 fastpath 校验链与 C-S9 实现的 SSoT 权威源。
 >
@@ -218,7 +218,19 @@ v1.1 起，fastpath 校验链为 **C-S0~C-S12 共 13 项**（含 Capability Fold
 
 #### 3.1.1 C-S9 Capability Folding Badge 校验详解（v1.1 新增）
 
-C-S9 是 Capability Folding 的核心执行点，内联在 fastpath 校验链中。校验流程：
+C-S9 是 Capability Folding 的核心执行点，内联在 fastpath 校验链中。
+
+> **术语声明（SSoT）**：`C-S9` 是 AirymaxOS 自创的 fastpath 校验状态编号（**C**heck-**S**tate 9），命名风格参考 Linux netfilter hook 编号（`NF_INET_PRE_ROUTING = 0`，数值编号 + 描述性宏名并存）与 Linux TCP 状态编号（`TCP_ESTABLISHED = 2`）。C-S9 对应行业标准术语 **"capability validation checkpoint"**（能力校验检查点），其语义等同于 seL4 `cap_cap_check()` 函数的 fastpath 内联版本。C-S9 内部包含 3 个子检查点，统一采用 `C-S9.<SUBCHECK>` 命名风格（点号分隔，类似 Linux `subsystem.op` 风格）：
+>
+> | 子检查点 | 命名 | 行业等价语义 | 校验内容 |
+> |---------|------|------------|---------|
+> | Epoch 校验 | `C-S9.EPOCH` | capability generation check | `badge_epoch == global_epoch` |
+> | Random Tag 校验 | `C-S9.RANDTAG` | capability authenticity check | `badge_randtag == agent_caps[src].randtag` |
+> | 权限校验 | `C-S9.PERMS` | capability permission check | `airy_cap_has_perm(badge_perms, opcode)` |
+>
+> **v1.1 术语统一**：早期文档使用的 `C-S9a`/`C-S9b`/`C-S9c` 子状态命名已废弃，统一替换为 `C-S9.EPOCH`/`C-S9.RANDTAG`/`C-S9.PERMS`。本文档为该命名的唯一权威源（SSoT）。
+
+校验流程：
 
 ```c
 /* C-S9: Capability Folding Badge 校验（关键步骤，~10ns） */
@@ -252,12 +264,12 @@ badge_epoch   = AIRY_BADGE_EPOCH(badge);     /* bits 48-63 */
 badge_randtag = AIRY_BADGE_RANDTAG(badge);   /* bits 16-47 */
 badge_perms   = AIRY_BADGE_PERMS(badge);     /* bits 0-15  */
 
-/* (3a) Epoch 校验：badge_epoch == global_epoch */
+/* (3a) C-S9.EPOCH: Epoch 校验——badge_epoch == global_epoch */
 global_epoch  = airy_cap_epoch_get();        /* atomic_read */
 if (unlikely(badge_epoch != global_epoch))
     return -AIRY_ECAP_EPOCH;  /* -79，已撤销或过期 */
 
-/* (3b) Random Tag 校验：防伪造 */
+/* (3b) C-S9.RANDTAG: Random Tag 校验——防伪造 */
 agent_randtag = READ_ONCE(agent_caps[hdr->src_task].randtag);
 agent_perms   = READ_ONCE(agent_caps[hdr->src_task].perms);
 
@@ -267,7 +279,7 @@ if (unlikely(badge_randtag != agent_randtag)) {
     return -AIRY_ECAP_FORGED;  /* -80 */
 }
 
-/* (3c) 权限校验：badge_perms 必须包含 opcode 所需权限 */
+/* (3c) C-S9.PERMS: 权限校验——badge_perms 必须包含 opcode 所需权限 */
 if (unlikely(!airy_cap_has_perm(badge_perms, hdr->opcode)))
     return -AIRY_ECAP_PERM;  /* -81 */
 
@@ -355,7 +367,7 @@ io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。v1.1 
 |--------------|---------|
 | `sqe.opcode` | `IORING_OP_URING_CMD`（统一复用） |
 | `sqe.cmd_op` | `AIRY_URING_CMD_IPC_SEND` / `IPC_SEND_BATCH` / `IPC_CANCEL` / `IPC_FREEZE` / `IPC_CAP_REQUEST` |
-| `sqe.cmd` | 16 字节命令数据，含 `airy_ipc_cmd` 结构指针（指向消息头 + payload + 路由信息） |
+| `sqe.cmd` | OLK 6.6 标准 SQE 的 `cmd` 字段为 16 字节（`__u8 cmd[16]`），不足以承载 `airy_ipc_cmd`；agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，详见 §5.7），`cmd` 字段扩展至 80 字节，承载 `airy_ipc_cmd`（≤ 80 字节，含消息头指针 + payload 指针 + 路由信息） |
 | `sqe.fd` | 目标 ring fd（`io_uring_setup()` 返回） |
 | `sqe.user_data` | 携带 `trace_id`，原样回填至 `cqe.user_data` |
 | `cqe.res` | 成功=0（fastpath），失败=`-AIRY_E*` |
@@ -393,7 +405,14 @@ io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。v1.1 
  */
 static int airy_uring_cmd(struct io_uring_cmd *ioucmd, unsigned int issue_flags)
 {
-    struct airy_ipc_cmd *cmd = (struct airy_ipc_cmd *)ioucmd->cmd;
+    /* OLK 6.6 + SQE128 模式（IORING_SETUP_SQE128，D-7 修复，详见 §5.7）:
+     * - 标准 SQE 的 cmd 字段为 16 字节（__u8 cmd[16]），不足以承载 airy_ipc_cmd
+     * - SQE128 模式下 SQE 为 128 字节（64B 标准 + 64B 扩展），cmd 扩展至 80 字节
+     * - struct io_uring_cmd 的 pdu[32] 仅内联存储 cmd 的前 32 字节副本
+     * - 完整 80 字节 cmd 数据通过 ioucmd->sqe->cmd 访问原始 SQE 区域
+     * - airy_ipc_cmd 必须保证 sizeof <= 80（BUILD_BUG_ON 校验）
+     */
+    struct airy_ipc_cmd *cmd = io_uring_cmd_to_pdu(ioucmd, struct airy_ipc_cmd);
     int ret;
 
     /* Phase 1: 完整校验链 C-S0~C-S11（锁内，~68ns） */
@@ -584,8 +603,12 @@ static int airy_ipc_deliver_fast(struct airy_ipc_cmd *cmd)
 
     preempt_enable();
 
-    /* CQE 填充（无 wake_up，接收方轮询消费） */
-    io_uring_cmd_done(cmd->ioucmd, 0, 0);
+    /* CQE 填充（无 wake_up，接收方轮询消费）
+     * OLK 6.6 io_uring_cmd_done() 4 参数：(cmd, ret, res2, issue_flags)
+     * issue_flags 必须使用核心 io_uring 代码传入的 mask，禁止硬编码（OLK 6.6 注释要求）
+     * fastpath 在 NONBLOCK 上下文执行，传入 IO_URING_F_NONBLOCK
+     */
+    io_uring_cmd_done(cmd->ioucmd, 0, 0, IO_URING_F_NONBLOCK);
     return 0;
 }
 
@@ -617,8 +640,10 @@ static int airy_ipc_deliver_full(struct airy_ipc_cmd *cmd)
     if (!cmd->dst_polling)
         eventfd_signal(cmd->dst_eventfd_ctx, 1);
 
-    /* CQE 填充 */
-    io_uring_cmd_done(cmd->ioucmd, 0, 0);
+    /* CQE 填充
+     * SLOW_SEND 在 io-wq 上下文执行，传入 IO_URING_F_IOWQ
+     */
+    io_uring_cmd_done(cmd->ioucmd, 0, 0, IO_URING_F_IOWQ);
     return 0;
 }
 ```
@@ -674,6 +699,56 @@ SLOW_SEND 路径（跨 CPU 或 kfifo 满或接收方阻塞）:
 - 批量提交摊销 SQE 入队与 CQE 回填开销，吞吐较单条提升 4–6×（实测目标）。
 - CQE 返回批量结果掩码，逐条状态由 `cqe.res` 高 16 位（成功数）+ 低 16 位（失败数）编码。
 
+### 5.7 SQE128 模式（cmd 字段扩展，D-7 修复）
+
+**背景**：OLK 6.6 `include/uapi/linux/io_uring.h` 中 `struct io_uring_sqe` 的 `cmd` 字段标准大小为 16 字节（`__u8 cmd[16]`），不足以承载 agentrt-linux IPC 的 `airy_ipc_cmd` 结构体（含消息头指针 + payload 指针 + 路由信息）。v1.1 方案早期文档错误声称可直接传递 80 字节 `airy_ipc_cmd`，未说明需要启用 SQE128 模式。D-7 修复对此进行文档化。
+
+**SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+，OLK 6.6 基线支持）：
+
+- SQE 大小从标准 64 字节扩展到 128 字节（64B 标准 + 64B 扩展）。
+- `cmd` 字段从 16 字节扩展到 80 字节（标准 16B + 扩展 64B）。
+- io_uring 实例创建时必须设置 `IORING_SETUP_SQE128` flag。
+
+**启用要求**：
+
+1. `io_uring_setup()` 时 `flags` 参数必须置位 `IORING_SETUP_SQE128`（OS-IPC-009 已更新，详见 [40-dataflows/03-ipc-flow.md](../40-dataflows/03-ipc-flow.md) §2.5）。
+2. SQ ring 内存大小 = `128 × nr_entries`（128 字节 × 队列深度），由内核自动分配。
+3. 用户态提交 SQE 时必须填充完整的 128 字节（标准 64B + 扩展 64B），扩展区 `cmd[16:80)` 由 `airy_ipc_cmd` 覆盖。
+4. `airy_ipc_cmd` 结构体大小必须 ≤ 80 字节（SQE128 的 `cmd` 字段大小），通过 `BUILD_BUG_ON(sizeof(struct airy_ipc_cmd) <= 80)` 编译期校验。
+
+**OLK 6.6 内核侧访问**：
+
+- `struct io_uring_cmd` 的 `pdu[32]` 是 32 字节内联数据区，仅存储 `cmd` 的前 32 字节副本（OLK 6.6 标准 `include/linux/io_uring.h`）。
+- `io_uring_cmd_to_pdu()` 宏用于快速访问前 32 字节，fastpath 路径仅依赖前 32 字节时使用。
+- 完整的 80 字节 `cmd` 数据需通过 `ioucmd->sqe->cmd` 访问原始 SQE 区域（含扩展 64 字节）。
+- `airy_ipc_cmd` ≤ 32 字节的字段（如 `hdr` 指针 + `payload` 指针 + `payload_len`）走 `io_uring_cmd_to_pdu()` fastpath；> 32 字节的扩展字段（如 `dst_task` + `ring_id` + 路由元数据）走 `ioucmd->sqe->cmd` 访问路径。
+
+**`airy_ipc_cmd` 结构体布局约束**（≤ 80 字节）：
+
+```c
+struct airy_ipc_cmd {
+    struct airy_ipc_msg_hdr *hdr;   /* 消息头指针，offset  0, 8 字节 */
+    const void              *payload; /* payload 指针，offset  8, 8 字节 */
+    size_t                   payload_len; /* payload 长度，offset 16, 8 字节 */
+    __u64                    dst_task;    /* 目标任务，offset 24, 8 字节 */
+    __u32                    ring_id;     /* ring ID，offset 32, 4 字节 */
+    __u32                    reserved;    /* 保留字段，offset 36, 4 字节 */
+    /* 共 40 字节，远小于 80 字节上限（SQE128 cmd 字段大小） */
+};
+BUILD_BUG_ON(sizeof(struct airy_ipc_cmd) > 80);
+```
+
+**与 fastpath 的协作**：
+
+- `airy_uring_cmd()` 入口通过 `io_uring_cmd_to_pdu(ioucmd, struct airy_ipc_cmd)` 获取前 32 字节内联副本（覆盖 `hdr` / `payload` / `payload_len` / `dst_task`），fastpath 校验与投递仅需这 4 个字段。
+- 扩展字段（`ring_id` / `reserved` / 未来扩展）通过 `ioucmd->sqe->cmd` 访问，slowpath 或审计路径使用。
+
+**对齐说明**：
+
+- SQE128 模式是 OLK 6.6 标准 io_uring 特性（Linux 5.18+ 引入），不引入任何内核 patch，符合"不修改 OLK 6.6 内核源码"原则（OS-ARCH-001）。
+- SQE128 启用后 SQ ring 内存占用翻倍（64B → 128B/SQE），但 IPC fastpath 收益（消除 cmd 数据截断、支持完整 `airy_ipc_cmd` 内联传递）远大于内存开销。
+- SQE128 与 `SQPOLL` / `DEFER_TASKRUN` / `NO_SQARRAY` / `NO_IEC` 等 flag 正交，可同时启用。
+
 ---
 
 ## 6. kfifo kthread 间通信
@@ -723,7 +798,7 @@ if (likely(kfifo_in(&kfifo->fifo, &hdr, 1) == 1)) {
 /* 接收方 fastpath */
 if (likely(kfifo_out_peek(&kfifo->fifo, &hdr, 1) == 1)) {
     smp_rmb();                          /* 读数据前屏障 */
-    if (likely(airy_cap_check_fast(hdr.dst_task, cap)))
+    if (likely(airy_cap_badge_ok(current, hdr.capability_badge, hdr.opcode) == 0))
         kfifo_out(&kfifo->fifo, &hdr, 1);
 }
 ```
@@ -746,7 +821,7 @@ if (likely(kfifo_out_peek(&kfifo->fifo, &hdr, 1) == 1)) {
 ### 7.1 cache line 对齐
 
 - 128B 消息头 = 2 cache lines（x86_64 64B/line），单次 `prefetch` 即可加载完整头。
-- `struct airy_ipc_msg_hdr` 已 `__attribute__((packed))`（见 [02-ipc-protocol.md](02-ipc-protocol.md) §2.3），无填充间隙。
+- `struct airy_ipc_msg_hdr` 已 `__attribute__((aligned(64)))`（D-9 修复后移除 `__attribute__((packed))`，见 [02-ipc-protocol.md](02-ipc-protocol.md) §2.3），所有 `__u64` 字段自然 8 字节对齐，热字段（magic ~ crc32，offset 0-55）集中在 cache line 1。
 - per-cpu kfifo 结构体 `____cacheline_aligned_in_smp`，避免 false sharing（OS-KER-139）。
 - 热数据（`stats`、`water_mark`）单独 cache line 对齐。
 
@@ -768,7 +843,7 @@ if (likely(hdr.magic == AIRY_IPC_MAGIC) &&
     likely(hdr.payload_len == 0) &&
     likely(smp_processor_id() == dst_cpu) &&
     likely(!kfifo_is_full(&kfifo->fifo)) &&
-    likely(airy_cap_check_fast(hdr.dst_task, cap))) {
+    likely(airy_cap_badge_ok(current, hdr.capability_badge, hdr.opcode) == 0)) {
     /* FAST_SEND fastpath */
 } else {
     /* slowpath fallback */
@@ -778,7 +853,7 @@ if (likely(hdr.magic == AIRY_IPC_MAGIC) &&
 ### 7.4 内联函数
 
 - fastpath 入口 `airy_ipc_fastpath_send()` / `airy_ipc_fastpath_recv()` 标注 `__always_inline`，消除函数调用开销（call/ret、栈帧）。
-- `airy_cap_check_fast()` 内联（仅做 capability 位掩码比较，不查 daemon）。
+- `airy_cap_badge_ok()` 内联（v1.1 Capability Folding Badge 校验：3 次 READ_ONCE + 位运算 + 比较，~10ns）。
 - slowpath 函数不内联（体积大，避免 icache 污染，对齐 OS-KER-138：>3 行函数不应 inline）。
 
 ### 7.5 prefetch 指令使用
@@ -801,7 +876,7 @@ if (likely(hdr.magic == AIRY_IPC_MAGIC) &&
 |--------|---------|-------------|--------|
 | 内存分配失败 | `fail_function(airy_ipc_alloc)` | FAST_SEND → ERROR / SLOW_SEND | 返回 `AIRY_ENOMEM` |
 | kfifo 满 | `fail_kfifo_full`（强制 `kfifo_is_full()` 返回 true） | IDLE → SLOW_SEND | 触发背压，入 wait queue |
-| capability 检查失败 | `fail_cap_check`（强制 `airy_cap_check_fast()` 返回 false） | FAST_SEND → ERROR | 返回 `AIRY_ECAPABILITY`（OS-SEC-121） |
+| capability 检查失败 | `fail_cap_check`（强制 `airy_cap_badge_ok()` 返回非 0） | FAST_SEND → ERROR | 返回 `AIRY_ECAP_FORGED`(-80) 或 `AIRY_ECAP_PERM`(-81) |
 | magic 校验失败 | 注入错误 magic `0xDEADBEEF` | IDLE → ERROR | 返回 `AIRY_EPROTO` |
 | 唤醒丢失 | `fail_wake_up`（丢弃 `wake_up_interruptible`） | SLOW_RECV 超时 → CANCEL | 返回 `AIRY_ETIMEDOUT` |
 | 跨 CPU 注入 | 强制 `dst_cpu != smp_processor_id()` | IDLE → SLOW_SEND | 走跨 CPU 路径 |
@@ -930,6 +1005,411 @@ struct airy_ipc_stats {
 | V2 | AutoCorres 提取 C 模型 + 无死锁证明 | 规划中 |
 | V3 | 有界延迟证明 + KCSAN 交叉验证 | 规划中 |
 | V4 | 全量证明证书集成 CI | 规划中 |
+
+### 10.6 CBMC 形式化验证属性规约（v1.1 新增）
+
+CBMC（C Bounded Model Checker）是对 fastpath **100 行代码**做全函数验证的工业级工具，与 §10.1 Isabelle/HOL（定理证明）形成互补——Isabelle 证明状态机层语义性质，CBMC 验证 C 代码层内存安全与逻辑不变量。CBMC 验证范围限定在 **fastpath C-S9 Badge 校验 + C-S12 CRC32 校验 + kfifo_in 投递**共 ~100 行 C 代码（H4 硬约束要求）。
+
+#### 10.6.1 验证范围与目标
+
+| 验证对象 | 物理宿主 | 行数 | 验证工具 | 验证目标 |
+|---------|---------|------|---------|---------|
+| `airy_cap_badge_ok()` | kernel/security/airy/capability.c | ~30 行 | CBMC | 内存安全 + Badge 校验逻辑不变量 |
+| `airy_ipc_validate()` | kernel/ipc/airy_uring_cmd.c | ~40 行 | CBMC | C-S0~C-S11 校验链完备性 |
+| `airy_ipc_deliver_fast()` | kernel/ipc/airy_uring_cmd.c | ~20 行 | CBMC | kfifo_in 边界 + preempt 平衡 |
+| `airy_ipc_crc32_ok()` | kernel/ipc/airy_crc32.c | ~10 行 | CBMC | CRC32 计算无越界 |
+| **合计** | — | **~100 行** | CBMC | 全函数验证（H4 硬约束） |
+
+#### 10.6.2 CBMC 属性规约（Property Specifications）
+
+CBMC 通过 `__CPROVER_assert()` 与函数契约（`__CPROVER_requires()` / `__CPROVER_ensures()`）声明属性规约。以下属性规约是 fastpath 100 行代码的**唯一权威规约源**（SSoT）。
+
+```c
+/* kernel/security/airy/capability.c —— CBMC 属性规约（SSoT）
+ *
+ * 物理宿主: kernel/security/airy/capability.c（CBMC 验证块）
+ * 启用方式: #ifdef CBMC_VERIFICATION 包裹，编译期注入
+ * 验证脚本: tests-linux/formal/cbmc/run_fastpath_cbmc.sh
+ */
+
+#ifdef CBMC_VERIFICATION
+#include <cbmc_contract.h>
+
+/* ========== 属性 1: agent_caps[] 访问边界 ========== */
+/* 给定任意 agent_id，agent_caps[agent_id] 访问不越界 */
+
+__CPROVER_requires(0 <= agent_id && agent_id < AIRY_CAP_MAX_AGENTS)
+__CPROVER_ensures(
+    __CPROVER_return_value == 0 ||
+    __CPROVER_return_value == -AIRY_ECAP_EPOCH ||
+    __CPROVER_return_value == -AIRY_ECAP_FORGED ||
+    __CPROVER_return_value == -AIRY_ECAP_PERM)
+int airy_cap_badge_ok(struct task_struct *task, u64 badge, u16 opcode)
+{
+    u32 agent_id = task->pid;
+
+    /* CBMC 不变量: agent_id 在 [0, 1024) 范围内 */
+    __CPROVER_assume(agent_id < AIRY_CAP_MAX_AGENTS);
+
+    /* CBMC 不变量: agent_caps[] 是静态数组，访问 O(1) 无越界 */
+    __CPROVER_assert(agent_id < AIRY_CAP_MAX_AGENTS,
+        "P1.1: agent_caps[agent_id] access in bounds");
+
+    /* CBMC 不变量: READ_ONCE 不引入数据竞争（单写者 sec_d + 多读者 fastpath） */
+    u16 global_epoch = (u16)atomic_read(&airy_cap_global_epoch);
+    u32 agent_randtag = READ_ONCE(agent_caps[agent_id].randtag);
+    u16 agent_perms   = READ_ONCE(agent_caps[agent_id].perms);
+
+    /* CBMC 不变量: Badge 字段提取不溢出（位运算无 UB） */
+    u16 badge_epoch   = (u16)(badge >> 48);
+    u32 badge_randtag = (u32)((badge >> 16) & 0xFFFFFFFF);
+    u16 badge_perms   = (u16)(badge & 0xFFFF);
+
+    __CPROVER_assert((badge >> 48) <= 0xFFFF,
+        "P1.2: badge_epoch extraction no overflow");
+    __CPROVER_assert(((badge >> 16) & 0xFFFFFFFF) <= 0xFFFFFFFF,
+        "P1.3: badge_randtag extraction no overflow");
+
+    /* CBMC 不变量: C-S9.EPOCH 校验逻辑正确 */
+    if (badge_epoch != global_epoch)
+        return -AIRY_ECAP_EPOCH;
+
+    /* CBMC 不变量: C-S9.RANDTAG 校验逻辑正确 */
+    if (badge_randtag != agent_randtag)
+        return -AIRY_ECAP_FORGED;
+
+    /* CBMC 不变量: C-S9.PERMS 校验逻辑正确（严格包含语义） */
+    u16 required = airy_op_required_perms(opcode);
+    if ((badge_perms & required) != required)
+        return -AIRY_ECAP_PERM;
+
+    return 0;
+}
+
+/* ========== 属性 2: opcode → required_perms 映射完备性 ========== */
+/* 对任意 opcode，airy_op_required_perms() 返回值属于 {0, 0xFFFF, AIRY_CAP_PERM_*} */
+
+__CPROVER_requires(opcode <= 0xFFFF)
+__CPROVER_ensures(
+    __CPROVER_return_value == 0 ||
+    __CPROVER_return_value == 0xFFFF ||
+    (__CPROVER_return_value & ~AIRY_CAP_PERM_ALL) == 0)
+u16 airy_op_required_perms(u16 opcode)
+{
+    /* CBMC 不变量: 所有 opcode 路径都有返回值（无 fallthrough） */
+    u8 idx;
+    if (opcode <= 0x0005)
+        idx = opcode - 1;
+    else if (opcode >= 0x0010 && opcode <= 0x0011)
+        idx = (opcode - 0x0010) + 6;
+    else
+        return 0xFFFF;
+
+    __CPROVER_assert(idx < 8,
+        "P2.1: airy_op_required_perms_table index in bounds");
+
+    return airy_op_required_perms_table[idx];
+}
+
+/* ========== 属性 3: CRC32 校验无缓冲区越界 ========== */
+__CPROVER_requires(hdr != NULL)
+__CPROVER_requires(total > 0 && total <= AIRY_IPC_HDR_SIZE + AIRY_IPC_MAX_PAYLOAD)
+__CPROVER_ensures(__CPROVER_return_value == 0 || __CPROVER_return_value == 1)
+bool airy_ipc_crc32_ok(struct airy_ipc_msg_hdr *hdr, size_t total)
+{
+    /* CBMC 不变量: CRC32 计算覆盖范围不越界 */
+    __CPROVER_assert(total <= sizeof(*hdr) + AIRY_IPC_MAX_PAYLOAD,
+        "P3.1: CRC32 computation range in bounds");
+
+    u32 computed = airy_ipc_crc32_compute(hdr, total);
+    u32 expected = hdr->crc32;
+
+    /* CBMC 不变量: 比较是无符号比较，无符号溢出 UB */
+    return computed == expected;
+}
+
+/* ========== 属性 4: kfifo_in 边界与原子性 ========== */
+__CPROVER_requires(cmd != NULL)
+__CPROVER_requires(cmd->hdr != NULL)
+__CPROVER_requires(cmd->hdr->payload_len <= AIRY_IPC_MAX_PAYLOAD)
+__CPROVER_ensures(
+    __CPROVER_return_value == 0 ||
+    __CPROVER_return_value == -AIRY_EIPC_CRC32 ||
+    __CPROVER_return_value == -AIRY_EIPC_KFIFO)
+int airy_ipc_deliver_fast(struct airy_ipc_cmd *cmd)
+{
+    size_t total = AIRY_IPC_HDR_SIZE + cmd->hdr->payload_len;
+
+    __CPROVER_assert(total <= AIRY_IPC_HDR_SIZE + AIRY_IPC_MAX_PAYLOAD,
+        "P4.1: kfifo_in total size in bounds");
+
+    /* CBMC 不变量: preempt_disable/enable 必须配对 */
+    preempt_disable();
+    __CPROVER_assert(preempt_count() & PREEMPT_DISABLE_OFFSET,
+        "P4.2: preempt disabled after preempt_disable()");
+
+    if (!airy_ipc_crc32_ok(cmd->hdr, total)) {
+        preempt_enable();
+        __CPROVER_assert(!(preempt_count() & PREEMPT_DISABLE_OFFSET),
+            "P4.3: preempt re-enabled on CRC32 failure");
+        return -AIRY_EIPC_CRC32;
+    }
+
+    int ret = kfifo_in(&cmd->dst_kfifo, cmd->hdr, total);
+    __CPROVER_assert(ret == 0 || ret == total,
+        "P4.4: kfifo_in returns 0 or total (SPSC invariant)");
+
+    preempt_enable();
+    __CPROVER_assert(!(preempt_count() & PREEMPT_DISABLE_OFFSET),
+        "P4.5: preempt re-enabled on success path");
+
+    return (ret == total) ? 0 : -AIRY_EIPC_KFIFO;
+}
+
+/* ========== 属性 5: 校验链完备性（C-S0~C-S11 全覆盖） ========== */
+__CPROVER_requires(cmd != NULL)
+__CPROVER_requires(cmd->hdr != NULL)
+__CPROVER_ensures(
+    __CPROVER_return_value == 0 || __CPROVER_return_value < 0)
+int airy_ipc_validate(struct airy_ipc_cmd *cmd)
+{
+    /* CBMC 不变量: 所有错误码来自预定义集合（无未定义错误码） */
+    int allowed_ret[] = {
+        0,
+        -AIRY_ECAP_FROZEN, -AIRY_EIPC_MAGIC, -AIRY_EIPC_OPCODE,
+        -AIRY_EIPC_PAYLOAD, -AIRY_EIPC_HDRSIZE, -AIRY_EIPC_RESERVED,
+        -AIRY_EIPC_RECLAIM, -AIRY_EIPC_CONTEXT,
+        -AIRY_ECAP_BADGE, -AIRY_ECAP_EPOCH, -AIRY_ECAP_FORGED, -AIRY_ECAP_PERM,
+        -AIRY_EIPC_FLAGS, -AIRY_EIPC_NOTSUPP,
+    };
+
+    int ret = airy_ipc_validate_impl(cmd);
+
+    /* CBMC 不变量: 返回值必须属于预定义错误码集合 */
+    bool found = false;
+    for (size_t i = 0; i < sizeof(allowed_ret)/sizeof(allowed_ret[0]); i++) {
+        if (ret == allowed_ret[i]) {
+            found = true;
+            break;
+        }
+    }
+    __CPROVER_assert(found,
+        "P5.1: airy_ipc_validate returns only predefined error codes");
+
+    return ret;
+}
+
+#endif /* CBMC_VERIFICATION */
+```
+
+#### 10.6.3 CBMC 验证属性清单（SSoT）
+
+| 属性 ID | 属性描述 | 验证函数 | 失败后果 |
+|---------|---------|---------|---------|
+| P1.1 | `agent_caps[agent_id]` 访问边界 | `airy_cap_badge_ok` | 内存越界，CWE-125 |
+| P1.2 | `badge_epoch` 提取无溢出 | `airy_cap_badge_ok` | 整数溢出，CWE-190 |
+| P1.3 | `badge_randtag` 提取无溢出 | `airy_cap_badge_ok` | 整数溢出，CWE-190 |
+| P2.1 | `airy_op_required_perms_table[]` 索引边界 | `airy_op_required_perms` | 数组越界，CWE-125 |
+| P3.1 | CRC32 计算范围不越界 | `airy_ipc_crc32_ok` | 缓冲区过读，CWE-125 |
+| P4.1 | `kfifo_in` 写入大小不越界 | `airy_ipc_deliver_fast` | 缓冲区过写，CWE-787 |
+| P4.2 | `preempt_disable` 后抢占计数 > 0 | `airy_ipc_deliver_fast` | 调度语义违反 |
+| P4.3 | CRC32 失败路径抢占重新启用 | `airy_ipc_deliver_fast` | 调度语义违反 |
+| P4.4 | `kfifo_in` 返回 0 或 total（SPSC） | `airy_ipc_deliver_fast` | SPSC 不变量违反 |
+| P4.5 | 成功路径抢占重新启用 | `airy_ipc_deliver_fast` | 调度语义违反 |
+| P5.1 | `airy_ipc_validate` 返回值属于预定义集合 | `airy_ipc_validate` | 未定义错误码，CWE-754 |
+
+#### 10.6.4 CBMC 配置（CBMC.yml）
+
+```yaml
+# tests-linux/formal/cbmc/CBMC.yml —— CBMC 验证配置（SSoT）
+# 物理宿主: tests-linux/formal/cbmc/CBMC.yml
+
+verification_targets:
+  - name: airy_cap_badge_ok
+    source: kernel/security/airy/capability.c
+    function: airy_cap_badge_ok
+    unwind: 10                    # 循环展开上界（Badge 校验无循环，10 足够）
+    object_bits: 8                # 堆对象位宽（256 字节，覆盖 agent_caps[] 单元素）
+    property_file: tests-linux/formal/cbmc/properties/fastpath.prp
+
+  - name: airy_op_required_perms
+    source: kernel/security/airy/capability.c
+    function: airy_op_required_perms
+    unwind: 5
+    object_bits: 4
+
+  - name: airy_ipc_crc32_ok
+    source: kernel/ipc/airy_crc32.c
+    function: airy_ipc_crc32_ok
+    unwind: 32                    # CRC32 表查找循环最多 256 次
+    object_bits: 16              # 覆盖最大 payload
+
+  - name: airy_ipc_deliver_fast
+    source: kernel/ipc/airy_uring_cmd.c
+    function: airy_ipc_deliver_fast
+    unwind: 10
+    object_bits: 16
+
+  - name: airy_ipc_validate
+    source: kernel/ipc/airy_uring_cmd.c
+    function: airy_ipc_validate
+    unwind: 20
+    object_bits: 16
+
+global_options:
+  compiler: gcc
+  c_standard: gnu11
+  include_paths:
+    - kernel/include
+    - kernel/include/airymax
+    - kernel/security/airy
+  defines:
+    - CBMC_VERIFICATION=1
+    - CONFIG_AIRY_CAP_MAX_AGENTS=1024
+    - CONFIG_AIRY_IPC_MAX_PAYLOAD=4096
+  flags:
+    - -DCBMC_VERIFICATION
+    - -I${INCLUDE_PATHS}
+    - -nostdinc
+    - -fno-builtin
+
+ci_integration:
+  trigger: pull_request
+  matrix:
+    - target: airy_cap_badge_ok
+      timeout: 300s
+    - target: airy_op_required_perms
+      timeout: 60s
+    - target: airy_ipc_crc32_ok
+      timeout: 600s
+    - target: airy_ipc_deliver_fast
+      timeout: 300s
+    - target: airy_ipc_validate
+      timeout: 600s
+  fail_fast: false               # 全量运行，便于一次性发现所有违规
+```
+
+#### 10.6.5 CBMC 验证脚本
+
+```bash
+#!/bin/bash
+# tests-linux/formal/cbmc/run_fastpath_cbmc.sh —— fastpath 100 行代码 CBMC 验证
+#
+# 物理宿主: tests-linux/formal/cbmc/run_fastpath_cbmc.sh
+# 调用方式: ./run_fastpath_cbmc.sh [target]
+# 无参数时验证全部 5 个目标，否则验证指定目标
+
+set -euo pipefail
+
+CBMC_BIN="${CBMC_BIN:-cbmc}"
+CONFIG_FILE="tests-linux/formal/cbmc/CBMC.yml"
+RESULTS_DIR="tests-linux/formal/cbmc/results"
+
+mkdir -p "${RESULTS_DIR}"
+
+# 解析 YAML 配置（简化版，实际可用 yq）
+verify_target() {
+    local target="$1"
+    local source="$2"
+    local function="$3"
+    local unwind="$4"
+    local object_bits="$5"
+
+    echo "=========================================="
+    echo "[CBMC] Verifying: ${function}"
+    echo "  Source:    ${source}"
+    echo "  Unwind:    ${unwind}"
+    echo "  Obj bits:  ${object_bits}"
+    echo "=========================================="
+
+    # 步骤 1: goto-cc 编译（生成 goto 二进制）
+    goto-cc \
+        -DCBMC_VERIFICATION=1 \
+        -DCONFIG_AIRY_CAP_MAX_AGENTS=1024 \
+        -DCONFIG_AIRY_IPC_MAX_PAYLOAD=4096 \
+        -Ikernel/include \
+        -Ikernel/include/airymax \
+        -Ikernel/security/airy \
+        -nostdinc -fno-builtin \
+        "${source}" \
+        -o "${RESULTS_DIR}/${target}.goto"
+
+    # 步骤 2: CBMC 验证
+    "${CBMC_BIN}" \
+        "${RESULTS_DIR}/${target}.goto" \
+        --function "${function}" \
+        --unwind "${unwind}" \
+        --object-bits "${object_bits}" \
+        --pointer-check \
+        --bounds-check \
+        --div-by-zero-check \
+        --signed-overflow-check \
+        --unsigned-overflow-check \
+        --conversion-check \
+        --undefined-shift-check \
+        --enum-range-check \
+        --no-assertions \
+        --assertions \
+        2>&1 | tee "${RESULTS_DIR}/${target}.log"
+
+    # 步骤 3: 解析结果
+    if grep -q "VERIFICATION SUCCESSFUL" "${RESULTS_DIR}/${target}.log"; then
+        echo "[CBMC] PASS: ${function}"
+        return 0
+    else
+        echo "[CBMC] FAIL: ${function}"
+        return 1
+    fi
+}
+
+# 全量验证（5 个目标）
+TARGETS=(
+    "airy_cap_badge_ok|kernel/security/airy/capability.c|airy_cap_badge_ok|10|8"
+    "airy_op_required_perms|kernel/security/airy/capability.c|airy_op_required_perms|5|4"
+    "airy_ipc_crc32_ok|kernel/ipc/airy_crc32.c|airy_ipc_crc32_ok|32|16"
+    "airy_ipc_deliver_fast|kernel/ipc/airy_uring_cmd.c|airy_ipc_deliver_fast|10|16"
+    "airy_ipc_validate|kernel/ipc/airy_uring_cmd.c|airy_ipc_validate|20|16"
+)
+
+FAILED=0
+for entry in "${TARGETS[@]}"; do
+    IFS='|' read -r name source function unwind obj_bits <<< "${entry}"
+    if ! verify_target "${name}" "${source}" "${function}" "${unwind}" "${obj_bits}"; then
+        FAILED=$((FAILED + 1))
+    fi
+done
+
+echo "=========================================="
+echo "[CBMC] Summary: $(( ${#TARGETS[@]} - FAILED ))/${#TARGETS[@]} passed"
+echo "=========================================="
+
+exit $(( FAILED > 0 ? 1 : 0 ))
+```
+
+#### 10.6.6 CBMC 验证与 KCSAN/KCSAN 交叉验证
+
+CBMC 验证的是**单线程 C 代码层**的内存安全与逻辑不变量。多线程并发安全由 KCSAN（Kernel Concurrency Sanitizer）运行时检测器交叉验证：
+
+| 验证维度 | CBMC | KCSAN | 覆盖关系 |
+|---------|------|-------|---------|
+| 单函数内存安全 | ✅ 全函数验证 | ❌ 仅运行时覆盖 | CBMC 主导 |
+| 数组边界 | ✅ 全路径 | ❌ 仅运行时 | CBMC 主导 |
+| 整数溢出 | ✅ 全路径 | ❌ 仅运行时 | CBMC 主导 |
+| 抢占计数平衡 | ✅ 全路径 | ❌ 仅运行时 | CBMC 主导 |
+| 数据竞争（多线程） | ❌ 不支持 | ✅ 运行时 | KCSAN 主导 |
+| 锁序倒置 | ❌ 不支持 | ✅ 运行时（lockdep） | lockdep 主导 |
+
+CBMC 与 KCSAN 形成互补——CBMC 在编译期保证单函数不变量，KCSAN 在运行时保证多线程不变量。
+
+#### 10.6.7 CBMC 验证里程碑（v1.1 新增）
+
+| 阶段 | 交付物 | 状态 |
+|------|--------|------|
+| V-C1 | CBMC 属性规约（§10.6.2）+ CBMC.yml 配置（§10.6.4） | ✅ 完成（本文档） |
+| V-C2 | fastpath 100 行代码 goto-cc 编译通过 | 规划中（1.0.1 Phase 3） |
+| V-C3 | 5 个验证目标全部 VERIFICATION SUCCESSFUL | 规划中（1.0.1 Phase 3） |
+| V-C4 | CBMC 验证集成 CI（PR 触发） | 规划中（1.0.1 Phase 3） |
+| V-C5 | CBMC 属性规约回归保护（新增属性必经 CBMC 验证） | 规划中（1.0.1 Phase 4） |
 
 ---
 

@@ -22,7 +22,7 @@ agentrt（AirymaxAgentRT）与 agentrt-linux（AirymaxOS）的集成基于 **IRO
 |------|------|
 | **无适配层** | agentrt 在 agentrt-linux 上原生运行，无需任何适配层或转换层 |
 | **同源天然契合** | 两者共享 Airymax 设计理念（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），设计假设和实现假设一致 |
-| **契约共享** | [SC] 共享契约层代码完全共享，通过 `include/airymax/` 头文件库同步 |
+| **契约共享** | [SC] 共享契约层代码完全共享，通过 `include/uapi/linux/airymax/` 头文件库同步 |
 | **语义同源** | [SS] 语义同源层高层 API 语义同源，签名因抽象层级不同而独立演进 |
 | **完全独立** | [IND] 完全独立层各自独立演进，不互相依赖 |
 | **可选使用** | agentrt 在 agentrt-linux 上运行时，可选使用 OS 原生能力（同源红利），非强制 |
@@ -53,7 +53,7 @@ graph TB
     end
 
     subgraph "IRON-9 v3 四层"
-        SC["[SC] 共享契约层<br/>━━━━━━━━━━━━━<br/>include/airymax/<br/>syscalls.h<br/>memory_types.h<br/>security_types.h<br/>cognition_types.h<br/>sched.h<br/>ipc.h<br/>━━━━━━━━━━━━━<br/>完全共享代码"]
+        SC["[SC] 共享契约层<br/>━━━━━━━━━━━━━<br/>include/uapi/linux/airymax/<br/>syscalls.h<br/>memory_types.h<br/>security_types.h<br/>cognition_types.h<br/>sched.h<br/>ipc.h<br/>━━━━━━━━━━━━━<br/>完全共享代码"]
         SS["[SS] 语义同源层<br/>━━━━━━━━━━━━━<br/>调度语义同源<br/>IPC 语义同源<br/>安全语义同源<br/>记忆语义同源<br/>认知语义同源<br/>━━━━━━━━━━━━━<br/>高层 API 语义同源，签名独立演进"]
         IND["[IND] 完全独立层<br/>━━━━━━━━━━━━━<br/>平台适配层<br/>构建系统<br/>跨平台兼容层<br/>各自独立演进"]
     end
@@ -146,7 +146,7 @@ agentrt 在 agentrt-linux 上的运行示意：
 
 #### 2.1 共享契约层定义
 
-[SC] 共享契约层是 IRON-9 v3 的核心，包含 agentrt 和 agentrt-linux 完全共享的代码。该层代码存放于 `include/airymax/` 头文件库，由 agentrt 维护，agentrt-linux 引用。
+[SC] 共享契约层是 IRON-9 v3 的核心，包含 agentrt 和 agentrt-linux 完全共享的代码。该层代码存放于 `include/uapi/linux/airymax/` 头文件库，由 agentrt 维护，agentrt-linux 引用。
 
 #### 2.2 集成关键共享头文件（节选 6 个：5 个 [SC] 核心 + bpf_struct_ops.h 补充共享；全量 [SC] 核心为 10 个）
 
@@ -154,7 +154,7 @@ agentrt 在 agentrt-linux 上的运行示意：
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/bpf_struct_ops.h` |
+| 文件名 | `include/uapi/linux/airymax/bpf_struct_ops.h` |
 | 维护方 | agentrt |
 | 共享内容 | sched_tac 用户态调度器 struct airy_sched_ops 状态机定义、common_value 共享结构、调度器注册接口 |
 | agentrt-linux 使用方式 | 内核态 `#include` 使用，sched_tac 用户态调度器通过 struct airy_sched_ops 注册调度策略 |
@@ -186,7 +186,7 @@ struct airy_sched_ops {
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/memory_types.h` |
+| 文件名 | `include/uapi/linux/airymax/memory_types.h` |
 | 维护方 | agentrt |
 | 共享内容 | MemoryRovol L1-L4 数据结构、GFP 掩码语义、PMEM 持久化接口 |
 | agentrt-linux 使用方式 | 内核态 MemoryRovol 使用相同的数据结构 |
@@ -225,7 +225,7 @@ typedef struct {
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/security_types.h` |
+| 文件名 | `include/uapi/linux/airymax/security_types.h` |
 | 维护方 | agentrt |
 | 共享内容 | POSIX capability 41 ID 枚举、LSM 钩子 252 ID 枚举、Cupolas blob 布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 |
 | agentrt-linux 使用方式 | 内核态 capability 系统使用相同的令牌格式与安全类型 |
@@ -270,7 +270,7 @@ typedef enum {
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/cognition_types.h` |
+| 文件名 | `include/uapi/linux/airymax/cognition_types.h` |
 | 维护方 | agentrt |
 | 共享内容 | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）、Thinkdual 模式枚举（SYSTEM1_FAST/SYSTEM2_SLOW）、LLM 推理阶段枚举（PREFILL/DECODE/SPECULATIVE）、CoreLoopThree 上下文结构、Token 能效指标结构、GPU/NPU 能力描述符 |
 | agentrt-linux 使用方式 | 内核态 CoreLoopThree kthread 使用相同的阶段枚举与上下文结构 |
@@ -306,7 +306,7 @@ typedef enum {
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/sched.h` |
+| 文件名 | `include/uapi/linux/airymax/sched.h` |
 | 维护方 | agentrt |
 | 共享内容 | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）、任务描述符（magic 0x41475453 'AGTS'）、vtime 类型与衰减公式、优先级范围 0-139、AIRY_SLICE_DFL（20ms） |
 | agentrt-linux 使用方式 | sched_tac 用户态调度器使用相同的任务描述符与 vtime 语义 |
@@ -352,7 +352,7 @@ struct __attribute__((aligned(64))) airy_task_desc {
 
 | 字段 | 说明 |
 |------|------|
-| 文件名 | `include/airymax/ipc.h` |
+| 文件名 | `include/uapi/linux/airymax/ipc.h` |
 | 维护方 | agentrt |
 | 共享内容 | IPC magic（0x41524531 'ARE1'）、128B 消息头结构（struct airy_ipc_msg_hdr）、SQE/CQE 操作码与标志位 |
 | agentrt-linux 使用方式 | 内核态 IPC 子系统原生支持 128B 消息头 |
@@ -737,12 +737,12 @@ sequenceDiagram
 ```mermaid
 graph LR
     subgraph "agentrt 仓库"
-        A1[include/airymax/bpf_struct_ops.h]
-        A2[include/airymax/memory_types.h]
-        A3[include/airymax/security_types.h]
-        A4[include/airymax/cognition_types.h]
-        A5[include/airymax/sched.h]
-        A6[include/airymax/ipc.h]
+        A1[include/uapi/linux/airymax/bpf_struct_ops.h]
+        A2[include/uapi/linux/airymax/memory_types.h]
+        A3[include/uapi/linux/airymax/security_types.h]
+        A4[include/uapi/linux/airymax/cognition_types.h]
+        A5[include/uapi/linux/airymax/sched.h]
+        A6[include/uapi/linux/airymax/ipc.h]
     end
 
     subgraph "同步机制"
@@ -752,7 +752,7 @@ graph LR
     end
 
     subgraph "agentrt-linux 仓库"
-        B1[include/airymax/ → 引用]
+        B1[include/uapi/linux/airymax/ → 引用]
         B2[kernel IPC]
         B3[security cap]
         B4[memory mem]

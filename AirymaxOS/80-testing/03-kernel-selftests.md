@@ -304,7 +304,7 @@ static const int airy_cap_ids[] = {
     CAP_AIRY_MEM_FREE,       /* 7 */
     CAP_AIRY_MEM_MMAP,       /* 8 */
     CAP_AIRY_SCHED_SET,      /* 9 */
-    /* ... 共 41 个，详见 include/uapi/airymax/capability.h */
+    /* ... 共 41 个，详见 include/uapi/linux/airymax/capability.h */
     CAP_AIRY_LAST            /* 40 */
 };
 
@@ -364,7 +364,7 @@ late_initcall(test_airy_cap_41_ids);
 
 **OS-TEST-034**：Capability 自检必须遍历全部 41 个 ID，验证 "默认拒绝 → 授权允许 → 回收拒绝" 三态语义；任一 ID 语义错误即视为自检失败。
 
-**OS-KER-104**：Capability ID 总数硬编码为 41，对应 `include/uapi/airymax/capability.h` 中的 `CAP_AIRY_LAST + 1`；若自检检测到实际 ID 数 ≠ 41，自检以 `-EINVAL` 失败，提示开发者更新 [SC] 头文件。
+**OS-KER-104**：Capability ID 总数硬编码为 41，对应 `include/uapi/linux/airymax/capability.h` 中的 `CAP_AIRY_LAST + 1`；若自检检测到实际 ID 数 ≠ 41，自检以 `-EINVAL` 失败，提示开发者更新 [SC] 头文件。
 
 ### 3.4 252 钩子纯 C LSM 自检
 
@@ -628,10 +628,10 @@ jobs:
         run: |
           for h in error.h log_types.h sched.h ipc.h capability.h \
                    lsm.h mem.h agent.h dsl.h version.h; do
-            if ! diff -q agentrt/include/airymax/$h \
-                        agentrt-linux/include/uapi/airymax/$h >/dev/null; then
+            if ! diff -q agentrt/include/uapi/linux/airymax/$h \
+                        agentrt-linux/include/uapi/linux/airymax/$h >/dev/null; then
               echo "::error::[SC] header $h byte-for-byte mismatch"
-              diff agentrt/include/airymax/$h agentrt-linux/include/uapi/airymax/$h
+              diff agentrt/include/uapi/linux/airymax/$h agentrt-linux/include/uapi/linux/airymax/$h
               exit 1
             fi
           done

@@ -406,7 +406,7 @@ static inline int airy_quota_check(struct device *dev,
 agentrt-linux Capability 模型在传统 Linux capability 之外扩展了智能体专属 capability。设备资源相关的两个 capability：
 
 ```c
-/* include/uapi/airymax/capability.h */
+/* include/uapi/linux/airymax/capability.h */
 #define CAP_DEV_ALLOC       0x00000001  /* 允许调用 airy_dev_alloc */
 #define CAP_DEV_FREE        0x00000002  /* 允许调用 airy_dev_free */
 #define CAP_DEV_QUOTA_BYPASS 0x00000004 /* 允许绕过配额检查（仅 macro_superv） */
@@ -459,10 +459,10 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 
 ### 7.1 error.h — AIRY_E_DEV_* 错误码
 
-[SC] `include/airymax/error.h` 定义的设备资源错误码（与 [SC] 共享契约层三路桥接至内核态、用户态、daemon 态）：
+[SC] `include/uapi/linux/airymax/error.h` 定义的设备资源错误码（与 [SC] 共享契约层三路桥接至内核态、用户态、daemon 态）：
 
 ```c
-/* [SC] include/airymax/error.h — 设备资源错误码段 */
+/* [SC] include/uapi/linux/airymax/error.h — 设备资源错误码段 */
 #define AIRY_E_DEV_BASE             (-2000)
 
 #define AIRY_E_DEV_NOCAP            (AIRY_E_DEV_BASE - 1)   /* Capability 校验失败 */
@@ -481,19 +481,19 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 
 ```mermaid
 graph LR
-    SC["[SC] include/airymax/error.h<br/>SSoT 错误码定义"]
+    SC["[SC] include/uapi/linux/airymax/error.h<br/>SSoT 错误码定义"]
     SC -->|"kernel: include/linux/airymax/error.h"| K["内核态"]
-    SC -->|"user: include/airymax/error.h"| U["用户态库"]
+    SC -->|"user: include/uapi/linux/airymax/error.h"| U["用户态库"]
     SC -->|"daemon: daemons/common/error.h"| D["daemon 态"]
     style SC fill:#e1f5ff,stroke:#0288d1
 ```
 
 ### 7.2 sched.h — Agent 8 态生命周期
 
-[SC] `include/airymax/sched.h` 定义的 Agent 8 态生命周期中，设备资源状态作为附加字段嵌入：
+[SC] `include/uapi/linux/airymax/sched.h` 定义的 Agent 8 态生命周期中，设备资源状态作为附加字段嵌入：
 
 ```c
-/* [SC] include/airymax/sched.h — Agent 状态枚举 */
+/* [SC] include/uapi/linux/airymax/sched.h — Agent 状态枚举 */
 enum agent_state {
     AGENT_STATE_SPAWNING    = 0,
     AGENT_STATE_READY       = 1,

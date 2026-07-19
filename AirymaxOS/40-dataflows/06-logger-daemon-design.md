@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Logger Daemon 用户态守护进程** 的唯一权威源。mmap 读取 Ring Buffer 共享内存、格式化引擎（sprintf raw binary → 人类可读文本）、过滤策略（level/facility/caller_id）、落盘轮转压缩策略、崩溃恢复流程（systemd 自动重启 + Ring Buffer 不丢失）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Logger Daemon 职责边界与消费流程。
 >
-> 技术选型声明：日志内存采用 **alloc_pages(GFP_KERNEL) + mmap**（**不使用 DMA 一致性内存**，x86_64 默认缓存一致）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：日志内存采用 **alloc_pages(GFP_KERNEL) + mmap**（**不使用 DMA 一致性内存**，x86_64 默认缓存一致）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 
@@ -369,6 +369,202 @@ static void sink_cleanup_old(const char *dir, time_t max_age, off_t max_total)
     /* 实现略，使用 scandir + stat 遍历 */
 }
 ```
+
+### 5.5 哈希链完整性保护（R4 补强：审计日志防篡改）
+
+A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日志文件可能被攻击者篡改（如本地 root 攻击、磁盘离线篡改）。本节新增 SHA3-256 哈希链 + Ed25519 签名机制，确保审计日志的完整性与可追溯性。本机制由 sec_d 与 Logger Daemon 协作完成：sec_d 持有签名密钥并触发链尾签名，Logger Daemon 在落盘前追加 `prev_hash` 字段。
+
+> **OS-SEC-130**（R4 新增）：所有 `AIRY_FAC_SECURITY` facility 的审计日志记录必须经过哈希链完整性保护；审计日志读取方必须重新计算哈希链验证完整性，链断裂即视为日志被篡改，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册；注：原计划使用 0x1008，但该值已分配给 `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED`，故追加至 0x100B）。
+
+#### 5.5.1 威胁模型
+
+| 威胁 | 攻击方式 | 危害 |
+|------|---------|------|
+| 日志篡改 | 攻击者修改 `/var/log/airymax/*.log` 中的审计记录 | 抹除攻击痕迹 |
+| 日志删除 | 攻击者删除特定时间段的日志文件 | 破坏证据链 |
+| 日志插入 | 攻击者插入伪造的审计记录 | 误导安全分析 |
+| 日志重排 | 攻击者交换日志记录顺序 | 破坏时序因果 |
+
+#### 5.5.2 哈希链结构
+
+每条审计日志记录包含 `prev_hash` 字段，形成单向哈希链：
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Record[0]      │    │  Record[1]      │    │  Record[2]      │
+│  genesis_hash   │───▶│  prev_hash =    │───▶│  prev_hash =    │───▶ ...
+│                 │    │   SHA3-256(R[0])│    │   SHA3-256(R[1])│
+│  record_data    │    │  record_data    │    │  record_data    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                                           │
+        │           每 N=1000 条或 T=60s            │
+        ▼                                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  chain_signature = Ed25519_sign(sec_d_private_key,          │
+│                                  last_record_hash)          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **prev_hash = SHA3-256(prev_record)**：每条记录的 `prev_hash` 字段存储前一条记录（含其 `prev_hash`）的 SHA3-256 哈希值
+- **创世记录**：sec_d 启动时生成 `genesis_hash = SHA3-256(system_uuid || boot_time)`，作为链首 `prev_hash`，写入第一条审计记录
+- **链尾签名**：每 N=1000 条记录或 T=60s（先到者触发），由 sec_d 使用 Ed25519 私钥签名当前链尾的 `last_record_hash`，生成 `chain_signature` 写入独立的签名文件
+
+#### 5.5.3 哈希链数据结构（C 代码）
+
+```c
+/* services/daemons/logger_daemon/audit_chain.h —— 审计哈希链完整性保护（R4 补强） */
+#ifndef AIRY_AUDIT_CHAIN_H
+#define AIRY_AUDIT_CHAIN_H
+
+#include <stdint.h>
+#include <stddef.h>
+#include <time.h>
+#include "log_types.h"   /* 复用 [SC] airy_log_record 128B 定义 */
+
+/* SHA3-256 哈希长度：32 字节（256 位） */
+#define AIRY_SHA3_256_LEN    32
+
+/* Ed25519 签名长度：64 字节（512 位） */
+#define AIRY_ED25519_SIG_LEN 64
+
+/* Ed25519 公钥/私钥长度 */
+#define AIRY_ED25519_PUBKEY_LEN  32
+#define AIRY_ED25519_PRIVKEY_LEN 64
+
+/* 哈希链触发签名的记录数阈值（默认 1000 条） */
+#define AIRY_AUDIT_CHAIN_SIGN_INTERVAL  1000
+
+/* 哈希链触发签名的时间阈值（默认 60 秒） */
+#define AIRY_AUDIT_CHAIN_SIGN_TIMEOUT   60
+
+/* 审计日志记录（落盘格式：128B airy_log_record + 32B prev_hash） */
+struct airy_audit_record {
+    struct airy_log_record log;             /* 128B：A-ULP 标准 128B 日志记录 */
+    uint8_t prev_hash[AIRY_SHA3_256_LEN];   /* 32B：前一条记录的 SHA3-256 哈希 */
+} __attribute__((packed));
+/* sizeof(struct airy_audit_record) == 160 */
+
+/* 链尾签名记录（独立文件 audit_chain.sig） */
+struct airy_audit_chain_signature {
+    uint64_t sequence;                            /* 签名序号（从 0 递增） */
+    uint64_t record_count;                        /* 本次签名覆盖的记录数 */
+    uint8_t  last_record_hash[AIRY_SHA3_256_LEN]; /* 链尾记录的哈希 */
+    uint8_t  signature[AIRY_ED25519_SIG_LEN];     /* Ed25519 签名 */
+    int64_t  timestamp_ns;                         /* 签名时间戳（CLOCK_MONOTONIC） */
+} __attribute__((packed));
+
+/* 哈希链状态（sec_d 内存维护，崩溃恢复用） */
+struct airy_audit_chain_state {
+    uint8_t  last_hash[AIRY_SHA3_256_LEN];    /* 链尾哈希（每条记录更新） */
+    uint64_t record_count;                     /* 自上次签名以来的记录数 */
+    int64_t  last_sign_time_ns;                /* 上次签名时间 */
+    uint8_t  genesis_hash[AIRY_SHA3_256_LEN];  /* 创世哈希（启动时计算） */
+};
+
+/* 创世哈希计算：system_uuid || boot_time */
+int airy_audit_chain_genesis(uint8_t genesis_hash[AIRY_SHA3_256_LEN],
+                              const char *system_uuid,
+                              int64_t boot_time_ns);
+
+/* 追加一条审计记录到哈希链（Logger Daemon 落盘前调用） */
+int airy_audit_chain_append(struct airy_audit_chain_state *state,
+                             struct airy_audit_record *rec);
+
+/* 链尾签名（达到 N 条或 T 秒时触发，由 sec_d 调用） */
+int airy_audit_chain_sign(struct airy_audit_chain_state *state,
+                           const uint8_t privkey[AIRY_ED25519_PRIVKEY_LEN],
+                           struct airy_audit_chain_signature *sig_out);
+
+/* 哈希链完整性验证（审计日志读取时重新计算并比对） */
+int airy_audit_chain_verify(const struct airy_audit_record *records,
+                             size_t count,
+                             const uint8_t genesis_hash[AIRY_SHA3_256_LEN],
+                             const struct airy_audit_chain_signature *sigs,
+                             size_t sig_count,
+                             const uint8_t pubkey[AIRY_ED25519_PUBKEY_LEN]);
+
+#endif /* AIRY_AUDIT_CHAIN_H */
+```
+
+#### 5.5.4 链尾签名触发与密钥管理
+
+**签名触发条件**（先到者触发）：
+
+| 触发条件 | 阈值 | 默认值 | 说明 |
+|---------|------|--------|------|
+| 记录数 | N 条 | N=1000 | 每 1000 条审计记录签名一次 |
+| 时间 | T 秒 | T=60s | 每 60 秒签名一次（即使未达 N 条） |
+| sec_d 退出 | 即时 | — | sec_d 收到 SIGTERM 时强制签名链尾 |
+
+**Ed25519 密钥管理**：
+
+| 存储位置 | 优先级 | 权限 | 说明 |
+|---------|--------|------|------|
+| TPM 2.0（密封存储） | 1（最高） | TPM 独占 | 私钥永不出 TPM，签名操作在 TPM 内完成（v1.0.1 集成） |
+| `/var/lib/airy/audit.key` | 2（回退） | 0600，sec_d 独占 | 文件系统存储，sec_d 启动时加载到内存（v0.1.1 实现） |
+
+- **密钥生成**：sec_d 首次启动时通过 `crypto_sign_ed25519_keypair()` 生成密钥对，私钥写入 TPM 或 `/var/lib/airy/audit.key`（权限 0600，sec_d 独占），公钥写入 `/var/lib/airy/audit.pub`（权限 0644，可被审计读取方读取）
+- **密钥轮换**：每 90 天由 sec_d 自动轮换（生成新密钥对，旧公钥保留用于历史日志验证）
+- **密钥泄露响应**：检测到私钥泄露时，sec_d 立即生成新密钥对并通过 `airy_audit_emit_security(AGENT_AUDIT_KEY_ROTATE, ...)` 记录事件；历史日志的验证能力降级（仅能验证哈希链完整性，无法验证签名真实性）
+
+#### 5.5.5 篡改检测流程
+
+审计日志读取时（如合规审计、安全事件调查），读取方重新计算哈希链并与存储的 `prev_hash` 比对：
+
+```
+读取 audit_chain.log + audit_chain.sig
+        │
+        ▼
+1. 加载 genesis_hash + 公钥
+        │
+        ▼
+2. 逐条重新计算 prev_hash:
+   for i in 0..N:
+     expected_prev = SHA3-256(records[i-1])  (i>0)
+                    genesis_hash             (i==0)
+     if records[i].prev_hash != expected_prev:
+        → 链断裂，记录 i-1 与 i 之间被篡改
+        │
+        ▼
+3. 验证 chain_signature:
+   for each sig in sigs:
+     ok = Ed25519_verify(pubkey, sig.last_record_hash, sig.signature)
+     if !ok:
+        → 签名验证失败，签名覆盖的记录段被篡改
+        │
+        ▼
+4. 全部通过 → 审计日志完整性确认
+```
+
+任何篡改（修改记录、删除记录、插入记录、重排顺序）都会导致：
+
+- **修改记录**：`prev_hash` 不匹配（链断裂在篡改处）
+- **删除记录**：后续记录的 `prev_hash` 链断（链断裂在删除处）
+- **插入记录**：插入处 `prev_hash` 链断
+- **重排顺序**：`prev_hash` 链断
+
+#### 5.5.6 性能影响
+
+| 操作 | 单次开销 | 频率 | 总影响 |
+|------|---------|------|--------|
+| SHA3-256 计算 | ~1μs | 每条审计记录 | ~1μs/记录 |
+| Ed25519 签名 | ~50μs | 每 1000 条或 60s | ~0.05μs/记录（摊销） |
+| Ed25519 验证 | ~150μs | 审计读取时 | 一次性 |
+| 哈希链状态更新 | ~50ns | 每条审计记录 | ~50ns/记录 |
+
+- **fastpath 影响**：哈希链计算在 Logger Daemon 落盘前完成（用户态），**不进入内核 fastpath**，对 IPC fastpath SLO（≤200ns）零影响
+- **落盘吞吐影响**：SHA3-256 增加 ~1μs/记录，对于默认落盘吞吐（~15 万条/秒）影响 ~15%（落盘吞吐降为 ~13 万条/秒），仍在 SLO 内
+- **签名开销**：Ed25519 签名 ~50μs/1000 条，摊销到每条记录 ~0.05μs，可忽略
+
+#### 5.5.7 版本演进
+
+| 版本 | 实现内容 | 说明 |
+|------|---------|------|
+| v0.1.1 | SHA3-256 哈希链 + 文件系统密钥存储 | 基础完整性保护，密钥存于 `/var/lib/airy/audit.key` |
+| v1.0.1 | + Ed25519 签名 + TPM 2.0 集成 | 端到端签名保护，私钥密封于 TPM 2.0 |
+| v1.1+ | + 跨节点审计日志聚合签名 | 多节点审计链跨节点验证（与 gateway_d 协作） |
+
+> **OS-SEC-131**（R4 新增）：v0.1.1 必须实现 SHA3-256 哈希链（基础完整性保护）；v1.0.1 必须集成 Ed25519 签名 + TPM 2.0 密钥密封；任一审计日志记录缺失 `prev_hash` 即视为完整性破坏，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 08-sc-error-contract.md §3.1 注册）。
 
 ---
 

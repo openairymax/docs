@@ -160,7 +160,7 @@ KUnit 是 Linux 6.6 内核官方单元测试框架，特点：
 /* drivers/airymax/agent_driver_test.c — KUnit 测试用例示例 */
 
 #include <kunit/test.h>
-#include "../include/airymax/agent_driver.h"
+#include "../include/uapi/linux/airymax/agent_driver.h"
 
 /* 测试上下文 */
 struct airy_test_ctx {
@@ -317,7 +317,7 @@ kselftest 是 Linux 6.6 内核官方集成测试框架，特点：
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/io_uring.h>
-#include "../../../include/uapi/airymax/airy_ioctl.h"
+#include "../../../include/uapi/linux/airymax/airy_ioctl.h"
 
 #define TEST_DEV_PATH "/dev/airy_42_cogn"
 

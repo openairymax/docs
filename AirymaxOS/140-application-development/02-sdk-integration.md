@@ -22,7 +22,7 @@ agentrt-linux（AirymaxOS）提供四语言 SDK（Python / Rust / Go / TypeScrip
 2. **FFI 边界安全**：四语言与 C ABI 边界严格类型检查，杜绝内存安全漏洞
 3. **同源 API 一致性**：四语言 SDK（SDK 层）API 签名完全一致，遵循 IRON-9 v3 [SS] 层
 4. **运行时环境感知**：SDK 自动检测宿主为 agentrt-linux 或 agentrt，切换通信路径
-5. **统一错误码**：四语言共享 `include/airymax/error.h` 错误码（[SC] 层）
+5. **统一错误码**：四语言共享 `include/uapi/linux/airymax/error.h` 错误码（[SC] 层）
 
 ### 1.2 SDK 分层架构
 
@@ -70,7 +70,7 @@ AgentsIPC 协议的核心是 128 字节定长消息头，定义于 IRON-9 v3 [SC
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。
 
 ### 2.2 消息类型
 
@@ -604,7 +604,7 @@ bool airy_host_is_airymaxos(void)
 
 ### 8.1 错误码映射
 
-四语言 SDK 共享 `include/airymax/error.h`（[SC] 层），各语言包装为本地异常类型：
+四语言 SDK 共享 `include/uapi/linux/airymax/error.h`（[SC] 层），各语言包装为本地异常类型：
 
 | C 错误码 | Python 异常 | Rust 变体 | Go 错误 | TS 异常 |
 |----------|-------------|-----------|---------|---------|

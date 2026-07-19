@@ -168,7 +168,7 @@ agentrt-linux SBOM 覆盖以下组件类别：
 
 根据 IRON-9 v3 分层：
 
-- **[SC] 共享契约层**：agentrt-linux 与 agentrt 共享 `include/airymax/` 头文件库，SBOM 中共同标注此部分
+- **[SC] 共享契约层**：agentrt-linux 与 agentrt 共享 `include/uapi/linux/airymax/` 头文件库，SBOM 中共同标注此部分
 - **[SS] 语义同源层**：两者的实现使用各自独立的组件，SBOM 各自维护
 - **[IND] 完全独立层**：SBOM 完全独立，无交叉
 

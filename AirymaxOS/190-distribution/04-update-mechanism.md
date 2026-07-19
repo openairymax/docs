@@ -612,7 +612,7 @@ echo "[完成] 12 daemon 滚动重启完成"
 
 ## 7. 错误码体系对接
 
-更新机制错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/airymax/error.h`）：
+更新机制错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|

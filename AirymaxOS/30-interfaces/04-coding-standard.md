@@ -93,7 +93,7 @@ agentrt-linux 全部公共符号使用统一命名空间前缀，与 agentrt 同
 |------|------|
 | `airy_ipc_msg.h` | IPC 消息头定义 |
 | `airy_syscalls.h` | 系统调用接口 |
-| `include/airymax/error.h` | 错误码 SSoT 定义（[SC] 补充共享头文件） |
+| `include/uapi/linux/airymax/error.h` | 错误码 SSoT 定义（[SC] 补充共享头文件） |
 | `daemon_errors.h` | daemon 错误码 |
 | `airy_user_sched.policy` | 用户态调度器策略（sched_tac） |
 | `io_uring_ipc.c` | io_uring IPC 实现 |
@@ -237,7 +237,7 @@ AIRY_API void log_write_va(int level, const char *fmt, va_list ap);
 
 - `trace_id`: 链路追踪 ID（与 IPC 消息头对齐）。
 - `task_id`: Agent 任务 ID。
-- `errno`: 错误码（对齐 `include/airymax/error.h`）。
+- `errno`: 错误码（对齐 `include/uapi/linux/airymax/error.h`）。
 
 ---
 
@@ -268,7 +268,7 @@ AIRY_API void log_write_va(int level, const char *fmt, va_list ap);
 
 ```c
 /**
- * @brief IPC 128 字节定长消息头（SSoT：include/airymax/ipc.h，Layout C）
+ * @brief IPC 128 字节定长消息头（SSoT：include/uapi/linux/airymax/ipc.h，Layout C）
  *
  * 权威定义见 [SC] 共享契约层；此处仅展示 Doxygen 行内注释风格示例。
  */

@@ -72,7 +72,7 @@ SLOW_SEND（fastpath C-S9 失败路径）的详细性能拆解：
 
 | 阶段 | 操作 | 延迟 | 说明 |
 |------|------|------|------|
-| C-S0~C-S9a/b/c | fastpath 校验至 C-S9 失败 | ~10ns | 返回 Badge 错误码（-78/-79/-80/-81/-82） |
+| C-S0~C-S9.{EPOCH,RANDTAG,PERMS} | fastpath 校验至 C-S9 失败 | ~10ns | 返回 Badge 错误码（-78/-79/-80/-81/-82） |
 | LSM 钩子 | `security_uring_cmd` 被 slowpath 调用 | ~100ns-1μs | Micro-Supervisor 接管，详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md) |
 | 冷酷执法 | `airy_fault_enforce()` 冻结 Ring + 时间戳 | ~200ns | smp_store_release + ktime_get_real_ns |
 | eventfd 通知 | `airy_eventfd_signal_fault()` | ~50ns | 非阻塞 signal |
@@ -84,10 +84,10 @@ SLOW_SEND（fastpath C-S9 失败路径）的详细性能拆解：
 
 ### 2.1 128B 消息头结构（v1.1: Layout C v4 + capability_badge）
 
-A-IPC 128 字节统一消息头（Layout C v4，定义于 `include/airymax/ipc.h`，IRON-9 v3 [SC] 共享契约层）：
+A-IPC 128 字节统一消息头（Layout C v4，定义于 `include/uapi/linux/airymax/ipc.h`，IRON-9 v3 [SC] 共享契约层）：
 
 ```c
-/* include/airymax/ipc.h —— 128B IPC 消息头（[SC] 共享契约层，Layout C v4）
+/* include/uapi/linux/airymax/ipc.h —— 128B IPC 消息头（[SC] 共享契约层，Layout C v4）
  * v1.1: Layout C v4 含 capability_badge (offset 44-51, 8B)
  * 详见 30-interfaces/02-ipc-protocol.md §2 Layout C v4 完整定义
  */
@@ -119,7 +119,7 @@ enum airy_ipc_msg_type {
 #endif /* AIRY_IPC_H */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/airymax/ipc.h`（物理宿主见 `30-interfaces/02-ipc-protocol.md` §2 Layout C v4）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C v4）。v1.1 关键字段：`capability_badge`（offset 44-51，8B，Badge 64-bit Native Word = `Epoch<<48 | RandomTag<<16 | Perms`），由 sec_d 编译并写入 `agent_caps[agent_id]` 静态数组。原 Layout D（21 字段）已废弃，原 Layout C v1-v3 由 v4 替代。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `30-interfaces/02-ipc-protocol.md` §2 Layout C v4）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C v4）。v1.1 关键字段：`capability_badge`（offset 44-51，8B，Badge 64-bit Native Word = `Epoch<<48 | RandomTag<<16 | Perms`），由 sec_d 编译并写入 `agent_caps[agent_id]` 静态数组。原 Layout D（21 字段）已废弃，原 Layout C v1-v3 由 v4 替代。
 
 ### 2.2 零拷贝传输机制
 
@@ -634,20 +634,20 @@ static inline void emit_ipc_metric(const struct airy_ipc_metric *m)
 | 错误码 | 数值 | 含义 | 触发位置 | Fault 映射 |
 |--------|------|------|---------|-----------|
 | AIRY_ECAP_BADGE | -78 | Badge 格式无效 | fastpath C-S9 预校验 | 0x1005 ABNORMAL_CAP |
-| AIRY_ECAP_EPOCH | -79 | Epoch 不匹配（已撤销/过期） | fastpath C-S9a | 0x1005 ABNORMAL_CAP |
-| AIRY_ECAP_FORGED | -80 | Badge 伪造（RandomTag 不匹配） | fastpath C-S9b | **0x1001 CAP_FORGED** |
-| AIRY_ECAP_PERM | -81 | Perms 权限位不满足 | fastpath C-S9c | 0x1005 ABNORMAL_CAP |
+| AIRY_ECAP_EPOCH | -79 | Epoch 不匹配（已撤销/过期） | fastpath C-S9.EPOCH | 0x1005 ABNORMAL_CAP |
+| AIRY_ECAP_FORGED | -80 | Badge 伪造（RandomTag 不匹配） | fastpath C-S9.RANDTAG | **0x1001 CAP_FORGED** |
+| AIRY_ECAP_PERM | -81 | Perms 权限位不满足 | fastpath C-S9.PERMS | 0x1005 ABNORMAL_CAP |
 | AIRY_ECAP_FROZEN | -82 | Ring 已冻结（重复冻结） | fastpath C-S0 | —（Error，不触发 Fault） |
 
 ### 6.3 Fault 码段（0x1001 ~ 0x1006，不可恢复，v1.1 重定义）
 
 | Fault 码 | 数值 | 含义 | 触发条件 | 冷酷执法动作 |
 |----------|------|------|---------|-------------|
-| AIRY_FAULT_CAP_FORGED | 0x1001 | Badge 伪造 | C-S9b RandomTag 不匹配 | 冻结 Ring + KILL_AGENT |
+| AIRY_FAULT_CAP_FORGED | 0x1001 | Badge 伪造 | C-S9.RANDTAG RandomTag 不匹配 | 冻结 Ring + KILL_AGENT |
 | AIRY_FAULT_CAP_LEAK | 0x1002 | Capability 泄露 | sec_d 审计发现 | 冻结 Ring + AUDIT |
 | AIRY_FAULT_RING_CORRUPT | 0x1003 | Ring 数据损坏 | C-S12 CRC32 失败 | 冻结 Ring + 重启 |
 | AIRY_FAULT_TIMEOUT | 0x1004 | IPC 超时不可恢复 | slowpath 等待超时 | 冻结 Ring + 通知 |
-| AIRY_FAULT_ABNORMAL_CAP | 0x1005 | Capability 异常 | C-S9a/c 失败 | 冻结 Ring + AUDIT |
+| AIRY_FAULT_ABNORMAL_CAP | 0x1005 | Capability 异常 | C-S9.EPOCH/PERMS 失败 | 冻结 Ring + AUDIT |
 | AIRY_FAULT_VM_FAULT | 0x1006 | 内存访问异常 | 零拷贝区域访问 | 冻结 Ring + OOM |
 
 ### 6.4 集中错误处理示例（v1.1: 对齐 Badge 校验）
@@ -705,11 +705,12 @@ static inline int airy_ipc_badge_err_dispatch(int fastpath_ret,
 
 ### 7.1 零拷贝内存区域权限（v1.1: Badge 校验前置到 fastpath）
 
-**v1.1 重构**：零拷贝内存区域注册的权限校验从"Cupolas `cupolas_permission_check()` 独立前置"重构为 **fastpath C-S9 Badge 校验**（IPC 操作时内联校验）+ **slowpath LSM 钩子**（仅 C-S9 失败时接管）。区域注册本身仍走传统 LSM 路径（`security_uring_register_buffers`），但区域使用时的 Badge 校验由 fastpath C-S9 内联完成。详见 [07-airy-lsm-design.md §3.1](../110-security/07-airy-lsm-design.md) 职责分割表。
+**v1.1 重构**：零拷贝内存区域注册的权限校验从"Cupolas `cupolas_permission_check()` 独立前置"重构为 **fastpath C-S9 Badge 校验**（IPC 操作时内联校验）+ **slowpath LSM 钩子**（仅 C-S9 失败时接管）。区域注册本身走 `security_uring_cmd` 钩子内部分发的 buffer 注册子命令校验（OLK 6.6 无 `uring_register_buffers` 钩子，详见 [07-airy-lsm-design.md §4.1](../110-security/07-airy-lsm-design.md)），区域使用时的 Badge 校验由 fastpath C-S9 内联完成。详见 [07-airy-lsm-design.md §3.1](../110-security/07-airy-lsm-design.md) 职责分割表。
 
 ```c
-/* v1.1: 零拷贝区域注册——区域注册走传统 LSM 钩子，区域使用走 fastpath C-S9 Badge 校验
- * 区域注册：security_uring_register_buffers 钩子（slowpath，~100ns+）
+/* v1.1: 零拷贝区域注册——区域注册走 security_uring_cmd 内部分发，区域使用走 fastpath C-S9 Badge 校验
+ * 区域注册：security_uring_cmd 钩子内部分发 buffer 注册子命令（slowpath，~100ns+）
+ *          （OLK 6.6 无 uring_register_buffers 钩子，v1.0 文档误注册已删除）
  * 区域使用：fastpath C-S9 Badge 校验（每次 IPC 操作内联，~10ns）
  */
 int airy_ipc_register_region(int ring_fd,
@@ -717,9 +718,10 @@ int airy_ipc_register_region(int ring_fd,
 {
 	int ret;
 
-	/* 1. 区域注册走传统 LSM 钩子（slowpath，由 security_uring_register_buffers 接管）
+	/* 1. 区域注册走 security_uring_cmd 内部分发的 buffer 注册子命令校验（slowpath）
 	 * v1.1: 不再调用 cupolas_permission_check() 独立前置
-	 * 详见 110-security/07-airy-lsm-design.md §3.6 其他 Capability 钩子表
+	 * OLK 6.6 对齐: 不注册 uring_register_buffers 钩子（OLK 6.6 中不存在）
+	 * 详见 110-security/07-airy-lsm-design.md §4.1
 	 */
 
 	/* 2. 区域对齐校验（必须 2MB 对齐） */
@@ -733,7 +735,7 @@ int airy_ipc_register_region(int ring_fd,
 	if (ret < 0)
 		goto out_err;
 
-	/* 4. 注册到 io_uring（内核会调用 security_uring_register_buffers 钩子） */
+	/* 4. 注册到 io_uring（内核会调用 security_uring_cmd 钩子，内部分发 buffer 注册子命令） */
 	ret = io_uring_register_region(ring_fd, desc);
 	return ret;
 
@@ -788,15 +790,15 @@ out_err:
 | 组件 | agentrt-linux（[SS] 语义同源） | agentrt（[SS] 语义同源） | 共享（[SC] 共享契约） |
 |------|--------------------------------|--------------------------|----------------------|
 | IPC 传输 | 内核 io_uring `IORING_OP_URING_CMD` | 用户态消息队列 | 128B 消息头结构（Layout C v4） |
-| 消息类型枚举 | AIRY_IPC_MSG_* | AIRY_IPC_MSG_* | `include/airymax/ipc.h` |
+| 消息类型枚举 | AIRY_IPC_MSG_* | AIRY_IPC_MSG_* | `include/uapi/linux/airymax/ipc.h` |
 | Badge 64-bit Native Word | fastpath C-S9 内联校验（~10ns） | 用户态 Badge 校验 | Badge 编码 = `Epoch<<48 \| RandomTag<<16 \| Perms` |
 | 全局 Epoch | `atomic_t airy_cap_global_epoch` | 用户态 atomic | Epoch 撤销语义（O(1) atomic_inc） |
 | agent_caps[] 静态数组 | 16KB 内核静态数组（sec_d 唯一写者） | 用户态等价结构 | `airy_cap_badge_compile()` / `airy_cap_badge_ok()` |
 | opcode 枚举 | SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE | 同左 | 7 种 opcode（[SC] 共享契约层） |
-| 错误码 | AIRY_E_IPC_*（-41~-70）+ AIRY_ECAP_*（-78~-82） | 同左 | `include/airymax/error.h` |
+| 错误码 | AIRY_E_IPC_*（-41~-70）+ AIRY_ECAP_*（-78~-82） | 同左 | `include/uapi/linux/airymax/error.h` |
 | Fault 码 | AIRY_FAULT_*（0x1001~0x1006） | 用户态映射到 Error | Fault 码仅内核态使用 |
 | TraceID | 16B UUID | 16B UUID | TraceID 体系 |
-| 4 值裁决枚举 | AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN | 同左 | `include/airymax/verdict.h` |
+| 4 值裁决枚举 | AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN | 同左 | `include/uapi/linux/airymax/verdict.h` |
 
 > **IRON-9 v3 四层模型**：[SC] 共享契约层 / [SS] 语义同源层 / [IND] 完全独立层 / [DSL] 降级生存层。详见 [10-unify-design.md §7](../10-architecture/10-unify-design.md) IRON-9 v3 章节。
 

@@ -615,7 +615,7 @@ done
 
 ## 8. 错误码体系对接
 
-发行版管理错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/airymax/error.h`）：
+发行版管理错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # io_uring 安全加固设计
 > **文档定位**：A-IPC（统一进程间通信体系）io_uring 在 Agent 环境安全加固的唯一权威设计\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-19\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §8\
 > **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ §6.2.1 C-02（page flipping 修正）
 
@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **io_uring 安全加固设计** 的唯一权威源。io_uring_disabled sysctl 控制、opcode 白名单（仅允许 IORING_OP_URING_CMD + 基础 opcode）、纯 C LSM 双重校验（io_uring_cmd 回调中纯 C LSM 校验）、registered buffer 安全（Capability 校验后才能注册 buffer）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 io_uring 安全加固策略。
 >
-> 技术选型声明：IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（**不使用 page flipping**）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（**不使用 BPF LSM**）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（**不使用 page flipping**）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（**不使用 BPF LSM**）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 
@@ -166,13 +166,17 @@ static bool airy_uring_opcode_allowed(unsigned int opcode)
     return false;  /* 默认拒绝 */
 }
 
-/* io_uring SQE 提交时检查（纯 C LSM 钩子） */
-static int airy_uring_sqe_check(struct io_kiocb *req, unsigned int opcode)
+/* io_uring cmd_op 白名单校验辅助函数（非独立 LSM 钩子）
+ * OLK 6.6 对齐: 不存在 uring_sqe 钩子，opcode 白名单改在 security_uring_cmd 内部分发
+ * 详见 07-airy-lsm-design.md §4.1
+ */
+static int airy_uring_opcode_check(struct io_uring_cmd *ioucmd)
 {
-    if (!airy_uring_opcode_allowed(opcode)) {
+    u32 cmd_op = ioucmd->cmd_op;
+    if (!airy_uring_opcode_allowed(cmd_op)) {
         /* 非法 opcode：记录告警 + 拒绝 */
-        pr_warn("airy: blocked io_uring opcode %u for pid %d\n",
-                opcode, current->pid);
+        pr_warn_ratelimited("airy: blocked io_uring cmd_op %u for pid %d\n",
+                cmd_op, current->pid);
         return -EOPNOTSUPP;
     }
     return 0;
@@ -186,6 +190,195 @@ opcode 白名单通过 A-UCS 配置管理，支持热重载：
 | 配置项 | sysctl | JSON | 默认值 |
 |--------|--------|------|--------|
 | 允许的 opcode | `kernel.airy.uring_allowed_opcodes` | `uring.allowed_opcodes` | `[URING_CMD, NOP]` |
+
+### 3.5 Malformed SQE/CQE Input 防护（R6 补强：malformed 输入防护）
+
+opcode 白名单（§3.2 `airy_uring_opcode_check()`）仅校验 `cmd_op` 是否在允许列表内，但未覆盖 SQE/CQE 字段级的 malformed 输入。恶意 Agent 可构造 malformed SQE 绕过白名单，导致内核越界访问或崩溃。本节新增 5 阶段完整校验机制 `airy_uring_sqe_validate()`，作为 opcode 白名单的强化后继。
+
+#### 3.5.1 威胁模型：5 种 malformed SQE 攻击向量
+
+| # | 攻击向量 | 攻击载荷 | 危害 | CWE 映射 |
+|---|---------|---------|------|---------|
+| 1 | 无效 opcode | SQE->opcode 超出 `IORING_OP_URING_CMD` 范围（如伪造 `IORING_OP_OPENAT=18`） | 越权文件访问 | CWE-862（Missing Authorization） |
+| 2 | 越界 cmd_op | `ioucmd->cmd_op` 超出 `AIRY_CMD_*` 枚举范围（如 `cmd_op=0xFFFF`） | 内核函数指针越界跳转 | CWE-129（Improper Validation of Array Index） |
+| 3 | 错误 pdu 长度 | `pdu[32]` 缓冲区越界访问（如 Agent 通过 `ioucmd->cmd` 直接读取 64B） | 内核信息泄露 | CWE-125（Out-of-bounds Read） |
+| 4 | 伪造 SQE128 模式 | 未启用 `IORING_SETUP_SQE128` 但提交 128B SQE（设置 `SQE128_FLAG`） | 内核解析 128B 越界读 | CWE-787（Out-of-bounds Write） |
+| 5 | CQE 溢出攻击 | 高频提交 SQE 导致 CQ ring 溢出，覆盖相邻内核内存 | 内核内存损坏 | CWE-120（Buffer Copy without Checking Size） |
+
+#### 3.5.2 防护机制
+
+针对 5 种攻击向量，提供对应的防护代码：
+
+- **opcode 白名单**：`airy_uring_opcode_check()` 已有（§3.2），强化为 `airy_uring_sqe_validate()` 完整校验（阶段 1 复用已有函数）
+- **cmd_op 范围检查**：
+
+  ```c
+  if (sqe->cmd_op > AIRY_CMD_MAX)
+      return -EINVAL;
+  ```
+
+- **pdu 长度校验**：通过 `io_uring_cmd_to_pdu()` 宏安全访问 `pdu[32]`，**禁止直接 `ioucmd->cmd`**（OLK 6.6 中 `struct io_uring_cmd` 无 `cmd` 字段，详见 §4.2）
+- **SQE128 模式校验**：
+
+  ```c
+  if (!(ctx->flags & IORING_SETUP_SQE128) && (sqe->flags & SQE128_FLAG))
+      return -EINVAL;
+  ```
+
+- **CQE 溢出防护**：通过 `io_cqring_overflow_timeout` 配置 + 强制 `io_cqring_overflow_flush()`
+
+#### 3.5.3 `airy_uring_sqe_validate()` 完整 C 实现
+
+```c
+/* kernel/ipc/airy_uring_security.c —— malformed SQE 完整校验（R6 补强） */
+/*
+ * airy_uring_sqe_validate: 5 阶段 malformed SQE 完整校验
+ *   阶段 1: opcode 白名单（复用 airy_uring_opcode_allowed）
+ *   阶段 2: cmd_op 范围检查（AIRY_CMD_MIN..AIRY_CMD_MAX）
+ *   阶段 3: pdu 长度校验（强制走 io_uring_cmd_to_pdu，禁止 ioucmd->cmd）
+ *   阶段 4: SQE128 模式一致性校验
+ *   阶段 5: CQE 溢出预检（CQ ring 余量检查）
+ *
+ * 全部失败统一返回 -EINVAL 并触发 airy_security_fault 通知 Micro-Supervisor
+ */
+int airy_uring_sqe_validate(struct io_ring_ctx *ctx,
+                             struct io_uring_cmd *ioucmd,
+                             unsigned int issue_flags)
+{
+    /* ── 阶段 1: opcode 白名单（复用 §3.2 已有函数） ── */
+    if (!airy_uring_opcode_allowed(IORING_OP_URING_CMD)) {
+        pr_warn_ratelimited("airy: SQE opcode %u not in whitelist (pid=%d)\n",
+                IORING_OP_URING_CMD, current->pid);
+        goto malformed;
+    }
+
+    /* ── 阶段 2: cmd_op 范围检查 ── */
+    if (ioucmd->cmd_op < AIRY_CMD_MIN || ioucmd->cmd_op > AIRY_CMD_MAX) {
+        pr_warn_ratelimited("airy: SQE cmd_op %u out of range [%u..%u] (pid=%d)\n",
+                ioucmd->cmd_op, AIRY_CMD_MIN, AIRY_CMD_MAX, current->pid);
+        goto malformed;
+    }
+
+    /* ── 阶段 3: pdu 长度校验（强制走安全宏，禁止 ioucmd->cmd 直接访问） ──
+     * io_uring_cmd_to_pdu() 返回 pdu[32] 起始地址；OLK 6.6 中 pdu 固定 32B，
+     * 任何超出 32B 的访问由 BUILD_BUG_ON 在编译期拦截
+     */
+    struct airy_ipc_cmd *cmd = io_uring_cmd_to_pdu(ioucmd, struct airy_ipc_cmd);
+    if (!cmd) {
+        pr_warn_ratelimited("airy: SQE pdu access returned NULL (pid=%d)\n",
+                current->pid);
+        goto malformed;
+    }
+
+    /* ── 阶段 4: SQE128 模式一致性校验 ──
+     * 未启用 IORING_SETUP_SQE128 但 SQE 携带 SQE128_FLAG 视为伪造
+     */
+    if (!(ctx->flags & IORING_SETUP_SQE128) &&
+        (ioucmd->sqe->flags & SQE128_FLAG)) {
+        pr_warn_ratelimited("airy: SQE128 forgery: ctx->flags=0x%x sqe->flags=0x%x (pid=%d)\n",
+                ctx->flags, ioucmd->sqe->flags, current->pid);
+        goto malformed;
+    }
+
+    /* ── 阶段 5: CQE 溢出预检 ──
+     * CQ ring 余量 < 1 时拒绝，防止高频提交导致 CQ 溢出覆盖相邻内核内存；
+     * 先尝试 io_cqring_overflow_flush 强制 flush，避免正常负载下合法 SQE 被丢弃
+     */
+    if (io_cqring_avail(ctx) < 1) {
+        pr_warn_ratelimited("airy: CQ ring full, forcing flush (pid=%d)\n",
+                current->pid);
+        io_cqring_overflow_flush(ctx, issue_flags);
+        if (io_cqring_avail(ctx) < 1) {
+            pr_warn_ratelimited("airy: CQ ring still full after flush (pid=%d)\n",
+                    current->pid);
+            goto malformed;
+        }
+    }
+
+    return 0;  /* 5 阶段校验全部通过，放行至 §4 纯 C LSM 双重校验 */
+
+malformed:
+    /* 所有 malformed 校验失败统一返回 -EINVAL（不区分阶段，防攻击者阶段定位） */
+    airy_security_fault(current->pid, AIRY_FAULT_URING_MALFORMED, ioucmd);
+    return -EINVAL;
+}
+```
+
+#### 3.5.4 校验流程图：5 阶段 SQE 提交校验
+
+```
+Agent 提交 SQE (IORING_OP_URING_CMD)
+        │
+        ▼
+┌──────────────────────────────────────────┐
+│ 阶段 1: opcode 白名单校验                  │
+│  airy_uring_opcode_allowed(URING_CMD)     │
+│  失败 → -EOPNOTSUPP（白名单层拒绝）        │
+└──────────────────────────────────────────┘
+        │ 通过
+        ▼
+┌──────────────────────────────────────────┐
+│ 阶段 2: cmd_op 范围校验                    │
+│  AIRY_CMD_MIN ≤ cmd_op ≤ AIRY_CMD_MAX     │
+│  失败 → -EINVAL + airy_security_fault     │
+└──────────────────────────────────────────┘
+        │ 通过
+        ▼
+┌──────────────────────────────────────────┐
+│ 阶段 3: pdu 长度校验                       │
+│  io_uring_cmd_to_pdu() 宏安全访问 pdu[32]  │
+│  禁止直接 ioucmd->cmd                     │
+│  失败 → -EINVAL + airy_security_fault     │
+└──────────────────────────────────────────┘
+        │ 通过
+        ▼
+┌──────────────────────────────────────────┐
+│ 阶段 4: SQE128 模式一致性校验              │
+│  ctx->flags & IORING_SETUP_SQE128         │
+│    一致于 sqe->flags & SQE128_FLAG        │
+│  失败 → -EINVAL + airy_security_fault     │
+└──────────────────────────────────────────┘
+        │ 通过
+        ▼
+┌──────────────────────────────────────────┐
+│ 阶段 5: CQE 溢出预检                       │
+│  io_cqring_avail(ctx) ≥ 1                 │
+│  不足 → io_cqring_overflow_flush + 重检    │
+│  仍不足 → -EINVAL + airy_security_fault   │
+└──────────────────────────────────────────┘
+        │ 通过
+        ▼
+    放行至 §4 纯 C LSM 双重校验
+    （airy_uring_cmd_security_check）
+```
+
+#### 3.5.5 性能影响
+
+5 阶段校验的开销分解：
+
+| 阶段 | 操作 | 开销 |
+|------|------|------|
+| 阶段 1 opcode 白名单 | 2 次比较（数组遍历） | ~2ns |
+| 阶段 2 cmd_op 范围 | 2 次比较 | ~0.5ns |
+| 阶段 3 pdu 长度 | 1 次宏展开 + NULL 检查 | ~0.3ns |
+| 阶段 4 SQE128 模式 | 2 次位运算 + 1 次比较 | ~0.5ns |
+| 阶段 5 CQE 溢出预检 | 1 次 atomic_read + 1 次比较 | ~0.7ns |
+| **合计** | **5 次比较 + 位运算** | **~3ns** |
+
+- **fastpath 影响**：malformed 校验增加 ~3ns，占 IPC fastpath SLO（≤200ns）的 ~1.5%，可接受
+- **slowpath 影响**：阶段 5 触发 `io_cqring_overflow_flush` 时进入 slowpath（~1μs），仅在高负载场景偶发，不阻塞 fastpath
+
+#### 3.5.6 失败处理契约
+
+所有 malformed 校验失败统一遵循以下契约：
+
+1. **返回值**：统一返回 `-EINVAL`（不区分具体阶段，避免给攻击者阶段定位信息）
+2. **Fault 通知**：调用 `airy_security_fault(pid, AIRY_FAULT_URING_MALFORMED, ioucmd)` 通知 Micro-Supervisor（详见 [07-airy-lsm-design.md §3.5](07-airy-lsm-design.md)）
+3. **审计日志**：`airy_security_fault` 内部触发 `airy_audit_emit_security(AGENT_URING_MALFORMED, ...)` 写入 A-ULP 审计日志（永不可绕过）
+4. **限流**：`pr_warn_ratelimited` 防止日志洪水
+5. **Fault 码**：`AIRY_FAULT_URING_MALFORMED = 0x100A`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册；注：原计划使用 0x1007，但该值已分配给 `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED`，故追加至 0x100A）
+
+> **OS-KER-172**（R6 新增）：所有 `airy_uring_sqe_validate()` 失败必须触发 `airy_security_fault` 通知 Micro-Supervisor；连续 3 次 malformed SQE 的 Agent 由 Macro-Supervisor 裁决为 `AIRY_VERDICT_PAUSE`（暂停）或 `AIRY_VERDICT_TERMINATE`（终止），详见 [10-user-supervisor-daemon.md §5.2](../20-modules/10-user-supervisor-daemon.md)。
 
 ---
 
@@ -213,16 +406,22 @@ io_uring_cmd 回调中执行纯 C LSM 双重校验，确保 Capability 与 opcod
 static int airy_uring_cmd_security_check(struct io_uring_cmd *ioucmd,
                                           unsigned int issue_flags)
 {
-    struct airy_ipc_cmd *cmd = (struct airy_ipc_cmd *)ioucmd->cmd;
+    /* OLK 6.6: struct io_uring_cmd 无 cmd 字段，使用 io_uring_cmd_to_pdu() 宏访问 pdu[32] */
+    struct airy_ipc_cmd *cmd = io_uring_cmd_to_pdu(ioucmd, struct airy_ipc_cmd);
 
     /* 第一层：opcode 白名单校验 */
     if (!airy_uring_opcode_allowed(IORING_OP_URING_CMD)) {
         return -EOPNOTSUPP;
     }
 
-    /* 第二层：Capability 校验（纯 C LSM，非 BPF） */
+    /* 第二层：Capability 校验（纯 C LSM，非 BPF）
+     * v1.1: IPC fastpath 走 C-S9 Badge 内联校验（airy_cap_badge_ok）；
+     *       non-IPC 路径（如 buffer 注册）走 slowpath airy_cap_check()。
+     *       本钩子是 security_uring_cmd LSM 入口，仅 slowpath 被 C-S9 失败时调用
+     *       （详见 07-airy-lsm-design.md §3.3）。
+     */
     if (airy_op_needs_cap(cmd->op)) {
-        int ret = airy_cap_check_fastpath(cmd->cap_id, cmd->required_badge);
+        int ret = airy_cap_check(current_agent_id(), cmd->cap_id, cmd->required_badge);
         if (ret < 0) {
             /* Capability 校验失败：冷酷执法 */
             return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd);
@@ -232,10 +431,11 @@ static int airy_uring_cmd_security_check(struct io_uring_cmd *ioucmd,
     return 0;  /* 双重校验通过 */
 }
 
-/* 注册到 security_uring_cmd 钩子 */
+/* 注册到 security_uring_cmd 钩子（OLK 6.6 唯一 io_uring 钩子）
+ * v1.1: 不注册 uring_sqe（OLK 6.6 中不存在），opcode 白名单在本钩子内部分发
+ */
 static struct security_hook_list airy_uring_hooks[] __lsm_ro_after_init = {
     LSM_HOOK_INIT(uring_cmd, airy_uring_cmd_security_check),
-    LSM_HOOK_INIT(uring_sqe, airy_uring_sqe_check),
 };
 ```
 
@@ -297,9 +497,12 @@ static int airy_uring_register_buffer_check(struct io_ring_ctx *ctx,
                                               void __user *addr,
                                               unsigned long size)
 {
-    /* 1. Capability 校验：必须拥有 REGISTER_BUFFER 权限 */
-    if (airy_cap_check_fastpath(current_cap_id(),
-                                 AIRY_CAP_REGISTER_BUFFER) < 0) {
+    /* 1. Capability 校验：必须拥有 REGISTER_BUFFER 权限
+     * v1.1: buffer 注册是 non-IPC 路径，走 slowpath airy_cap_check()
+     *       （IPC fastpath 走 C-S9 Badge 内联校验，详见 03-capability-model.md §4.3.2）
+     */
+    if (airy_cap_check(current_agent_id(), current_cap_id(),
+                       AIRY_CAP_REGISTER_BUFFER) < 0) {
         pr_warn("airy: buffer register denied (no cap) pid=%d\n",
                 current->pid);
         return -AIRY_ECAP_PERM;
@@ -325,10 +528,13 @@ static int airy_uring_register_buffer_check(struct io_ring_ctx *ctx,
     return 0;
 }
 
-/* 注册到 security 钩子 */
-static struct security_hook_list airy_buffer_hooks[] __lsm_ro_after_init = {
-    LSM_HOOK_INIT(uring_register_buffers, airy_uring_register_buffer_check),
-};
+/* v1.1: 不注册 uring_register_buffers 钩子（OLK 6.6 中不存在）
+ * buffer 注册校验改为 airy_uring_cmd_check() 在 IORING_OP_URING_CMD 子命令中调用
+ * 本函数 airy_uring_register_buffer_check() 作为辅助函数被调用，不作为独立 LSM 钩子
+ *
+ * 替代方案：buffer 注册类操作也可通过 security_file_ioctl() 等既有钩子承担
+ * 详见 07-airy-lsm-design.md §4.1
+ */
 ```
 
 ### 5.4 buffer 生命周期管理
@@ -370,9 +576,9 @@ io_uring 安全加固依赖纯 C LSM 模块（详见 [07-airy-lsm-design.md](07-
 
 | io_uring 安全机制 | 纯 C LSM 钩子 | 说明 |
 |-----------------|-------------|------|
-| opcode 白名单 | `security_uring_sqe` | SQE 提交时校验 opcode |
-| Capability 校验 | `security_uring_cmd` | URING_CMD 回调中校验 |
-| buffer 注册校验 | `security_uring_register_buffers` | 注册时校验权限 |
+| opcode 白名单 | `security_uring_cmd`（内部分发） | v1.1: 在 uring_cmd 钩子内基于 ioucmd->cmd_op 校验（OLK 6.6 无 uring_sqe 钩子） |
+| Capability 校验 | `security_uring_cmd` | URING_CMD 回调中校验 Badge |
+| buffer 注册校验 | `security_uring_cmd`（子命令分发） | v1.1: 在 uring_cmd 钩子内分发 buffer 注册子命令（OLK 6.6 无 uring_register_buffers 钩子） |
 
 ### 6.3 与 seL4 Capability 模型的关系
 

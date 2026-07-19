@@ -76,7 +76,7 @@ agentrt-linux（AirymaxOS）Locale 设计旨在为全球开发者与用户提供
 agentrt-linux 严格遵循 POSIX locale 命名规范 `language[_TERRITORY][.codeset][@modifier]`：
 
 ```c
-/* include/uapi/airymax/locale.h —— agentrt-linux locale 标识符 */
+/* include/uapi/linux/airymax/locale.h —— agentrt-linux locale 标识符 */
 #ifndef AIRY_LOCALE_H
 #define AIRY_LOCALE_H
 

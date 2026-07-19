@@ -367,7 +367,7 @@ TEST_HARNESS_MAIN
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include "../../../include/uapi/airymax/agent_ioctl.h"
+#include "../../../include/uapi/linux/airymax/agent_ioctl.h"
 
 FIXTURE(agent_sdk) {
     int agent_fd;
@@ -629,7 +629,7 @@ kselftest 输出 TAP（version 13），形如 `ok <num> <suite>:<case>` / `not o
 
 ## 附录 A: 接口定义
 
-> **附录定位**： 本附录汇集 kselftest 系统级测试框架所需的完整接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `tools/testing/selftests/kselftest.h`、`tools/testing/selftests/kselftest_harness.h`、`tools/testing/selftests/lib.mk`、`run_kselftest.sh` 及 `include/airymax/selftest_types.h`（[SC] 共享契约层）。kselftest 框架与 Linux 6.6 上游保持源码同源（IRON-9 v3），agentrt-linux 扩展以独立 `airy_*` 子目录形式注入，禁止改写上游框架代码。
+> **附录定位**： 本附录汇集 kselftest 系统级测试框架所需的完整接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `tools/testing/selftests/kselftest.h`、`tools/testing/selftests/kselftest_harness.h`、`tools/testing/selftests/lib.mk`、`run_kselftest.sh` 及 `include/uapi/linux/airymax/selftest_types.h`（[SC] 共享契约层）。kselftest 框架与 Linux 6.6 上游保持源码同源（IRON-9 v3），agentrt-linux 扩展以独立 `airy_*` 子目录形式注入，禁止改写上游框架代码。
 
 ### A.1 核心数据结构
 

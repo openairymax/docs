@@ -878,7 +878,7 @@ typedef struct __attribute__((aligned(128))) {
 } are_ipc_msg_header_t;
 ```
 
-> **SSoT 声明**：`are_ipc_msg_header_t` 是 L2 服务协议层的**扩展布局**（含 source_namespace/target_namespace/correlation_id 等 L2 语义字段），与 [SC] 共享契约层的基础消息头 `struct airy_ipc_msg_hdr`（Layout C，物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）不同。基础 128B 消息头以 `include/airymax/ipc.h` 为单一数据源；本 L2 扩展布局在 magic（`0x41524531` 'ARE1'）与 trace_id 语义上与 Layout C 保持同源，其余字段为 L2 服务协议专属。
+> **SSoT 声明**：`are_ipc_msg_header_t` 是 L2 服务协议层的**扩展布局**（含 source_namespace/target_namespace/correlation_id 等 L2 语义字段），与 [SC] 共享契约层的基础消息头 `struct airy_ipc_msg_hdr`（Layout C，物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）不同。基础 128B 消息头以 `include/uapi/linux/airymax/ipc.h` 为单一数据源；本 L2 扩展布局在 magic（`0x41524531` 'ARE1'）与 trace_id 语义上与 Layout C 保持同源，其余字段为 L2 服务协议专属。
 
 #### 2.2 字段详细说明
 

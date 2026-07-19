@@ -6,6 +6,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**：2026-07-06\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **设计原则**：微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源性
+> **系统定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——通过 seL4 微内核工程思想进行系统化改造，落地 v1.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。详见 ADR-012（微内核化改造技术路线确认）+ ADR-014（微内核设计思想来源单一化）。
 
 ---
 
@@ -131,7 +132,7 @@ agentrt-linux 不是从零开发微内核，而是基于 Linux 内核进行**微
 
 ### 3.1 同源性定义
 
-**同源** = agentrt 和 agentrt-linux 共享 Airymax 设计理念，并共享契约层代码（IRON-9 v3，`include/airymax/` 头文件库），实现层各自独立。
+**同源** = agentrt 和 agentrt-linux 共享 Airymax 设计理念，并共享契约层代码（IRON-9 v3，`include/uapi/linux/airymax/` 头文件库），实现层各自独立。
 
 | 维度 | 同源体现 |
 |---|---|
@@ -246,7 +247,7 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 | 层次 | 共享程度 | 本文档涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
+| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/uapi/linux/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/uapi/linux/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_tac/io_uring） |
 

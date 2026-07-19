@@ -1436,7 +1436,7 @@ agentrt-linux 的工具链配置以代码形式存放在仓库中，确保所有
 | 内部参考文档 | 内部文档路径 | 文档标准化（放宽禁词） | P1 |
 | C 源码 | `atoms/` `daemons/` `commons/` `memoryrovol/` | 代码标准化 | P0 |
 | CMake 构建系统 | `cmake/` `CMakeLists.txt` | 构建标准化 | P1 |
-| 头文件 | `include/airymax/` | [SC] 契约层一致性 | P0 |
+| 头文件 | `include/uapi/linux/airymax/` | [SC] 契约层一致性 | P0 |
 
 ### 1.3 检查分级
 
@@ -1514,7 +1514,7 @@ echo "OK: 0 forbidden words in open-source docs"
 | 检查项 | 合格标准 | 检查方法 |
 |--------|----------|----------|
 | §2 三层模型表 | 包含 [SC]/[SS]/[IND] 三行表 | grep "\[SC\]" + grep "\[SS\]" + grep "\[IND\]" |
-| [SC] 头文件引用 | 引用 `include/airymax/*.h` | grep "include/airymax/" |
+| [SC] 头文件引用 | 引用 `include/uapi/linux/airymax/*.h` | grep "include/uapi/linux/airymax/" |
 | [SS] API 映射表 | 包含 API 语义映射（SDK 层签名映射，其他层语义映射） | grep "\[SS\].*API" |
 | [IND] 独立实现表 | 包含独立实现清单 | grep "\[IND\]" |
 | agentrt 一致性检查 | 包含 15 项检查表 | grep "agentrt 一致性检查" |
@@ -1544,14 +1544,14 @@ done
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
-| 1 | `include/airymax/syscalls.h` | SYS | v1.1: 4 核心 syscall 编号 + 20 预留槽位 |
-| 2 | `include/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
-| 3 | `include/airymax/security_types.h` | 安全 | capability 41 ID + LSM 252 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
-| 4 | `include/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
-| 5 | `include/airymax/sched.h` | 调度 | sched_tac 调度类约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
-| 6 | `include/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |
+| 1 | `include/uapi/linux/airymax/syscalls.h` | SYS | v1.1: 4 核心 syscall 编号 + 20 预留槽位 |
+| 2 | `include/uapi/linux/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
+| 3 | `include/uapi/linux/airymax/security_types.h` | 安全 | capability 41 ID + LSM 252 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
+| 4 | `include/uapi/linux/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
+| 5 | `include/uapi/linux/airymax/sched.h` | 调度 | sched_tac 调度类约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
+| 6 | `include/uapi/linux/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |
 
-**检查方法**：grep `include/airymax/` 引用，核对是否与上述 10 个头文件一致。
+**检查方法**：grep `include/uapi/linux/airymax/` 引用，核对是否与上述 10 个头文件一致。
 
 ### 2.5 链接完整性检查
 
@@ -1630,7 +1630,7 @@ done
 # TODO: 依赖 R-01（syscall.xml 单一来源管理）落地，1.0.1 M1 阶段实现
 # 当前为规范形式检查，验证 [SC] 头文件 syscalls.h 的 syscall 编号定义完整性
 
-SC_SYSCALL_HEADER="include/airymax/syscalls.h"
+SC_SYSCALL_HEADER="include/uapi/linux/airymax/syscalls.h"
 
 # 检查 1：syscall 编号定义是否存在
 if ! grep -q "AIRY_SYS_" "$SC_SYSCALL_HEADER"; then
@@ -1652,7 +1652,7 @@ fi
 echo "OK: syscall.xml contract check passed (R-01 dependency: pending 1.0.1 M1)"
 ```
 
-**适用范围**：`include/airymax/syscalls.h`（[SC] 共享契约层）。
+**适用范围**：`include/uapi/linux/airymax/syscalls.h`（[SC] 共享契约层）。
 **合格标准**：v1.1: 4 核心 syscall 编号 + 20 预留槽位完整定义；R-01 落地后增加 XML 一致性检查。
 **依赖**：R-01（ES-SEL4-21 syscall.xml 单一来源管理），1.0.1 M1 阶段落地。
 
@@ -1668,10 +1668,10 @@ echo "OK: syscall.xml contract check passed (R-01 dependency: pending 1.0.1 M1)"
 # 当前为规范形式检查，验证 [SC] 头文件中位域结构体的定义规范
 
 SC_HEADERS="
-    include/airymax/memory_types.h
-    include/airymax/security_types.h
-    include/airymax/sched.h
-    include/airymax/ipc.h
+    include/uapi/linux/airymax/memory_types.h
+    include/uapi/linux/airymax/security_types.h
+    include/uapi/linux/airymax/sched.h
+    include/uapi/linux/airymax/ipc.h
 "
 
 for h in $SC_HEADERS; do
@@ -1691,7 +1691,7 @@ done
 echo "OK: structures.bf codegen check passed (R-02 dependency: pending 1.0.1 M1)"
 ```
 
-**适用范围**：`include/airymax/*.h`（[SC] 共享契约层中含位域的头文件）。
+**适用范围**：`include/uapi/linux/airymax/*.h`（[SC] 共享契约层中含位域的头文件）。
 **合格标准**：位域结构体定义规范；R-02 落地后增加 .bf 文件一致性检查。
 **依赖**：R-02（ES-SEL4-25/26 structures.bf bitfield codegen），1.0.1 M1 阶段落地。
 
@@ -1880,12 +1880,12 @@ echo "OK: seL4 scope check passed (only ES-SEL4-1~5 architecture layer allowed)"
 #!/bin/bash
 # check-sc-consistency.sh
 SC_HEADERS="
-    include/airymax/syscalls.h
-    include/airymax/memory_types.h
-    include/airymax/security_types.h
-    include/airymax/cognition_types.h
-    include/airymax/sched.h
-    include/airymax/ipc.h
+    include/uapi/linux/airymax/syscalls.h
+    include/uapi/linux/airymax/memory_types.h
+    include/uapi/linux/airymax/security_types.h
+    include/uapi/linux/airymax/cognition_types.h
+    include/uapi/linux/airymax/sched.h
+    include/uapi/linux/airymax/ipc.h
 "
 
 for h in $SC_HEADERS; do
@@ -2274,7 +2274,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|------|
 | 内核态 → 用户态 | UAPI 头文件使用 `GPL-2.0-only WITH Linux-syscall-note` | `Linux-syscall-note` 例外允许用户态引用系统调用接口 |
 | 用户态 → 内核态 | 用户态代码不链接内核态代码 | 通过 syscall / io_uring / AgentsIPC 消息通信，无代码级链接 |
-| [SC] 共享契约层 | 6 个 `include/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
+| [SC] 共享契约层 | 6 个 `include/uapi/linux/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
 
 ### 2.2 IRON-9 v3 四层共享模型的许可证约束
 
@@ -2548,7 +2548,7 @@ spdx-check:
 # 格式: <文件路径> <豁免理由>
 
 # 自动生成头文件
-include/airymax/generated/version.h 由 gen_version.py 生成
+include/uapi/linux/airymax/generated/version.h 由 gen_version.py 生成
 ```
 
 ---

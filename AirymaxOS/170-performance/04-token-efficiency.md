@@ -436,7 +436,7 @@ void airy_sched_llm_phase(uint32_t agent_id,
 
 ### 8.1 三层认知循环能效
 
-参考 `include/airymax/cognition_types.h` [SC] 的 CoreLoopThree 阶段枚举：
+参考 `include/uapi/linux/airymax/cognition_types.h` [SC] 的 CoreLoopThree 阶段枚举：
 
 | 阶段 | 能效特征 | 优化策略 |
 |------|---------|---------|

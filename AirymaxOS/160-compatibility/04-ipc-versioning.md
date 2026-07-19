@@ -94,7 +94,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。版本号编解码宏作为协议层语义保留，但消息头权威布局以 SSoT Layout C 为准（`opcode`/`flags`/`trace_id`/`timestamp_ns`/`src_task`/`dst_task`/`payload_len`/`reserved[84]`）。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。版本号编解码宏作为协议层语义保留，但消息头权威布局以 SSoT Layout C 为准（`opcode`/`flags`/`trace_id`/`timestamp_ns`/`src_task`/`dst_task`/`payload_len`/`reserved[84]`）。
 
 ```c
 /* 版本号编解码宏 */
@@ -113,7 +113,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
 
 ## 3. 128B 消息头版本识别
 
-> **SSoT 对齐说明**：SSoT Layout C（`struct airy_ipc_msg_hdr`，定义于 `include/airymax/ipc.h`）**不含 `version` 字段**。128B 消息头布局为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]，共 9 字段。协议版本识别依赖 `magic` 字段（0x41524531 'ARE1'），版本协商通过 §4 运行时握手协议完成，而非消息头内嵌版本号。
+> **SSoT 对齐说明**：SSoT Layout C（`struct airy_ipc_msg_hdr`，定义于 `include/uapi/linux/airymax/ipc.h`）**不含 `version` 字段**。128B 消息头布局为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]，共 9 字段。协议版本识别依赖 `magic` 字段（0x41524531 'ARE1'），版本协商通过 §4 运行时握手协议完成，而非消息头内嵌版本号。
 
 ### 3.1 magic 字段版本识别
 
@@ -168,7 +168,7 @@ sequenceDiagram
 ### 4.2 协商数据结构
 
 ```c
-/* include/airymax/ipc.h [SC] 共享契约层 */
+/* include/uapi/linux/airymax/ipc.h [SC] 共享契约层 */
 
 /* 握手请求 payload */
 typedef struct airy_ipc_handshake_req {
@@ -351,7 +351,7 @@ payload 版本化遵循"只追加不修改"原则：
 操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.1 起保持稳定，永不重定义、永不复用：
 
 ```c
-/* include/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
+/* include/uapi/linux/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
 /* v1.1: opcode 已升级为宏定义，非 enum（见 [SC] ipc.h） */
 #define AIRY_IPC_OP_SEND          0x0001
 #define AIRY_IPC_OP_RECV          0x0002
@@ -736,7 +736,7 @@ int airy_ipc_set_min_version(uint16_t min_ver)
 
 | 层次 | 共享内容 | 本文档使用 |
 |------|---------|-----------|
-| [SC] 共享契约层 | `include/airymax/ipc.h` 128B 消息头 + magic 字段 | 消息头布局与 agentrt 共享 |
+| [SC] 共享契约层 | `include/uapi/linux/airymax/ipc.h` 128B 消息头 + magic 字段 | 消息头布局与 agentrt 共享 |
 | [SS] 语义同源层 | 网关协议协商语义 | gateway_d 与 agentrt gateway 协商语义同源 |
 | [IND] 完全独立层 | 版本协商逻辑 + 注册表 + sysfs | agentrt-linux 专属实现 |
 

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 接口设计
 > **文档定位**：agentrt-linux（AirymaxOS） 接口设计层的总览与索引\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-19\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
 > **设计依据**：综合修正方案 §3.1（P0 级缺失文档 #3/#4）+ §6.2.1（30-interfaces 一致性检查）
 
@@ -21,7 +21,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 | 2 | IPC 协议 | 进程 ↔ 进程 | AgentsIPC 128B 消息头 | io_uring + IORING_OP_URING_CMD 零拷贝消息传递（不使用 page flipping） |
 | 3 | SDK API | 应用 → OS | sdk 管理接口 | 4 语言统一封装的客户端 |
 | 4 | 编码规范 | 代码级约定 | commons 公共工具 | 命名、风格、日志、Doxygen、安全编码 |
-| 5 | **[SC] 共享契约** | 内核态 ↔ 用户态（跨端） | 物理共享头文件 | A-UEF/A-ULP/A-IPC/A-ULS 的二进制布局契约，物理宿主 `kernel/include/airymax/` |
+| 5 | **[SC] 共享契约** | 内核态 ↔ 用户态（跨端） | 物理共享头文件 | A-UEF/A-ULP/A-IPC/A-ULS 的二进制布局契约，物理宿主 `kernel/include/uapi/linux/airymax/` |
 
 ---
 
@@ -57,7 +57,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 
 | 子仓 | 系统调用 | IPC 协议 | SDK API | 编码规范 | [SC] 共享契约 |
 |------|---------|---------|---------|---------|--------------|
-| kernel | `AIRY_SYS_TASK_*` / `IPC_*` / `ROVOL_*` / `SCHED_*` / `CAP_*` / `CLT_*` | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/airymax/`（10 个头文件） |
+| kernel | `AIRY_SYS_TASK_*` / `IPC_*` / `ROVOL_*` / `SCHED_*` / `CAP_*` / `CLT_*` | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/uapi/linux/airymax/`（10 个头文件） |
 | services | 通过系统调用 + IPC | 128B 消息头用户态 + 4 通信原语 | daemon 客户端 | C 风格 + 日志 | `#include <airymax/*.h>` 引用 |
 | security | `AIRY_SYS_CAP_*` / `LSM_*` | capability 携带 | SafetyClient | C 风格 + 安全编码 | `lsm_types.h` / `security_types.h` |
 | memory | `AIRY_SYS_ROVOL_*` / `CXL_*` / `MGLRU_*` | MemoryRovol 迁移消息 | MemoryClient（嵌套） | C 风格 + 内存安全 | `memory_types.h` |
@@ -77,7 +77,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 - **显式契约**: 所有接口以 C 头文件 + Doxygen 注释形式给出显式契约，包括参数语义、返回值、错误码、并发约束。
 - **ABI 稳定**: 系统调用编号、IPC 消息头布局、capability 令牌格式在 MAJOR 版本内保持 ABI 稳定，破坏性变更必须升级 MAJOR 版本。
 - **版本协商**: IPC 消息头携带 `version` 字段（当前 0x0100），支持协议版本协商。
-- **错误码对齐**: 全部接口错误码对齐 `include/airymax/error.h`（[SC] SSoT），与 agentrt 同源且部分代码共享（IRON-9 v3）。
+- **错误码对齐**: 全部接口错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT），与 agentrt 同源且部分代码共享（IRON-9 v3）。
 - **并发约束显式**: 所有接口在 Doxygen 注释中显式声明线程安全性与可重入性（thread-safe / reentrant / async-signal-safe）。
 
 ### 3.2 E-7 文档即代码
@@ -110,7 +110,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 | 8 | [08-sc-error-contract.md](08-sc-error-contract.md) | **[SC] error.h 二进制契约** + Error（负数可恢复）vs Fault（正数 0x1000+ 不可恢复）分层 + 5 子空间分配 + CI 逐字节校验 + [DSL] 降级块 | 300-400 |
 | 9 | [09-sc-log-types-contract.md](09-sc-log-types-contract.md) | **[SC] log_types.h 二进制契约** + 128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射 | 250-350 |
 
-> **[SC] 共享契约说明**：文档 #8、#9 是 Airymax Unify Design 五模块（A-UEF/A-ULP）的 [SC] 共享契约权威定义，物理宿主为 `kernel/include/airymax/error.h` 与 `kernel/include/airymax/log_types.h`，由 `sc-dual-ci.yml` 进行双端逐字节校验。详见 [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) 与 [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)。
+> **[SC] 共享契约说明**：文档 #8、#9 是 Airymax Unify Design 五模块（A-UEF/A-ULP）的 [SC] 共享契约权威定义，物理宿主为 `kernel/include/uapi/linux/airymax/error.h` 与 `kernel/include/uapi/linux/airymax/log_types.h`，由 `sc-dual-ci.yml` 进行双端逐字节校验。详见 [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) 与 [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)。
 
 ## 5. 与 agentrt 接口的关系
 

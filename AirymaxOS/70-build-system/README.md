@@ -50,7 +50,7 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 | 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | `airy_defconfig` 强制 `CONFIG_IO_URING=y`；page flipping 相关代码路径不编译 |
 | 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | `airy_defconfig` 强制 `# CONFIG_BPF_LSM is not set`；`CONFIG_SECURITY_AIRY_LSM=y` 编译纯 C LSM 模块 |
 | 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | `airy_defconfig` 不启用 `DMA_CMA` 一致性路径；共享内存构建目标绑定 `alloc_pages + mmap` 实现源文件 |
-| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | CI 流水线强制校验 `include/airymax/*.h` 共 10 个 [SC] 头文件逐字节一致；`AIRY_SC_FALLBACK` 宏由构建系统在 [SC] 校验失败时自动注入（[DSL] 第四层） |
+| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | CI 流水线强制校验 `include/uapi/linux/airymax/*.h` 共 10 个 [SC] 头文件逐字节一致；`AIRY_SC_FALLBACK` 宏由构建系统在 [SC] 校验失败时自动注入（[DSL] 第四层） |
 
 ### 2.1 IRON-9 v3 四层模型在构建系统的归属
 

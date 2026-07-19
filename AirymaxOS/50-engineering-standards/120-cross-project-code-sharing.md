@@ -47,7 +47,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次          | 缩写     | 共享程度               | 内容                                                        | 组织方式                             |
 | ----------- | ------ | ------------------ | --------------------------------------------------------- | -------------------------------- |
-| **共享契约层**   | \[SC]  | 完全共享代码             | 10 个头文件，定义数据结构、magic、操作码、枚举                                | `include/airymax/` 独立头文件库，两端共同依赖 |
+| **共享契约层**   | \[SC]  | 完全共享代码             | 10 个头文件，定义数据结构、magic、操作码、枚举                                | `include/uapi/linux/airymax/` 独立 UAPI 头文件库（D-8 对齐 OLK 6.6），两端共同依赖 |
 | **语义同源层**   | \[SS]  | 高层 API 语义同源，签名独立演进 | 调度语义、安全模型、IPC 传输、记忆模型                                     | 各自独立实现，通过 \[SC] 保证互操作            |
 | **完全独立层**   | \[IND] | 完全独立               | 内核驱动/Kbuild/内核 API（agentrt-linux）；跨平台用户态/SDK 四语言（agentrt） | 各自独立仓库，无依赖                       |
 | **降级生存层**   | \[DSL] | 自包含降级块（[SC] 头文件内）   | `#ifdef AIRY_SC_FALLBACK` 降级块；[SC] 损坏时的最小可运行子集（38 POSIX 码 + 最简 IPC + EEVDF 默认调度） | 详见 [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) |
@@ -67,20 +67,20 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.1 10 个 \[SC] 头文件清单
 
-\[SC] 层包含**10 个**共享头文件，**唯一物理宿主**于 `kernel/include/airymax/` 目录（其他子仓通过 `-I../kernel/include` 引用，禁止物理副本，OS-IRON-014 落地），两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**。下表清单与 [06-iron9-shared-model.md §2.2](../10-architecture/06-iron9-shared-model.md) 完全一致（权威源）：
+\[SC] 层包含**10 个**共享头文件，**唯一物理宿主**于 `kernel/include/uapi/linux/airymax/` 目录（其他子仓通过 `-I../kernel/include` 引用，禁止物理副本，OS-IRON-014 落地），两端（agentrt 与 agentrt-linux）共同依赖，**逐字节相同**。下表清单与 [06-iron9-shared-model.md §2.2](../10-architecture/06-iron9-shared-model.md) 完全一致（权威源）：
 
 | 序号 | 文件                  | 共享内容                                                                                                    | magic 值               | 落地路径                                |
 | -- | ------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------- |
-| 1  | `error.h`           | A-UEF 统一错误码（AIRY_E* POSIX 负值 + AIRY_FAULT_* 0x1000+ 故障码）+ [DSL] 降级块                                      | —                     | `include/airymax/error.h`           |
-| 2  | `log_types.h`       | A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射）                                                     | —                     | `include/airymax/log_types.h`       |
-| 3  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/airymax/ipc.h`             |
-| 4  | `sched.h`           | sched_tac 调度约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL | `0x41475453` ('AGTS') | `include/airymax/sched.h`           |
-| 5  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/airymax/memory_types.h`    |
-| 6  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/airymax/security_types.h`  |
-| 7  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/airymax/cognition_types.h` |
-| 8  | `syscalls.h`        | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                                                     | —                     | `include/airymax/syscalls.h`        |
-| 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/airymax/uapi_compat.h`    |
-| 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/airymax/lsm_types.h`       |
+| 1  | `error.h`           | A-UEF 统一错误码（AIRY_E* POSIX 负值 + AIRY_FAULT_* 0x1000+ 故障码）+ [DSL] 降级块                                      | —                     | `include/uapi/linux/airymax/error.h`           |
+| 2  | `log_types.h`       | A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射）                                                     | —                     | `include/uapi/linux/airymax/log_types.h`       |
+| 3  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/uapi/linux/airymax/ipc.h`             |
+| 4  | `sched.h`           | sched_tac 调度约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL | `0x41475453` ('AGTS') | `include/uapi/linux/airymax/sched.h`           |
+| 5  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/uapi/linux/airymax/memory_types.h`    |
+| 6  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 252 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/uapi/linux/airymax/security_types.h`  |
+| 7  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/uapi/linux/airymax/cognition_types.h` |
+| 8  | `syscalls.h`        | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                                                     | —                     | `include/uapi/linux/airymax/syscalls.h`        |
+| 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/uapi/linux/airymax/uapi_compat.h`    |
+| 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/uapi/linux/airymax/lsm_types.h`       |
 
 **补充内容**（不属于上述 10 个 [SC] 核心头文件，但两端共享语义）：
 
@@ -132,7 +132,7 @@ enum airy_struct_ops_state {
 
 ### 2.2.2 [SC] 核心头文件 1：error.h（A-UEF 统一错误码）
 
-> **定位说明**：`error.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级，A-UEF 模块），物理宿主为 `kernel/include/airymax/error.h`，agentrt 用户态通过 `-I` 引用，禁止物理副本。
+> **定位说明**：`error.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级，A-UEF 模块），物理宿主为 `kernel/include/uapi/linux/airymax/error.h`，agentrt 用户态通过 `-I` 引用，禁止物理副本。
 
 **错误码体系**（A-UEF 统一错误码与故障定义体系）：
 
@@ -149,7 +149,7 @@ enum airy_struct_ops_state {
 
 **权威源迁移状态**（2026-07-17 完成）：
 
-- **当前权威源**：`kernel/include/airymax/error.h`（[SC] 物理宿主，已创建，195 行）
+- **当前权威源**：`kernel/include/uapi/linux/airymax/error.h`（[SC] 物理宿主，已创建，195 行）
 - **历史源**：`agentrt/commons/utils/error/include/error.h` + `agentrt/commons/include/airy_types.h`（迁移完成后废弃）
 - **SSoT 登记**：`09-ssot-registry.md §2 OS-IRON-014`（[SC] 10 个头文件单一数据源）
 - **CI 校验**：`sc-dual-ci.yml` 逐字节验证两端 error.h 相同
@@ -333,7 +333,7 @@ struct airy_task_desc {
 ```c
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
 /*
- * kernel/include/airymax/ipc.h —— [SC] 共享契约层，物理宿主
+ * kernel/include/uapi/linux/airymax/ipc.h —— [SC] 共享契约层，物理宿主
  * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
  * 校验机制属于 [SS] 语义同源层，不在本头文件中定义
  */
@@ -393,14 +393,22 @@ extern "C" {
  * @timestamp_ns:     CLOCK_REALTIME nanoseconds, sender fills.
  * @src_task:         Source Agent/daemon task_id, bound to Badge at compile.
  * @dst_task:         Destination task_id, decides kfifo routing.
- * @payload_len:      Payload length, excluding header.
  * @capability_badge: [SS] semantic-aligned: agentrt-linux uses (compiled by
  *                    sec_d), agentrt user-space always 0 (H3).
+ * @payload_len:      Payload length, excluding header.
  * @crc32:            CRC32 over header[0:52) + payload.
  * @reserved:         Reserved, must be zero (C-S4 checks).
  *
  * Layout C v4 — 128-byte fixed header. Shared between agentrt and
  * agentrt-linux via [SC] contract layer. magic is frozen post-release.
+ *
+ * Alignment design (D-9 fix, mirrors OLK 6.6 kernel protocol headers like
+ * struct ethhdr/iphdr/udphdr which do NOT use __attribute__((packed))):
+ *   - No __attribute__((packed)); all __u64 fields 8-byte aligned naturally.
+ *   - capability_badge moved to offset 40 (was 44 in v0.1.1 draft) to
+ *     restore 8-byte natural alignment; payload_len shifted to offset 48.
+ *   - struct uses __attribute__((aligned(64))) to guarantee 2 cache lines.
+ *   - 128B = 2 cache lines (x86_64/aarch64 64B/line).
  */
 struct airy_ipc_msg_hdr {
 	__u32	magic;			/* offset  0, 'ARE1' 0x41524531 */
@@ -410,14 +418,18 @@ struct airy_ipc_msg_hdr {
 	__u64	timestamp_ns;		/* offset 16, CLOCK_REALTIME nanoseconds */
 	__u64	src_task;		/* offset 24, source Agent/daemon task_id */
 	__u64	dst_task;		/* offset 32, destination Agent/daemon task_id */
-	__u32	payload_len;		/* offset 40, payload length (excluding header) */
-	__u64	capability_badge;	/* offset 44, [SS] agentrt-linux uses, agentrt=0 */
+	__u64	capability_badge;	/* offset 40, [SS] agentrt-linux uses, agentrt=0 */
+	__u32	payload_len;		/* offset 48, payload length (excluding header) */
 	__u32	crc32;			/* offset 52, CRC32 over header[0:52) + payload */
-	__u8	reserved[72];		/* offset 56, must be zero */
-} __attribute__((packed));
+	__u8	reserved[72];		/* offset 56, must be zero (CL1 [56:64) + CL2 [64:128)) */
+} __attribute__((aligned(64)));
 
 _Static_assert(sizeof(struct airy_ipc_msg_hdr) == AIRY_IPC_HDR_SIZE,
 	"airy_ipc_msg_hdr must be exactly 128 bytes");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 40,
+	"capability_badge must be at offset 40 (8-byte aligned, D-9 fix)");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
+	"crc32 must be at offset 52");
 
 /* ===== Badge 位布局（仅 [SS] 语义同源，定义在内核实现侧）===== */
 /* agentrt 用户态：capability_badge 始终为 0（H3） */
@@ -473,7 +485,7 @@ _Static_assert(sizeof(struct airy_ipc_msg_hdr) == AIRY_IPC_HDR_SIZE,
 ```c
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
 /*
- * kernel/include/airymax/syscalls.h —— [SC] 共享契约层，物理宿主
+ * kernel/include/uapi/linux/airymax/syscalls.h —— [SC] 共享契约层，物理宿主
  * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
  */
 #ifndef AIRYMAX_SYSCALLS_H
@@ -586,7 +598,7 @@ extern "C" {
 | ASCII | `'ARE1'`      | Airymax Runtime Engine v1 |
 | 用途    | IPC 消息头 magic | 验证 IPC 协议版本与消息完整性         |
 
-**SSoT 权威定义**：`#define AIRY_IPC_MAGIC 0x41524531u`（[SC] `include/airymax/ipc.h`）
+**SSoT 权威定义**：`#define AIRY_IPC_MAGIC 0x41524531u`（[SC] `include/uapi/linux/airymax/ipc.h`）
 
 **设计原理**：
 
@@ -599,7 +611,7 @@ extern "C" {
 
 | 层 | 原独立定义 | 收敛后 | 文件 |
 | - | -------- | --- | --- |
-| [SC] 共享契约 | `AIRY_IPC_MAGIC 0x41524531u` | **SSoT（不变）** | `include/airymax/ipc.h` |
+| [SC] 共享契约 | `AIRY_IPC_MAGIC 0x41524531u` | **SSoT（不变）** | `include/uapi/linux/airymax/ipc.h` |
 | L2 corekern IPC | `ARE_IPC_MAGIC 0x41524531u` | `#define ARE_IPC_MAGIC AIRY_IPC_MAGIC` | `atoms/corekern/include/are_ipc.h` |
 | 应用层 IPC | `IPC_MAGIC 0x49504300` ❌ | `#define IPC_MAGIC AIRY_IPC_MAGIC` | `commons/utils/ipc/include/ipc_common.h` |
 | 服务总线 | `IPC_BUS_MESSAGE_MAGIC 0x49534200` ❌ | `#define IPC_BUS_MESSAGE_MAGIC AIRY_IPC_MAGIC` | `commons/utils/ipc/include/ipc_service_bus.h` |
@@ -748,7 +760,7 @@ sc-contract-bidirectional:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - include/airymax/*.h
+        - include/uapi/linux/airymax/*.h
   script:
     # 步骤 1: 本仓编译与测试
     - make build
@@ -783,8 +795,8 @@ sc-contract-bidirectional:
 
 | magic         | 十六进制         | ASCII  | 物理宿主 | CI 校验方式 |
 | ------------- | ------------ | ------ | -------- | -------- |
-| IPC 消息头 magic | `0x41524531` | 'ARE1' | `include/airymax/ipc.h` | `sc-dual-ci.yml` 逐字节验证 + 行为契约测试（`assert(hdr.magic == 0x41524531u)`） |
-| 任务描述符 magic   | `0x41475453` | 'AGTS' | `include/airymax/sched.h` | `sc-dual-ci.yml` 逐字节验证 + 行为契约测试（`assert(desc.magic == 0x41475453u)`） |
+| IPC 消息头 magic | `0x41524531` | 'ARE1' | `include/uapi/linux/airymax/ipc.h` | `sc-dual-ci.yml` 逐字节验证 + 行为契约测试（`assert(hdr.magic == 0x41524531u)`） |
+| 任务描述符 magic   | `0x41475453` | 'AGTS' | `include/uapi/linux/airymax/sched.h` | `sc-dual-ci.yml` 逐字节验证 + 行为契约测试（`assert(desc.magic == 0x41475453u)`） |
 
 > **变更禁令**：magic 值一经发布即冻结，禁止修改。如需协议演进，新增 magic（如 'ARE2'）而非修改现有 magic。CI 校验对 magic 值的任何修改均为合并阻断错误。
 
@@ -831,7 +843,7 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 
 | 层次     | 共享程度 | 内容              | 落地路径               | CI 校验  |
 | ------ | ---- | --------------- | ------------------ | ------ |
-| \[SC]  | 完全共享 | 10 个头文件 + magic  | `include/airymax/` | 双向 CI  |
+| \[SC]  | 完全共享 | 10 个头文件 + magic  | `include/uapi/linux/airymax/` | 双向 CI  |
 | \[SS]  | 语义同源 | 调度/安全/IPC/记忆    | 各自实现               | 行为契约测试 |
 | \[IND] | 完全独立 | 内核驱动/Kbuild/SDK | 各自仓库               | 各自 CI  |
 | \[DSL] | 自包含降级块 | `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 码 + 最简 IPC + EEVDF 默认调度） | [SC] 头文件底部 | 降级块 hash 校验 |

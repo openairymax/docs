@@ -266,7 +266,8 @@ Kconfig 求解的 `CONFIG_*` 宏有两套消费者：Make 侧（`obj-$(CONFIG_*)
 obj-$(CONFIG_AIRY_IPC)        += airymax-ipc.o
 obj-$(CONFIG_AIRY_CUPOLAS)    += cupolas/
 obj-$(CONFIG_AIRY_MEMPOOL)    += airymax-mempool.o
-airymax-mempool-y := mempool_core.o mempool_region.o
+airymax-mempool-y += mempool_core.o
+airymax-mempool-y += mempool_region.o
 ```
 
 `auto.conf`（由 syncconfig 生成）被 `scripts/Makefile.build` 在每个子目录 `-include`，提供 `CONFIG_*` 的 make 侧值。这就是"配置即构建"的闭合回路：Kconfig 求解 → `auto.conf` → `obj-$(CONFIG_*)` → 三态门控。

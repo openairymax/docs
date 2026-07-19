@@ -22,6 +22,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 agentrt-linux 与 agentrt（AgentRT 极境智能体运行底座平台工程）同源：agentrt 是跨平台用户态运行时（Linux/macOS/Windows），agentrt-linux 是基于 Linux 6.6 内核基线的发行版（专为 Agent 工作负载优化），两者共享 Airymax 工程设计思想，agentrt 在 agentrt-linux 上运行天然更稳健和适配，架构同源，无适配层。
 
+> **项目定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——基于 Linux 6.6 内核基线，通过 seL4 微内核工程思想（Liedtke minimality principle、capability-based security、消息传递 IPC、服务用户态化）进行系统化改造，落地 v1.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。
+
 ***
 
 ## 2. 技术选型声明
@@ -40,7 +42,7 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 
 | 层次    | 缩写     | 名称                             | 共享程度          | 内容                                                                                                                                                                                         | 组织方式                                       |
 | ----- | ------ | ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| 第 1 层 | \[SC]  | 共享契约层（Shared-Contract）         | 完全共享代码        | 10 个头文件（`include/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `uapi_compat.h` / `lsm_types.h` | `include/airymax/` 独立头文件库，两端共同依赖           |
+| 第 1 层 | \[SC]  | 共享契约层（Shared-Contract）         | 完全共享代码        | 10 个头文件（`include/uapi/linux/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `uapi_compat.h` / `lsm_types.h` | `include/uapi/linux/airymax/` 独立头文件库，两端共同依赖           |
 | 第 2 层 | \[SS]  | 语义同源层（Shared-Semantics）        | API 签名相同，实现独立 | 调度语义、安全模型、IPC 传输、记忆模型、认知循环                                                                                                                                                                 | 各自独立实现，通过 \[SC] 保证互操作                      |
 | 第 3 层 | \[IND] | 完全独立层（Independent）             | 完全独立实现        | io\_uring fastpath、eBPF kfunc、Kbuild/Kconfig、内核模块构建                                                                                                                                        | 各自独立实现，通过 \[SC] 保证互操作                      |
 | 第 4 层 | \[DSL] | 降级生存层（Degraded Survival Layer） | 自包含降级块        | `#ifdef AIRY_SC_FALLBACK` 降级块、最小可运行子集（38 POSIX 错误码 + printk LOG\_FATAL/ERROR + 最简 IPC）                                                                                                     | 每个 \[SC] 头文件底部的降级块，`.fallback_hashes` 独立校验 |

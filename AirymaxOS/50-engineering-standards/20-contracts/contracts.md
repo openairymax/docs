@@ -38,7 +38,7 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本契约不再就地重定义 IPC 128B 消息头，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，使用 `__attribute__((packed))` 对齐与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型；字段顺序为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]。下方字段语义表以 SSoT Layout C 为准。
+> **SSoT 声明**：本契约不再就地重定义 IPC 128B 消息头，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `__attribute__((aligned(64)))` 对齐（移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型；字段顺序为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。下方字段语义表以 SSoT Layout C v4 为准。
 
 #### 2.2 字段语义表
 
@@ -51,8 +51,10 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
 | timestamp_ns | 16 | 8 | __u64 | CLOCK_REALTIME 纳秒时间戳 | 对齐北京时间（UTC+8） |
 | src_task | 24 | 8 | __u64 | 源任务 ID（agentrt task token / 内核 task ID） | 内核校验真实性，用户态不可伪造 |
 | dst_task | 32 | 8 | __u64 | 目标任务 ID，0 表示广播 | 内核校验目标可达性 |
-| payload_len | 40 | 4 | __u32 | payload 字节数，0 表示无 payload | 最大 64 MiB |
-| reserved | 44 | 84 | __u8[84] | 保留字段 | 填充为 0，未来扩展 |
+| capability_badge | 40 | 8 | __u64 | [SS] Capability Folding Badge（agentrt-linux 内核由 sec_d 编译，agentrt 用户态始终为 0） | D-9 修复后 8 字节对齐至 offset 40 |
+| payload_len | 48 | 4 | __u32 | payload 字节数，0 表示无 payload | 最大 64 MiB |
+| crc32 | 52 | 4 | __u32 | CRC32 覆盖 header[0:52) + payload | 发送方计算填入 |
+| reserved | 56 | 72 | __u8[72] | 保留字段（[56:64) CL1 尾部 + [64:128) CL2） | 填充为 0，未来扩展 |
 
 #### 2.3 标志位定义
 
@@ -67,7 +69,7 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
 | AIRY_IPC_F_URGENT | 0x0040 | [IND] 扩展 | 紧急消息，优先投递 | 仅 SCHED_FIFO 实时类可用 |
 | AIRY_IPC_F_NOREPLY | 0x0080 | [IND] 扩展 | 无需响应（单向通知） | 仅 EVENT payload 类型可用 |
 
-> **bit 冲突消解说明**：SSoT [SC] 锁定 bit 0-1 为 NOWAIT/SIGNAL（`include/airymax/ipc.h`）。扩展标志（ZEROCOPY/CAP_CARRY/COMPRESS/ENCRYPT/URGENT/NOREPLY）重新编号从 bit 2 开始，消除旧 `AIRY_IPC_FLAG_*` 前缀中 ZEROCOPY(bit 0)/CAP_CARRY(bit 1) 与 SSoT NOWAIT(bit 0)/SIGNAL(bit 1) 的 bit 位冲突。标志位类型为 `__u16`（对应消息头 `flags` 字段），前缀统一为 `AIRY_IPC_F_*`（对齐 SSoT 命名）。
+> **bit 冲突消解说明**：SSoT [SC] 锁定 bit 0-1 为 NOWAIT/SIGNAL（`include/uapi/linux/airymax/ipc.h`）。扩展标志（ZEROCOPY/CAP_CARRY/COMPRESS/ENCRYPT/URGENT/NOREPLY）重新编号从 bit 2 开始，消除旧 `AIRY_IPC_FLAG_*` 前缀中 ZEROCOPY(bit 0)/CAP_CARRY(bit 1) 与 SSoT NOWAIT(bit 0)/SIGNAL(bit 1) 的 bit 位冲突。标志位类型为 `__u16`（对应消息头 `flags` 字段），前缀统一为 `AIRY_IPC_F_*`（对齐 SSoT 命名）。
 
 #### 2.4 消息头布局可视化
 
@@ -606,7 +608,7 @@ static inline int airy_validate_user_ptr(const void __user *uptr, size_t size)
 
 #### 4.2 错误码定义
 
-agentrt-linux 系统调用错误码对齐 `include/airymax/error.h`（[SC] SSoT，权威定义见 `180-i18n/03-error-message-i18n.md` §2.2），与 agentrt 同源且部分代码共享（IRON-9 v3 [SC] 层）。错误码统一使用 `AIRY_E*` 前缀，负值返回：
+agentrt-linux 系统调用错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT，权威定义见 `180-i18n/03-error-message-i18n.md` §2.2），与 agentrt 同源且部分代码共享（IRON-9 v3 [SC] 层）。错误码统一使用 `AIRY_E*` 前缀，负值返回：
 
 | 错误码 | 值 | 含义 | 典型触发场景 | 可重试 |
 |--------|-----|------|-------------|--------|

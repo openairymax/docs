@@ -798,7 +798,7 @@ export LC_ALL=C
 
 # 1. 收集 [SC] 共享契约层头文件
 mkdir -p airymaxos-headers/airymax
-cp include/airymax/*.h airymaxos-headers/airymax/
+cp include/uapi/linux/airymax/*.h airymaxos-headers/airymax/
 
 # 2. 强制时间戳
 find airymaxos-headers -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +

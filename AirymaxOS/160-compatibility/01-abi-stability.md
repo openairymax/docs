@@ -89,7 +89,7 @@ L2 层接口允许向后兼容的扩展：
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。
 
 L2 层变更规则：
 - **禁止**：改变 128B 消息头大小、改变已用字段语义

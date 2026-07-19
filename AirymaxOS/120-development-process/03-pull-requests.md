@@ -228,7 +228,7 @@ Signed-off-by: <作者> <邮箱>                # DCO 必填
 `sc-dual-ci.yml` 在 [SC] PR 上执行以下校验：
 
 1. **拉取双端 PR 分支**：从 agentrt 与 agentrt-linux 分别拉取对应 PR 的分支。
-2. **提取 10 个 [SC] 头文件**：从 `kernel/include/airymax/*.h` 提取 10 个 [SC] 文件。
+2. **提取 10 个 [SC] 头文件**：从 `kernel/include/uapi/linux/airymax/*.h` 提取 10 个 [SC] 文件。
 3. **逐字节比对**：使用 `diff -u` 比对双端文件，任何字节差异阻断合并。
 4. **编译器无关性校验**：运行 `check-uapi-compiler-agnostic.sh`，验证头文件不含编译器扩展（GCC `__attribute__` / Clang `__builtin__` / MSVC `__declspec` 等）。
 5. **UAPI 兼容性校验**：使用 `scripts/headers_compile_test.sh` 在 5 种编译器（GCC / Clang / MSVC / icx / armclang）下编译。
@@ -257,7 +257,7 @@ SSoT v2 单一权威源模型要求每个技术点只有一个权威源。任何
 
 1. **四层归属校验**：检查变更文件是否正确归属到 [SC] / [SS] / [IND] / [DSL] 之一，归属错误的 PR 阻断。
 2. **权威源唯一性**：检查变更是否引入了与已有权威源冲突的新权威源声明。
-3. **[SC] 数量校验**：验证 `kernel/include/airymax/` 下的 [SC] 头文件数量保持为 10 个（不可增减）。
+3. **[SC] 数量校验**：验证 `kernel/include/uapi/linux/airymax/` 下的 [SC] 头文件数量保持为 10 个（不可增减）。
 4. **跨文档引用一致性**：验证 SSoT 注册表中的跨文档引用链接有效。
 5. **五大选型守护**：验证变更未偏离五大技术选型声明。
 

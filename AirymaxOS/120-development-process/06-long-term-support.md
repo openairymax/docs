@@ -192,7 +192,7 @@ LTS 分支的 commit 来源有三：
 ### 5.1 ABI 稳定性
 
 - **保证范围**：
-  - 内核→用户态 UAPI（`kernel/include/airymax/*.h`）。
+  - 内核→用户态 UAPI（`kernel/include/uapi/linux/airymax/*.h`）。
   - 12 daemon 的服务接口（IPC 协议）。
   - Agent 契约接口（[SC] `agent_contract.h`）。
 - **保证标准**：LTS 周期内（5 年）不引入破坏性 ABI 变更。
@@ -201,7 +201,7 @@ LTS 分支的 commit 来源有三：
 
 ### 5.2 [SC] 头文件向后兼容
 
-- **保证范围**：10 个 [SC] 头文件（`kernel/include/airymax/*.h`）。
+- **保证范围**：10 个 [SC] 头文件（`kernel/include/uapi/linux/airymax/*.h`）。
 - **保证标准**：LTS 周期内 [SC] 头文件不引入破坏性变更。
 - **允许的变更**：
   - 新增结构体字段（必须附加在末尾，且不改变 sizeof）。

@@ -163,7 +163,7 @@ CONFIG_KALLSYMS_ALL=y
 agentrt-linux 在 syscall 表中保留编号 512-631，共 120 个 Agent 专属 syscall：
 
 ```c
-/* include/uapi/airymax/syscall.h（[SC] 共享契约层） */
+/* include/uapi/linux/airymax/syscall.h（[SC] 共享契约层） */
 #ifndef _UAPI_AIRY_SYSCALL_H
 #define _UAPI_AIRY_SYSCALL_H
 
@@ -604,6 +604,220 @@ agentrt-linux 计划在 v1.1 版本接入 Google syzbot 公开实例（`syzkalle
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | v1.0.1 | 2026-07-18 | 初始版本：定义 syzkaller 模糊测试框架集成与 KCOV 覆盖率引导；定义 120 个 Agent syscall（512-631）的 syzkaller 描述；定义 IORING_OP_URING_CMD 参数模糊与 Agent 设备 ioctl 参数模糊；定义 `continuous-fuzzing` workflow（PR 短时 + 持续 24 小时）与 crash 处理流程 |
+
+---
+
+## 13. v1.1 Capability Folding Fuzz 用例（v1.1 增量补强）
+
+> **补强背景**：80-testing/ 现有 §1-§12 覆盖 120 个 Agent syscall（512-631）的通用 syzkaller 描述，但未针对 v1.1 Capability Folding 架构引入的攻击面（64-bit Badge 格式 `Epoch<<48 | RandomTag<<16 | Perms`、`agent_caps[1024]` 静态数组、SQE128 fastpath 路径）进行专项 fuzz。本章节定义 v1.1 Capability Folding 专属 fuzz 矩阵、syzkaller 描述、CI 集成与门槛，作为 §1-§12 的增量补强，不替换现有任何内容。
+
+### 13.1 攻击面与 fuzz 矩阵
+
+v1.1 Capability Folding 引入三类新攻击面，每类对应一个 fuzz 用例集：
+
+| 用例集 | 攻击面 | 输入空间 | 期望失败模式 | 关联模块 |
+|--------|--------|---------|------------|---------|
+| F-BADGE-1 | Badge 64-bit 格式伪造 | `Epoch∈[0,2^16)`、`RandomTag∈[0,2^32)`、`Perms∈[0,2^16)` | `airy_cap_badge_ok()` 拒绝非法 Badge，返回 `-EACCES` | `kernel/airymaxos/cap/` |
+| F-SQE128-1 | malformed SQE128 fastpath 输入 | `cmd_op` 越界、`addr` 未对齐、`len` 超过 `agent_caps[]` 容量 | fastpath 返回 `-EINVAL`，slowpath LSM 钩子接管 | `kernel/airymaxos/ipc/airy_ipc_fastpath.c` |
+| F-CAPS-1 | `agent_caps[1024]` 越界访问 | `cap_idx∈[0, 4096)`（覆盖越界 1024-4095） | `agent_caps[]` 边界检查拒绝越界索引，返回 `-ERANGE` | `kernel/airymaxos/cap/airy_cap_cache.c` |
+
+### 13.2 Badge 伪造 fuzz（F-BADGE-1）
+
+Badge 64-bit 格式 `Badge = Epoch<<48 | RandomTag<<16 | Perms`，攻击者可能构造以下伪造输入：
+
+- **Epoch 不匹配**：`Badge.Epoch ≠ agent_caps[idx].epoch`（撤销后旧 Badge 重放）。
+- **RandomTag 猜测**：暴力枚举 2^32 空间尝试匹配合法 `agent_caps[idx].random_tag`。
+- **Perms 越权**：`Badge.Perms` 包含 `agent_caps[idx].perms` 未授权的权限位。
+- **全 0 Badge**：`Badge = 0`（非法 sentinel）。
+- **全 1 Badge**：`Badge = 0xFFFFFFFFFFFFFFFF`（边界值）。
+
+KUnit 伪代码（`kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c`）：
+
+```c
+/* kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c */
+#include <kunit/test.h>
+#include <uapi/airymax/cap.h>
+
+/* Fuzz 1：Epoch 不匹配必须被拒绝 */
+KUNIT_DEFINE_TEST(airy_cap_badge_fuzz_epoch_mismatch)
+{
+    struct kunit *test = kunit_current;
+    struct airy_cap_entry entry = {
+        .epoch = 0x1234,
+        .random_tag = 0xDEADBEEF,
+        .perms = AIRY_CAP_PERM_READ,
+    };
+    /* 构造 Badge：RandomTag 与 Perms 匹配，但 Epoch 不匹配 */
+    u64 forged_badge = ((u64)(entry.epoch + 1) << 48) |
+                       ((u64)entry.random_tag << 16) |
+                       (entry.perms & 0xFFFF);
+    int ret = airy_cap_badge_ok(forged_badge, &entry);
+    KUNIT_EXPECT_EQ(test, -EACCES, ret);
+}
+
+/* Fuzz 2：RandomTag 暴力枚举（采样验证，不做全 2^32 遍历） */
+KUNIT_DEFINE_TEST(airy_cap_badge_fuzz_random_tag_brute)
+{
+    struct kunit *test = kunit_current;
+    struct airy_cap_entry entry = {
+        .epoch = 0x1, .random_tag = 0xCAFEBABE, .perms = AIRY_CAP_PERM_READ,
+    };
+    int reject_count = 0;
+    /* 采样 1024 个错误 RandomTag，全部应被拒绝 */
+    for (int i = 0; i < 1024; i++) {
+        u32 wrong_tag = entry.random_tag ^ (i * 0x9E3779B1u);
+        u64 badge = ((u64)entry.epoch << 48) | ((u64)wrong_tag << 16) | entry.perms;
+        if (airy_cap_badge_ok(badge, &entry) == -EACCES)
+            reject_count++;
+    }
+    KUNIT_EXPECT_EQ(test, 1024, reject_count);  /* 100% 拒绝 */
+}
+
+/* Fuzz 3：Perms 越权必须被拒绝 */
+KUNIT_DEFINE_TEST(airy_cap_badge_fuzz_perms_escalation)
+{
+    struct kunit *test = kunit_current;
+    struct airy_cap_entry entry = {
+        .epoch = 0x1, .random_tag = 0x1234,
+        .perms = AIRY_CAP_PERM_READ,  /* 仅 READ 权限 */
+    };
+    /* 构造 Badge：包含 WRITE 权限（越权） */
+    u64 forged_badge = ((u64)entry.epoch << 48) |
+                       ((u64)entry.random_tag << 16) |
+                       (AIRY_CAP_PERM_READ | AIRY_CAP_PERM_WRITE);
+    int ret = airy_cap_badge_ok(forged_badge, &entry);
+    KUNIT_EXPECT_EQ(test, -EACCES, ret);
+}
+
+/* Fuzz 4：边界值（全 0 / 全 1）必须被拒绝 */
+KUNIT_DEFINE_TEST(airy_cap_badge_fuzz_boundary_values)
+{
+    struct kunit *test = kunit_current;
+    struct airy_cap_entry entry = {
+        .epoch = 0x1, .random_tag = 0x1234, .perms = AIRY_CAP_PERM_READ,
+    };
+    KUNIT_EXPECT_EQ(test, -EACCES, airy_cap_badge_ok(0, &entry));
+    KUNIT_EXPECT_EQ(test, -EACCES, airy_cap_badge_ok(0xFFFFFFFFFFFFFFFFULL, &entry));
+}
+```
+
+### 13.3 malformed SQE128 fuzz（F-SQE128-1）
+
+v1.1 fastpath 使用 SQE128（128 字节 SQE），`IORING_OP_URING_CMD` 的 `cmd_op` 与 `cmd[]` 字段是 fuzz 重点：
+
+- **cmd_op 越界**：`cmd_op ≥ AIRY_URING_CMD_MAX`（如 `0xFFFF`）。
+- **addr 未对齐**：`addr % 64 ≠ 0`（破坏 2-cache-line 对齐假设）。
+- **len 超容**：`len > 4096`（超过 `agent_caps[]` 单次操作容量）。
+- **cmd[] 内容随机**：128 字节 `cmd[]` 全随机字节流。
+
+syzkaller 描述见 §13.5，CI 通过 KASAN + UBSAN 检测 fastpath 中的越界访问与未对齐访问。
+
+### 13.4 `agent_caps[]` 越界 fuzz（F-CAPS-1）
+
+`agent_caps[1024]` 静态数组的边界检查是 fuzz 重点：
+
+- **索引 1024-4095**：立即越界，必须返回 `-ERANGE`。
+- **索引 -1（0xFFFFFFFF）**：有符号转换越界。
+- **并发索引竞争**：多线程同时读写不同索引（配合 KCSAN 检测数据竞争）。
+
+KUnit 伪代码（`kernel/airymaxos/cap/airy_cap_cache_fuzz_test.c`）：
+
+```c
+/* kernel/airymaxos/cap/airy_cap_cache_fuzz_test.c */
+KUNIT_DEFINE_TEST(airy_cap_cache_fuzz_oob_index)
+{
+    struct kunit *test = kunit_current;
+    /* 索引 1024-4095 全部越界 */
+    for (int i = 1024; i < 4096; i += 17) {  /* 采样 180 个越界索引 */
+        int ret = airy_cap_lookup(i, NULL);
+        KUNIT_EXPECT_EQ(test, -ERANGE, ret);
+    }
+}
+
+KUNIT_DEFINE_TEST(airy_cap_cache_fuzz_signed_underflow)
+{
+    struct kunit *test = kunit_current;
+    /* 有符号 -1 转 unsigned 后为 0xFFFFFFFF，越界 */
+    int ret = airy_cap_lookup((unsigned int)-1, NULL);
+    KUNIT_EXPECT_EQ(test, -ERANGE, ret);
+}
+```
+
+### 13.5 syzkaller syz_program 完整描述
+
+`syzkaller/sys/airymaxos/airy_cap_folding.txt`：
+
+```
+# syzkaller/sys/airymaxos/airy_cap_folding.txt
+# v1.1 Capability Folding 专属 fuzz 描述
+
+include <uapi/linux/airymax/cap.h>
+include <uapi/linux/airymax/uring_cmd.h>
+
+# Badge 伪造 fuzz：随机生成 64-bit Badge 并尝试校验
+resource airy_badge_t[int64]
+
+airy_forged_badge_compile(fd fd, badge ptr[in, airy_badge_t], cap_idx int32[0:4095]) airy_cap_result
+
+# malformed SQE128 fuzz
+airy_uring_cmd_malformed(fd fd, cmd_op int32[0:0xFFFF], cmd ptr[in, array[int8, 128]], addr int64, len int32[0:8192])
+
+# agent_caps[] 越界 fuzz
+airy_cap_oob_lookup(fd fd, cap_idx int32[0:8191]) airy_cap_result
+
+# 类型定义
+type airy_cap_result int32[0:0xFFFFFFFF]
+```
+
+种子语料 `airy_fuzz_seed/cap_folding/`：
+
+- `badge_epoch_replay.syz`：Epoch 不匹配重放场景。
+- `sqe128_cmd_op_oob.syz`：cmd_op 越界场景。
+- `caps_oob_index.syz`：agent_caps[] 索引越界场景。
+- `badge_perms_escalation.syz`：Perms 越权场景。
+- `badge_boundary_zero.syz`：全 0 Badge 边界场景。
+- `badge_boundary_ones.syz`：全 1 Badge 边界场景。
+
+### 13.6 CI 集成与门槛
+
+v1.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（§6.1），新增 `cap-folding-fuzz` job：
+
+```yaml
+# .github/workflows/continuous-fuzzing.yml 新增 job（增量）
+  cap-folding-fuzz:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04-large
+    timeout-minutes: 720  # 12 小时
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with airy_fuzz_defconfig + KASAN
+        run: |
+          make ARCH=um defconfig airy_fuzz_defconfig
+          make ARCH=um -j$(nproc)
+      - name: Run cap-folding fuzz (4 VMs, 12 hours)
+        run: |
+          /tmp/syzkaller/bin/syz-manager -config syzkaller_cap_folding.cfg 2>&1 | tee cap_fuzz.log &
+          FUZZ_PID=$!
+          sleep 43200  # 12 小时
+          kill $FUZZ_PID
+      - name: Check for crashes
+        run: |
+          crashes=$(find /syzkaller/workdir/crashes -type d | wc -l)
+          if [ "$crashes" -gt 0 ]; then
+            echo "::error::Cap-folding fuzz found $crashes crashes"
+            for d in /syzkaller/workdir/crashes/*; do
+              echo "::error::Crash: $(basename $d)"
+              cat $d/description
+            done
+            exit 1
+          fi
+```
+
+**OS-TEST-107**：CI 持续模糊测试（`cap-folding-fuzz` job）必须 7×24 小时运行，覆盖 F-BADGE-1 / F-SQE128-1 / F-CAPS-1 三类攻击面；任一 crash（KASAN 报告 / panic / -ERANGE 未触发 / -EACCES 未触发）即自动创建 critical issue 并阻断 PR 合入。
+
+**OS-TEST-108**：CI PR 阶段必须运行 KUnit 单元测试 `airy_cap_badge_fuzz_test` 与 `airy_cap_cache_fuzz_test`，覆盖率门槛遵循 06-coverage-metrics §3.2 的 A 级（`cap/` 模块 95% 行 + 95% 分支 + 100% 函数覆盖率）；任一 KUnit 失败即 PR 阻断。
+
+**OS-KER-161**：v1.1 Capability Folding 专属 fuzz（§13）发现的 crash 视为 P0 级安全缺陷，必须在 12 小时内修复或回滚；连续 24 小时发现 ≥ 3 个同类型 crash 即暂停 release 流程，直至根因分析与修复完成。
 
 ---
 

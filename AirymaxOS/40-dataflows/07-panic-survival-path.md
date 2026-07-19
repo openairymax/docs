@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Panic 生存路径** 的唯一权威源。printk_safe NMI-safe buffer 模型、Ring Buffer 锁规避策略（trylock + 直接写入）、Panic handler 流程（dump 寄存器 → 写入 Ring Buffer → 同步持久存储）、与 [DSL] 降级模式的关系均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Panic 日志生存策略。
 >
-> 技术选型声明：日志内存采用 **alloc_pages(GFP_KERNEL) + mmap**（**不使用 DMA 一致性内存**）。整体遵循 Unify Design：sched_tac（不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：日志内存采用 **alloc_pages(GFP_KERNEL) + mmap**（**不使用 DMA 一致性内存**）。整体遵循 Unify Design：sched_tac（不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 
@@ -394,7 +394,7 @@ Panic 发生
 [DSL] 的 `#ifdef AIRY_SC_FALLBACK` 降级块确保即使 [SC] 头文件损坏，Panic 路径仍可用：
 
 ```c
-/* kernel/include/airymax/log_types.h 底部 —— [DSL] 降级块 */
+/* kernel/include/uapi/linux/airymax/log_types.h 底部 —— [DSL] 降级块 */
 #ifdef AIRY_SC_FALLBACK
 /* 降级块：Panic 路径仅依赖 printk_safe，不碰 Ring Buffer */
 #define airy_panic_write(fmt, ...)  printk_safe(fmt, ##__VA_ARGS__)

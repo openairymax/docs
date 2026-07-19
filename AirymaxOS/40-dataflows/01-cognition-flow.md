@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-07\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
-> **核心约束**：IRON-9 v3 同源且部分代码共享——[SC] cognition_types.h 落地于 include/airymax/（CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符），[SS] CoreLoopThree/Thinkdual/LLM 推理 API 语义同源，[IND] kthread 内核态/Wasm runtime/GPU-NPU 驱动独立实现
+> **核心约束**：IRON-9 v3 同源且部分代码共享——[SC] cognition_types.h 落地于 include/uapi/linux/airymax/（CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符），[SS] CoreLoopThree/Thinkdual/LLM 推理 API 语义同源，[IND] kthread 内核态/Wasm runtime/GPU-NPU 驱动独立实现
 
 ---
 
@@ -345,18 +345,18 @@ airy_cognition_dag_depth_avg 4.2
 
 认知循环数据流严格遵守 IRON-9 v3 四层共享模型：
 
-### 9.1 [SC] 共享契约层（`include/airymax/cognition_types.h`）
+### 9.1 [SC] 共享契约层（`include/uapi/linux/airymax/cognition_types.h`）
 
 agentrt 与 agentrt-linux 完全共享的契约定义：
 
 | 契约 | 内容 | 落地位置 |
 |------|------|---------|
-| CoreLoopThree 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION`（3 项） | `include/airymax/cognition_types.h` |
-| Thinkdual 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW`（2 项） | `include/airymax/cognition_types.h` |
-| LLM 推理阶段枚举 | `LLM_STAGE_PREFILL/DECODE/SPECULATIVE`（3 项） | `include/airymax/cognition_types.h` |
-| CoreLoopThree 上下文结构 | `airy_clt_ctx_t`（per-cpu 上下文） | `include/airymax/cognition_types.h` |
-| Token 能效指标结构 | `airy_token_efficiency_t`（tokens/J、tokens/s） | `include/airymax/cognition_types.h` |
-| GPU/NPU 能力描述符 | `airy_accel_capabilities_t`（VRAM/算力/带宽） | `include/airymax/cognition_types.h` |
+| CoreLoopThree 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION`（3 项） | `include/uapi/linux/airymax/cognition_types.h` |
+| Thinkdual 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW`（2 项） | `include/uapi/linux/airymax/cognition_types.h` |
+| LLM 推理阶段枚举 | `LLM_STAGE_PREFILL/DECODE/SPECULATIVE`（3 项） | `include/uapi/linux/airymax/cognition_types.h` |
+| CoreLoopThree 上下文结构 | `airy_clt_ctx_t`（per-cpu 上下文） | `include/uapi/linux/airymax/cognition_types.h` |
+| Token 能效指标结构 | `airy_token_efficiency_t`（tokens/J、tokens/s） | `include/uapi/linux/airymax/cognition_types.h` |
+| GPU/NPU 能力描述符 | `airy_accel_capabilities_t`（VRAM/算力/带宽） | `include/uapi/linux/airymax/cognition_types.h` |
 
 ### 9.2 [SS] 语义同源层（高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进）
 

@@ -160,7 +160,7 @@ A-ULS 的双 Supervisor 模型在发行版中体现为：内核 Micro-Supervisor
 
 ### 4.4 同源 agentrt 版本管理（IRON-9 v3）
 
-发行版管理遵循 **IRON-9 v3 四层模型**与 agentrt 版本管理同源：[SC] 共享头文件打包（`kernel/include/airymax/` 10 个头文件随内核 RPM 分发），[SS] 语义同源（版本号策略协同），[IND] 各自独立实现（agentrt 用户态版本 ↔ AirymaxOS 发行版版本），[DSL] 降级生存块（#ifdef AIRY_SC_FALLBACK）。
+发行版管理遵循 **IRON-9 v3 四层模型**与 agentrt 版本管理同源：[SC] 共享头文件打包（`kernel/include/uapi/linux/airymax/` 10 个头文件随内核 RPM 分发），[SS] 语义同源（版本号策略协同），[IND] 各自独立实现（agentrt 用户态版本 ↔ AirymaxOS 发行版版本），[DSL] 降级生存块（#ifdef AIRY_SC_FALLBACK）。
 
 ---
 

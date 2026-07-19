@@ -122,7 +122,7 @@ flowchart TD
 | 引入 page flipping | 禁止交换物理页实现零拷贝 | 使用 IORING_OP_URING_CMD |
 | 引入 BPF LSM | 禁止通过 eBPF 程序挂载安全钩子 | 使用纯 C LSM（`airy_lsm`） |
 | 引入 DMA 一致性内存 | 禁止 `dma_alloc_coherent` | 使用 `alloc_pages + mmap` |
-| 引入非 [SC] 共享头 | 禁止在 `kernel/include/airymax/` 之外创建共享头 | 通过 SSoT 评审后纳入 10 个 [SC] 头之一 |
+| 引入非 [SC] 共享头 | 禁止在 `kernel/include/uapi/linux/airymax/` 之外创建共享头 | 通过 SSoT 评审后纳入 10 个 [SC] 头之一 |
 
 ### 3.4 多架构编译矩阵
 

@@ -68,8 +68,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | workflow | 触发路径 | 排除路径 |
 |---------|---------|---------|
 | `ci-kernel.yml` | `kernel/**` / `services/**` / `security/**` / `memory/**` / `cognition/**` / `cloudnative/**` / `system/**` | `docs/**` / `*.md` |
-| `ssot-validate.yml` | `docs/AirymaxOS/**` / `kernel/include/airymax/**` / `airy_defconfig` | — |
-| `sc-dual-ci.yml` | `kernel/include/airymax/**`（仅 10 个 [SC] 头文件） | — |
+| `ssot-validate.yml` | `docs/AirymaxOS/**` / `kernel/include/uapi/linux/airymax/**` / `airy_defconfig` | — |
+| `sc-dual-ci.yml` | `kernel/include/uapi/linux/airymax/**`（仅 10 个 [SC] 头文件） | — |
 | `nightly.yml` | 全部 | — |
 | `release.yml` | tag `v*` | — |
 | `mgmt-orchestrator.yml` | `agentrt-linux-mgmt/**` | — |
@@ -266,13 +266,13 @@ on:
     branches: [main, develop, 'release/*', 'stable-*', 'lts-*']
     paths:
       - 'docs/AirymaxOS/**'
-      - 'kernel/include/airymax/**'
+      - 'kernel/include/uapi/linux/airymax/**'
       - 'airy_defconfig'
   pull_request:
     branches: [main, develop, 'release/*', 'stable-*', 'lts-*']
     paths:
       - 'docs/AirymaxOS/**'
-      - 'kernel/include/airymax/**'
+      - 'kernel/include/uapi/linux/airymax/**'
       - 'airy_defconfig'
 ```
 
@@ -282,7 +282,7 @@ on:
 |-----|------|---------|
 | 1 | 四层归属校验 | 变更文件正确归属到 [SC] / [SS] / [IND] / [DSL] |
 | 2 | 权威源唯一性 | 变更不引入冲突权威源 |
-| 3 | [SC] 数量校验 | `kernel/include/airymax/` 下保持 10 个 [SC] 头文件 |
+| 3 | [SC] 数量校验 | `kernel/include/uapi/linux/airymax/` 下保持 10 个 [SC] 头文件 |
 | 4 | 跨文档引用一致性 | SSoT 注册表中的链接有效 |
 | 5 | 五大选型守护 | 变更未偏离五大技术选型 |
 | 6 | `airy_defconfig` 锁定 | 五大选型配置不变 |
@@ -305,8 +305,8 @@ on:
 
 ### 4.6 Job 3：[SC] 数量校验
 
-- **校验内容**：`kernel/include/airymax/` 下的 [SC] 头文件数量保持为 10 个。
-- **校验方式**：统计 `kernel/include/airymax/*.h` 文件数量。
+- **校验内容**：`kernel/include/uapi/linux/airymax/` 下的 [SC] 头文件数量保持为 10 个。
+- **校验方式**：统计 `kernel/include/uapi/linux/airymax/*.h` 文件数量。
 - **失败处理**：数量不为 10 即 job 失败。
 - **OS-DEV-802**：新增或删除 [SC] 头文件必须通过 SSoT 委员会决议，且同步更新 SSoT 注册表。
 
@@ -352,11 +352,11 @@ on:
   push:
     branches: [main, develop, 'release/*', 'stable-*', 'lts-*']
     paths:
-      - 'kernel/include/airymax/**'
+      - 'kernel/include/uapi/linux/airymax/**'
   pull_request:
     branches: [main, develop, 'release/*', 'stable-*', 'lts-*']
     paths:
-      - 'kernel/include/airymax/**'
+      - 'kernel/include/uapi/linux/airymax/**'
 ```
 
 ### 5.3 Job 结构

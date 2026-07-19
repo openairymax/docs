@@ -11,9 +11,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **[SC] 三路类型桥接规范** 的唯一权威源。三路类型桥接模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）、`uapi_compat.h` 设计、物理宿主 `kernel/include/airymax/uapi_compat.h`、CI 三路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
+> **单一权威源声明**：本文件是 **[SC] 三路类型桥接规范** 的唯一权威源。三路类型桥接模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）、`uapi_compat.h` 设计、物理宿主 `kernel/include/uapi/linux/airymax/uapi_compat.h`、CI 三路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
 >
-> 技术选型声明：整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
 ---
 
@@ -31,7 +31,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 问题背景
 
-[SC] 共享契约头文件（物理宿主 `kernel/include/airymax/`，共 10 个）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
+[SC] 共享契约头文件（物理宿主 `kernel/include/uapi/linux/airymax/`，共 10 个）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
 
 | 环境 | 编译器 | 类型系统 | 头文件依赖 |
 |------|--------|---------|-----------|
@@ -107,7 +107,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 以 `struct airy_log_record` 为例，展示三路桥接：
 
 ```c
-/* kernel/include/airymax/log_types.h —— 三路类型桥接示例 */
+/* kernel/include/uapi/linux/airymax/log_types.h —— 三路类型桥接示例 */
 #ifndef _AIRYM_LOG_TYPES_H
 #define _AIRYM_LOG_TYPES_H
 
@@ -136,7 +136,7 @@ struct airy_log_record {
 `uapi_compat.h` 是三路类型桥接的实现头文件，定义统一的类型别名：
 
 ```c
-/* kernel/include/airymax/uapi_compat.h —— 三路类型桥接 */
+/* kernel/include/uapi/linux/airymax/uapi_compat.h —— 三路类型桥接 */
 #ifndef _AIRYM_UAPI_COMPAT_H
 #define _AIRYM_UAPI_COMPAT_H
 
@@ -239,14 +239,14 @@ _Static_assert(offsetof(struct airy_log_record, timestamp_ns) == 8, "ts offset")
 
 ---
 
-## §4 物理宿主：kernel/include/airymax/uapi_compat.h
+## §4 物理宿主：kernel/include/uapi/linux/airymax/uapi_compat.h
 
 ### 4.1 物理宿主
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| uapi_compat.h | `kernel/include/airymax/uapi_compat.h` | 三路类型桥接实现 |
-| [SC] 头文件 | `kernel/include/airymax/*.h` | 10 个 [SC] 头文件，均 #include uapi_compat.h |
+| uapi_compat.h | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接实现 |
+| [SC] 头文件 | `kernel/include/uapi/linux/airymax/*.h` | 10 个 [SC] 头文件，均 #include uapi_compat.h |
 
 ### 4.2 与 10 个 [SC] 头文件的关系
 
@@ -307,7 +307,7 @@ jobs:
         run: |
           # 内核态编译：定义 __KERNEL__
           gcc -D__KERNEL__ -Ikernel/include -c \
-              kernel/include/airymax/*.h -o /dev/null
+              kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
   userspace-linux-compile:
     name: Userspace Linux path (__linux__)
@@ -318,7 +318,7 @@ jobs:
         run: |
           # 用户态 Linux 编译：__linux__ 由 GCC 预定义
           gcc -Ikernel/include -c \
-              kernel/include/airymax/*.h -o /dev/null
+              kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
   third-party-compile:
     name: Third-party path (no macros)
@@ -331,7 +331,7 @@ jobs:
           # 仅依赖 stdint.h，模拟非 Linux 环境
           gcc -U__linux__ -U__KERNEL__ -std=c99 \
               -Ikernel/include -c \
-              kernel/include/airymax/*.h -o /dev/null
+              kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
   type-size-check:
     name: Type size consistency
@@ -385,7 +385,7 @@ jobs:
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
-| v1.0 | 2026-07-17 | 初始版本：[SC] 三路类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（统一 airy_* 类型别名）；物理宿主 kernel/include/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
+| v1.0 | 2026-07-17 | 初始版本：[SC] 三路类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（统一 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
 
 ---
 

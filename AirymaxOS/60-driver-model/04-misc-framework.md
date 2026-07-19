@@ -374,7 +374,7 @@ out:
 agentrt-linux v1.0.1 定义了统一的 ioctl 命令编号体系，通过 [SC] 头文件三路桥接：
 
 ```c
-/* [SC] include/uapi/airymax/airy_ioctl.h — ioctl 命令编号 */
+/* [SC] include/uapi/linux/airymax/airy_ioctl.h — ioctl 命令编号 */
 
 /* 魔数：'A' = 0x41（Airymax） */
 #define AIRY_IOC_MAGIC      'A'
@@ -512,8 +512,8 @@ static int airy_cogn_uring_cmd(struct io_uring_cmd *ioucmd,
     const struct airy_uring_cmd_hdr *hdr;
     int rc;
 
-    /* 1. 解析命令头（io_uring cmd 数据中） */
-    hdr = (const struct airy_uring_cmd_hdr *)ioucmd->cmd;
+    /* 1. 解析命令头（io_uring pdu 内联数据区，OLK 6.6 io_uring_cmd_to_pdu 宏） */
+    hdr = io_uring_cmd_to_pdu(ioucmd, const struct airy_uring_cmd_hdr);
     if (hdr->magic != AIRY_URING_CMD_MAGIC)
         return -AIRY_E_DEV_INVAL;
 
@@ -773,7 +773,7 @@ misc 设备框架的测试覆盖在 [07-driver-testing.md](07-driver-testing.md)
 | 1 | `struct airy_misc_dev` 定义 | `include/airymax/misc_agent.h` | 待实现 |
 | 2 | `airy_misc_register` / `airy_misc_deregister` 实现 | `drivers/airymax/misc_agent.c` | 待实现 |
 | 3 | `devm_airy_misc_register` 托管式封装 | `drivers/airymax/misc_agent.c` | 待实现 |
-| 4 | `AIRY_IOC_*` ioctl 命令编号体系 [SC] 头文件 | `include/uapi/airymax/airy_ioctl.h` | 待实现 |
+| 4 | `AIRY_IOC_*` ioctl 命令编号体系 [SC] 头文件 | `include/uapi/linux/airymax/airy_ioctl.h` | 待实现 |
 | 5 | io_uring fastpath 集成（`uring_cmd` 回调） | `drivers/airymax/misc_agent.c` | 待实现 |
 | 6 | vfs_d daemon 设备节点缓存逻辑 | `daemons/vfs_d/dev_cache.c` | 待实现 |
 | 7 | KUnit 单元测试（≥25 用例） | `drivers/airymax/misc_agent_test.c` | 待实现 |

@@ -100,10 +100,10 @@ sched_tac 用户态调度器通过 `struct airy_sched_ops` 暴露下列回调（
 
 ### 3.1 Q16.16 定点数表示
 
-Linux 6.6 内核态禁用浮点（kernel_fpu 禁用），因此 vtime 必须以定点数表达。agentrt-linux 采用 **Q16.16 定点数**（`airy_q16_t`），整数部分 16 位、小数部分 16 位，定义于 `include/airymax/memory_types.h`（IRON-9 v3 [SC] 共享契约层）：
+Linux 6.6 内核态禁用浮点（kernel_fpu 禁用），因此 vtime 必须以定点数表达。agentrt-linux 采用 **Q16.16 定点数**（`airy_q16_t`），整数部分 16 位、小数部分 16 位，定义于 `include/uapi/linux/airymax/memory_types.h`（IRON-9 v3 [SC] 共享契约层）：
 
 ```c
-/* include/airymax/airy_q16.h —— Q16.16 定点数原语 */
+/* include/uapi/linux/airymax/airy_q16.h —— Q16.16 定点数原语 */
 #ifndef AIRY_Q16_H
 #define AIRY_Q16_H
 
@@ -544,7 +544,7 @@ void agent_exit(struct airy_sched_exit_info *info)
 
 ### 7.2 错误码体系对接
 
-调度器错误码纳入 agentrt-linux 统一错误码体系（`include/airymax/error.h`，IRON-9 v3 [SC] 共享契约层）：
+调度器错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，IRON-9 v3 [SC] 共享契约层）：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|

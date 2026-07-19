@@ -418,8 +418,8 @@ if (unlikely(fatal_error)) {
 1. **结构体布局不变式**：依赖结构体大小、偏移、对齐的代码，必须在头文件或初始化函数中使用 `BUILD_BUG_ON()` 或 `static_assert` 编译期校验。
 2. **枚举与位宽约束**：枚举值用于位域或固定位宽字段时，必须编译期校验上界。
 3. **`__noreturn` 标注**：`airy_panic`、`airy_halt`、`do_exit` 等不会返回的函数必须声明为 `__noreturn`；调用这些函数后的代码路径编译器将正确消除"缺少 return"警告。
-4. **头文件依赖最小化**：内核内部头文件不得依赖用户态接口头文件；`include/airymax/` 下的 [SC] 共享契约层头文件必须保持最小依赖集，仅包含自身类型定义所需的头文件。
-5. **UAPI 头文件编译器无关原则**（OS-IRON-016）：`include/uapi/airymax/` 下的用户态接口头文件必须坚持 C11 标准，禁止使用 `__attribute__`、`__builtin_*`、`__asm__`、`__sync_*`、`__atomic_*`、`typeof` 等编译器扩展，以保证可被任意 C11 标准编译器（GCC/Clang/MSVC/ICC）消费。内核内部头文件（`include/airymax/`）不受此约束。详见 [04-engineering-philosophy.md §2.4](../04-engineering-philosophy.md)。
+4. **头文件依赖最小化**：内核内部头文件不得依赖用户态接口头文件；`include/uapi/linux/airymax/` 下的 [SC] 共享契约层头文件必须保持最小依赖集，仅包含自身类型定义所需的头文件。
+5. **UAPI 头文件编译器无关原则**（OS-IRON-016）：`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C11 标准，禁止使用 `__attribute__`、`__builtin_*`、`__asm__`、`__sync_*`、`__atomic_*`、`typeof` 等编译器扩展，以保证可被任意 C11 标准编译器（GCC/Clang/MSVC/ICC）消费。内核内部头文件（`include/uapi/linux/airymax/`）不受此约束（D-8 OLK 6.6 UAPI 路径对齐：UAPI 头文件物理宿主 `include/uapi/linux/airymax/`，内核内部头文件 `include/uapi/linux/airymax/`）。详见 [04-engineering-philosophy.md §2.4](../04-engineering-philosophy.md)。
 6. **`unreachable()` 标注不可达路径**：调用 `__noreturn` 函数后的代码路径，或逻辑上不可达的 `default`/`case` 分支，必须使用 Linux 内核 `unreachable()` 宏（等价于 `__builtin_unreachable()`，定义于 `include/linux/compiler.h`）标注。`airy_panic()` 之后的代码若 `airy_panic()` 已声明为 `__noreturn`，编译器自动消除警告，无需额外 `unreachable()`；仅在未声明 `__noreturn` 的场景或 `switch` 默认分支需显式标注。
 7. **位操作函数**：优先使用 Linux 内核位操作 API（`__builtin_clzl()` / `__builtin_ctzl()` / `__builtin_popcountl()` / `bitmap_*` 系列，定义于 `include/linux/bitops.h` / `include/asm-generic/bitops/`），不引入 seL4 `clzl()` / `ctzl()` / `popcountl()` 函数封装（违反 IRON-1 禁止新特性）。
 8. **缓存行对齐 padding**：使用 Linux 内核 `____cacheline_aligned` / `__cacheline_aligned` / `CACHELINE_ALIGN` 等已有宏（定义于 `include/linux/cache.h`），不引入 seL4 `PAD_TO_NEXT_CACHE_LN()` 宏。
@@ -1477,7 +1477,7 @@ kfree(old);
 
 #### 10.1 [SC] 层定义
 
-[SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/airymax/` 下的 10 个头文件：
+[SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/uapi/linux/airymax/` 下的 10 个头文件：
 - `syscalls.h`：v1.1 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位
 - `memory_types.h`：MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口
 - `security_types.h`：Cupolas capability 令牌结构、POSIX capability 41 ID 枚举、LSM 钩子 252 ID 枚举、capability 派生模型、Vault backend 抽象、策略裁决 4 值枚举
@@ -1495,7 +1495,7 @@ kfree(old);
 > 5. **版本锁定**：头文件变更必须伴随语义版本号变更（MAJOR.MINOR.PATCH）
 
 ```c
-/* [SC] 共享契约层示例：include/airymax/ipc.h */
+/* [SC] 共享契约层示例：include/uapi/linux/airymax/ipc.h */
 #ifndef _AIRY_IPC_H
 #define _AIRY_IPC_H
 
@@ -1886,7 +1886,7 @@ static int airy_ipc_send(struct airy_ipc_chan *chan,
 
 #### 4.1 规则文本
 
-agentrt-linux 内核态代码**禁止**使用 `float`/`double` 浮点类型。x86 编译强制 `-mno-80387` 禁止 x87 指令生成。所有需要小数运算的场景**必须**使用 `airy_q16_t`（`int32_t`）Q16.16 定点数：高 16 位为整数部分，低 16 位为小数部分。定点运算辅助宏定义于 `include/airymax/cognition_types.h`。
+agentrt-linux 内核态代码**禁止**使用 `float`/`double` 浮点类型。x86 编译强制 `-mno-80387` 禁止 x87 指令生成。所有需要小数运算的场景**必须**使用 `airy_q16_t`（`int32_t`）Q16.16 定点数：高 16 位为整数部分，低 16 位为小数部分。定点运算辅助宏定义于 `include/uapi/linux/airymax/cognition_types.h`。
 
 #### 4.2 Linux 6.6 内核基线 源码路径
 
@@ -4053,7 +4053,7 @@ spin_unlock(&task_table->lock);
 
 #### 6.1 capability 检查（OS-SEC-121）
 
-> **OS-SEC-121**：所有安全敏感操作（资源访问、权限变更、配置修改）必须通过 Cupolas capability 系统检查。capability 是不可伪造的令牌，无 capability 即无访问权限。Cupolas capability 结构体定义位于 [SC] 共享契约层（`include/airymax/capability.h`），遵循 IRON-9 v3 同源且部分代码共享原则。
+> **OS-SEC-121**：所有安全敏感操作（资源访问、权限变更、配置修改）必须通过 Cupolas capability 系统检查。capability 是不可伪造的令牌，无 capability 即无访问权限。Cupolas capability 结构体定义位于 [SC] 共享契约层（`include/uapi/linux/airymax/capability.h`），遵循 IRON-9 v3 同源且部分代码共享原则。
 
 ```c
 /* 好：操作前检查 capability */

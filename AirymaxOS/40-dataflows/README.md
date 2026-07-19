@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0\
 > **最后更新**：2026-07-17\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
-> **核心约束**：IRON-9 v3 同源代码共享——[SC] 共享契约层 10 个头文件落地于 `include/airymax/`，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现，[DSL] 降级生存层提供 [SC] 损坏时最小可运行子集（#ifdef AIRY_SC_FALLBACK）；安全为横切关注点，贯穿全部数据流
+> **核心约束**：IRON-9 v3 同源代码共享——[SC] 共享契约层 10 个头文件落地于 `include/uapi/linux/airymax/`，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现，[DSL] 降级生存层提供 [SC] 损坏时最小可运行子集（#ifdef AIRY_SC_FALLBACK）；安全为横切关注点，贯穿全部数据流
 
 ---
 

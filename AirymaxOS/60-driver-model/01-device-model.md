@@ -487,22 +487,22 @@ IRON-9 v3 将 agentrt daemons 设备访问模式与 agentrt-linux 内核 device 
 
 | 层次 | 共享程度 | 设备模型内容 |
 |------|---------|------------|
-| **[SC] 共享契约层** | 间接共享（无直接头文件） | 无直接 [SC] 共享头文件；间接依赖 `include/airymax/sched.h` 任务描述符 `agent_id` 字段（magic `0x41475453` 'AGTS'）用于 Agent 驱动匹配 |
+| **[SC] 共享契约层** | 间接共享（无直接头文件） | 无直接 [SC] 共享头文件；间接依赖 `include/uapi/linux/airymax/sched.h` 任务描述符 `agent_id` 字段（magic `0x41475453` 'AGTS'）用于 Agent 驱动匹配 |
 | **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | `device_register`/`driver_register` 注册模式、bus 匹配逻辑、probe/remove 生命周期、devm_ 资源管理 |
 | **[IND] 完全独立层** | 完全独立 | Linux device core（kobject、sysfs、kobj_type）、devm_ 分配器内核实现、driver_private 结构、device_links 实现 |
 
 #### [SC] 共享契约层
 
-驱动模型无直接 [SC] 共享头文件——device core 是内核私有实现，agentrt 不跨态共享其数据结构。间接依赖 `include/airymax/sched.h` 中的任务描述符 `agent_id` 字段，用于将 Agent 实例与内核设备匹配。以下为间接 [SC] 依赖节选：
+驱动模型无直接 [SC] 共享头文件——device core 是内核私有实现，agentrt 不跨态共享其数据结构。间接依赖 `include/uapi/linux/airymax/sched.h` 中的任务描述符 `agent_id` 字段，用于将 Agent 实例与内核设备匹配。以下为间接 [SC] 依赖节选：
 
 ```c
-/* include/airymax/sched.h —— IRON-9 v3 [SC] 间接依赖（节选）
+/* include/uapi/linux/airymax/sched.h —— IRON-9 v3 [SC] 间接依赖（节选）
  * SSoT struct airy_task_desc 物理宿主见 120-cross-project-code-sharing.md §2.6。
  * agent_id 为 [SS] 语义层扩展字段（Agent 实例 ↔ 内核设备匹配键），
  * 不在 [SC] struct 中定义，由 device_driver 匹配逻辑维护。 */
 #define AIRY_TASK_MAGIC	0x41475453u	/* 'AGTS' —— Agent 任务描述符 magic（SSoT） */
 
-struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/airymax/sched.h */
+struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/uapi/linux/airymax/sched.h */
 	__u32		magic;		/* AIRY_TASK_MAGIC 0x41475453 'AGTS' */
 	__u16		prio;		/* 优先级 0-139（0 最高） */
 	__u16		_pad;
@@ -512,7 +512,7 @@ struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/airymax/sched.
 };
 ```
 
-**OS-DRV-IRON 约束**: agentrt daemons 与 agentrt-linux device model 不直接共享 device core 头文件；`agent_id` 字段语义两端一致（Agent 实例 ↔ 内核设备匹配键），由 `include/airymax/sched.h` 间接锁定。Agent 驱动匹配发生在语义层，不跨态共享 device_struct 内存布局。
+**OS-DRV-IRON 约束**: agentrt daemons 与 agentrt-linux device model 不直接共享 device core 头文件；`agent_id` 字段语义两端一致（Agent 实例 ↔ 内核设备匹配键），由 `include/uapi/linux/airymax/sched.h` 间接锁定。Agent 驱动匹配发生在语义层，不跨态共享 device_struct 内存布局。
 
 #### [SS] 语义同源层
 
@@ -553,7 +553,7 @@ graph LR
     style E fill:#fde68a,stroke:#b45309
 ```
 
-agentrt daemons 通过 [SC] 间接共享契约层读取 `include/airymax/sched.h` 任务描述符的 `agent_id` 字段，将 Agent 实例与 agentrt-linux 内核设备匹配，触发 `bus_type.match` → `driver probe` 探测链。两端通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）同步设备事件（uevent），无适配层。MicroCoreRT 极简内核契约要求（OS-KER-149）：内核态 device model 不得引入对用户态 daemon 的强依赖——`probe` 回调不得阻塞等待 daemon 响应；daemon 缺失时内核回退到默认行为，daemon 在 5 秒内未响应触发超时回退。
+agentrt daemons 通过 [SC] 间接共享契约层读取 `include/uapi/linux/airymax/sched.h` 任务描述符的 `agent_id` 字段，将 Agent 实例与 agentrt-linux 内核设备匹配，触发 `bus_type.match` → `driver probe` 探测链。两端通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）同步设备事件（uevent），无适配层。MicroCoreRT 极简内核契约要求（OS-KER-149）：内核态 device model 不得引入对用户态 daemon 的强依赖——`probe` 回调不得阻塞等待 daemon 响应；daemon 缺失时内核回退到默认行为，daemon 在 5 秒内未响应触发超时回退。
 
 ### 8.3 IRON-9 v3 同源且部分代码共享的实践
 
@@ -573,7 +573,7 @@ Agent 虚拟设备驱动是 agentrt-linux 专属扩展的核心——它将 agen
 
 #### 8.4.1 agent_device 结构定义
 
-`agent_device` 嵌入标准 `struct device` 作为首字段，复用 kobj/sysfs/kref 全套机制。`agent_id` 与 `include/airymax/sched.h` 任务描述符的 `agent_id` 同源（[SC] 间接共享），用于跨态匹配。
+`agent_device` 嵌入标准 `struct device` 作为首字段，复用 kobj/sysfs/kref 全套机制。`agent_id` 与 `include/uapi/linux/airymax/sched.h` 任务描述符的 `agent_id` 同源（[SC] 间接共享），用于跨态匹配。
 
 ```c
 /* agentrt/daemon/include/agent_device.h — agentrt-linux 专属扩展 */
@@ -791,7 +791,7 @@ Agent 设备的 probe/remove 与内核 uevent 形成异步协作：daemon 侧完
 
 ## 附录 A: 接口定义
 
-> **附录定位**： 本附录汇集 device/driver/bus/class 四元驱动模型所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/linux/device.h`、`include/linux/device/driver.h`、`include/linux/device/bus.h`、`include/linux/device/class.h`、`drivers/base/base.h` 及 `include/airymax/sched.h`（[SC] 间接依赖层）。
+> **附录定位**： 本附录汇集 device/driver/bus/class 四元驱动模型所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/linux/device.h`、`include/linux/device/driver.h`、`include/linux/device/bus.h`、`include/linux/device/class.h`、`drivers/base/base.h` 及 `include/uapi/linux/airymax/sched.h`（[SC] 间接依赖层）。
 
 ### A.1 核心数据结构
 

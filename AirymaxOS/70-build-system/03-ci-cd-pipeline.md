@@ -27,7 +27,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|
 | 7 层自动化验证体系 | OS-STD-TOOL-001~161 定义的端到端验证链：L1 编译期检查 / L2 静态分析 / L3 预提交 / L4 CI 门禁 / L5 连接验证 / L6 协议验证 / L7 发布验证 |
 | CI 矩阵 | 配置 × 架构 × 编译器的笛卡尔积构建矩阵（3×3×2=18） |
-| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014），物理宿主 `kernel/include/airymax/` |
+| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014），物理宿主 `kernel/include/uapi/linux/airymax/` |
 | 双向 CI | kernel CI 通过 → 触发 agentrt 镜像 PR → agentrt CI 通过 → L1 审查 → L3 审批（OS-IRON-008） |
 | SSoT | Single Source of Truth，规则编号唯一权威来源（`09-ssot-registry.md`/`.yaml`） |
 | 门禁（Gate） | CI 中阻断 PR 合并的硬性检查点，失败即禁止合并 |
@@ -105,7 +105,7 @@ agentrt-linux/.github/workflows/
 管理仓 CI 串行执行 4 类校验，任一失败即阻断：
 
 1. **SSoT 校验**：扫描全仓 `.md` 文件中的 `OS-*-NNN` 规则 ID，与 `ssot-registry.yaml`（管理仓根）比对（详见 §6）。
-2. **文件完整性**：校验 `.gitmodules` 中声明的 8 子仓 submodule 指针与实际 checkout 一致；校验 `kernel/include/airymax/` 下 10 个头文件物理存在（OS-IRON-014）。
+2. **文件完整性**：校验 `.gitmodules` 中声明的 8 子仓 submodule 指针与实际 checkout 一致；校验 `kernel/include/uapi/linux/airymax/` 下 10 个头文件物理存在（OS-IRON-014）。
 3. **子仓状态**：聚合 8 子仓最近一次 CI 状态，任一子仓主干红则管理仓 CI 红。
 4. **文档格式**：校验 markdownlint + front-matter 版权头 + 父文档链接有效性。
 
@@ -142,14 +142,14 @@ jobs:
         run: python3 agentrt-linux/tools/check-submodules.py --expected 8
       - name: Verify [SC] 10 shared headers exist
         run: |
-          test -f kernel/include/airymax/airy_agent.h
-          test -f kernel/include/airymax/airy_ipc.h
-          test -f kernel/include/airymax/airy_sched.h
-          test -f kernel/include/airymax/airy_mem.h
-          test -f kernel/include/airymax/airy_security.h
-          test -f kernel/include/airymax/airy_version.h
-          test -f kernel/include/airymax/bpf_struct_ops.h
-          test -f kernel/include/airymax/error.h
+          test -f kernel/include/uapi/linux/airymax/airy_agent.h
+          test -f kernel/include/uapi/linux/airymax/airy_ipc.h
+          test -f kernel/include/uapi/linux/airymax/airy_sched.h
+          test -f kernel/include/uapi/linux/airymax/airy_mem.h
+          test -f kernel/include/uapi/linux/airymax/airy_security.h
+          test -f kernel/include/uapi/linux/airymax/airy_version.h
+          test -f kernel/include/uapi/linux/airymax/bpf_struct_ops.h
+          test -f kernel/include/uapi/linux/airymax/error.h
 
   subrepo-status:
     runs-on: ubuntu-latest
@@ -683,34 +683,34 @@ SSoT 校验独立于 7 层验证体系，是横切关注点：它不验证代码
 
 ### 7.1 触发条件
 
-[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。物理宿主为 `kernel/include/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。
+[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。物理宿主为 `kernel/include/uapi/linux/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。
 
 当以下 8 个文件中任一发生变更时，触发双向 CI：
 
 | 序号 | 文件 | 共享内容 |
 |------|------|---------|
-| 1 | `kernel/include/airymax/airy_agent.h` | Agent 句柄/状态结构 |
-| 2 | `kernel/include/airymax/airy_ipc.h` | AgentsIPC 128B 消息协议 |
-| 3 | `kernel/include/airymax/airy_sched.h` | 调度器策略枚举 |
-| 4 | `kernel/include/airymax/airy_mem.h` | share_pool 内存语义 |
-| 5 | `kernel/include/airymax/airy_security.h` | LSM 钩子/capability |
-| 6 | `kernel/include/airymax/airy_version.h` | 版本注入宏 |
-| 7 | `kernel/include/airymax/bpf_struct_ops.h` | BPF 结构操作（补充共享） |
-| 8 | `kernel/include/airymax/error.h` | 错误码 SSoT（补充共享） |
+| 1 | `kernel/include/uapi/linux/airymax/airy_agent.h` | Agent 句柄/状态结构 |
+| 2 | `kernel/include/uapi/linux/airymax/airy_ipc.h` | AgentsIPC 128B 消息协议 |
+| 3 | `kernel/include/uapi/linux/airymax/airy_sched.h` | 调度器策略枚举 |
+| 4 | `kernel/include/uapi/linux/airymax/airy_mem.h` | share_pool 内存语义 |
+| 5 | `kernel/include/uapi/linux/airymax/airy_security.h` | LSM 钩子/capability |
+| 6 | `kernel/include/uapi/linux/airymax/airy_version.h` | 版本注入宏 |
+| 7 | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | BPF 结构操作（补充共享） |
+| 8 | `kernel/include/uapi/linux/airymax/error.h` | 错误码 SSoT（补充共享） |
 
 ```yaml
 # agentrt-linux/.github/workflows/sc-dual-ci.yml（触发段）
 on:
   pull_request:
     paths:
-      - 'kernel/include/airymax/airy_agent.h'
-      - 'kernel/include/airymax/airy_ipc.h'
-      - 'kernel/include/airymax/airy_sched.h'
-      - 'kernel/include/airymax/airy_mem.h'
-      - 'kernel/include/airymax/airy_security.h'
-      - 'kernel/include/airymax/airy_version.h'
-      - 'kernel/include/airymax/bpf_struct_ops.h'
-      - 'kernel/include/airymax/error.h'
+      - 'kernel/include/uapi/linux/airymax/airy_agent.h'
+      - 'kernel/include/uapi/linux/airymax/airy_ipc.h'
+      - 'kernel/include/uapi/linux/airymax/airy_sched.h'
+      - 'kernel/include/uapi/linux/airymax/airy_mem.h'
+      - 'kernel/include/uapi/linux/airymax/airy_security.h'
+      - 'kernel/include/uapi/linux/airymax/airy_version.h'
+      - 'kernel/include/uapi/linux/airymax/bpf_struct_ops.h'
+      - 'kernel/include/uapi/linux/airymax/error.h'
 ```
 
 ### 7.2 双向流程
@@ -760,7 +760,7 @@ jobs:
         run: |
           # 导出 10 个头文件变更补丁
           git format-patch origin/${{ github.base_ref }} HEAD -- \
-            kernel/include/airymax/ -o /tmp/patches
+            kernel/include/uapi/linux/airymax/ -o /tmp/patches
           # 在 agentrt 仓创建镜像 PR
           python3 agentrt-linux/tools/create-agentrt-mirror-pr.py \
             --patches /tmp/patches \

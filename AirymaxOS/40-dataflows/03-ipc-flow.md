@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.1（Capability Folding 集成版）\
 > **最后更新**：2026-07-18\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
-> **核心约束**：IRON-9 v3 同源且部分代码共享——[SC] IPC 消息头布局（128B 定长 + magic 0x41524531 'ARE1' + Layout C v4 含 `capability_badge` offset 44-51）+ 5 种 payload 协议落地于 include/airymax/，[SS] io_uring SQE/CQE 语义 + io_uring_register OP 语义同源 + fastpath C-S9 Badge 校验机制同源，[IND] io_uring 内核驱动实现 + ring buffer 内存分配策略独立
+> **核心约束**：IRON-9 v3 同源且部分代码共享——[SC] IPC 消息头布局（128B 定长 + magic 0x41524531 'ARE1' + Layout C v4 含 `capability_badge` offset 44-51）+ 5 种 payload 协议落地于 include/uapi/linux/airymax/，[SS] io_uring SQE/CQE 语义 + io_uring_register OP 语义同源 + fastpath C-S9 Badge 校验机制同源，[IND] io_uring 内核驱动实现 + ring buffer 内存分配策略独立
 
 ---
 
@@ -141,7 +141,7 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 | 8 | `SUBMIT_ALL` | 5.18 | ✅ | `io_uring_enter` 持续提交直到 SQ 空 | 提升吞吐 |
 | 9 | `COOP_TASKRUN` | 5.19 | ✅ | 避免任务上下文异步切换 | 与 DEFER_TASKRUN 二选一 |
 | 10 | `TASKRUN_FLAG` | 5.19 | ✅ | 设置 IORING_SQ_TASKRUN 标志 | 配合 COOP_TASKRUN |
-| 11 | `SQE128` | 5.18 | ❌ | 128 字节 SQE（扩展字段） | IPC 用 64B SQE 足够 |
+| 11 | `SQE128` | 5.18 | ✅ | 128 字节 SQE（扩展字段），`cmd` 扩展至 80 字节承载 `airy_ipc_cmd`（D-7 修复） | OS-IPC-009 |
 | 12 | `CQE32` | 5.18 | ❌ | 32 字节 CQE（扩展字段） | IPC 用 16B CQE 足够 |
 | 13 | `SINGLE_ISSUER` | 6.0 | ✅ | 单一提交者约束（DEFER_TASKRUN 前置） | OS-IPC-003 |
 | 14 | `DEFER_TASKRUN` | 6.0 | ✅ | task_work 延迟到 `enter` 执行 | OS-IPC-003 |
@@ -153,12 +153,12 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 
 **启用策略**：
 
-- **必须启用**（11 项）：`SQPOLL` / `SQ_AFF` / `CQSIZE` / `CLAMP` / `SUBMIT_ALL` / `TASKRUN_FLAG` / `SINGLE_ISSUER` / `DEFER_TASKRUN` / `NO_MMAP` / `NO_SQARRAY` / `NO_IEC`——覆盖零 syscall（OS-IPC-002）、零拷贝（OS-IPC-003）、低延迟三大场景。
+- **必须启用**（12 项）：`SQPOLL` / `SQ_AFF` / `CQSIZE` / `CLAMP` / `SUBMIT_ALL` / `SQE128` / `TASKRUN_FLAG` / `SINGLE_ISSUER` / `DEFER_TASKRUN` / `NO_MMAP` / `NO_SQARRAY` / `NO_IEC`——覆盖零 syscall（OS-IPC-002）、零拷贝（OS-IPC-003）、低延迟三大场景；`SQE128` 扩展 `cmd` 至 80 字节以承载 `airy_ipc_cmd`（D-7 修复，详见 [30-interfaces/02-ipc-protocol.md §4.9](../30-interfaces/02-ipc-protocol.md) + [30-interfaces/07-ipc-fastpath.md §5.7](../30-interfaces/07-ipc-fastpath.md)）。
 - **互斥标志二选一**：`COOP_TASKRUN`（5.19+）或 `DEFER_TASKRUN`（6.0+），不可同时启用。
-- **不启用**（6 项）：`IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `SQE128` / `CQE32` / `REGISTERED_FD_ONLY`——不适用于 IPC 场景（块设备 I/O / 多 ring 共享 / 立即禁用 / 扩展 SQE-CQE / 固定 fd）。
+- **不启用**（5 项）：`IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `CQE32` / `REGISTERED_FD_ONLY`——不适用于 IPC 场景（块设备 I/O / 多 ring 共享 / 立即禁用 / 扩展 CQE / 固定 fd）。
 - **版本路线**（1 项）：`DEFER_INIT`——Linux 6.6 基线不支持（ADR-001）；1.0.1 升级 Linux 7.1 后启用（ADR-013 版本路线，非设计延期；设计决策已在 0.1.1 完成：0.1.1 阶段不启用，1.0.1 阶段启用）。
 
-> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 11 个 `IORING_SETUP_*` 标志，并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一，禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `SQE128` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 设计决策已在 0.1.1 完成（0.1.1 阶段不启用——Linux 6.6 基线不支持 ADR-001；1.0.1 阶段启用——升级 Linux 7.1 后 ADR-013），属版本路线规划非设计延期。
+> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 12 个 `IORING_SETUP_*` 标志（含 `SQE128`，D-7 修复后从禁止列表移至必须启用列表，以扩展 `cmd` 至 80 字节承载 `airy_ipc_cmd`），并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一，禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 设计决策已在 0.1.1 完成（0.1.1 阶段不启用——Linux 6.6 基线不支持 ADR-001；1.0.1 阶段启用——升级 Linux 7.1 后 ADR-013），属版本路线规划非设计延期。
 
 > **与本文档已有提及对齐**：`SQPOLL`（§2.4 / §4 / §10.3）/ `SQ_AFF`（§10.3）/ `DEFER_TASKRUN`（§5）/ `NO_MMAP`（§12.3 [IND]）——本文档前述章节已分散提及 4 项，本表补全至 Linux 6.6 全量 19 项，确保 io_uring SETUP 标志清单的完整性与对齐性。
 
@@ -800,7 +800,7 @@ agentrt-linux IPC 的 IRON-9 v3 四层共享模型（同源且部分代码共享
 
 ### 12.1 [SC] 共享契约层（完全共享代码）
 
-`include/airymax/ipc.h` 头文件库，agentrt 与 agentrt-linux 完全共享：
+`include/uapi/linux/airymax/ipc.h` 头文件库，agentrt 与 agentrt-linux 完全共享：
 
 ```c
 #define AIRY_IPC_HDR_SIZE  128

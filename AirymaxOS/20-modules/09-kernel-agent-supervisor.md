@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Micro-Supervisor 内核模块设计
 > **文档定位**：A-ULS（统一生命周期管理）模块的内核态监管组件唯一权威设计\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.1.1（落后内容修复版，基于 v1.1 Capability Folding）\
+> **最后更新**：2026-07-19\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
 > **设计依据**：本文件为 SSoT（Single Source of Truth），Micro-Supervisor 内核模块职责、执法流程、FREEZE opcode、Badge 撤销解耦 atomic_inc 机制均以本文件为唯一权威定义
 
@@ -15,7 +15,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 >
 > **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，Micro-Supervisor 的 capability 校验路径从"独立前置 `airy_cap_check()` + radix tree 查找"重构为 **fastpath C-S9 内联 Badge 校验**（`airy_cap_badge_ok()`，~10ns）。Micro-Supervisor 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅在 slowpath（异常路径）做策略裁决。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码立即失效所有已发出 Badge，与 IPC fastpath 完全解耦（无 drain、无 bitmap、无 IPI）。详见 §3.5 FREEZE opcode 与 §6.4 Badge 撤销解耦。
 >
-> 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
+>
+> **ADR 引用声明**：本设计遵循 ADR-012（对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造技术路线确立）与 ADR-014（微内核设计思想来源单一化——seL4 为唯一思想来源，禁止混用 Mach/L4/Fuchsia/Zircon 等其他微内核设计模式）。Micro-Supervisor 的"冷酷执法 + 用户态裁决"机制级/策略级分离严格对齐 seL4 `handleFault()` 模型，不引入其他微内核的等价机制。IRON-9 v3 四层模型（[SC] 共享契约层 / [SS] 语义同源层 / [IND] 完全独立层 / [DSL] 降级生存层）是 Micro-Supervisor 与 Macro-Supervisor 协作的同源映射框架，详见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)。
 
 ---
 
@@ -51,7 +53,7 @@ Micro-Supervisor 是内核态的纯 C LSM 模块，不做任何"人性化"决策
 | IPC 队列冻结 | `kernel/superv/airy_ipc_freeze.c` | `ring->frozen` 设置 |
 | die_notifier | `kernel/superv/airy_die_notify.c` | 内核崩溃通知链 |
 | eventfd 通知 | `kernel/superv/airy_eventfd.c` | 向 Macro-Supervisor 通知 |
-| [SC] 头文件 | `kernel/include/airymax/superv.h` | 共享契约 |
+| [SC] 头文件 | `kernel/include/uapi/linux/airymax/superv.h` | 共享契约 |
 
 ### 1.3 与其他模块的协作
 
@@ -61,6 +63,64 @@ Micro-Supervisor 是内核态的纯 C LSM 模块，不做任何"人性化"决策
 | A-UEF | 返回 Fault 码 | `AIRY_FAULT_ABNORMAL_CAP` 等 |
 | A-ULP | eventfd 复用日志通道 | eventfd_signal |
 | Macro-Supervisor | 故障通知接收方 | eventfd + io_uring_cmd |
+| sched_tac（sched_d） | Agent 8 态生命周期联动 + 调度预算冻结 | `airy_sys_sched_ctl`（编号 2） |
+
+### 1.4 与 12 daemon 的协作关系（v1.1 新增）
+
+Micro-Supervisor 作为内核态监管组件，与 Macro-Supervisor 管理的 12 个 daemon 通过 fastpath C-S9 Badge 校验 + slowpath LSM 钩子协作。12 daemon 完整名单（详见 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md)）：
+
+| # | Daemon | 与 Micro-Supervisor 的协作 | Badge 校验路径 |
+|---|--------|---------------------------|---------------|
+| 1 | sec_d | Badge 唯一编译者（H4），`agent_caps[1024]` 唯一写者；sec_d 故障触发 [DSL] 降级 | 自举路径（CAP_REQUEST，badge=0 跳过 C-S9） |
+| 2 | cogn_d | 认知调度守护，8 态生命周期管理；cogn_d 违规触发 Ring 冻结 | fastpath C-S9 |
+| 3 | mem_d | 记忆管理守护；mem_d IPC 异常触发冷酷执法 | fastpath C-S9 |
+| 4 | gateway_d | 跨节点 IPC 网关（1.0.1）；gateway_d Badge 校验在源节点完成 | fastpath C-S9（per-node） |
+| 5 | logger_d | 日志消费守护（A-ULP）；logger_d 故障不影响 Badge 校验 | fastpath C-S9 |
+| 6 | macro_superv | 故障通知接收方 + 裁决执行者；通过 `AIRY_IPC_OP_ADJUDICATE` 下发裁决 | fastpath C-S9（持 FREEZE 权限位） |
+| 7 | audit_d | 审计守护；所有 Badge 编译/撤销/冻结事件写入 audit_d 审计链 | fastpath C-S9 |
+| 8 | sched_d | sched_tac 策略守护进程；通过 `airy_sys_sched_ctl`（编号 2）控制调度参数 | fastpath C-S9 |
+| 9 | dev_d | 设备驱动守护；dev_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
+| 10 | net_d | 网络策略守护；net_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
+| 11 | vfs_d | VFS 用户态服务；vfs_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
+| 12 | config_daemon | 配置管理守护（A-UCS）；config_daemon 故障不影响 Badge 校验 | fastpath C-S9 |
+
+> **daemon 命名约定**：daemon 命名后缀统一为 `_d`（sec_d/cogn_d/mem_d/gateway_d/logger_d/audit_d/sched_d/dev_d/net_d/vfs_d），例外为 `macro_superv`（主监管守护进程，沿用 Unify Design 命名）和 `config_daemon`（配置管理，沿用 `_daemon` 后缀）。12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT。
+
+### 1.5 与 sched_tac 的协作（v1.1 新增）
+
+**sched_tac 策略守护进程**是 sched_d daemon（详见 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md)），通过 `airy_sys_sched_ctl`（syscall 编号 2）与 Micro-Supervisor 协作。协作关系如下：
+
+| 协作维度 | sched_d 职责 | Micro-Supervisor 职责 | 接口 |
+|---------|-------------|----------------------|------|
+| Agent 8 态生命周期 | 通过 `airy_sys_sched_ctl` 配置 Agent 调度参数（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射） | Agent 态迁移时通知 sched_d 调整调度预算（如 STOPPED → READY 时恢复预算） | `airy_sys_sched_ctl` + eventfd |
+| 调度预算冻结 | 收到 Micro-Supervisor 通知后冻结违规 Agent 的调度预算 | 检测到 Badge 异常 → 冻结 Ring + 通知 sched_d | eventfd + `airy_sys_sched_ctl` |
+| [DSL] 降级 | 进入 [DSL] 降级模式时，调度退化为 EEVDF 默认 | 通知 sched_d 进入 [DSL] 降级模式 | eventfd |
+| Badge 校验 | sched_d 作为 Agent 持有 Badge，fastpath C-S9 校验 | fastpath C-S9 校验 sched_d 的 Badge | io_uring `IORING_OP_URING_CMD` |
+
+**Agent 8 态生命周期与 sched_tac 集成**（对齐 [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md)）：
+
+```
+Agent 8 态:  CREATED → READY → RUNNING → STOPPED → DEAD
+                                       ↘ PAUSED ↗
+                                       ↘ DEGRADED ↗
+                                       ↘ TERMINATED → DEAD
+
+Micro-Supervisor 在态迁移时通知 sched_d:
+  - RUNNING → STOPPED: kill(SIGSTOP)，sched_d 冻结调度预算
+  - STOPPED → READY:   kill(SIGCONT)，sched_d 恢复调度预算
+  - RUNNING → DEGRADED: sched_d 缩减调度预算（不停止进程）
+  - * → TERMINATED:    sched_d 释放调度预算 + Micro-Supervisor 撤销 Badge
+  - * → DEAD:          sched_d 释放调度预算 + Micro-Supervisor 撤销 Badge + 冻结 Ring
+```
+
+**`airy_sys_sched_ctl`（编号 2）子命令**：
+
+| 子命令 | 功能 | 调用者 |
+|--------|------|--------|
+| `SCHED_SET_POLICY` | 设置 Agent 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF） | 仅 sched_d |
+| `SCHED_SET_BUDGET` | 设置 Agent 调度预算（runtime/deadline/period） | 仅 sched_d |
+| `SCHED_FREEZE` | 冻结 Agent 调度预算（Micro-Supervisor 通知） | 仅 sched_d |
+| `SCHED_THAW` | 恢复 Agent 调度预算（Micro-Supervisor 通知） | 仅 sched_d |
 
 ---
 
@@ -83,7 +143,7 @@ Micro-Supervisor 选择纯 C LSM 模块（**不使用 BPF LSM**），对齐 open
 /* DEFINE_LSM 宏注册纯 C LSM 模块（非 BPF） */
 DEFINE_LSM(airy) = {
     .name = "airy",
-    .order = LSM_ORDER_FIRST,   /* 永远第一个执行，确保 Capability 优先校验 */
+    .order = LSM_ORDER_MUTABLE,   /* v1.1: LSM_ORDER_MUTABLE + CONFIG_LSM 首位（替代原 v1.0 误用的 capabilities-only 顺序常量，OLK 6.6 注释明确后者仅用于 capabilities） */
 };
 
 static int __init airy_superv_init(void)
@@ -95,30 +155,56 @@ static int __init airy_superv_init(void)
 }
 ```
 
-### 2.3 非法 Capability 检测钩子（v1.1: fastpath C-S9 + slowpath LSM）
+### 2.3 非法 Capability 检测钩子（v1.1: fastpath C-S9 + slowpath LSM 严格分工，禁止重复校验）
 
 **v1.1 变更**：Micro-Supervisor 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验。fastpath C-S9 已在 io_uring 数据面完成 Badge 校验（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)）。LSM 钩子仅在 slowpath（异常路径）做策略裁决——当 fastpath C-S9 返回 `-AIRY_ECAP_FORGED` (-80) 等 Badge 错误码时，Micro-Supervisor 接管并执行冷酷执法。
 
+**fastpath/slowpath 严格分工（禁止重复校验）**：
+
+| 路径 | 执行点 | 调用 `airy_cap_badge_ok()` | 触发条件 | 延迟 |
+|------|--------|:---:|---------|------|
+| **fastpath C-S9** | io_uring 数据面内联（`airy_ipc_validate()`） | ✓（唯一调用点） | 每次 IPC 消息投递 | ~10ns |
+| **slowpath LSM** | `security_uring_cmd` 钩子（`airy_uring_cmd_check`） | ✗（**禁止重复调用**） | 仅 fastpath C-S9 返回 Badge 错误码时 | ~100ns |
+
+> **关键约束**：LSM 钩子 `airy_uring_cmd_check` **不得再次调用 `airy_cap_badge_ok()`**——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅读取 fastpath 返回的错误码（通过 `cmd->fastpath_ret` 字段传递）并执行冷酷执法。重复校验会导致：① fastpath ~10ns + slowpath ~100ns 双重开销；② Epoch 双读破坏单快照语义；③ 违反 Capability Folding H4 单写者 + 单校验点不变量。
+
 ```c
-/* kernel/superv/airy_cap_check.c —— v1.1: slowpath LSM 钩子（fastpath C-S9 异常接管） */
-static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd,
-                                 unsigned int issue_flags)
+/* kernel/superv/airy_cap_check.c —— v1.1: slowpath LSM 钩子（fastpath C-S9 异常接管）
+ * OLK 6.6 对齐: security_uring_cmd 钩子单参数（issue_flags 从 ioucmd->flags 获取）
+ *
+ * v1.1 fastpath/slowpath 严格分工（禁止重复校验）:
+ *   - fastpath C-S9: io_uring 数据面内联 Badge 校验（airy_cap_badge_ok，~10ns）
+ *     正常路径（Badge 通过）不进入 LSM 钩子，零开销
+ *   - slowpath LSM: 仅在 fastpath C-S9 返回 Badge 错误码时被调用
+ *     读取 cmd->fastpath_ret 字段执行冷酷执法，不再次调用 airy_cap_badge_ok()
+ */
+static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd)
 {
-    struct airy_ipc_cmd *cmd = (struct airy_ipc_cmd *)ioucmd->cmd;
+    /* OLK 6.6: struct io_uring_cmd 无 cmd 字段，使用 io_uring_cmd_to_pdu() 宏访问 pdu[32] */
+    struct airy_ipc_cmd *cmd = io_uring_cmd_to_pdu(ioucmd, struct airy_ipc_cmd);
     int fastpath_ret;
 
     /* v1.1: fastpath C-S9 已在 io_uring 数据面完成 Badge 校验
      * LSM 钩子仅在 slowpath（异常路径）被调用
      * 详见 07-ipc-fastpath.md §5.2 C-S9 实现
+     *
+     * 禁止重复校验: LSM 钩子不调用 airy_cap_badge_ok()
+     * 仅根据 fastpath 返回的错误码执行冷酷执法
      */
 
-    /* 1. 调用 fastpath C-S9 Badge 校验（内联函数，~10ns） */
-    fastpath_ret = airy_cap_badge_ok(cmd->src_task, cmd->capability_badge,
-                                      cmd->opcode);
-    if (likely(fastpath_ret == 0))
-        return 0;   /* Badge 校验通过，放行 */
+    /* 1. 读取 fastpath C-S9 的返回码（通过 cmd->fastpath_ret 字段传递）
+     * fastpath 在 io_uring 数据面执行 airy_cap_badge_ok() 后
+     * 将返回码写入 cmd->fastpath_ret，LSM 钩子 READ_ONCE 读取
+     */
+    fastpath_ret = READ_ONCE(cmd->fastpath_ret);
 
-    /* 2. slowpath: Badge 校验失败，Micro-Supervisor 接管 */
+    /* 2. fastpath 校验通过（fastpath_ret == 0）: 直接放行
+     * 正常路径不进入 slowpath 任何处置
+     */
+    if (likely(fastpath_ret == 0))
+        return 0;
+
+    /* 3. slowpath: Badge 校验失败，Micro-Supervisor 接管（不重复调用 airy_cap_badge_ok） */
     switch (fastpath_ret) {
     case -AIRY_ECAP_FORGED:     /* -80: Badge 伪造，触发 Fault */
         return airy_fault_enforce(AIRY_FAULT_CAP_FORGED, cmd);  /* 0x1001 */
@@ -137,6 +223,10 @@ static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd,
 
     case -AIRY_ECAP_BADGE:      /* -78: Badge 格式无效 / CAP_CARRY 但 badge=0 */
         return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd);  /* 0x1005 */
+
+    case -AIRY_ESEC_D_THROTTLED: /* -83: sec_d 限流拒绝（Badge 编译请求被限流） */
+        /* sec_d 限流是 Error，不是 Fault，直接返回让调用方重试 */
+        return fastpath_ret;
 
     default:
         /* 未知 Badge 错误，保守冻结 */
@@ -161,9 +251,11 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 | 权限不足 | `AIRY_ECAP_PERM` (-81) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_perms & required != required` | 立即冻结 + 通知 |
 | Badge 格式无效 | `AIRY_ECAP_BADGE` (-78) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | Badge 格式无效 / CAP_CARRY 但 badge=0 | 立即冻结 + 通知 |
 | Ring 已冻结 | `AIRY_ECAP_FROZEN` (-82) | —（Error，不触发 Fault） | `ring->frozen == true`（C-S0 检查） | 直接返回 Error，等待解冻 |
-| Capability 树损坏 | — | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | MDB 派生链校验失败 | 立即终止 Agent（SIGKILL） |
+| Capability 槽位损坏 | — | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `agent_caps[agent_id].state` 异常或 Badge 64-bit 编码不一致（Epoch/RandomTag/Perms 三段校验失败） | 立即终止 Agent（SIGKILL） |
+| io_uring SQE 畸变（**上游检测**） | — | `AIRY_FAULT_URING_MALFORMED` (0x100A) | `airy_uring_sqe_validate()` 5 阶段校验失败（opcode/flags/payload_len 越界或 CRC32 不匹配，详见 [06-io-uring-hardening.md §3.5.3](../110-security/06-io-uring-hardening.md)） | `airy_security_fault()` 通知 Micro-Supervisor + 冻结 Ring（**在 fastpath C-S9 之前执行，不进入 §2.3 LSM 钩子**） |
+| sec_d 限流拒绝（**上游检测**） | `AIRY_ESEC_D_THROTTLED` (-83) | —（Error，不触发 Fault） | sec_d 令牌桶限流命中（per-Agent 配额/全局阈值/排队超限，详见 [10-user-supervisor-daemon.md §4.6](10-user-supervisor-daemon.md)） | 直接返回 Error 让调用方退避重试（**在 Badge 编译路径触发，不进入 fastpath C-S9**） |
 
-> **错误码 SSoT**：所有 Error/Fault 码定义以 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) 为唯一权威源。Ring 冻结是 Error（-82），不是 Fault——Error 可恢复（等待解冻），Fault 不可恢复（Micro-Supervisor 接管）。
+> **错误码 SSoT**：所有 Error/Fault 码定义以 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) 为唯一权威源。Ring 冻结是 Error（-82），不是 Fault——Error 可恢复（等待解冻），Fault 不可恢复（Micro-Supervisor 接管）。`AIRY_FAULT_URING_MALFORMED` (0x100A) 与 `AIRY_ESEC_D_THROTTLED` (-83) 是上游检测路径的扩展错误码，**不进入 §2.3 LSM 钩子的 slowpath 处置**（前者在 `airy_uring_sqe_validate()` 拦截，后者在 sec_d Badge 编译路径拦截），列出以完整覆盖 Micro-Supervisor 可能涉及的全部异常类型。
 
 ---
 
@@ -255,7 +347,7 @@ int airy_ipc_send_fastpath(struct airy_ipc_ring *ring, const void *payload,
 |--------|---|------|------|:---:|
 | FREEZE | 0x0005 | 冻结 ring | `ring->frozen = true` | ✓（需 FREEZE 权限位） |
 
-**FREEZE 权限位**：Badge Perms 字段的 bit 4（`AIRY_BADGE_PERM_FREEZE`，详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md)）。仅 sec_d 和 Macro-Supervisor 持有此权限位。
+**FREEZE 权限位**：Badge Perms 字段的 bit 5（`AIRY_CAP_PERM_FREEZE` = 0x0020，详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md)）。仅 sec_d 和 Macro-Supervisor 持有此权限位。Perms 16-bit 位掩码对齐 SSoT：`SEND=0x0001` / `RECV=0x0002` / `CALL=0x0004` / `GRANT=0x0008` / `REVOKE=0x0010` / `FREEZE=0x0020` / `BATCH=0x0040`。
 
 **FREEZE 执行流程**：
 
@@ -286,7 +378,7 @@ static int airy_ipc_handle_freeze(struct airy_ipc_cmd *cmd)
 **FREEZE 与冷酷执法的关系**：
 - **冷酷执法**（§6）：fastpath C-S9 检测到 Badge 异常 → Micro-Supervisor 主动 FREEZE
 - **策略冻结**：Macro-Supervisor 通过发送 FREEZE opcode 主动冻结 Ring（如维护、升级）
-- **解冻**：Macro-Supervisor 通过 `ring->frozen = false` 解冻（不通过 opcode，直接内核接口）
+- **解冻协议**（v1.1 统一：与 [10-user-supervisor-daemon.md §8.3](10-user-supervisor-daemon.md) 严格一致）：Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 sec_d 请求解冻，**sec_d 串行化解冻**（避免并发解冻导致状态不一致），解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge），最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 [10-user-supervisor-daemon.md §4.7](10-user-supervisor-daemon.md)）。**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**（绕过 sec_d 串行化会破坏 Badge 一致性）。
 
 ---
 
@@ -649,7 +741,8 @@ Airymax 在借鉴 seL4 时有两处适配：
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Micro-Supervisor 内核模块设计；纯 C LSM 检测非法 Capability（对齐 openEuler 纯 C 模式，不使用 BPF）；IPC 队列冻结（ring->frozen + unlikely 零开销）；die_notifier 内核崩溃通知链；eventfd 非阻塞故障通知；"内核冷酷执法"四步流程；借鉴 seL4 handleFault() 机制与策略分离 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**（A-IPC 第一块基石）：① §2.3 capability 校验路径重构——从独立前置 `airy_cap_check()` + radix tree 查找改为 fastpath C-S9 内联 Badge 校验（`airy_cap_badge_ok()`，~10ns），LSM 钩子仅在 slowpath（异常路径）做策略裁决；② §2.4 异常类型表对齐 Badge 错误码（-78~-82, 0x1001-0x1006）；③ §3.2 fastpath C-S0 返回 `AIRY_ECAP_FROZEN` (-82) 明确 Error vs Fault 区分；④ §3.5 新增 FREEZE opcode (0x0005) ring 冻结语义；⑤ §4.1/§4.2 Fault 码更新（`AIRY_FAULT_IPC_FAULT`→`AIRY_FAULT_RING_CORRUPT` 0x1003）；⑥ §6.2 `AIRY_FAULT_CAP_FAULT`→`AIRY_FAULT_CAP_FORGED` (0x1001) + 完整 Fault 码参考；⑦ §6.4 新增 Badge 撤销解耦 `atomic_inc` 机制（1 行代码 O(1) 撤销，无 drain/bitmap/IPI）；⑧ §8.1/§8.2 性能 SLO + 资源预算对齐 agent_caps[] 静态数组（16KB）+ atomic_t Epoch；⑨ §9 相关文档清除内部审查路径引用 |
+| v1.1.1 | 2026-07-19 | **落后内容修复版**：① §2.3 修复 LSM 钩子重复校验——禁止 slowpath LSM 再次调用 `airy_cap_badge_ok()`，改为读取 `cmd->fastpath_ret` 执行冷酷执法（fastpath/slowpath 严格分工）；② §2.4 修复 MDB 残留——"MDB 派生链校验失败" 替换为 v1.1 `agent_caps[1024]` 静态数组 + Badge 64-bit 编码三段校验；③ §3.5 修复 FREEZE 权限位 bit 编号——`AIRY_BADGE_PERM_FREEZE` bit 4 → `AIRY_CAP_PERM_FREEZE` bit 5 (0x0020)，对齐 03-capability-model.md SSoT；④ §3.5 统一解冻协议——sec_d 串行化解冻 + Epoch 自增 + systemd watchdog（与 10-user-supervisor-daemon.md 严格一致）；⑤ §1.4 新增 12 daemon 完整协作关系；⑥ §1.5 新增 sched_tac 协作章节（sched_d + `airy_sys_sched_ctl` 编号 2 + Agent 8 态生命周期集成）；⑦ SSoT 声明新增 ADR-014 引用 + IRON-9 v3 四层模型引用；⑧ §2.3 新增 `AIRY_ESEC_D_THROTTLED` (-83) sec_d 限流错误码处理 + §2.4 异常类型表扩展两行上游检测路径（`AIRY_FAULT_URING_MALFORMED` 0x100A io_uring SQE 畸变 + `AIRY_ESEC_D_THROTTLED` -83 sec_d 限流），完整覆盖 Micro-Supervisor 可能涉及的异常类型 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | Micro-Supervisor 内核模块设计 | v1.1 | 2026-07-18
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | Micro-Supervisor 内核模块设计 | v1.1.1 | 2026-07-19

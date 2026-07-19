@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **[DSL] 降级生存层** 的唯一权威源。`#ifdef AIRY_SC_FALLBACK` 降级块机制、Panic 回退路径、最小可运行子集定义、与 IRON-9 v3 四层模型的关系、**Capability Folding H6 降级落地**均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [DSL] 降级策略。
 >
-> 本文件遵循 **sched_tac**（降级时回退到 EEVDF 默认调度）、**纯 C LSM**（不依赖 BPF）、**alloc_pages + mmap**（不依赖 DMA 一致性内存）技术选型。[SC] 共享契约头文件的物理宿主为 `kernel/include/airymax/`。
+> 本文件遵循 **sched_tac**（降级时回退到 EEVDF 默认调度）、**纯 C LSM**（不依赖 BPF）、**alloc_pages + mmap**（不依赖 DMA 一致性内存）技术选型。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
 > **v1.1 Capability Folding H6 集成声明**：[DSL] 降级模式下，IPC 消息头 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验（直接 `goto cap_pass`），IPC 仍可使用但仅保留 POSIX capability 校验（slowpath `airy_cap_check()`）。这是 6 条硬约束 H6 的落地，详见 §4.4。
 
@@ -33,7 +33,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 问题背景
 
-Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/airymax/`，共 10 个头文件）是 agentrt 与 agentrt-linux 双端逐字节共享的权威源。但在以下极端场景下，[SC] 头文件可能不可用或损坏：
+Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uapi/linux/airymax/`，共 10 个头文件）是 agentrt 与 agentrt-linux 双端逐字节共享的权威源。但在以下极端场景下，[SC] 头文件可能不可用或损坏：
 
 | 场景 | 触发原因 | 影响 |
 |------|---------|------|
@@ -81,7 +81,7 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/air
 3. **显式告警**：降级块生效时必须发出 `#warning`，告知开发者当前为降级模式
 
 ```c
-/* kernel/include/airymax/error.h —— 文件底部 */
+/* kernel/include/uapi/linux/airymax/error.h —— 文件底部 */
 #ifdef AIRY_SC_FALLBACK
 /*
  * [DSL] 降级生存层 —— AIRY_SC_FALLBACK 激活
@@ -244,15 +244,20 @@ static void airy_log_panic(const char *fmt, ...)
 
 ```c
 /* 降级模式 IPC 消息头（v1.1: Layout C v4 兼容，capability_badge=0）*/
+/* D-9 修复后移除 __attribute__((packed))，使用显式 padding 覆盖 airy_ipc_msg_hdr 偏移 */
 struct airy_ipc_msg_hdr_min {
     __u32   magic;              /* offset  0, 'ARE1' 0x41524531 */
     __u16   opcode;             /* offset  4 */
-    __u32   payload_len;        /* offset 40 */
-    __u64   capability_badge;   /* offset 44, v1.1 新增: 固定为 0（H6 硬约束）*/
-    /* 其余 110 字节置零（trace_id/timestamp_ns/src_task/dst_task/crc32/reserved）*/
-} __attribute__((packed));
-_Static_assert(offsetof(struct airy_ipc_msg_hdr_min, capability_badge) == 44,
-               "H1: capability_badge offset must be 44");
+    __u8    _pad0[34];          /* offset  6-39, 对应 trace_id/timestamp_ns/src_task/dst_task，置零 */
+    __u64   capability_badge;   /* offset 40, v1.1 新增: 固定为 0（H6 硬约束, D-9 对齐至 offset 40）*/
+    __u32   payload_len;        /* offset 48 */
+    __u32   crc32;              /* offset 52 */
+    __u8    _pad1[72];          /* offset 56-127, 对应 reserved，置零 */
+} __attribute__((aligned(64)));
+_Static_assert(offsetof(struct airy_ipc_msg_hdr_min, capability_badge) == 40,
+               "H1: capability_badge offset must be 40 (D-9 alignment fix, matches airy_ipc_msg_hdr)");
+_Static_assert(sizeof(struct airy_ipc_msg_hdr_min) == 128,
+               "airy_ipc_msg_hdr_min must overlay airy_ipc_msg_hdr (128 bytes)");
 ```
 
 降级模式下 IPC 仅支持 `AIRY_IPC_OP_SEND` / `AIRY_IPC_OP_RECV` 两个操作，不支持 `FREEZE` / `CAP_REQUEST` 等高级操作。fastpath C-S9 检测到 `capability_badge=0` 时直接 `goto cap_pass` 跳过 Badge 校验（H6 落地）。
@@ -391,7 +396,7 @@ cap_pass:
 
 [DSL] 降级块虽然在 [SC] 头文件内部（`#ifdef AIRY_SC_FALLBACK`），但其设计是**自包含**的——不依赖 [SC] 的任何其他符号，仅依赖标准 C 预处理与编译器内置类型。这意味着即使 [SC] 头文件主体损坏，只要降级块本身完整（通过 hash 校验），系统仍可降级启动。
 
-为保障降级块本身的完整性，构建系统对每个 [SC] 头文件的 `#ifdef AIRY_SC_FALLBACK ... #endif` 区域单独计算 hash，并存入 `kernel/include/airymax/.fallback_hashes`。CI 校验时不仅校验 [SC] 主体，也校验降级块 hash。
+为保障降级块本身的完整性，构建系统对每个 [SC] 头文件的 `#ifdef AIRY_SC_FALLBACK ... #endif` 区域单独计算 hash，并存入 `kernel/include/uapi/linux/airymax/.fallback_hashes`。CI 校验时不仅校验 [SC] 主体，也校验降级块 hash。
 
 ---
 

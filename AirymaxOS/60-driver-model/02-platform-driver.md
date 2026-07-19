@@ -488,22 +488,22 @@ IRON-9 v3 将 agentrt daemons 平台设备访问与 agentrt-linux 内核 platfor
 
 | 层次 | 共享程度 | platform driver 内容 |
 |------|---------|---------------------|
-| **[SC] 共享契约层** | 间接共享（无直接头文件） | 无直接 [SC] 共享头文件；间接依赖 `include/airymax/sched.h` 任务描述符 `agent_id` 字段（magic `0x41475453` 'AGTS'）用于 Agent 平台设备匹配 |
+| **[SC] 共享契约层** | 间接共享（无直接头文件） | 无直接 [SC] 共享头文件；间接依赖 `include/uapi/linux/airymax/sched.h` 任务描述符 `agent_id` 字段（magic `0x41475453` 'AGTS'）用于 Agent 平台设备匹配 |
 | **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | `platform_driver_register` 注册模式、probe/remove 生命周期、`devm_platform_ioremap_resource` 资源管理 |
 | **[IND] 完全独立层** | 完全独立 | platform bus 内核实现（`drivers/base/platform.c`）、ACPI/DT 匹配逻辑、platform_device 内核分配器 |
 
 #### [SC] 共享契约层
 
-platform driver 无直接 [SC] 共享头文件——`drivers/base/platform.c` 是内核私有实现，agentrt 不跨态共享其数据结构。间接依赖 `include/airymax/sched.h` 中的任务描述符 `agent_id` 字段，用于将 Agent 实例与内核平台设备匹配。以下为间接 [SC] 依赖节选：
+platform driver 无直接 [SC] 共享头文件——`drivers/base/platform.c` 是内核私有实现，agentrt 不跨态共享其数据结构。间接依赖 `include/uapi/linux/airymax/sched.h` 中的任务描述符 `agent_id` 字段，用于将 Agent 实例与内核平台设备匹配。以下为间接 [SC] 依赖节选：
 
 ```c
-/* include/airymax/sched.h —— IRON-9 v3 [SC] 间接依赖（节选）
+/* include/uapi/linux/airymax/sched.h —— IRON-9 v3 [SC] 间接依赖（节选）
  * SSoT struct airy_task_desc 物理宿主见 120-cross-project-code-sharing.md §2.6。
  * agent_id 为 [SS] 语义层扩展字段（Agent 实例 ↔ 内核平台设备匹配键），
  * 不在 [SC] struct 中定义，由 platform_driver 匹配逻辑维护。 */
 #define AIRY_TASK_MAGIC	0x41475453u	/* 'AGTS' —— Agent 任务描述符 magic（SSoT） */
 
-struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/airymax/sched.h */
+struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/uapi/linux/airymax/sched.h */
 	__u32		magic;		/* AIRY_TASK_MAGIC 0x41475453 'AGTS' */
 	__u16		prio;		/* 优先级 0-139（0 最高） */
 	__u16		_pad;
@@ -513,7 +513,7 @@ struct airy_task_desc {       /* [SC] SSoT，物理宿主 include/airymax/sched.
 };
 ```
 
-**OS-DRV-IRON-PLAT 约束**: agentrt daemons 与 agentrt-linux platform driver 不直接共享 platform.c 头文件；`agent_id` 字段语义两端一致（Agent 实例 ↔ 内核平台设备匹配键），由 `include/airymax/sched.h` 间接锁定。Agent 平台设备匹配发生在语义层，不跨态共享 platform_device 内存布局。
+**OS-DRV-IRON-PLAT 约束**: agentrt daemons 与 agentrt-linux platform driver 不直接共享 platform.c 头文件；`agent_id` 字段语义两端一致（Agent 实例 ↔ 内核平台设备匹配键），由 `include/uapi/linux/airymax/sched.h` 间接锁定。Agent 平台设备匹配发生在语义层，不跨态共享 platform_device 内存布局。
 
 #### [SS] 语义同源层
 
@@ -554,7 +554,7 @@ graph LR
     style E fill:#fde68a,stroke:#b45309
 ```
 
-agentrt daemons 通过 [SC] 间接共享契约层读取 `include/airymax/sched.h` 任务描述符的 `agent_id` 字段，将 Agent 实例与 agentrt-linux 内核平台设备匹配，触发 `platform_match`（OF/DT 精确匹配 → 名称回退）→ `platform_driver.probe` 探测链。两端通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）同步平台设备事件（uevent），无适配层。MicroCoreRT 极简内核契约要求（OS-KER-150）：内核态 platform driver 的 `remove` 回调必须通知用户态 daemon（通过 uevent 或 AgentsIPC 消息），让 daemon 先释放对硬件资源的引用，再让内核释放硬件本身——这是跨边界资源托管链的关键时序保证。
+agentrt daemons 通过 [SC] 间接共享契约层读取 `include/uapi/linux/airymax/sched.h` 任务描述符的 `agent_id` 字段，将 Agent 实例与 agentrt-linux 内核平台设备匹配，触发 `platform_match`（OF/DT 精确匹配 → 名称回退）→ `platform_driver.probe` 探测链。两端通过 AgentsIPC 总线（128B 消息头，magic `0x41524531`）同步平台设备事件（uevent），无适配层。MicroCoreRT 极简内核契约要求（OS-KER-150）：内核态 platform driver 的 `remove` 回调必须通知用户态 daemon（通过 uevent 或 AgentsIPC 消息），让 daemon 先释放对硬件资源的引用，再让内核释放硬件本身——这是跨边界资源托管链的关键时序保证。
 
 ### 9.3 跨边界资源托管链
 
@@ -627,7 +627,7 @@ SoC 设备的完整资源托管链跨越内核/用户态：内核 `devm_` 资源
 
 ## 附录 A: 接口定义
 
-> **附录定位**： 本附录汇集 platform 总线与 SoC 设备资源管理所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/linux/platform_device.h`、`drivers/base/platform.c`、`include/linux/of.h`、`include/linux/ioport.h` 及 `include/airymax/sched.h`（[SC] 间接依赖层）。
+> **附录定位**： 本附录汇集 platform 总线与 SoC 设备资源管理所需的完整 C 接口契约，供直接参照实现。所有数据结构与函数签名对齐 Linux 6.6 `include/linux/platform_device.h`、`drivers/base/platform.c`、`include/linux/of.h`、`include/linux/ioport.h` 及 `include/uapi/linux/airymax/sched.h`（[SC] 间接依赖层）。
 
 ### A.1 核心数据结构
 

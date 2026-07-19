@@ -70,7 +70,7 @@ graph TD
     C2 --> IRON
 
     subgraph IRON["IRON-9 v3 同源且部分代码共享"]
-        SC["[SC] 共享契约层<br/>include/airymax/ 头文件完全共享"]
+        SC["[SC] 共享契约层<br/>include/uapi/linux/airymax/ 头文件完全共享"]
         SS["[SS] 语义同源层<br/>高层 API 语义同源，签名独立演进"]
         IND["[IND] 完全独立层<br/>各自独立实现，无依赖"]
     end
@@ -108,7 +108,7 @@ agentrt-linux（AirymaxOS）编码规范与 agentrt 编码规范遵循 **IRON-9 
 
 | IRON-9 v3 层级 | 定义 | 编码规范关系 | 示例 |
 |---------------|------|-------------|------|
-| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/airymax/` 10 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
+| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/uapi/linux/airymax/` 10 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
 | **[SS] 语义同源层** | 高层 API 语义同源，签名独立演进 | 共享命名约定（`airy_` 前缀）、错误码体系、注释风格；但 C 内核态用 kernel-doc，Rust 用户态用 rustdoc | SDK 层 `airy_ipc_send()` 签名同源（同一份源码两端编译），其他层语义同源 |
 | **[IND] 完全独立层** | 完全独立 | 各自独立的编码规范——agentrt-linux（AirymaxOS）覆盖内核态 C 和内核模块 Rust，agentrt 覆盖用户态 Python/TS/Rust | agentrt-linux 专属：goto 集中出口模式、kmalloc/kfree 惯用法、内核锁规范 |
 
@@ -222,7 +222,7 @@ graph LR
 
 ### 7.1 [SC] 共享契约层编码规范
 
-[SC] 共享契约层是 agentrt-linux（AirymaxOS）与 agentrt 之间**代码完全共享**的层级。该层包含 `include/airymax/` 下的以下头文件：
+[SC] 共享契约层是 agentrt-linux（AirymaxOS）与 agentrt 之间**代码完全共享**的层级。该层包含 `include/uapi/linux/airymax/` 下的以下头文件：
 
 | 头文件 | 内容 | 共享方式 | 变更流程 |
 |--------|------|----------|----------|
@@ -252,7 +252,7 @@ graph LR
 
 [SS] 层编码规范核心约束：
 - SDK 层函数签名与 agentrt 同源 API 一致（同一份源码两端编译）；其他层仅要求概念操作语义同源
-- 错误码必须对齐 `include/airymax/error.h`（[SC] SSoT）
+- 错误码必须对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT）
 - 注释必须标注 `[SS] 语义同源层`
 - 实现可使用内核原语，但语义必须等价
 

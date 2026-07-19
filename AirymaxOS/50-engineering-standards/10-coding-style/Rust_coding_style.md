@@ -525,7 +525,7 @@ graph TD
         end
 
         subgraph "[SC] 共享契约层"
-            SC_HDR["include/airymax/<br/>syscalls.h / memory_types.h<br/>security_types.h / cognition_types.h<br/>sched.h / ipc.h"]
+            SC_HDR["include/uapi/linux/airymax/<br/>syscalls.h / memory_types.h<br/>security_types.h / cognition_types.h<br/>sched.h / ipc.h"]
         end
     end
 

@@ -84,20 +84,20 @@ graph TB
 
 ### 2.1 [SC] 共享契约层：10 个共享头文件
 
-[SC] 层是 agentrt 与 agentrt-linux 代码字面一致的头文件库，位于 `include/airymax/` 目录。这 10 个头文件是 agentrt-linux OS 层契约的"共享基础"：
+[SC] 层是 agentrt 与 agentrt-linux 代码字面一致的头文件库，位于 `include/uapi/linux/airymax/` 目录。这 10 个头文件是 agentrt-linux OS 层契约的"共享基础"：
 
 | 头文件 | 全路径 | 定义内容 | 对应契约 |
 |--------|--------|---------|---------|
-| `error.h` | `include/airymax/error.h` | A-UEF Error 码（负数空间 `[-300, -1]`）+ Fault 码（正数空间 `[0x1000, 0x1FFF]`）双轨制 + POSIX/IPC/Capability/[SC]/[DSL] 分层错误码 | A-UEF 错误码契约 |
-| `log_types.h` | `include/airymax/log_types.h` | A-ULP LOG_* 枚举（LOG_DEBUG~LOG_FATAL）+ 128B 固定日志记录格式（magic=0x414C4F47 'ALOG'）+ facility 编号 | A-ULP 日志契约 |
-| `memory_types.h` | `include/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | syscall API 契约 |
-| `security_types.h` | `include/airymax/security_types.h` | POSIX capability 41 ID 枚举 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP）契约 |
-| `lsm_types.h` | `include/airymax/lsm_types.h` | LSM 钩子 252 ID 枚举 + Cupolas blob 布局（cred/inode/file/task）+ 纯 C LSM 模块接口契约 | 安全（LSM）契约 |
-| `cognition_types.h` | `include/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | syscall API 契约 |
-| `sched.h` | `include/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | syscall API 契约 |
-| `ipc.h` | `include/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（struct airy_ipc_msg_hdr）+ SQE/CQE 操作码与标志位 | IPC 协议契约 |
-| `syscalls.h` | `include/airymax/syscalls.h` | v1.1: 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位 | syscall API 契约 |
-| `uapi_compat.h` | `include/airymax/uapi_compat.h` | 用户态-内核态 ABI 兼容性定义 + 类型映射（`__u32`/`__u16` 等）+ 字节序与对齐规范 | ABI 兼容契约 |
+| `error.h` | `include/uapi/linux/airymax/error.h` | A-UEF Error 码（负数空间 `[-300, -1]`）+ Fault 码（正数空间 `[0x1000, 0x1FFF]`）双轨制 + POSIX/IPC/Capability/[SC]/[DSL] 分层错误码 | A-UEF 错误码契约 |
+| `log_types.h` | `include/uapi/linux/airymax/log_types.h` | A-ULP LOG_* 枚举（LOG_DEBUG~LOG_FATAL）+ 128B 固定日志记录格式（magic=0x414C4F47 'ALOG'）+ facility 编号 | A-ULP 日志契约 |
+| `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | syscall API 契约 |
+| `security_types.h` | `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID 枚举 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP）契约 |
+| `lsm_types.h` | `include/uapi/linux/airymax/lsm_types.h` | LSM 钩子 252 ID 枚举 + Cupolas blob 布局（cred/inode/file/task）+ 纯 C LSM 模块接口契约 | 安全（LSM）契约 |
+| `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | syscall API 契约 |
+| `sched.h` | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | syscall API 契约 |
+| `ipc.h` | `include/uapi/linux/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（struct airy_ipc_msg_hdr）+ SQE/CQE 操作码与标志位 | IPC 协议契约 |
+| `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | v1.1: 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位 | syscall API 契约 |
+| `uapi_compat.h` | `include/uapi/linux/airymax/uapi_compat.h` | 用户态-内核态 ABI 兼容性定义 + 类型映射（`__u32`/`__u16` 等）+ 字节序与对齐规范 | ABI 兼容契约 |
 
 **共享规则**：
 
@@ -115,7 +115,7 @@ graph TB
 | syscall API | 无（用户态运行时） | `AIRY_SYS_*` 系统调用 | 任务管理、调度、记忆卷载语义一致 |
 | IPC 128B 消息头 | AgentsIPC 用户态消息队列 | io_uring 零拷贝内核通道 | 消息头字段布局完全兼容 |
 | 日志格式 | 结构化 JSON 日志 | 结构化 JSON 日志 + 内核 log_write() | 日志级别、TraceID、ANSI 颜色编码一致 |
-| 错误码 | `include/airymax/error.h` | `include/airymax/error.h`（[SC] SSoT 同源共享） | 错误码值、语义、`strerror()` 描述一致 |
+| 错误码 | `include/uapi/linux/airymax/error.h` | `include/uapi/linux/airymax/error.h`（[SC] SSoT 同源共享） | 错误码值、语义、`strerror()` 描述一致 |
 
 ### 2.3 [IND] 完全独立层
 

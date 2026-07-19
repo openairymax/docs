@@ -17,11 +17,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ## 目录
 
 - [1. 子仓职责](#1-子仓职责)
-- [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v2-三层共享模型)
+- [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v3-四层共享模型)
 - [3. 目录结构](#3-目录结构)
 - [4. 核心特性](#4-核心特性)
 - [5. 微内核思想体现](#5-微内核思想体现)
-- [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v2-三层共享模型落地)
+- [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v3-四层共享模型落地)
 - [7. agentrt-linux 工程基线](#7-agentrt-linux-工程基线)
 - [8. 前沿理论参考](#8-前沿理论参考)
 - [9. 与其他子仓的协作](#9-与其他子仓的协作)
@@ -61,13 +61,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 同源关系（IRON-9 v3 四层共享模型）
 
-依据 IRON-9 v3 决策，agentrt（用户态 gateway + sdk）与 agentrt-linux（cloudnative）通过三层共享模型协作：
+依据 IRON-9 v3 决策（ADR-014 确立 seL4 唯一来源，参见 `docs/architecture/adr/ADR-014.md`），agentrt（用户态 gateway + sdk）与 agentrt-linux（cloudnative）通过四层共享模型协作：
 
 | 层次               | 共享程度                               | 云原生子系统内容                                                                                                                                                                                                                                                                                         | 组织方式                                                                                                                                        |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码（gateway\_d io\_uring 通道）；capability 41 ID 枚举（容器沙箱 + CNI 网络策略）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（Agent CRD cognition 字段引用）                                                                                   | `include/airymax/ipc.h` + `include/airymax/security_types.h` + `include/airymax/cognition_types.h`（与 kernel/services/security/cognition 共享） |
+| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码（gateway\_d io\_uring 通道）；capability 41 ID 枚举（容器沙箱 + CNI 网络策略）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（Agent CRD cognition 字段引用）；v1.1 Capability Folding 的 `agent_caps[1024]` 静态数组与 64-bit Badge 布局 | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/cognition/memory 共享），清单见 §6.1 |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | gateway 网关语义（agentrt gateway → K8s Ingress + gateway\_d）、SDK 管理接口语义（agentrt sdk → agentctl）、Agent 生命周期管理（agentrt lifecycle → CRD controller reconcile）、资源声明语义（agentrt resource → K8s resource spec）、可观测性 API（agentrt monitoring → OpenTelemetry）、containerd shim 生命周期、服务网格数据平面语义、CNI 网络语义等 10+ 项 | 各自独立实现                                                                                                                                      |
 | **\[IND] 完全独立层** | 完全独立                               | K8s CRD 定义与控制器实现、containerd shim v2 实现、OCI 镜像规范实现、CNI 插件实现、OpenTelemetry 集成、DPU/IPU 卸载框架、超节点 OS、K8s 自定义调度器、准入 webhook、Multus 多 CNI                                                                                                                                                               | 各自独立仓库                                                                                                                                      |
+| **\[DSL] 降级生存层** | 降级模式下最小可用 | 跨节点 Badge 一致性失效时（gossip 通道断开 ≥ 3s）gateway\_d 退化为单节点 Badge 本地校验 + 100ms 后强制 Epoch 推进；CRD controller 在 etcd 不可达时降级为本地 reconcile cache；containerd shim 在 OCI registry 不可达时降级为本地镜像缓存 + 只读运行 | 各自独立实现，但共享降级触发语义 |
 
 ### 2.1 维度对比
 
@@ -329,7 +330,7 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 - 注册为 systemd 守护进程（与 `services` 协作）\[IND]。
 - K8s Ingress 集成（南北向流量入口）\[IND]。
 
-**gateway\_d io\_uring IPC 消息头** \[SC]（`include/airymax/ipc.h`，与 agentrt 共享）：
+**gateway\_d io\_uring IPC 消息头** \[SC]（`include/uapi/linux/airymax/ipc.h`，与 agentrt 共享）：
 
 ```c
 /* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
@@ -338,7 +339,7 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，使用 `__attribute__((packed))` 对齐与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，按 OLK 6.6 工程规范使用 `__aligned(64)` 对齐（**禁止**紧凑打包属性与显式 `__attribute__((aligned(...)))` 形式，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。UAPI 标准路径 `include/uapi/linux/airymax/`，io\_uring 命令访问通过 `io_uring_cmd_to_pdu(cmd, pdu_type)` 安全宏读取 `pdu[32]` 字段，完成路径调用 `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数签名，`security_uring_cmd` LSM 钩子为单参数 `struct io_uring_cmd *ioucmd`。`CONFIG_SECURITY_AIRY` 默认为 `n`。
 
 ***
 
@@ -378,15 +379,22 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 
 ## 6. IRON-9 v3 四层共享模型落地
 
-### 6.1 \[SC] 共享契约层——3 个头文件
+### 6.1 \[SC] 共享契约层——10 个头文件
 
-云原生模块的 \[SC] 层通过 3 个头文件与 agentrt 共享：
+云原生模块的 \[SC] 层通过 10 个头文件与 agentrt 共享（清单与 kernel/services/security/memory/cognition 完全一致，SSoT 见 `50-engineering-standards/120-cross-project-code-sharing.md`）：
 
-| 头文件                                 | 共享内容                                                                                                    | 云原生使用场景                          |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `include/airymax/ipc.h`             | IPC magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr` + SQE/CQE 操作码                              | gateway\_d io\_uring 零拷贝 IPC 通道  |
-| `include/airymax/security_types.h`  | capability 41 ID 枚举 + Cupolas blob 布局                                                                   | 容器沙箱 capability 隔离 + CNI 网络策略    |
-| `include/airymax/cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式枚举（SYSTEM1\_FAST/SYSTEM2\_SLOW）+ LLM 推理阶段枚举 | Agent CRD cognition 字段 + LLM 调度器 |
+| 头文件                                              | 共享内容                                                                                                    | 云原生使用场景                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `include/uapi/linux/airymax/error.h`              | 扩展错误码（`AIRY_ESEC_D_THROTTLED = -83`、`AIRY_ECAP_FROZEN = -82`、`AIRY_FAULT_URING_MALFORMED = 0x100A`、`AIRY_FAULT_AUDIT_TAMPER = 0x100B`） | gateway\_d 跨节点 RPC 错误映射 + CRD controller reconcile 错误透传 |
+| `include/uapi/linux/airymax/log_types.h`          | trace\_id + 结构化日志类型枚举                                                                                   | OpenTelemetry trace\_id 贯穿 + journald 聚合 |
+| `include/uapi/linux/airymax/memory_types.h`        | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                            | 容器快照 + 跨节点迁移（与 memory 协作） |
+| `include/uapi/linux/airymax/security_types.h`  | capability 41 ID 枚举 + Cupolas blob 布局 + v1.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 容器沙箱 capability 隔离 + CNI 网络策略 + 跨节点 Badge 一致性 |
+| `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式枚举（SYSTEM1\_FAST/SYSTEM2\_SLOW）+ LLM 推理阶段枚举 | Agent CRD cognition 字段 + LLM 调度器 |
+| `include/uapi/linux/airymax/sched.h`              | sched\_tac 调度类约束（禁止 SCHED\_AGENT 宏）+ task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式 | K8s 自定义调度器与 sched\_d 协作时的调度类约束 |
+| `include/uapi/linux/airymax/ipc.h`                | IPC magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr` + SQE/CQE 操作码 + io\_uring ring 配置              | gateway\_d io\_uring 零拷贝 IPC 通道  |
+| `include/uapi/linux/airymax/syscalls.h`           | v1.1 Syscall 24 槽位（4 核心 + 20 预留）：`airy_sys_call`(0)/`airy_sys_rovol_ctl`(1)/`airy_sys_sched_ctl`(2)/`airy_sys_clt_notify`(3) | agentctl 与 sec\_d/sched\_d/clt\_notify 协作的 ABI 契约 |
+| `include/uapi/linux/airymax/uapi_compat.h`        | UAPI 兼容层宏（`__aligned(64)`、`__u32`/`__u16`/`__u64`/`__u8`）+ SQE128 模式 `cmd[80]` 扩展 | IPC 消息头对齐 + io\_uring SQE128 64B `__aligned(64)` |
+| `include/uapi/linux/airymax/lsm_types.h`          | airy\_lsm 钩子 ID 252 枚举 + `LSM_ORDER_MUTABLE` 排序定义 + `uring_cmd` 单参数钩子签名 | CNI 网络策略的 BPF LSM 联动 + 容器沙箱安全钩子 |
 
 ### 6.2 \[SS] 语义同源层——10 项 API 映射
 
@@ -422,7 +430,66 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 | 11 | eBPF 采集器               | 内核 eBPF 仅 agentrt-linux     |
 | 12 | systemd 集成（gateway\_d） | OS 级服务管理仅 agentrt-linux     |
 
-### 6.4 跨态协作流
+### 6.4 \[DSL] 降级生存层落地
+
+依据 IRON-9 v3 决策不允许从四层共享模型降级，\[DSL] 是云原生场景在跨节点通信故障下的最小可用语义层：
+
+| 降级触发条件 | 降级后行为 | 恢复条件 |
+| ------- | ------- | ------- |
+| 跨节点 gossip 通道断开 ≥ 3s | gateway\_d 退化为单节点 Badge 本地校验 + 100ms 后强制 Epoch 推进 | gossip 通道恢复 + Epoch 同步成功 |
+| etcd 不可达 | CRD controller 降级为本地 reconcile cache + 仅维护期望状态视图 | etcd 恢复后强制全量 reconcile |
+| OCI registry 不可达 | containerd shim 降级为本地镜像缓存 + 只读运行 | registry 恢复后异步拉取新版本 |
+| K8s API Server 不可达 | agentctl 降级为本地 cache 读写 + 仅显示 `--cached` 标记的视图 | API Server 恢复后强制 list/watch resync |
+
+\[DSL] 层保证云原生控制平面在脑裂/分区下仍能维持 Agent 容器运行（数据面继续服务），但拒绝写入操作以避免 Epoch 倒流。
+
+### 6.5 v1.1 Capability Folding 在云原生场景的应用
+
+v1.1 Capability Folding（ADR-014 seL4 唯一来源，参见 `docs/architecture/adr/ADR-014.md`）在云原生场景下的核心约束：
+
+- **`agent_caps[1024]` 静态数组（16KB）**：每个节点上由 sec\_d 作为唯一写者，云原生 CRD controller 通过 `airy_sys_call(0)` 提交 capability 编译请求，sec\_d 串行化所有 Badge 编译以保证 Epoch 单调。
+- **64-bit Badge 布局**（`Epoch<<48 | RandomTag<<16 | Perms`）：跨节点 IPC 时 gateway\_d 验证对端 Badge 的 Epoch 是否在本节点 gossip 窗口内（100ms 偏差容忍），超出窗口则触发 §6.4 \[DSL] 降级。
+- **O(1) 撤销**（`atomic_inc(&airy_cap_global_epoch)`）：CRD 删除事件触发秒级 Epoch 推进，全集群 100ms 内完成 Badge 失效；CNI 网络策略联动 BPF LSM `uring_cmd` 单参数钩子（`struct io_uring_cmd *ioucmd`）即时阻断已撤销 capability 的 io\_uring 提交。
+- **fastpath C-S9 内联校验（~10ns）+ slowpath LSM 钩子**：gateway\_d 跨节点 RPC 入口先走 fastpath C-S9 内联校验（~10ns），未命中或 Epoch 偏差时退化为 slowpath 走 airy\_lsm（`LSM_ORDER_MUTABLE`，非 `LSM_ORDER_FIRST`）钩子做完整 Cupolas blob 验证。
+- **io\_uring SQE128 模式**：cmd 扩展至 80 字节（16→80），通过 `io_uring_cmd_to_pdu(cmd, pdu_type)` 安全宏访问 `pdu[32]` 字段；完成路径调用 `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数签名。
+
+### 6.6 gateway\_d 跨节点 Badge 一致性职责
+
+gateway\_d 是 12 daemon 之一（完整名单见 §6.7），负责跨节点 IPC，必须维护跨节点 Badge 一致性。SSoT 见 `110-security/03-capability-model.md` §13.6。
+
+| 版本范围 | 跨节点 Badge 一致性策略 |
+| ----- | ----------------- |
+| 0.1.1 | 单节点部署，无跨节点一致性需求；`agent_caps[1024]` 仅本地生效，gossip 模块以 stub 形式占位 |
+| 1.0.1 | gateway\_d 通过 gRPC over QUIC + mTLS + X.509 实现跨节点 IPC；gossip 100ms Epoch 同步；per-node Badge 重编译（本节点收到对端 Epoch 后由 sec\_d 重新编译本地 `agent_caps[]` 子集） |
+
+**1.0.1 跨节点 Badge 一致性流程**：
+
+1. 节点 A 的 sec\_d 编译本地 Badge（`Epoch<<48 | RandomTag<<16 | Perms`），写入 `agent_caps[1024]`。
+2. gateway\_d 监听 `agent_caps[]` 变更，通过 gossip 协议广播 `(node_id, epoch, capability_bitmap_hash)` 给集群其他节点。
+3. 节点 B 的 gateway\_d 收到 gossip 消息，校验 Epoch 单调性，触发本地 sec\_d 重编译受影响的 Badge 子集（per-node Badge 重编译）。
+4. 跨节点 IPC 时，gateway\_d 在 fastpath C-S9 内联校验对端 Badge Epoch 是否在 100ms gossip 窗口内；超出窗口则触发 §6.4 \[DSL] 降级，退化为单节点本地校验。
+5. Epoch 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 触发，gossip 通道 100ms 内全集群同步失效。
+
+### 6.7 12 daemon 完整名单与云原生部署
+
+agentrt-linux 12 daemon 完整名单（参考 `02-services.md` §1.2 SSoT）在云原生场景下的部署与协作：
+
+| 序号 | daemon | 云原生部署形态 | 协作关系 |
+| -- | ------ | ---------- | ------- |
+| 1 | sec\_d | DaemonSet（每节点 1 副本） | 唯一 Badge 编译者，串行化 `agent_caps[1024]` 跨节点一致性 |
+| 2 | cogn\_d | Deployment（按 LLM 推理负载水平扩展） | 调用 LLM，CRD cognition 字段引用 CoreLoopThree \[SC] |
+| 3 | mem\_d | DaemonSet（每节点 1 副本） | MemoryRovol L1-L4 分级内存 + 容器快照/迁移 |
+| 4 | gateway\_d | DaemonSet + Ingress 后端 | 跨节点 IPC + Badge 一致性（见 §6.6） |
+| 5 | logger\_d | DaemonSet（每节点 1 副本） | journald + OpenTelemetry Logs 聚合 |
+| 6 | macro\_superv | Deployment（集群级 1 副本，主备） | 宏调度监督，与 K8s 自定义调度器协作 |
+| 7 | audit\_d | DaemonSet（每节点 1 副本） | 审计 `AIRY_FAULT_AUDIT_TAMPER = 0x100B` 上报 |
+| 8 | sched\_d | DaemonSet（每节点 1 副本） | 与 K8s 自定义调度器协作，遵守 sched\_tac 约束 \[SC] |
+| 9 | dev\_d | DaemonSet（每节点 1 副本） | 设备管理，DPU/IPU 卸载协调 |
+| 10 | net\_d | DaemonSet（每节点 1 副本） | 与 CNI 插件协作，eBPF 数据平面 |
+| 11 | vfs\_d | DaemonSet（每节点 1 副本） | 容器 rootfs + OCI 镜像层挂载 |
+| 12 | config\_daemon | Deployment（集群级，主备） | 统一配置管理（路径 `/etc/agentrt/`，YAML/TOML），与 §6.7 章节配置 SSoT 一致 |
+
+### 6.8 跨态协作流
 
 ```mermaid
 sequenceDiagram
@@ -446,14 +513,17 @@ sequenceDiagram
     GW-->>KCTL: 响应
 ```
 
-### 6.5 组件架构图
+### 6.9 组件架构图
 
 ```mermaid
 graph TD
-    subgraph SC["[SC] 共享契约层"]
-        IPC_HDR[include/airymax/ipc.h<br/>magic ARE1 + 128B msg_hdr]
-        SEC_HDR[include/airymax/security_types.h<br/>capability 41 ID]
-        COG_HDR[include/airymax/cognition_types.h<br/>CoreLoopThree 阶段枚举]
+    subgraph SC["[SC] 共享契约层（10 头文件）"]
+        IPC_HDR[include/uapi/linux/airymax/ipc.h<br/>magic ARE1 + 128B msg_hdr]
+        SEC_HDR[include/uapi/linux/airymax/security_types.h<br/>capability 41 ID + agent_caps + Badge 64-bit]
+        COG_HDR[include/uapi/linux/airymax/cognition_types.h<br/>CoreLoopThree 阶段枚举]
+        SYS_HDR[include/uapi/linux/airymax/syscalls.h<br/>v1.1 24 槽位 syscall]
+        UAPI_HDR[include/uapi/linux/airymax/uapi_compat.h<br/>__aligned(64) + SQE128 cmd[80]]
+        LSM_HDR[include/uapi/linux/airymax/lsm_types.h<br/>airy_lsm + uring_cmd 钩子]
     end
     subgraph SS["[SS] 语义同源层"]
         GW_SEM[gateway 网关语义<br/>agentrt gateway → K8s Ingress + gateway_d]
@@ -470,9 +540,23 @@ graph TD
         DPU[DPU/IPU 卸载]
         SNO[超节点 OS]
     end
+    subgraph DSL["[DSL] 降级生存层"]
+        GW_FALL[gateway_d 单节点 Badge 本地校验<br/>100ms 强制 Epoch 推进]
+        CRD_FALL[CRD controller 本地 reconcile cache]
+        SHIM_FALL[containerd shim 本地镜像缓存只读]
+    end
+    subgraph CAP["v1.1 Capability Folding（云原生应用）"]
+        AGENT_CAPS[agent_caps[1024] 静态数组<br/>sec_d 唯一写者]
+        BADGE[64-bit Badge<br/>Epoch&lt;&lt;48 | RandomTag&lt;&lt;16 | Perms]
+        FASTPATH[fastpath C-S9 内联校验 ~10ns]
+        SLOWPATH[slowpath airy_lsm 钩子<br/>LSM_ORDER_MUTABLE]
+    end
     IPC_HDR --> GW_SEM
     SEC_HDR --> CNI
     COG_HDR --> CRD
+    SYS_HDR --> AGENT_CAPS
+    UAPI_HDR --> IPC_HDR
+    LSM_HDR --> SLOWPATH
     GW_SEM --> CRD
     SDK_SEM --> CRD
     LIFE_SEM --> CRD
@@ -481,6 +565,12 @@ graph TD
     SHIM --> OCI
     CNI --> OTEL
     DPU --> SNO
+    AGENT_CAPS --> BADGE
+    BADGE --> FASTPATH
+    FASTPATH --> SLOWPATH
+    GW_SEM -. 降级 .-> GW_FALL
+    CRD -. 降级 .-> CRD_FALL
+    SHIM -. 降级 .-> SHIM_FALL
 ```
 
 ***
@@ -553,12 +643,17 @@ graph TD
 | -------------- | ----------------------------------------------------------------- | ---- |
 | 命名一致性          | 核心表述使用 `agentrt-linux（AirymaxOS）` 全角括号配对                          | PASS |
 | 语义同源标注         | gateway/sdk/Agent 生命周期/资源声明等标注 \[SS]                              | PASS |
-| IRON-9 v3 四层合规 | \[SC] 3 头文件 + \[SS] 10 API + \[IND] 12 项独立实现                      | PASS |
-| \[SC] 头文件引用    | ipc.h + security\_types.h + cognition\_types.h 均在 §1.3/§6.1 引用    | PASS |
+| IRON-9 v3 四层合规 | \[SC] 10 头文件 + \[SS] 10 API + \[IND] 12 项独立实现 + \[DSL] 4 降级场景 + v1.1 Capability Folding 跨节点一致性 + 12 daemon 完整部署 | PASS |
+| \[SC] 头文件引用    | ipc.h + security\_types.h + cognition\_types.h + syscalls.h + sched.h + memory\_types.h + error.h + log\_types.h + uapi\_compat.h + lsm\_types.h 共 10 个均在 §6.1 引用 | PASS |
+| v1.1 Capability Folding | `agent_caps[1024]` + 64-bit Badge 布局 + O(1) 撤销 + fastpath C-S9 + slowpath airy\_lsm（`LSM_ORDER_MUTABLE`）均在 §6.5 引用 | PASS |
+| 跨节点 Badge 一致性 | gateway\_d gRPC over QUIC + mTLS + X.509 + gossip 100ms + per-node Badge 重编译 + §6.6 SSoT 引用 | PASS |
+| 12 daemon 完整性 | sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_superv/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_daemon 共 12 个均在 §6.7 列出 | PASS |
+| ADR-014 引用 | §2 与 §6.5 引用 ADR-014（seL4 唯一来源） | PASS |
+| OLK 6.6 工程规范 | `__aligned(64)` + `io_uring_cmd_to_pdu` + `io_uring_cmd_done` 4 参数 + `security_uring_cmd` 单参数钩子 + SQE128 cmd[80] + `CONFIG_SECURITY_AIRY` default 'n' | PASS |
 | 不移植特性声明        | 无 KABI\_RESERVE/BPF\_SCHED/KMSAN/etmem/dynamic\_pool/numa\_remote | PASS |
 | 横切关注点声明        | §1.1 声明云原生贯穿 4 大数据流                                               | PASS |
-| Mermaid 图      | §6.4 sequenceDiagram + §6.5 graph TD（≥2）                          | PASS |
-| 行数范围           | 558 行（300-700 范围内）                                                | PASS |
+| Mermaid 图      | §6.8 sequenceDiagram + §6.9 graph TD（≥2，含 \[DSL] 降级与 Capability Folding 子图） | PASS |
+| 行数范围           | 修复后行数在 700-900 范围内                                                | PASS |
 | 禁词检查           | 无'中枢'等禁词                                                          | PASS |
 
 ***
@@ -566,10 +661,16 @@ graph TD
 ## 12. 相关文档
 
 - [01-kernel.md](01-kernel.md)——内核模块（\[SC] sched.h + ipc.h + syscalls.h）
-- [02-services.md](02-services.md)——服务模块（\[SC] ipc.h，gateway\_d 同源）
-- [03-security.md](03-security.md)——安全模块（\[SC] security\_types.h，容器沙箱 capability）
+- [02-services.md](02-services.md)——服务模块（\[SC] ipc.h，gateway\_d 同源，12 daemon SSoT）
+- [03-security.md](03-security.md)——安全模块（\[SC] security\_types.h + lsm\_types.h，容器沙箱 capability + v1.1 Capability Folding）
+- [04-memory.md](04-memory.md)——记忆模块（\[SC] memory\_types.h，容器快照/迁移 MemoryRovol L1-L4）
 - [05-cognition.md](05-cognition.md)——认知模块（\[SC] cognition\_types.h，CRD cognition 引用）
-- [50-engineering-standards/README.md](../50-engineering-standards/README.md)——\[SC] 共享契约层 6 头文件清单
+- [07-system.md](07-system.md)——系统模块（config\_daemon 配置 SSoT `/etc/agentrt/`）
+- [50-engineering-standards/README.md](../50-engineering-standards/README.md)——\[SC] 共享契约层 10 头文件清单
+- [50-engineering-standards/120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md)——\[SC] Layout C 物理宿主
+- [110-security/03-capability-model.md](../../110-security/03-capability-model.md)——capability 模型 SSoT（§13.6 跨节点 Badge 一致性）
+- [docs/architecture/adr/ADR-012.md](../../architecture/adr/ADR-012.md)——ADR-012 微内核化技术路线
+- [docs/architecture/adr/ADR-014.md](../../architecture/adr/ADR-014.md)——ADR-014 seL4 唯一来源
 
 ***
 

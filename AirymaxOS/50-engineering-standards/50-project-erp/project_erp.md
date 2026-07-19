@@ -407,13 +407,13 @@ sbom:
 
 | 层级 | SBOM 关系 | 说明 |
 |------|-----------|------|
-| **[SC] 共享契约层** | 共享 SBOM 片段 | `include/airymax/` 头文件库的 SBOM 片段由 agentrt 维护，agentrt-linux 引用 |
+| **[SC] 共享契约层** | 共享 SBOM 片段 | `include/uapi/linux/airymax/` 头文件库的 SBOM 片段由 agentrt 维护，agentrt-linux 引用 |
 | **[SS] 语义同源层** | 各自独立 SBOM | 各自的实现使用独立组件，SBOM 各自维护 |
 | **[IND] 完全独立层** | 完全独立 SBOM | 无交叉引用，SBOM 完全独立 |
 
 #### 7.2 [SC] 层共享 SBOM 片段
 
-共享契约层的组件（`include/airymax/` 头文件库）在 agentrt 和 agentrt-linux 的 SBOM 中共同标注：
+共享契约层的组件（`include/uapi/linux/airymax/` 头文件库）在 agentrt 和 agentrt-linux 的 SBOM 中共同标注：
 
 ```yaml
 # agentrt-linux SBOM 中引用 agentrt 共享 SBOM 片段
@@ -882,7 +882,7 @@ IPC 错误码由 kernel 和 services 联合定义：
 
 ##### 3.1.1 [SC] 共享契约层 — 错误码内嵌定义
 
-错误码定义内嵌在 `include/airymax/` 的 10 个 [SC] 共享契约层头文件中，agentrt 和 agentrt-linux 使用相同的错误码数值和语义：
+错误码定义内嵌在 `include/uapi/linux/airymax/` 的 10 个 [SC] 共享契约层头文件中，agentrt 和 agentrt-linux 使用相同的错误码数值和语义：
 
 | [SC] 头文件 | 错误码分类 | 说明 |
 |------------|-----------|------|
@@ -951,7 +951,7 @@ IPC 错误码由 kernel 和 services 联合定义：
 ```c
 /**
  * @brief 错误码宏定义 — 内核态
- * @file include/airymax/airy_kernel_errno.h
+ * @file include/uapi/linux/airymax/airy_kernel_errno.h
  * @since 1.0.1
  */
 
@@ -981,7 +981,7 @@ IPC 错误码由 kernel 和 services 联合定义：
 ```c
 /**
  * @brief 错误码宏定义 — 用户态（SDK 十六进制次要体系，非 C 内核首要体系）
- * @file include/airymax/ipc.h（[SC] 共享契约层）
+ * @file include/uapi/linux/airymax/ipc.h（[SC] 共享契约层）
  * @since 1.0.1
  * @note 以下十六进制值为 ERP 位掩码分类（方案 D），非 C 内核错误码（方案 A）。
  *       C 内核错误码使用方案 A（POSIX errno 负值），见 agentrt/commons/include/airy_types.h。

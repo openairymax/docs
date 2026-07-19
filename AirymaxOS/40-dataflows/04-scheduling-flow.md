@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：0.1.1\
 > **最后更新**：2026-07-07\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
-> **核心约束**：IRON-9 v3 同源且部分代码共享——共享契约文件 sched.h（用户态调度器策略契约 + `airy_task_desc` + `airy_sched_ops` 回调表）落地于 include/airymax/，[SS] EEVDF + sched_tac 调度策略语义同源，[IND] 用户态调度器 daemon 实现 + cgroup cpuset 隔离配置独立
+> **核心约束**：IRON-9 v3 同源且部分代码共享——共享契约文件 sched.h（用户态调度器策略契约 + `airy_task_desc` + `airy_sched_ops` 回调表）落地于 include/uapi/linux/airymax/，[SS] EEVDF + sched_tac 调度策略语义同源，[IND] 用户态调度器 daemon 实现 + cgroup cpuset 隔离配置独立
 
 ---
 
@@ -817,21 +817,21 @@ airy_sched_airy_task_state{state="enabled"} 380
 
 调度数据流严格遵守 IRON-9 v3 四层共享模型：
 
-### 14.1 [SC] 共享契约层（`include/airymax/sched.h`）
+### 14.1 [SC] 共享契约层（`include/uapi/linux/airymax/sched.h`）
 
 agentrt 与 agentrt-linux 完全共享的契约定义：
 
 | 契约 | 内容 | 落地位置 |
 |------|------|---------|
 | 调度类 | 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF | `include/uapi/linux/sched.h`（内核）|
-| 策略名称 | `AIRY_STC_POLICY_NAME "stc_agent"` | `include/airymax/sched.h` |
-| 任务描述符 magic | `0x41475453 'AGTS'` | `include/airymax/sched.h` |
-| 任务描述符结构 | `struct airy_task_desc`（[SC] 8 字节核心视图，对齐 SSoT §2.6；[IND] 扩展视图见 §6.1） | `include/airymax/sched.h` |
-| 默认时间片 | `AIRY_SLICE_DFL`（20ms） | `include/airymax/sched.h` |
-| 权重范围 | `[1..10000]` | `include/airymax/sched.h` |
-| 优先级范围 | 0-139（实时 0-49 / 标准 50-99 / 后台 100-139） | `include/airymax/sched.h` |
-| vtime 类型 | `airy_vtime_t`（`__s32`，Q16.16 定点，对齐 SSoT §2.6 + `-mno-80387` 约束） | `include/airymax/sched.h` |
-| vtime 衰减公式 | `airy_vtime_decay(vtime, consumed, weight)` | `include/airymax/sched.h` |
+| 策略名称 | `AIRY_STC_POLICY_NAME "stc_agent"` | `include/uapi/linux/airymax/sched.h` |
+| 任务描述符 magic | `0x41475453 'AGTS'` | `include/uapi/linux/airymax/sched.h` |
+| 任务描述符结构 | `struct airy_task_desc`（[SC] 8 字节核心视图，对齐 SSoT §2.6；[IND] 扩展视图见 §6.1） | `include/uapi/linux/airymax/sched.h` |
+| 默认时间片 | `AIRY_SLICE_DFL`（20ms） | `include/uapi/linux/airymax/sched.h` |
+| 权重范围 | `[1..10000]` | `include/uapi/linux/airymax/sched.h` |
+| 优先级范围 | 0-139（实时 0-49 / 标准 50-99 / 后台 100-139） | `include/uapi/linux/airymax/sched.h` |
+| vtime 类型 | `airy_vtime_t`（`__s32`，Q16.16 定点，对齐 SSoT §2.6 + `-mno-80387` 约束） | `include/uapi/linux/airymax/sched.h` |
+| vtime 衰减公式 | `airy_vtime_decay(vtime, consumed, weight)` | `include/uapi/linux/airymax/sched.h` |
 
 ### 14.2 [SS] 语义同源层（高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进）
 

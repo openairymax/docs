@@ -982,7 +982,7 @@ static void test_budget_exhaustion(struct kunit *test)
 
 ### 15.2 [SC] 层共享
 
-Token 预算的 `airy_token_budget` 结构体定义在 `include/airymax/sched.h`（[SC] 共享头文件）中，agentrt 与 agentrt-linux 代码字面共享。
+Token 预算的 `airy_token_budget` 结构体定义在 `include/uapi/linux/airymax/sched.h`（[SC] 共享头文件）中，agentrt 与 agentrt-linux 代码字面共享。
 
 ### 15.3 [IND] 层独立
 

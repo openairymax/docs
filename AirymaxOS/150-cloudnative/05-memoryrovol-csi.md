@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：MemoryRovol L1-L4 数据结构 [SC] 共享 + CSI v1.9 规范 [IND] 独立实现\
 > **文档性质**：实现方案文档（非设计文档）。本方案在 [20-modules/06-cloudnative.md](../20-modules/06-cloudnative.md) §4.3 容器快照与 [40-dataflows/02-memory-flow.md](../40-dataflows/02-memory-flow.md) MemoryRovol L1-L4 数据结构的基础上，补充完整的 CSI 驱动实现\
-> **设计参考**：CSI v1.9 规范（container-storage-interface spec）+ Linux 6.6 `drivers/cxl/`（CXL 持久化）+ `include/airymax/memory_types.h`（[SC] 共享契约层）\
+> **设计参考**：CSI v1.9 规范（container-storage-interface spec）+ Linux 6.6 `drivers/cxl/`（CXL 持久化）+ `include/uapi/linux/airymax/memory_types.h`（[SC] 共享契约层）\
 > **IRON-9 v3 层次**：[SC] 共享契约层（L1-L4 数据结构）+ [IND] 完全独立层（CSI 驱动实现）
 
 ---
@@ -551,8 +551,8 @@ func retryCreateVolume(req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse,
 
 | 层次 | 共享内容 | CSI 驱动使用方式 |
 |------|---------|-----------------|
-| **[SC] 共享契约层** | `include/airymax/memory_types.h` L1-L4 数据结构 | 卷存储使用 [SC] 数据结构 |
-| **[SC] 共享契约层** | `include/airymax/security_types.h` capability 41 ID | 卷操作的 capability 守卫 |
+| **[SC] 共享契约层** | `include/uapi/linux/airymax/memory_types.h` L1-L4 数据结构 | 卷存储使用 [SC] 数据结构 |
+| **[SC] 共享契约层** | `include/uapi/linux/airymax/security_types.h` capability 41 ID | 卷操作的 capability 守卫 |
 | **[IND] 完全独立层** | CSI gRPC 实现、卷生命周期、挂载协议 | agentrt-linux 专属 |
 
 ---

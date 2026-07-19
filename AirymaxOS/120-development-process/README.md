@@ -62,11 +62,11 @@ agentrt-linux 开发流程遵循 SSoT v2（Single Source of Truth v2）单一权
 
 | 技术点 | 权威源 | 物理宿主 |
 |--------|--------|---------|
-| sched_tac 调度 | [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) §1.3 + [30-interfaces/10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) | `kernel/include/airymax/sched.h` |
-| IORING_OP_URING_CMD | [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) | `kernel/include/airymax/ipc.h` |
-| 纯 C LSM | [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) | `kernel/include/airymax/lsm_types.h` |
-| alloc_pages + mmap | [40-dataflows/05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) §5.1 | `kernel/include/airymax/log_types.h` |
-| IRON-9 v3 四层模型 | [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) | `kernel/include/airymax/*.h`（10 个） |
+| sched_tac 调度 | [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) §1.3 + [30-interfaces/10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) | `kernel/include/uapi/linux/airymax/sched.h` |
+| IORING_OP_URING_CMD | [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) | `kernel/include/uapi/linux/airymax/ipc.h` |
+| 纯 C LSM | [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) | `kernel/include/uapi/linux/airymax/lsm_types.h` |
+| alloc_pages + mmap | [40-dataflows/05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) §5.1 | `kernel/include/uapi/linux/airymax/log_types.h` |
+| IRON-9 v3 四层模型 | [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) | `kernel/include/uapi/linux/airymax/*.h`（10 个） |
 | Airymax Unify Design | [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) | — |
 
 ### 2.2 IRON-9 v3 四层模型在开发流程的归属

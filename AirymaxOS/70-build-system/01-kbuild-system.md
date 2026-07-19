@@ -130,12 +130,16 @@ obj-y := $(filter-out %/, $(obj-y))
 
 ### 2.2 多部分目标（multi-part objects）
 
+> **D-11 OLK 6.6 Makefile 风格对齐说明**：OLK 6.6 Makefile 风格使用 `+=` 追加目录和对象，禁止 `:=` 直接赋值列出多个 `.o`。多文件模块必须通过复合目标 `<name>-y +=` 逐个追加 `.o`；`obj-$(CONFIG_*)` 行只允许出现单一复合目标 `<name>.o`，禁止直接列出多个 `.o`。例外：引用上游 Linux 6.6 内核 `scripts/Makefile.build` 等内部 Makefile 变量变换（`$(patsubst ...)` / `$(filter-out ...)`）的 `:=` 不受此约束（属于 make 变量计算，非对象清单）。
+
 当一个内核模块/内建由多个 `.c` 组合而成，使用 `<name>-objs` 或 `<name>-y` 列出组成部分：
 
 ```makefile
 # drivers/airymax/Makefile
 obj-$(CONFIG_AIRY_IPC) += airymax-ipc.o
-airymax-ipc-y := ipc_core.o ipc_dispatch.o ipc_ringbuf.o
+airymax-ipc-y += ipc_core.o
+airymax-ipc-y += ipc_dispatch.o
+airymax-ipc-y += ipc_ringbuf.o
 airymax-ipc-$(CONFIG_AIRY_IPC_DEBUG) += ipc_debug.o
 ```
 
@@ -159,10 +163,10 @@ agentrt-linux 子系统 Makefile 遵循 Linux 6.6 内核基线的 `Kbuild`/`Make
 
 obj-$(CONFIG_AIRY_IPC) += airymax-ipc.o
 
-airymax-ipc-y := ipc_core.o \
-                 ipc_dispatch.o \
-                 ipc_ringbuf.o \
-                 ipc.o
+airymax-ipc-y += ipc_core.o
+airymax-ipc-y += ipc_dispatch.o
+airymax-ipc-y += ipc_ringbuf.o
+airymax-ipc-y += ipc.o
 
 airymax-ipc-$(CONFIG_AIRY_IPC_BENCH) += ipc_bench.o
 
