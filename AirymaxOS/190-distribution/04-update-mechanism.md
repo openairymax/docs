@@ -431,7 +431,7 @@ fi
 # 检查 3：12 个 daemon 状态
 DOWN_DAEMONS=0
 for svc in gateway_d cogn_d dev_d gateway_d sched_d audit_d \
-           net_d logger_daemon sec_d mem_d vfs_d config_daemon; do
+           net_d logger_d sec_d mem_d vfs_d config_d; do
     if ! systemctl is-active --quiet "$svc.service"; then
         DOWN_DAEMONS=$((DOWN_DAEMONS + 1))
     fi
@@ -578,13 +578,13 @@ echo "[完成] MemoryRovol 数据已迁移至 $TARGET_VERSION"
 set -euo pipefail
 
 # 重启顺序：从底层到上层
-# 1. 基础服务（memory_d / logger_daemon）
+# 1. 基础服务（memory_d / logger_d）
 # 2. 中间服务（sched_d / audit_d / sec_d / mem_d）
-# 3. 业务服务（gateway_d / cogn_d / dev_d / gateway_d / net_d / vfs_d / config_daemon）
+# 3. 业务服务（gateway_d / cogn_d / dev_d / gateway_d / net_d / vfs_d / config_d）
 
-PHASE1="memory_d logger_daemon"
+PHASE1="memory_d logger_d"
 PHASE2="sched_d audit_d sec_d mem_d"
-PHASE3="gateway_d cogn_d dev_d gateway_d net_d vfs_d config_daemon"
+PHASE3="gateway_d cogn_d dev_d gateway_d net_d vfs_d config_d"
 
 restart_phase() {
     local phase_name=$1

@@ -890,7 +890,7 @@ struct landlock_ruleset_attr {
 struct landlock_path_beneath_attr {
     __u64 allowed_access;
     __s32 parent_fd;
-} __attribute__((packed));
+};
 
 /**
  * struct landlock_net_port_attr - 网络端口规则属性（agentrt-linux 前向移植）

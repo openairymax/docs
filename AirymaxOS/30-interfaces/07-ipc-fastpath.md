@@ -10,7 +10,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **SSoT 依赖声明**： 本文档状态机行为以 `50-engineering-standards/09-ssot-registry.md` 登记的接口规约为权威依据，重点依赖下列条目：OS-IFACE-003 / OS-IFACE-004（Layout C v4 128B 消息头 + magic 0x41524531 'ARE1' + `capability_badge` 字段经 [SC] `ipc.h` 共享）、OS-ARCH-005 / OS-ARCH-006（seL4 思想分布落地——capability/IPC 契约经 [SC] 共享，io_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait_event_interruptible）、OS-KER-139（数据结构 cache line 对齐）、OS-SEC-121 / OS-SEC-122（capability 检查与令牌管理）。Layout C v4 消息头结构体 `struct airy_ipc_msg_hdr` 的物理宿主为 `include/uapi/linux/airymax/ipc.h`（见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）。
 >
-> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较）。本文件 §3.1 / §5.2 是 fastpath 校验链与 C-S9 实现的 SSoT 权威源。
+> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较）。本文件 §3.1 / §5.2 是 fastpath 校验链与 C-S9 实现的 SSoT 权威源。
 >
 > **理论根基**： seL4 fastpath 设计思想（设计借鉴来源编号 ES-SEL4-4）——seL4 在 `decodeIPC`/`sendIPC` 路径中通过极简状态机实现最小延迟 IPC，本设计将其"无调度、无阻塞、内联检查"思想迁移至 agentrt-linux 的 io_uring + kfifo 双传输通道之上。Capability Folding 进一步将 seL4 的 capability 校验内联到 IPC fastpath，消除独立 capability syscall。
 
@@ -33,7 +33,7 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 ### 1.2 设计约束
 
 - **传输通道双栈**：用户态 ↔ 内核态走 io_uring（`IORING_OP_URING_CMD` + `cmd_op=AIRY_URING_CMD_IPC_*`，见 [02-ipc-protocol.md](02-ipc-protocol.md) §4.4）；内核 kthread 间走 per-cpu kfifo + `wait_event_interruptible`（OS-ARCH-006）。状态机对两条通道统一建模。
-- **Layout C v4 = 2 cache lines**：fastpath 仅处理消息头（无 payload）路径，payload 路径强制走 slowpath。`capability_badge` 字段（offset 44-51）在 fastpath C-S9 内联校验，不增加 cache miss（与 magic/opcode/flags 等同 cache line）。
+- **Layout C v4 = 2 cache lines**：fastpath 仅处理消息头（无 payload）路径，payload 路径强制走 slowpath。`capability_badge` 字段（offset 40-47）在 fastpath C-S9 内联校验，不增加 cache miss（与 magic/opcode/flags 等同 cache line）。
 - **per-cpu 无锁**：fastpath 必须在 per-cpu 上下文执行，禁止跨 CPU 同步。
 - **Capability Folding H1-H6 硬约束**：fastpath C-S9 是 Badge 校验的唯一执行点（H4），agentrt 用户态 `capability_badge=0` 跳过（H3），[DSL] 降级模式跳过（H6）。
 - **ABI 稳定**：状态机内部状态编号不进入 UAPI；对外契约仅 7 操作码（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE）与返回码。

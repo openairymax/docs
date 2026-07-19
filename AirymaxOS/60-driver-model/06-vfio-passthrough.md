@@ -5,7 +5,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档版本**：v1.0.1\
 > **最后更新**：2026-07-18\
 > **上级文档**：[60-driver-model README](README.md)\
-> **同源映射**：agentrt `daemons`（macro_superv + dev_d 共同监管）+ Linux 6.6 `drivers/vfio/`（VFIO 框架实现）\
+> **同源映射**：agentrt `daemons`（macro_d + dev_d 共同监管）+ Linux 6.6 `drivers/vfio/`（VFIO 框架实现）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-ULS 设备生命周期监管）\
 > **核心约束**：技术选型第 4 条——VFIO DMA 映射使用 `alloc_pages + vm_map_pages`，**不使用 `dma_alloc_coherent`**；[DSL] 降级生存层保证 VFIO 不可用时回退到模拟设备
 
@@ -105,7 +105,7 @@ sequenceDiagram
     participant K as 内核 VFIO 框架
     participant I as IOMMU
     participant D as dev_d daemon
-    participant S as macro_superv
+    participant S as macro_d
     A->>D: 申请 VFIO 直通设备
     D->>S: A-ULS 审核请求
     S->>S: 策略裁决（配额/Capability）
@@ -267,12 +267,12 @@ int airy_vfio_release_device(struct agent_vfio_ctx *ctx)
 
 ### 4.1 双层监管
 
-VFIO 直通设备生命周期由 macro_superv + dev_d 双层监管：
+VFIO 直通设备生命周期由 macro_d + dev_d 双层监管：
 
 | 监管层 | 职责 | 在 VFIO 直通的体现 |
 |--------|------|-------------------|
 | **Micro-Supervisor**（airy_lsm） | Capability 校验（`CAP_VFIO_ASSIGN`/`CAP_VFIO_RELEASE`）、IOMMU 组隔离校验 | 直通请求入口冷酷执法 |
-| **Macro-Supervisor**（macro_superv + dev_d） | 配额策略、设备分配仲裁、跨 Agent 设备迁移 | 温情裁决，可申诉 |
+| **Macro-Supervisor**（macro_d + dev_d） | 配额策略、设备分配仲裁、跨 Agent 设备迁移 | 温情裁决，可申诉 |
 
 ### 4.2 设备生命周期监管
 
@@ -285,7 +285,7 @@ stateDiagram-v2
     Releasing --> Unassigned: 释放完成
     Assigned --> Migrating: Agent 迁移
     Migrating --> Assigned: 迁移完成
-    note right of Assigned: macro_superv 定期健康检查
+    note right of Assigned: macro_d 定期健康检查
     note right of Releasing: audit_d 完成快照后释放
 ```
 
@@ -397,7 +397,7 @@ IOMMU fault 发生时（设备尝试访问未映射 IOVA），内核 VFIO fault 
 1. **记录 fault 信息**：设备 BDF、fault 地址、fault 类型（读/写/执行）
 2. **上报 dev_d daemon**：通过 A-ULP Ring 异步上报
 3. **隔离设备**：禁止设备后续 DMA（IOMMU 页表标记为 fault 状态）
-4. **触发 A-ULS 裁决**：由 macro_superv 决定是否终止 Agent 或重置设备
+4. **触发 A-ULS 裁决**：由 macro_d 决定是否终止 Agent 或重置设备
 
 ---
 
@@ -574,7 +574,7 @@ VFIO 直通相关的 Capability：
 /* include/uapi/linux/airymax/capability.h */
 #define CAP_VFIO_ASSIGN          0x00000100  /* 允许 VFIO 设备分配 */
 #define CAP_VFIO_RELEASE         0x00000200  /* 允许 VFIO 设备释放 */
-#define CAP_VFIO_IOMMU_BYPASS    0x00000400  /* 允许绕过 IOMMU（仅 macro_superv，危险） */
+#define CAP_VFIO_IOMMU_BYPASS    0x00000400  /* 允许绕过 IOMMU（仅 macro_d，危险） */
 #define CAP_VFIO_MIGRATE         0x00000800  /* 允许 VFIO 设备迁移 */
 ```
 
@@ -592,7 +592,7 @@ static int airy_vfio_assign_check(u32 agent_id, const char *pci_bdf,
     if (!(cred->cap_mask & CAP_VFIO_ASSIGN))
         return -AIRY_E_VFIO_NOCAP;
 
-    /* 2. IOMMU 绕过需要更高权限（仅 macro_superv） */
+    /* 2. IOMMU 绕过需要更高权限（仅 macro_d） */
     if ((cap_mask & CAP_VFIO_IOMMU_BYPASS) &&
         !(cred->cap_mask & CAP_VFIO_IOMMU_BYPASS)) {
         airy_ulps_log(AIRY_ULPS_CRIT,
@@ -624,7 +624,7 @@ static struct security_hook_list airy_vfio_hooks[] __lsm_ro_after_init = {
 | CAP_VFIO_ASSIGN | dev_d daemon | daemon 启动 | daemon 停止 |
 | CAP_VFIO_RELEASE | dev_d daemon | daemon 启动 | daemon 停止 |
 | CAP_VFIO_IOMMU_BYPASS | 永不授予（仅代码路径保留） | N/A | N/A |
-| CAP_VFIO_MIGRATE | macro_superv + dev_d | 系统启动 | 永不撤销 |
+| CAP_VFIO_MIGRATE | macro_d + dev_d | 系统启动 | 永不撤销 |
 
 > **OS-DRV-104**： `CAP_VFIO_IOMMU_BYPASS` **永不授予**任何进程——该 Capability 仅在代码路径中保留用于测试场景。生产环境启用此 Capability 视为安全违规。
 
@@ -705,7 +705,7 @@ graph TD
     style D fill:#fce4ec
 ```
 
-> **OS-DRV-106**： [DSL] 降级模式触发时**必须**通过 A-ULP Ring 上报 `AIRY_ULPS_WARN` 级别日志，包含降级前模式、降级后模式、降级原因。降级频率超过阈值（每小时 >5 次）应触发 macro_superv 重新评估设备分配策略。
+> **OS-DRV-106**： [DSL] 降级模式触发时**必须**通过 A-ULP Ring 上报 `AIRY_ULPS_WARN` 级别日志，包含降级前模式、降级后模式、降级原因。降级频率超过阈值（每小时 >5 次）应触发 macro_d 重新评估设备分配策略。
 
 ---
 

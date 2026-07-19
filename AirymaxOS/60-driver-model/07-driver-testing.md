@@ -94,7 +94,7 @@ Agent 设备驱动测试矩阵覆盖四大维度：
 |---------|------|------|---------|--------|
 | REG-001 | 正常注册 Agent 驱动 | 合法 `airy_agent_driver` | 返回 0，`/dev/airy_*` 创建 | KUnit |
 | REG-002 | 缺少 CAP_AGENT_DRIVER_REGISTER | cap_mask 不含所需 Capability | 返回 `-AIRY_E_DEV_NOCAP` | KUnit |
-| REG-003 | A-ULS 审核拒绝 | macro_superv 返回拒绝 | 返回 `-AIRY_E_DEV_REJECTED` | kselftest |
+| REG-003 | A-ULS 审核拒绝 | macro_d 返回拒绝 | 返回 `-AIRY_E_DEV_REJECTED` | kselftest |
 | REG-004 | 重复注册同名驱动 | 已注册的驱动名 | 返回 `-AIRY_E_DEV_EXIST` | KUnit |
 | REG-005 | 注销后访问设备 | 注销后 open `/dev/airy_*` | 返回 `-ENXIO` | kselftest |
 | REG-006 | probe 返回 -EPROBE_DEFER | 依赖未就绪 | 延迟重试，最终成功 | kselftest |

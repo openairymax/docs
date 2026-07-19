@@ -71,7 +71,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 维度        | agentrt（daemons）                | agentrt-linux（services）         | 同源标注   |
 | --------- | ------------------------------- | ------------------------------- | ------ |
 | 服务数量      | 12 daemons                      | 12 daemons + VFS/Net/Drivers    | \[SS]  |
-| daemon 语义 | macro\_superv/logger\_daemon/...   | macro\_superv/logger\_daemon/...   | \[SS]  |
+| daemon 语义 | macro\_d/logger\_d/...   | macro\_d/logger\_d/...   | \[SS]  |
 | IPC 消息头   | `struct airy_ipc_msg_hdr`（128B） | `struct airy_ipc_msg_hdr`（128B） | \[SC]  |
 | IPC magic | 0x41524531 'ARE1'               | 0x41524531 'ARE1'               | \[SC]  |
 | 通信方式      | 进程间消息队列                         | io\_uring 零拷贝 IPC               | \[SS]  |
@@ -98,9 +98,9 @@ services/
 ├── net/                   # 用户态网络栈（DPDK/AF_XDP）[IND]
 ├── drivers/               # 用户态驱动框架（VFIO/libvfio）[IND]
 ├── daemons/               # 12 daemons 集成（A-ULS 统一生命周期）[SS]
-│   ├── macro_superv/        # A-ULS：Macro-Supervisor
-│   ├── logger_daemon/       # A-ULP：Logger Daemon
-│   ├── config_daemon/       # A-UCS：配置管理守护
+│   ├── macro_d/        # A-ULS：Macro-Supervisor
+│   ├── logger_d/       # A-ULP：Logger Daemon
+│   ├── config_d/       # A-UCS：配置管理守护
 │   ├── gateway_d/           # 网关守护
 │   ├── sched_d/             # 调度守护
 │   ├── vfs_d/               # VFS 用户态服务
@@ -155,9 +155,9 @@ services/
 
 | 序号 | daemon           | 职责              | 同源标注  |
 | -- | ---------------- | --------------- | ----- |
-| 1  | `macro_superv`   | 主监管守护进程（A-ULS）    | \[SS] |
-| 2  | `logger_daemon`  | 日志消费守护进程（A-ULP）  | \[SS] |
-| 3  | `config_daemon`  | 配置管理守护进程（A-UCS）   | \[SS] |
+| 1  | `macro_d`   | 主监管守护进程（A-ULS）    | \[SS] |
+| 2  | `logger_d`  | 日志消费守护进程（A-ULP）  | \[SS] |
+| 3  | `config_d`  | 配置管理守护进程（A-UCS）   | \[SS] |
 | 4  | `gateway_d`      | 网关守护进程           | \[SS] |
 | 5  | `sched_d`        | 调度守护进程           | \[SS] |
 | 6  | `vfs_d`          | VFS 用户态服务守护进程    | \[SS] |
@@ -321,13 +321,13 @@ v1.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到
 | 3  | `mem_d`        | 记忆卷载守护                                                | Badge 携带者：记忆快照 IPC 经 C-S9 校验                  |
 | 4  | `gateway_d`    | 跨节点网关守护                                               | **入站 Badge 重新编译**：跨节点消息入站时重新编译为目标节点 Badge      |
 | 5  | `logger_d`     | 日志消费守护（A-ULP）                                         | Badge 携带者：审计日志 IPC 经 C-S9 校验                  |
-| 6  | `macro_superv` | 主监管守护（A-ULS）                                          | Badge 携带者：通过 `AIRY_IPC_OP_FREEZE` 冻结违规 Agent ring |
+| 6  | `macro_d` | 主监管守护（A-ULS）                                          | Badge 携带者：通过 `AIRY_IPC_OP_FREEZE` 冻结违规 Agent ring |
 | 7  | `audit_d`      | 审计守护                                                  | Badge 携带者：审计事件 IPC 经 C-S9 校验                  |
 | 8  | `sched_d`      | 调度守护                                                  | Badge 携带者：调度策略 IPC 经 C-S9 校验                  |
 | 9  | `dev_d`        | 设备驱动守护                                                | Badge 携带者：设备访问 IPC 经 C-S9 校验                  |
 | 10 | `net_d`        | 网络策略守护                                                | Badge 携带者：网络策略 IPC 经 C-S9 校验                  |
 | 11 | `vfs_d`        | VFS 用户态服务守护                                           | Badge 携带者：文件操作 IPC 经 C-S9 校验                  |
-| 12 | `config_daemon`| 配置管理守护（A-UCS）                                         | Badge 携带者：配置读写 IPC 经 C-S9 校验                  |
+| 12 | `config_d`| 配置管理守护（A-UCS）                                         | Badge 携带者：配置读写 IPC 经 C-S9 校验                  |
 
 **4.6.2 sec_d 串行化 Badge 编译** \[SS]
 
@@ -414,9 +414,9 @@ services 层 io\_uring IPC 实现严格遵循 OLK 6.6 工程规范：
 
 | 序号 | daemon      | 职责         | agentrt 实现 | agentrt-linux 实现          |
 | -- | ----------- | ---------- | ---------- | ------------------------- |
-| 1  | `macro_superv`  | 主监管守护进程     | 用户态进程      | systemd unit + capability |
-| 2  | `logger_daemon` | 日志消费守护进程    | 用户态进程      | systemd unit + capability |
-| 3  | `config_daemon` | 配置管理守护进程    | 用户态进程      | systemd unit + capability |
+| 1  | `macro_d`  | 主监管守护进程     | 用户态进程      | systemd unit + capability |
+| 2  | `logger_d` | 日志消费守护进程    | 用户态进程      | systemd unit + capability |
+| 3  | `config_d` | 配置管理守护进程    | 用户态进程      | systemd unit + capability |
 | 4  | `gateway_d`     | 网关守护进程      | 用户态进程      | systemd unit + capability |
 | 5  | `sched_d`       | 调度守护进程      | 用户态进程      | systemd unit + capability |
 | 6  | `vfs_d`         | VFS 用户态服务守护进程 | 用户态进程      | systemd unit + capability |

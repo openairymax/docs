@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **agentrt-linux Capability 安全模型** 的唯一权威源。CNode/CSpace 数据模型、MDB 派生链、POSIX 41 ID 枚举、令牌 7 状态生命周期、Cupolas blob 四类布局、4 值策略裁决、Vault backend 抽象、**Capability Folding Badge 64-bit Native Word 模型**、**fastpath C-S9 内联校验**、**`agent_caps[1024]` 静态数组** 均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 capability 数据模型与 Badge 校验机制。
 >
-> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，agentrt-linux 的 seL4 风格 capability 校验路径从"独立前置 `airy_cap_check()` + per-cpu 缓存"重构为 **fastpath C-S9 内联 Badge 校验**。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch 16位 + Random Tag 32位 + Perms 16位）；执行点是 fastpath `airy_cap_badge_ok()`（~10ns，3 个 READ_ONCE + 位运算 + 比较）；存储是 `agent_caps[1024]` 内核静态数组（16KB，sec_d 唯一写者）。6 条硬约束 H1-H6 不可妥协。详见 §13 与 [10-unify-design.md §8](../10-architecture/10-unify-design.md)。
+> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，agentrt-linux 的 seL4 风格 capability 校验路径从"独立前置 `airy_cap_check()` + per-cpu 缓存"重构为 **fastpath C-S9 内联 Badge 校验**。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch 16位 + Random Tag 32位 + Perms 16位）；执行点是 fastpath `airy_cap_badge_ok()`（~10ns，3 个 READ_ONCE + 位运算 + 比较）；存储是 `agent_caps[1024]` 内核静态数组（16KB，sec_d 唯一写者）。6 条硬约束 H1-H6 不可妥协。详见 §13 与 [10-unify-design.md §8](../10-architecture/10-unify-design.md)。
 
 ---
 
@@ -206,7 +206,7 @@ struct airy_cap_slot {
     uint16_t perms;                /* 当前有效权限位图（与 Badge.Perms 同源）*/
     uint8_t  state;                /* AIRY_CAP_STATE_* */
     uint8_t  reserved[3];          /* 对齐到 12B */
-} __attribute__((packed));
+};
 
 extern struct airy_cap_slot agent_caps[AIRY_CAP_MAX_AGENTS];
 
@@ -221,7 +221,7 @@ static inline uint16_t airy_cap_epoch_get(void)
 
 ### 2.5 Badge 64-bit Native Word 模型（v1.1 新增）
 
-**这是 Capability Folding 的物理载体**——fastpath C-S9 校验的就是这 64 位。Badge 的内部结构遵循 Layout C v4（[SC] `ipc.h` 消息头 offset 44-51）：
+**这是 Capability Folding 的物理载体**——fastpath C-S9 校验的就是这 64 位。Badge 的内部结构遵循 Layout C v4（[SC] `ipc.h` 消息头 offset 40-47）：
 
 ```
 63                    48 47                16 15            0
@@ -1474,7 +1474,7 @@ agentrt-linux 独有：
 
 | 硬约束 | 内容 | 落地位置 |
 |--------|------|---------|
-| **H1** | Layout C v4 总长 128B / magic 0x41524531 / `capability_badge` offset 44-51 | [SC] `ipc.h`（§2.5）|
+| **H1** | Layout C v4 总长 128B / magic 0x41524531 / `capability_badge` offset 40-47 | [SC] `ipc.h`（§2.5）|
 | **H2** | `capability_badge` 字段进 [SC] `ipc.h`，但 Badge 校验机制属 [SS] `airy_cap_badge_ok()` | 本文件 §4.3.1 + [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md) |
 | **H3** | agentrt 用户态 `capability_badge=0`（跳过 C-S9） | [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) [IND] 层 |
 | **H4** | agentrt-linux 内核 Badge 由 sec_d 编译、fastpath C-S9 校验 | 本文件 §2.4 + §9 |
@@ -1875,7 +1875,7 @@ static void airy_cap_write_slot(u32 agent_id, struct airy_cap_slot *new_slot)
 **策略**：在部署层面，将 Agent 进程绑定到特定 NUMA 节点，使 `src_task` 的 Agent 与 `agent_caps[]` 主副本（node 0）通信模式可预测。
 
 ```c
-/* services/daemons/macro_superv/sched.c —— Agent NUMA 亲和性绑定（v1.1）
+/* services/daemons/macro_d/sched.c —— Agent NUMA 亲和性绑定（v1.1）
  *
  * 策略:
  *   - 关键 Agent（sched_d, sec_d, audit_d）绑定到 node 0（与 agent_caps[] 主副本同节点）
@@ -1890,14 +1890,14 @@ static const struct {
     { "sec_d",          0 },   /* Badge 唯一写者，必须与 agent_caps[] 同节点 */
     { "sched_d",        0 },   /* 调度守护，频繁访问 agent_caps[] */
     { "audit_d",        0 },   /* 审计守护，记录所有 Badge 操作 */
-    { "macro_superv",   0 },   /* 主监管，与 sec_d 通信频繁 */
-    { "logger_daemon", -1 },   /* 日志守护，无 NUMA 偏好 */
+    { "macro_d",   0 },   /* 主监管，与 sec_d 通信频繁 */
+    { "logger_d", -1 },   /* 日志守护，无 NUMA 偏好 */
     { "vfs_d",         -1 },   /* VFS 守护，无 NUMA 偏好 */
     { "net_d",         -1 },   /* 网络守护，无 NUMA 偏好 */
     /* 其他 daemon 按负载均衡分配 */
 };
 
-static int macro_superv_set_numa_affinity(pid_t pid, const char *name)
+static int macro_d_set_numa_affinity(pid_t pid, const char *name)
 {
     int node = -1;
 
@@ -1922,7 +1922,7 @@ static int macro_superv_set_numa_affinity(pid_t pid, const char *name)
 ```
 
 **效果**：
-- 关键 daemon（sec_d/sched_d/audit_d/macro_superv）本地访问 `agent_caps[]`，~60-80ns
+- 关键 daemon（sec_d/sched_d/audit_d/macro_d）本地访问 `agent_caps[]`，~60-80ns
 - 其他 daemon 跨 NUMA 访问，~120-150ns（可接受，fastpath 预算 1μs）
 - 关键路径 IPC（Agent ↔ sec_d）始终本地访问
 

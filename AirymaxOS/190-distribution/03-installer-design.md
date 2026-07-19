@@ -464,7 +464,7 @@ systemctl enable airymaxos-sched-agent.service
 
 # 启用 12 个 daemon
 for svc in gateway_d cogn_d dev_d gateway_d sched_d audit_d \
-           net_d logger_daemon sec_d mem_d vfs_d config_daemon; do
+           net_d logger_d sec_d mem_d vfs_d config_d; do
     systemctl enable "$svc.service"
 done
 

@@ -891,12 +891,12 @@ pub fn airy_ipc_send_rs(channel: u32, msg: &[u8]) -> i32 {
 
 #### 5.2 类型布局兼容性（OS-SEC-241）
 
-> **OS-SEC-241**：FFI 边界上的结构体必须使用 `#[repr(C, packed)]` 确保与 C 的布局兼容。Rust 默认布局（`repr(Rust)`）不保证字段顺序和填充，不能用于 FFI。IRON-9 v3 [SC] 共享契约层的结构体（如 `AirymaxIpcMsgHdr`）在 agentrt 和 agentrt-linux（AirymaxOS）两端必须位级兼容，`#[repr(C, packed)]` 是保证这一兼容性的前提（对齐 Layout C SSoT 的 `__attribute__((packed))`）。
+> **OS-SEC-241**：FFI 边界上的结构体必须使用 `#[repr(C, align(64))]` 确保与 C 的布局兼容。Rust 默认布局（`repr(Rust)`）不保证字段顺序和填充，不能用于 FFI。IRON-9 v3 [SC] 共享契约层的结构体（如 `AirymaxIpcMsgHdr`）在 agentrt 和 agentrt-linux（AirymaxOS）两端必须位级兼容，`#[repr(C, align(64))]` 是保证这一兼容性的前提（对齐 Layout C SSoT 的 `__attribute__((aligned(64)))`，D-9 修复后禁用 `__attribute__((packed))`）。
 
 ```rust
 /// [SC] 共享契约层：IPC 消息头，与 C 结构体 struct airy_ipc_msg_hdr 完全一致。
 /// 物理宿主见 50-engineering-standards/120-cross-project-code-sharing.md §Layout C。
-#[repr(C, packed)]
+#[repr(C, align(64))]
 pub struct AirymaxIpcMsgHdr {
     pub magic: u32,           // offset  0, 'ARE1' (0x41524531)
     pub opcode: u16,          // offset  4, SQE/CQE 操作码

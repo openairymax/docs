@@ -50,7 +50,7 @@ A-ULP（Unified Logging and Printk Subsystem，统一日志与打印系统）是
 | 共享层级 | [SC] 共享契约层（IRON-9 v3 第一层） |
 | 共享方式 | 物理共享，逐字节相同 |
 | CI 校验 | `sc-dual-ci.yml` 逐字节校验 |
-| 关联实现 | `kernel/log/airy_log_ring.c`（内核侧）+ `services/daemons/logger_daemon/`（用户态） |
+| 关联实现 | `kernel/log/airy_log_ring.c`（内核侧）+ `services/daemons/logger_d/`（用户态） |
 
 ### 1.3 设计原则
 
@@ -77,7 +77,7 @@ struct airy_log_record {
     __u32   payload_len;    /* offset 20, 4B: payload 有效长度（≤96） */
     __u8    payload[96];    /* offset 24, 96B: 原始二进制 payload（不格式化） */
     __u64   reserved;       /* offset 120, 8B: 预留对齐 + 校验位 */
-} __attribute__((packed));
+} __attribute__((aligned(64)));
 /* sizeof(struct airy_log_record) == 128 */
 ```
 
@@ -97,7 +97,7 @@ struct airy_log_record {
 ### 2.3 关键约束
 
 1. **结构体名称**：`airy_log_record`（**不是** `airy_log_entry` 或 `airymaxos_log_record_t`）
-2. **对齐方式**：`__attribute__((packed))`（**不是** `aligned(64)` 或 `aligned(128)`）
+2. **对齐方式**：`__attribute__((aligned(64)))`（D-9 修复后禁用 `__attribute__((packed))`，参考 OLK 6.6 内核协议头自然对齐）
 3. **类型**：使用内核 UAPI 类型 `__u32`/`__u16`/`__u64`/`__u8`（**不是** `uint32_t` 等）
 4. **总大小**：严格 128 字节，`sizeof(struct airy_log_record) == 128`
 5. **payload 禁止格式化**：内核 fastpath 仅 `memcpy` 原始二进制到 `payload`，禁止 `sprintf`/`snprintf`

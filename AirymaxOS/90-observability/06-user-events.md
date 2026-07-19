@@ -17,7 +17,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [第 2 章 user_events 架构与数据通路](#第-2-章-user_events-架构与数据通路)
 - [第 3 章 Agent 事件注册](#第-3-章-agent-事件注册)
 - [第 4 章 事件类型定义](#第-4-章-事件类型定义)
-- [第 5 章 与 logger_daemon 的关系](#第-5-章-与-logger_daemon-的关系)
+- [第 5 章 与 logger_d 的关系](#第-5-章-与-logger_d-的关系)
 - [第 6 章 user_events 性能开销](#第-6-章-user_events-性能开销)
 - [第 7 章 与 eBPF 探针的关系](#第-7-章-与-ebpf-探针的关系)
 - [第 8 章 Airymax Unify Design 映射](#第-8-章-airymax-unify-design-映射)
@@ -32,8 +32,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 user_events 是 Linux 6.6 内核基线提供的用户态事件追踪框架，允许用户态进程通过 `ioctl()` 注册事件并将其直接写入 ftrace ring buffer，无需经过 `write()` 系统调用或额外的数据拷贝。agentrt-linux 选择 user_events 作为可观测性 L5 层（用户态桥接），原因有三：
 
 1. **零拷贝写入**：user_events 通过 `mmap()` 将 ftrace ring buffer 的写指针暴露给用户态，用户态直接填充事件数据，内核态仅做启用状态检查，单事件开销 < 10ns，远低于 `write()` 路径的 1-2μs。
-2. **与 ftrace 统一**：user_events 事件与内核 tracepoint 事件共享同一 ring buffer 与同一 `events/` 目录结构，可在同一 trace 输出中混合查看，符合 A-ULS 模块 macro_superv 的"统一观测面"原则。
-3. **与 logger_daemon 解耦**：user_events 用于实时追踪（短期、高频率），logger_daemon 用于持久化日志（长期、结构化）；二者职责清晰，不互相替代。
+2. **与 ftrace 统一**：user_events 事件与内核 tracepoint 事件共享同一 ring buffer 与同一 `events/` 目录结构，可在同一 trace 输出中混合查看，符合 A-ULS 模块 macro_d 的"统一观测面"原则。
+3. **与 logger_d 解耦**：user_events 用于实时追踪（短期、高频率），logger_d 用于持久化日志（长期、结构化）；二者职责清晰，不互相替代。
 
 **OS-OBS-061: user_events 是 agentrt-linux 可观测性 L5 层的强制基线，用户态守护进程上报追踪事件必须经 user_events，不得自创 ioctl/netlink/共享内存替代方案。**
 
@@ -57,7 +57,7 @@ user_events 是 Linux 6.6 内核基线提供的用户态事件追踪框架，允
 |------|------------|---------------------|
 | 用途 | 实时追踪（短期分析） | 持久化日志（长期审计） |
 | 数据通路 | ftrace ring buffer | A-ULP 专用 ring buffer |
-| 消费者 | ftrace trace / perf / eBPF | logger_daemon |
+| 消费者 | ftrace trace / perf / eBPF | logger_d |
 | 持久化 | 否（内存中） | 是（落盘） |
 | 单事件开销 | < 10ns | ~500ns（含格式化） |
 | 数据格式 | 二进制结构（自定义） | 128B 固定记录 |
@@ -248,9 +248,9 @@ int cogn_d_init_user_events(void)
 
 | Daemon | 注册的 user_events |
 |--------|-------------------|
-| macro_superv | `superv_enforce`、`superv_adjudicate`、`budget_alert` |
-| logger_daemon | `log_consume`、`log_flush`、`panic_fallback` |
-| config_daemon | `config_reload`、`config_version_change` |
+| macro_d | `superv_enforce`、`superv_adjudicate`、`budget_alert` |
+| logger_d | `log_consume`、`log_flush`、`panic_fallback` |
+| config_d | `config_reload`、`config_version_change` |
 | gateway_d | `ipc_send_user`、`ipc_recv_user`、`ipc_error` |
 | sched_d | `sched_class_switch_user`、`sched_deadline_miss` |
 | vfs_d | `file_open`、`file_close`、`mount_event` |
@@ -261,7 +261,7 @@ int cogn_d_init_user_events(void)
 | audit_d | `audit_record_user` |
 | dev_d | `device_event_user` |
 
-**OS-OBS-062: 12 daemon 必须在启动阶段完成所有 user_events 注册；注册失败的 daemon 不得进入 RUNNING 状态，需触发 macro_superv 重启。**
+**OS-OBS-062: 12 daemon 必须在启动阶段完成所有 user_events 注册；注册失败的 daemon 不得进入 RUNNING 状态，需触发 macro_d 重启。**
 
 ---
 
@@ -364,25 +364,25 @@ echo 'agent_id == 42 && input_tokens > 1000' > \
 
 ---
 
-## 第 5 章 与 logger_daemon 的关系
+## 第 5 章 与 logger_d 的关系
 
 ### 5.1 职责划分
 
-| 维度 | user_events | logger_daemon + Ring Buffer |
+| 维度 | user_events | logger_d + Ring Buffer |
 |------|------------|---------------------------|
 | 数据来源 | 用户态守护进程主动上报 | 内核态 tracepoint + 用户态 API |
 | 持久化 | 否（仅内存 ring buffer） | 是（落盘至 `/var/log/airy/`） |
 | 实时性 | 高（< 10ns 写入） | 中（~500ns 写入 + 异步落盘） |
 | 数据量 | 受 ring buffer 大小限制 | 受磁盘容量限制 |
-| 消费者 | ftrace trace / perf / eBPF | logger_daemon → 文件 |
+| 消费者 | ftrace trace / perf / eBPF | logger_d → 文件 |
 | 适用场景 | 实时性能分析、行为追踪 | 长期审计、合规留痕、Panic 后分析 |
 
 ### 5.2 协同工作流
 
-agentrt-linux 中，user_events 与 logger_daemon 协同工作：
+agentrt-linux 中，user_events 与 logger_d 协同工作：
 
 1. **实时分析阶段**：开发人员通过 user_events 实时观察 Agent 行为，定位性能瓶颈。
-2. **持久化阶段**：关键事件同时写入 A-ULP Ring Buffer，由 logger_daemon 异步落盘。
+2. **持久化阶段**：关键事件同时写入 A-ULP Ring Buffer，由 logger_d 异步落盘。
 3. **Panic 后分析**：Panic 发生时，user_events ring buffer 内容被 A-ULP Panic 回退路径保存至 `/var/log/airy/panic-trace-{timestamp}`。
 
 ### 5.3 双写策略
@@ -390,7 +390,7 @@ agentrt-linux 中，user_events 与 logger_daemon 协同工作：
 对于关键事件（如 `superv_enforce`），采用双写策略：
 
 ```c
-void macro_superv_on_enforce(u32 agent_id, u32 action, u32 reason)
+void macro_d_on_enforce(u32 agent_id, u32 action, u32 reason)
 {
     /* 1. 写入 user_events（实时分析） */
     struct airy_user_superv_enforce ev = {
@@ -409,15 +409,15 @@ void macro_superv_on_enforce(u32 agent_id, u32 action, u32 reason)
 
 **OS-OBS-063: 关键事件（superv_enforce、panic_fallback、lsm_hook）必须双写 user_events 与 A-ULP Ring Buffer；普通事件可仅写 user_events。**
 
-### 5.4 logger_daemon 消费 user_events
+### 5.4 logger_d 消费 user_events
 
-logger_daemon 可作为 user_events 的消费者，将追踪事件转为持久化日志：
+logger_d 可作为 user_events 的消费者，将追踪事件转为持久化日志：
 
 ```bash
-# 启用 logger_daemon 消费 user_events
+# 启用 logger_d 消费 user_events
 echo 1 > /sys/kernel/tracing/events/user_events/enable
-# logger_daemon 通过 trace_pipe 流式读取
-cat /sys/kernel/tracing/trace_pipe | logger_daemon --user-events
+# logger_d 通过 trace_pipe 流式读取
+cat /sys/kernel/tracing/trace_pipe | logger_d --user-events
 ```
 
 ---
@@ -551,9 +551,9 @@ bpftool prog load cogn_trace.o /sys/fs/bpf/cogn_trace \
 
 | Daemon | 主要 user_events | 上报频率 |
 |--------|----------------|---------|
-| macro_superv | superv_enforce, superv_adjudicate, budget_alert | 低（事件驱动） |
-| logger_daemon | log_consume, log_flush, panic_fallback | 中（周期性） |
-| config_daemon | config_reload, config_version_change | 极低（事件驱动） |
+| macro_d | superv_enforce, superv_adjudicate, budget_alert | 低（事件驱动） |
+| logger_d | log_consume, log_flush, panic_fallback | 中（周期性） |
+| config_d | config_reload, config_version_change | 极低（事件驱动） |
 | gateway_d | ipc_send_user, ipc_recv_user, ipc_error | 高（每消息） |
 | sched_d | sched_class_switch_user, sched_deadline_miss | 中（每次切换） |
 | vfs_d | file_open, file_close, mount_event | 中（每次操作） |
@@ -589,7 +589,7 @@ bpftool prog load cogn_trace.o /sys/fs/bpf/cogn_trace \
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.0.1 | 2026-07-18 | 初始版本：user_events 框架、airy_user_event_register() API、COGNITION_START/END/MEMORY_ACCESS/TOOL_CALL 事件类型、与 logger_daemon 关系（双写策略）、性能开销分析（<10ns/事件）、与 02-ebpf-probes.md 关系 |
+| v1.0.1 | 2026-07-18 | 初始版本：user_events 框架、airy_user_event_register() API、COGNITION_START/END/MEMORY_ACCESS/TOOL_CALL 事件类型、与 logger_d 关系（双写策略）、性能开销分析（<10ns/事件）、与 02-ebpf-probes.md 关系 |
 
 ---
 

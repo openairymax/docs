@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[90-observability README](README.md)\
 > **同源映射**：agentrt E-2 可观测性 + Linux 6.6 sysfs/procfs/kobject\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + sched_tac 调度\
-> **核心约束**：sysfs/procfs 仅导出只读状态，写操作必须经 A-UCS 模块 config_daemon 校验
+> **核心约束**：sysfs/procfs 仅导出只读状态，写操作必须经 A-UCS 模块 config_d 校验
 
 ---
 
@@ -34,8 +34,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 sysfs 与 procfs 是 Linux 6.6 内核基线提供的标准伪文件系统，分别承载设备/内核子系统状态（sysfs）与进程/系统状态（procfs）的静态导出。agentrt-linux 选择 sysfs/procfs 作为可观测性 L4 层，原因有三：
 
 1. **标准化访问语义**：运维人员与脚本工具天然熟悉 `cat /sys/...` 与 `cat /proc/...` 访问语义，无需引入新的客户端工具，符合"运维零学习成本"原则。
-2. **与 kobject/sysctl 集成**：sysfs 通过 `kobject` 与 `attribute` 自动管理生命周期；procfs 通过 `proc_ops` 注册回调，与 A-UCS 模块 config_daemon 的 sysctl/JSON 热重载天然协同。
-3. **零运行时开销**：sysfs/procfs 文件仅在 `read()` 时调用 `seq_show` 回调动态生成内容，不维护常驻缓冲区，对稳态运行无影响，符合 A-ULS 模块 macro_superv 的"可观测性不破坏系统稳态"原则。
+2. **与 kobject/sysctl 集成**：sysfs 通过 `kobject` 与 `attribute` 自动管理生命周期；procfs 通过 `proc_ops` 注册回调，与 A-UCS 模块 config_d 的 sysctl/JSON 热重载天然协同。
+3. **零运行时开销**：sysfs/procfs 文件仅在 `read()` 时调用 `seq_show` 回调动态生成内容，不维护常驻缓冲区，对稳态运行无影响，符合 A-ULS 模块 macro_d 的"可观测性不破坏系统稳态"原则。
 
 **OS-OBS-041: sysfs 与 procfs 是 agentrt-linux 可观测性 L4 层的强制基线，所有静态状态导出必须经 sysfs/procfs，不得自创 /sys/kernel/airy 或 /proc/airy_v2 等并行目录。**
 
@@ -89,7 +89,7 @@ agentrt-linux 遵循上游 Linux 约定的职责划分：
 │   │       └── errors      # 错误计数
 │   └── capabilities        # IPC capability 总表
 ├── daemons/                # 12 daemon 状态
-│   └── [name]/             # macro_superv / logger_daemon / ...
+│   └── [name]/             # macro_d / logger_d / ...
 │       ├── status          # running / stopped / faulted
 │       ├── pid             # daemon PID
 │       ├── uptime_ms       # 累计运行时间
@@ -101,7 +101,7 @@ agentrt-linux 遵循上游 Linux 约定的职责划分：
 │   │   ├── used_kb         # 已用大小
 │   │   ├── overrun         # 溢出计数
 │   │   └── write_rate      # 写入速率
-│   └── logger/             # logger_daemon 状态
+│   └── logger/             # logger_d 状态
 │       ├── consume_rate    # 消费速率
 │       ├── flush_latency   # 落盘延迟
 │       └── panic_fallback  # Panic 回退状态
@@ -189,7 +189,7 @@ static struct kobj_attribute sched_stats_attr =
     __ATTR(stats, 0444, sched_stats_show, NULL);
 ```
 
-**OS-STD-032: 所有统计类 sysfs 文件权限必须为 0444（只读），不得允许用户态直接写入；状态变更必须经 A-UCS config_daemon 的 sysctl/JSON 接口。**
+**OS-STD-032: 所有统计类 sysfs 文件权限必须为 0444（只读），不得允许用户态直接写入；状态变更必须经 A-UCS config_d 的 sysctl/JSON 接口。**
 
 ---
 
@@ -275,7 +275,7 @@ Agent 8 态定义：
 | `SCHEDULING` | 调度中 |
 | `EXECUTING` | 执行工具调用 |
 | `BLOCKED` | 阻塞等待 IPC/IO |
-| `SUSPENDED` | 被 macro_superv 挂起 |
+| `SUSPENDED` | 被 macro_d 挂起 |
 | `TERMINATED` | 已终止 |
 
 ### 4.2 /proc/airy/agents/[id]/sched
@@ -379,7 +379,7 @@ class: EEVDF
   p99_latency_ns: 1230000
 ```
 
-**OS-OBS-043: SCHED_DEADLINE 的 `deadline_misses` 必须为 0；非零值视为sched_tac 失效，需触发 macro_superv 告警并降级 Agent 至 SCHED_FIFO。**
+**OS-OBS-043: SCHED_DEADLINE 的 `deadline_misses` 必须为 0；非零值视为sched_tac 失效，需触发 macro_d 告警并降级 Agent 至 SCHED_FIFO。**
 
 ---
 
@@ -439,8 +439,8 @@ agent_id: 100 caps: IPC_RECV
 每个 daemon 的状态：
 
 ```bash
-$ cat /sys/airy/daemons/macro_superv/status
-name: macro_superv
+$ cat /sys/airy/daemons/macro_d/status
+name: macro_d
 state: RUNNING                # RUNNING / STOPPED / FAULTED
 pid: 1234
 uptime_ms: 123456789
@@ -454,7 +454,7 @@ last_heartbeat_ms: 100        # 最近心跳距今（ms）
 
 ```bash
 $ ls /sys/airy/daemons/
-macro_superv/  logger_daemon/  config_daemon/  gateway_d/
+macro_d/  logger_d/  config_d/  gateway_d/
 sched_d/  vfs_d/  net_d/  mem_d/  cogn_d/  sec_d/  audit_d/  dev_d/
 
 $ for d in /sys/airy/daemons/*/status; do
@@ -464,11 +464,11 @@ $ for d in /sys/airy/daemons/*/status; do
 
 ### 7.3 daemon 健康检查
 
-A-ULS 模块 macro_superv 定期读取所有 daemon 状态：
+A-ULS 模块 macro_d 定期读取所有 daemon 状态：
 
 ```bash
 # 健康检查脚本示例
-for d in macro_superv logger_daemon config_daemon gateway_d \
+for d in macro_d logger_d config_d gateway_d \
          sched_d vfs_d net_d mem_d cogn_d sec_d audit_d dev_d; do
     state=$(cat /sys/airy/daemons/$d/state)
     if [ "$state" != "RUNNING" ]; then
@@ -481,15 +481,15 @@ for d in macro_superv logger_daemon config_daemon gateway_d \
 done
 ```
 
-**OS-OBS-045: 12 daemon 的 `last_heartbeat_ms` 必须始终 ≤ 5000ms；超限视为 daemon 卡死，触发 macro_superv 重启。**
+**OS-OBS-045: 12 daemon 的 `last_heartbeat_ms` 必须始终 ≤ 5000ms；超限视为 daemon 卡死，触发 macro_d 重启。**
 
 ### 7.4 各 daemon 独有统计
 
 | Daemon | 独有统计文件 | 内容 |
 |--------|------------|------|
-| macro_superv | `/enforcements` | 冷酷执法与温情裁决计数 |
-| logger_daemon | `/consume_rate` | 日志消费速率 |
-| config_daemon | `/reload_count` | 配置热重载次数 |
+| macro_d | `/enforcements` | 冷酷执法与温情裁决计数 |
+| logger_d | `/consume_rate` | 日志消费速率 |
+| config_d | `/reload_count` | 配置热重载次数 |
 | gateway_d | `/ring_count` | 活跃 io_uring ring 数 |
 | sched_d | `/class_switches` | 调度类切换计数 |
 | vfs_d | `/mount_count` | 挂载点数 |
@@ -537,7 +537,7 @@ $ cat /sys/airy/log/ring_buffer/write_rate
 1234567
 ```
 
-### 8.3 logger_daemon 状态
+### 8.3 logger_d 状态
 
 ```bash
 $ cat /sys/airy/log/logger/consume_rate
@@ -564,7 +564,7 @@ INFO: 1234567
 DEBUG: 0                       # 生产环境关闭 DEBUG
 ```
 
-**OS-OBS-046: Ring Buffer `overrun` 必须为 0；非零值视为日志丢失，需扩容 Ring Buffer 或审查 logger_daemon 消费速率。**
+**OS-OBS-046: Ring Buffer `overrun` 必须为 0；非零值视为日志丢失，需扩容 Ring Buffer 或审查 logger_d 消费速率。**
 
 ---
 
@@ -638,7 +638,7 @@ state: ALERT                   # NORMAL / ALERT / EXCEEDED
 | Unify 模块 | 关系 | 在 sysfs/procfs 的体现 |
 |-----------|------|----------------------|
 | **A-UEF** | **核心** | `/proc/airy/fault_log` 导出最近 1024 条 `AIRY_FAULT_*` 错误码 |
-| **A-ULP** | **核心** | `/sys/airy/log/*` 导出 A-ULP Ring Buffer 与 logger_daemon 状态 |
+| **A-ULP** | **核心** | `/sys/airy/log/*` 导出 A-ULP Ring Buffer 与 logger_d 状态 |
 | **A-UCS** | **核心** | `/proc/airy/config/*` 导出 A-UCS 配置版本与加载状态 |
 | **A-ULS** | **核心** | `/sys/airy/superv/*` 导出 A-ULS Micro/Macro 监管状态 |
 | **A-IPC** | 辅助 | `/sys/airy/ipc/*` 导出 A-IPC IPC 统计 |
@@ -647,9 +647,9 @@ state: ALERT                   # NORMAL / ALERT / EXCEEDED
 
 | Daemon | sysfs 路径 | procfs 路径 |
 |--------|-----------|------------|
-| macro_superv | `/sys/airy/superv/macro/` | `/proc/airy/daemons/macro_superv/` |
-| logger_daemon | `/sys/airy/log/logger/` | `/proc/airy/daemons/logger_daemon/` |
-| config_daemon | `/sys/airy/config/` | `/proc/airy/daemons/config_daemon/` |
+| macro_d | `/sys/airy/superv/macro/` | `/proc/airy/daemons/macro_d/` |
+| logger_d | `/sys/airy/log/logger/` | `/proc/airy/daemons/logger_d/` |
+| config_d | `/sys/airy/config/` | `/proc/airy/daemons/config_d/` |
 | gateway_d | `/sys/airy/ipc/` | `/proc/airy/daemons/gateway_d/` |
 | sched_d | `/sys/airy/sched/` | `/proc/airy/daemons/sched_d/` |
 | vfs_d | `/sys/airy/vfs/` | `/proc/airy/daemons/vfs_d/` |

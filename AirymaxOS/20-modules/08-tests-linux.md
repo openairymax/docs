@@ -68,7 +68,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | **\[SC] 共享契约层**  | 完全共享代码                             | IPC 测试验证的消息头格式（magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr`）；调度器测试验证的 task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式；安全形式化验证的 capability 41 ID 枚举 + LSM 252 ID 枚举；struct\_ops 状态机验证（INIT/REGISTERED/ACTIVE/DRAINING）；MemoryRovol 快照一致性验证的 L1-L4 数据结构 + GFP 掩码语义；认知测试验证的 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举；v1.1 `agent_caps[1024]` 静态数组 + 64-bit Badge 布局；`AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码；纯 C LSM 类型（`DEFINE_LSM(airy)`） | `include/uapi/linux/airymax/` 10 个头文件（测试框架验证这些共享类型） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 单元测试框架语义（agentrt cargo test/go test/googletest → OS 级同框架）、集成测试模式（agentrt 集成测试 → OS 级集成测试）、性能基准指标（IPC 延迟/调度延迟/内存吞吐/I/O 吞吐——两端同指标）、覆盖率目标（≥90%/≥80%/≥70%——两端同标准）、回归测试方法（性能不退化——两端同方法）等 8+ 项                                                                                                                                 | 各自独立实现                                  |
 | **\[IND] 完全独立层** | 完全独立                               | 形式化验证框架（CBMC + TLA+ + Coq/Isabelle，借鉴 seL4 l4v / capDL 方法论——OS 专属）、Soak Test 框架（72h 持续运行——OS 专属）、混沌工程框架（Chaos Mesh 类似——OS 专属）、eBPF 可观测性验证（OS 专属）、agentrt-linux 集成测试框架（OS 专属）、测试运行器与报告生成（OS 专属）                                                                                                                                                      | 各自独立仓库                                  |
-| **\[DSL] 降级生存层** | 降级模式下最小可用 | 测试框架自身的降级：[SC] 头文件 SHA-256 校验失败时启用 `#ifdef AIRY_SC_FALLBACK` 降级块验证；airymaxmon 在 struct_ops 状态不可读时降级为 Prometheus 拉取模式验证；config_daemon 配置源不可达时降级为内置默认配置 + 只读运行测试；DevStation 在 LLM 通道断开时降级为规则引擎模式测试 | 各自独立实现，但共享降级触发语义 |
+| **\[DSL] 降级生存层** | 降级模式下最小可用 | 测试框架自身的降级：[SC] 头文件 SHA-256 校验失败时启用 `#ifdef AIRY_SC_FALLBACK` 降级块验证；airymaxmon 在 struct_ops 状态不可读时降级为 Prometheus 拉取模式验证；config_d 配置源不可达时降级为内置默认配置 + 只读运行测试；DevStation 在 LLM 通道断开时降级为规则引擎模式测试 | 各自独立实现，但共享降级触发语义 |
 
 ### 2.1 维度对比
 
@@ -122,7 +122,7 @@ tests-linux/
   - `security/`：安全单元测试（验证 security\_types.h + lsm\_types.h \[SC]）\[IND]。
   - `memory/`：记忆单元测试（验证 memory\_types.h \[SC]）\[IND]。
   - `cognition/`：认知单元测试（验证 cognition\_types.h \[SC]）\[IND]。
-  - `daemons/`：12 daemon 单元测试（sec_d / cogn_d / mem_d / gateway_d / logger_daemon / macro_superv / audit_d / sched_d / dev_d / net_d / vfs_d / config_daemon，验证 error.h + log\_types.h \[SC]）\[IND]。
+  - `daemons/`：12 daemon 单元测试（sec_d / cogn_d / mem_d / gateway_d / logger_d / macro_d / audit_d / sched_d / dev_d / net_d / vfs_d / config_d，验证 error.h + log\_types.h \[SC]）\[IND]。
   - `cloudnative/`：云原生单元测试 \[IND]。
   - `system/`：系统单元测试 \[IND]。
 - `coverage/`：代码覆盖率工具（llvm-cov、tarpaulin）\[IND]。
@@ -187,7 +187,7 @@ tests-linux/
 
 - `micro-bench/`：微基准测试 \[IND]。
   - `ipc-latency/`：IPC 延迟（验证 io\_uring IPC + io\_uring\_cmd\_to\_pdu SQE128 访问 \[SC]）\[SS]。
-  - `sched-latency/`：调度延迟（验证 sched\_tac：SCHED\_DEADLINE/SCHED\_FIFO/EEVDF，禁止 sched\_ext）\[SS]。
+  - `sched-latency/`：调度延迟（验证 sched\_tac：SCHED\_DEADLINE/SCHED\_FIFO/EEVDF，仅 sched\_tac 调度类，不使用 BPF 调度器）\[SS]。
   - `memory-throughput/`：内存吞吐（验证 MemoryRovol \[SC]）\[SS]。
   - `io-throughput/`：I/O 吞吐 \[IND]。
 - `macro-bench/`：宏基准测试 \[IND]。
@@ -228,7 +228,7 @@ tests-linux/
 - `include/uapi/linux/airymax/error.h`：验证 `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块（`AIRY_ESEC_D_THROTTLED = -83` / `AIRY_ECAP_FROZEN = -82` / `AIRY_FAULT_URING_MALFORMED = 0x100A` / `AIRY_FAULT_AUDIT_TAMPER = 0x100B`）\[SC]。
 - `include/uapi/linux/airymax/log_types.h`：验证 `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射 \[SC]。
 - `include/uapi/linux/airymax/ipc.h`：验证 128B msg\_hdr 格式 + magic 0x41524531 + SQE/CQE 操作码 + SQE128 模式（cmd 扩展至 80 字节）\[SC]。
-- `include/uapi/linux/airymax/sched.h`：验证 task\_desc magic 0x41475453 + vtime 衰减 + sched\_tac 调度参数（禁止 sched\_ext）\[SC]。
+- `include/uapi/linux/airymax/sched.h`：验证 task\_desc magic 0x41475453 + vtime 衰减 + sched\_tac 调度参数（仅 sched\_tac，不使用 BPF 调度器）\[SC]。
 - `include/uapi/linux/airymax/syscalls.h`：验证 4 核心 syscall 编号（v1.1）+ 20 预留 = 24 槽位（`airy_sys_call` / `airy_sys_rovol_ctl` / `airy_sys_sched_ctl` / `airy_sys_clt_notify`）\[SC]。
 - `include/uapi/linux/airymax/memory_types.h`：验证 MemoryRovol L1-L4 数据结构 + GFP 掩码语义 \[SC]。
 - `include/uapi/linux/airymax/security_types.h`：验证 capability 41 ID + LSM 252 ID + Cupolas blob 布局 + `agent_caps[1024]` 静态数组 + 64-bit Badge 布局（`Epoch<<48 | RandomTag<<16 | Perms`）\[SC]。
@@ -320,6 +320,34 @@ CONSTANTS  AgentSet = {a1, a2, a3, a4, a5}
 
 **OS-TEST-111**：TLA+ 模型检查必须验证至少 5 个 Agent 的并发状态转换；任一不变量或属性失败即视为形式化验证失败，PR 驳回。
 
+#### 4.3.2.1 TLA+ 规约：IPC Ring 状态机
+
+TLA+ 规约文件 `formal/ipc_ring_state_machine.tla` 验证 io_uring IPC Ring Buffer 的状态机正确性（详细规约见 [80-testing/10-formal-verification.md](../80-testing/10-formal-verification.md) §2.3）。IPC Ring 状态机覆盖以下 6 态：`IDLE` / `SQE_READY` / `ISSUED` / `PROCESSING` / `CQE_READY` / `COMPLETED`。
+
+- **不变量 1**：Ring 状态始终属于 6 态之一。
+- **不变量 2**：状态转换仅在合法路径上（10 条合法转换：IDLE→SQE_READY→ISSUED→PROCESSING→CQE_READY→COMPLETED 为主路径，外加 ERROR→IDLE 回收路径）。
+- **不变量 3**：Badge 单调性——同一 Agent 的 `Epoch` 字段在 Ring 生命周期内非降（`atomic_inc(&airy_cap_global_epoch)` 保证）。
+- **不变量 4**：magic 0x41524531 'ARE1' 在所有 SQE/CQE 中保持一致。
+- **活性 1**：每个已提交的 SQE 终将产生 CQE（无消息丢失）。
+- **安全性 1**：fastpath C-S9 Badge 校验失败的请求必定走 SLOW_PATH（io-wq 接管），不会进入 PROCESSING 态。
+- **安全性 2**：`AIRY_ESEC_D_THROTTLED = -83` 触发后，sec_d 串行化 Badge 编译路径不会被并发绕过。
+
+TLC 模型检查配置（3 个 Ring 并发 + 1024 个 agent_caps 槽位抽象为 8 个）：
+
+```
+# formal/ipc_ring_state_machine.cfg
+INIT  Init
+NEXT  Next
+INVARIANTS  RingStateInvariant  TransitionInvariant  BadgeMonotonic  MagicConsistent
+PROPERTIES  EventuallyCompleted  NoMessageLoss  ThrottleNotBypassed
+CONSTANTS  RingSet = {r1, r2, r3}
+           AgentSlotSet = {s1, s2, s3, s4, s5, s6, s7, s8}
+           IpcMagic = 0x41524531
+           SecDThrottleErr = -83
+```
+
+**OS-TEST-112**：IPC Ring 状态机 TLA+ 模型检查必须验证至少 3 个 Ring 的并发状态转换 + Badge 单调性 + sec_d 限流不可绕过；任一不变量或属性失败即视为形式化验证失败，PR 驳回。
+
 #### 4.3.3 Coq/Isabelle 证明：Capability 检查算法正确性
 
 `formal/cap_check_proof.v`（Coq）与 `formal/cap_check_proof.thy`（Isabelle/HOL）证明以下性质（详细证明见 [80-testing/10-formal-verification.md](../80-testing/10-formal-verification.md) §3）：
@@ -379,7 +407,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 | Capability 存储 | CNode/CSpace/MDB 动态结构 | `agent_caps[1024]` 静态数组（16KB，`__aligned(64)`）+ Badge 64-bit 折叠 | 简化落地 | O(1) 访问 + 锁-free fastpath（~10ns） |
 | IPC 机制 | seL4 Call/Send/Recv 系统调用 | io_uring `IORING_OP_URING_CMD` + SQE128（cmd 扩展至 80 字节） | 替代落地 | Linux 生态 + 零拷贝 + 128B 消息头 |
 | 形式化验证 | Isabelle/HOL 定理证明（数学证明） | CBMC 模型检验（高置信度工程证据） | 验证深度差异 | 工程成本（20 人年 vs 1 人月） |
-| 调度模型 | MCS（Mixed Criticality Systems） | sched\_tac（SCHED\_DEADLINE/FIFO/EEVDF + MCS 映射，禁用 sched\_ext） | 映射落地 | Linux 调度器兼容 |
+| 调度模型 | MCS（Mixed Criticality Systems） | sched\_tac（SCHED\_DEADLINE/FIFO/EEVDF + MCS 映射，仅 sched\_tac 不使用 BPF 调度器） | 映射落地 | Linux 调度器兼容 |
 | 故障处理 | handleFault() 内核回调 | `airy_fault_enforce()` + SIGKILL + Macro-Supervisor | 等价落地 | Linux 信号机制 + 用户态监管 |
 | 内存隔离 | 页表隔离 + capability 级联 | Landlock 沙箱 + Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` O(1)）+ KASAN + Cupolas | 强化落地 | Linux 进程模型 + 多层防护 |
 
@@ -457,7 +485,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 **微基准**（指标与 agentrt 同源 \[SS]）：
 
 - IPC 延迟：测量 io\_uring IPC 延迟（μs 级，验证 128B msg\_hdr + `io_uring_cmd_to_pdu(cmd, pdu_type)` 访问 pdu[32] 字段 + `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数完成 \[SC]）\[SS]。
-- 调度延迟：测量 sched\_tac 调度延迟（验证 SCHED\_DEADLINE/SCHED\_FIFO/EEVDF 调度类，禁用 sched\_ext，不使用 SCHED\_EXT=7 调度类 \[SC]）\[SS]。
+- 调度延迟：测量 sched\_tac 调度延迟（验证 SCHED\_DEADLINE/SCHED\_FIFO/EEVDF 调度类，仅 sched\_tac，不使用 BPF 调度器，不使用 7 号调度类 \[SC]）\[SS]。
 - 内存吞吐：测量 CXL/PMEM 内存带宽（验证 MemoryRovol \[SC]）\[SS]。
 - I/O 吞吐：测量 io\_uring I/O 吞吐（SQE128 模式，cmd 扩展至 80 字节）\[IND]。
 
@@ -486,6 +514,78 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 - 与 perf 对比：性能事件计数对比 \[IND]。
 - 与 strace 对比：系统调用追踪对比 \[IND]。
 - 与传统监控对比：指标数值对比 \[IND]。
+
+### 4.8 12 daemon 测试策略 \[IND]
+
+agentrt-linux 的 12 daemon 完整名单（ADR-014 确立 seL4 唯一来源，微内核化改造的用户态服务化体现）：sec_d / cogn_d / mem_d / gateway_d / logger_d / macro_d / audit_d / sched_d / dev_d / net_d / vfs_d / config_d。每个 daemon 均需通过单元测试、集成测试、混沌测试三关。
+
+#### 4.8.1 12 daemon 单元测试矩阵 \[IND]
+
+| daemon | 单元测试重点 | 验证 \[SC] 引用 | 优先级 |
+|--------|------------|--------------|--------|
+| `sec_d` | Badge 编译串行化 + 令牌桶限流 + fastpath C-S9 校验 + `agent_caps[1024]` 写者独占 + `AIRY_ESEC_D_THROTTLED=-83` 错误码路径 + `airy_sys_call`（syscall 0）入口 | security\_types.h + error.h + syscalls.h \[SC] | P0 |
+| `cogn_d` | CoreLoopThree 三阶段状态转换 + Thinkdual 模式 + LLM 推理阶段枚举 | cognition\_types.h \[SC] | P1 |
+| `mem_d` | MemoryRovol L1-L4 快照 + GFP 掩码 + PMEM 持久化接口 + `airy_sys_rovol_ctl`（syscall 1） | memory\_types.h + syscalls.h \[SC] | P0 |
+| `gateway_d` | io_uring IPC SQE128 + 128B msg\_hdr + magic 0x41524531 + `io_uring_cmd_to_pdu` 访问 | ipc.h \[SC] | P0 |
+| `logger_d` | 128B 日志记录 + `AIRY_LOG_MAGIC` + 5 级日志枚举 + printk 映射 | log\_types.h \[SC] | P1 |
+| `macro_d` | Macro-Supervisor 监管策略 + SIGKILL 故障处理 + `airy_fault_enforce()` 联动 | error.h + lsm\_types.h \[SC] | P0 |
+| `audit_d` | 审计日志完整性 + `AIRY_FAULT_AUDIT_TAMPER = 0x100B` 检测 + 防篡改 | error.h \[SC] | P0 |
+| `sched_d` | sched\_tac 调度策略 + SCHED\_DEADLINE/FIFO/EEVDF + `airy_sys_sched_ctl`（syscall 2） | sched.h + syscalls.h \[SC] | P0 |
+| `dev_d` | 设备 hotplug + 驱动加载 + `airy_sys_clt_notify`（syscall 3）kthread 注册 | syscalls.h \[SC] | P1 |
+| `net_d` | 网络栈用户态化 + Landlock 沙箱 + 网络命名空间隔离 | security\_types.h \[SC] | P1 |
+| `vfs_d` | VFS 用户态化 + Landlock 路径限制 + 挂载命名空间 | security\_types.h \[SC] | P1 |
+| `config_d` | YAML/TOML 配置解析 + RCU 热重载 + sysctl ↔ YAML/TOML 双向同步 + `AIRY_CONFIG_VERSION` 校验 | error.h + uapi\_compat.h \[SC] | P0 |
+
+#### 4.8.2 sec_d 串行化 Badge 编译测试（v1.1 Capability Folding）\[IND]
+
+sec_d 是 v1.1 Capability Folding 的唯一 Badge 编译者，必须保证串行化与限流。本节是 P0 测试项：
+
+**令牌桶限流测试**：
+
+| 测试用例 | 输入 | 期望输出 | 验证属性 |
+|---------|------|---------|---------|
+| `sec_d_throttle_normal` | 100 req/s 持续 1s | 全部通过（令牌桶容量 ≥ 100） | 正常路径不误限流 |
+| `sec_d_throttle_burst` | 1000 req/s 突发 100ms | 超过令牌桶容量的请求返回 `AIRY_ESEC_D_THROTTLED = -83` | 限流正确触发 |
+| `sec_d_throttle_recovery` | 限流后等待 1s | 令牌桶恢复，请求通过 | 限流可恢复 |
+| `sec_d_throttle_concurrent` | 8 线程并发 5000 req | 串行化无数据竞争 + 限流统计准确 | sec_d 唯一写者保证 |
+| `sec_d_throttle_epoch_monotonic` | 限流期间 `atomic_inc(&airy_cap_global_epoch)` | Epoch 单调非降 | O(1) 撤销不破坏单调性 |
+
+**50ms SLO 测试**：
+
+| 测试用例 | 输入 | 期望输出 | SLO |
+|---------|------|---------|-----|
+| `sec_d_badge_compile_slo` | 单次 Badge 编译（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 编译完成 | < 50ms（P99） |
+| `sec_d_badge_revoke_slo` | 单次 `atomic_inc(&airy_cap_global_epoch)` O(1) 撤销 | 撤销完成 | < 1ms（P99） |
+| `sec_d_fastpath_cs9_slo` | fastpath C-S9 内联校验 | 校验完成 | < 10ns（P99.9） |
+| `sec_d_agent_caps_write_exclusive` | sec_d 写 `agent_caps[1024]` 静态数组 | 无并发写者 | sec_d 唯一写者 |
+
+**OS-TEST-115**（v1.1 新增）：sec_d 令牌桶限流测试必须覆盖正常/突发/恢复/并发/单调性 5 个用例；50ms SLO 测试必须覆盖 Badge 编译 + 撤销 + fastpath 校验 + 写者独占 4 个用例；任一用例失败即 PR 驳回。`AIRY_ESEC_D_THROTTLED = -83` 错误码必须在限流路径中验证。
+
+#### 4.8.3 12 daemon 集成测试 \[IND]
+
+集成测试验证 12 daemon 之间的协作：
+
+| 测试场景 | 参与 daemon | 验证内容 |
+|---------|-----------|---------|
+| IPC 全链路 | gateway_d → cogn_d → sec_d → logger_d | 128B msg\_hdr + magic 0x41524531 + Badge 校验 + 日志记录 |
+| 配置热重载 | config_d → 全部 12 daemon | YAML/TOML 变更 → RCU 热重载 → 全 daemon 生效 |
+| 故障监管 | macro_d → 任意 daemon 崩溃 | SIGKILL + `airy_fault_enforce()` + 自动重启 |
+| 审计完整性 | audit_d → 全部 12 daemon | 审计日志无丢失 + `AIRY_FAULT_AUDIT_TAMPER = 0x100B` 检测 |
+| 调度联动 | sched_d → cogn_d / mem_d / dev_d | sched\_tac 调度策略 + SCHED\_DEADLINE 优先级 |
+| 记忆卷载 | mem_d → cogn_d / vfs_d | MemoryRovol L1-L4 快照 + `airy_sys_rovol_ctl`（syscall 1） |
+
+#### 4.8.4 12 daemon 混沌测试 \[IND]
+
+混沌测试验证 12 daemon 在故障注入下的稳态：
+
+| 实验类型 | 注入目标 | 稳态假设 |
+|---------|---------|---------|
+| Pod Kill | 随机杀死非 sec_d daemon | macro_d 自动重启 + 服务恢复 < 5s |
+| Pod Kill sec_d | 杀死 sec_d | 系统进入只读模式 + Badge 不再编译 + 已有 Badge 继续有效 |
+| Network Delay | gateway_d ↔ cogn_d | IPC 延迟增加但无消息丢失 + magic 校验仍通过 |
+| Disk Fill | logger_d / audit_d | 日志降级为内存 ring + `AIRY_FAULT_AUDIT_TAMPER` 不误报 |
+| Memory Stress | mem_d | MemoryRovol L1-L4 降级 + OOM 不影响 sec_d |
+| CPU Burn | sched_d | 调度延迟退化但有界 + sched\_tac 不退化为 BPF 调度器 |
 
 ***
 
@@ -534,16 +634,20 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 
 ### 6.1 \[SC] 共享契约层——10 个头文件验证
 
-测试模块验证 10 个 \[SC] 头文件的正确性与一致性：
+测试模块验证 10 个 \[SC] 头文件的正确性与一致性（v3 在 v2 的 6 个基础上新增 `error.h` / `log_types.h` / `uapi_compat.h` / `lsm_types.h`，bpf\_struct\_ops.h 为补充共享文件但不计入核心 10 头文件清单）：
 
 | 头文件                                 | 验证内容                                                      | 测试方式                             |
 | ----------------------------------- | --------------------------------------------------------- | -------------------------------- |
+| `include/uapi/linux/airymax/error.h`            | `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块（`AIRY_ESEC_D_THROTTLED=-83` / `AIRY_ECAP_FROZEN=-82` / `AIRY_FAULT_URING_MALFORMED=0x100A` / `AIRY_FAULT_AUDIT_TAMPER=0x100B`） | 单元测试 + [DSL] 降级块验证 |
+| `include/uapi/linux/airymax/log_types.h`        | `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射           | 单元测试 + 日志完整性验证 |
 | `include/uapi/linux/airymax/ipc.h`             | 128B msg\_hdr 格式 + magic 0x41524531 'ARE1' + SQE/CQE 操作码  | 单元测试 + 形式化验证（Coq 无死锁）            |
 | `include/uapi/linux/airymax/sched.h`           | task\_desc magic 0x41475453 'AGTS' + vtime 衰减公式 + 优先级范围   | 单元测试 + 形式化验证（Isabelle/HOL 公平性）   |
 | `include/uapi/linux/airymax/syscalls.h`        | v1.1: 4 核心 syscall 编号 + 20 预留槽位 = 24 槽位                        | 单元测试 + syscall 调用验证              |
 | `include/uapi/linux/airymax/memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口            | 单元测试 + 形式化验证（Coq 快照一致性）+ Soak 监控 |
-| `include/uapi/linux/airymax/security_types.h`  | capability 41 ID 枚举 + LSM 252 ID + Cupolas blob 布局 + 派生模型 | 单元测试 + 形式化验证（Isabelle/HOL 不可伪造）  |
+| `include/uapi/linux/airymax/security_types.h`  | capability 41 ID 枚举 + LSM 252 ID + Cupolas blob 布局 + `agent_caps[1024]` + 64-bit Badge 布局 | 单元测试 + 形式化验证（Isabelle/HOL 不可伪造 + CBMC fastpath 校验）  |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举          | 单元测试 + 形式化验证（Coq 阶段转换）+ Soak 监控  |
+| `include/uapi/linux/airymax/uapi_compat.h`     | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）+ [SC] 双端契约 | 单元测试 + sc-dual-ci 双端校验 |
+| `include/uapi/linux/airymax/lsm_types.h`       | 纯 C LSM 类型 + `DEFINE_LSM(airy)` 骨架 + `LSM_ORDER_MUTABLE` 注册（不使用 `LSM_ORDER_FIRST`，不使用 BPF LSM） | 单元测试 + CBMC 注册逻辑验证 |
 
 ### 6.2 \[SS] 语义同源层——8 项 API 映射
 
@@ -553,7 +657,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 | -- | -------------- | --------------------------------- | --------------------------------- |
 | 1  | 单元测试框架         | cargo test + go test + googletest | cargo test + go test + googletest |
 | 2  | IPC 延迟基准       | 应用层 IPC 延迟测量                      | io\_uring IPC 延迟测量                |
-| 3  | 调度延迟基准         | 应用层调度延迟                           | sched\_ext 调度延迟                   |
+| 3  | 调度延迟基准         | 应用层调度延迟                           | sched\_tac 调度延迟                   |
 | 4  | 内存吞吐基准         | heapstore 吞吐                      | MemoryRovol L1-L4 吞吐              |
 | 5  | 覆盖率目标          | ≥90%/≥80%/≥70%                    | ≥90%/≥80%/≥70%                    |
 | 6  | 回归测试方法         | 性能不退化                             | 性能不退化                             |
@@ -587,7 +691,7 @@ sequenceDiagram
     participant EBPF as eBPF 验证 [IND]
     participant SC as [SC] 共享契约层
 
-    CI->>UNIT: 运行单元测试（验证 6 头文件 [SC]）
+    CI->>UNIT: 运行单元测试（验证 10 头文件 [SC]）
     UNIT->>SC: 验证 syscalls.h/ipc.h/sched.h
     UNIT->>SC: 验证 memory_types.h/security_types.h/cognition_types.h
     SC-->>UNIT: 类型正确性 PASS
@@ -618,13 +722,17 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    subgraph SC["[SC] 共享契约层（6 头文件验证）"]
+    subgraph SC["[SC] 共享契约层（10 头文件验证）"]
+        ERR_TEST[error.h 验证<br/>AIRY_E* + AIRY_FAULT_* + DSL 降级块]
+        LOG_TEST[log_types.h 验证<br/>AIRY_LOG_MAGIC + 128B 记录]
         IPC_TEST[ipc.h 验证<br/>128B msg_hdr + magic ARE1]
         SCHED_TEST[sched.h 验证<br/>task_desc + vtime]
-        BPF_TEST[bpf_struct_ops.h 验证<br/>状态机四态]
+        SYS_TEST[syscalls.h 验证<br/>4 核心 + 20 预留 = 24 槽位]
         MEM_TEST[memory_types.h 验证<br/>MemoryRovol L1-L4]
-        SEC_TEST[security_types.h 验证<br/>capability 41 ID]
+        SEC_TEST[security_types.h 验证<br/>capability 41 ID + agent_caps 1024]
         COG_TEST[cognition_types.h 验证<br/>CoreLoopThree 阶段]
+        UAPI_TEST[uapi_compat.h 验证<br/>三路类型桥接]
+        LSM_TEST[lsm_types.h 验证<br/>DEFINE_LSM airy + LSM_ORDER_MUTABLE]
     end
     subgraph SS["[SS] 语义同源层"]
         UNIT_FW[单元测试框架<br/>cargo test + go test + googletest]
@@ -633,15 +741,20 @@ graph TD
         REGRESSION[回归测试<br/>性能不退化]
     end
     subgraph IND["[IND] 独立层"]
-        FV[形式化验证<br/>Isabelle/HOL + Coq]
+        FV[形式化验证<br/>CBMC + TLA+ + Coq/Isabelle]
         SOAK[Soak Test<br/>72h 持续运行]
         CHAOS[混沌工程<br/>Chaos Mesh 类似]
         EBPF_VER[eBPF 可观测性验证]
         ITF[集成测试框架<br/>agentrt-linux 自研]
     end
+    subgraph DSL["[DSL] 降级生存层"]
+        FALLBACK_SC[AIRY_SC_FALLBACK 降级块验证<br/>SC 头文件 SHA-256 失败时]
+        DAEMON_DEGRADE[12 daemon 降级模式验证<br/>sec_d/config_d/DevStation 等]
+    end
     IPC_TEST --> UNIT_FW
     SCHED_TEST --> UNIT_FW
-    BPF_TEST --> EBPF_VER
+    ERR_TEST --> FALLBACK_SC
+    LSM_TEST --> EBPF_VER
     MEM_TEST --> SOAK
     SEC_TEST --> FV
     COG_TEST --> FV
@@ -649,6 +762,7 @@ graph TD
     BENCH_METRICS --> REGRESSION
     FV --> SOAK
     SOAK --> CHAOS
+    FALLBACK_SC --> DAEMON_DEGRADE
 ```
 
 ***
@@ -719,7 +833,7 @@ graph TD
 | -------------- | ----------------------------------------------------------------- | ---- |
 | 命名一致性          | 核心表述使用 `agentrt-linux（AirymaxOS）` 全角括号配对                          | PASS |
 | 语义同源标注         | 单元测试框架/性能基准指标/覆盖率目标/回归测试标注 \[SS]                                  | PASS |
-| IRON-9 v3 四层合规 | \[SC] 6 头文件验证 + \[SS] 8 API + \[IND] 10 项独立实现                     | PASS |
+| IRON-9 v3 四层合规 | \[SC] 10 头文件验证 + \[SS] 8 API + \[IND] 10 项独立实现 + \[DSL] 降级生存层验证                     | PASS |
 | \[SC] 头文件引用    | 10 个头文件均在 §1.1/§3.3/§4.1/§4.3/§6.1 引用                              | PASS |
 | 不移植特性声明        | 无 KABI\_RESERVE/BPF\_SCHED/KMSAN/etmem/dynamic\_pool/numa\_remote | PASS |
 | 横切关注点声明        | §1.1 声明测试贯穿 4 大数据流                                                | PASS |
@@ -738,7 +852,7 @@ graph TD
 - [05-cognition.md](05-cognition.md)——认知模块（\[SC] cognition\_types.h，认知测试 + LLM 基准）
 - [06-cloudnative.md](06-cloudnative.md)——云原生模块（云原生测试 + K8s 集成测试）
 - [07-system.md](07-system.md)——系统模块（系统工具测试 + DevStation 验证）
-- [50-engineering-standards/README.md](../50-engineering-standards/README.md)——\[SC] 共享契约层 6 头文件清单
+- [50-engineering-standards/README.md](../50-engineering-standards/README.md)——\[SC] 共享契约层 10 头文件清单
 
 ***
 

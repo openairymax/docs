@@ -202,7 +202,7 @@ int airy_misc_register(struct airy_misc_dev *adev, u32 cap_mask)
     /* 5. 上报 vfs_d daemon（设备节点创建事件） */
     airy_vfsd_notify_create(adev);
 
-    /* 6. 上报 A-ULS（macro_superv 记录设备生命周期） */
+    /* 6. 上报 A-ULS（macro_d 记录设备生命周期） */
     airy_usv_report_event(AIRY_USV_EVT_DEV_CREATE, adev->agent_id,
                           adev->dev_type);
 

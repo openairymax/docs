@@ -76,15 +76,15 @@ Micro-Supervisor 作为内核态监管组件，与 Macro-Supervisor 管理的 12
 | 3 | mem_d | 记忆管理守护；mem_d IPC 异常触发冷酷执法 | fastpath C-S9 |
 | 4 | gateway_d | 跨节点 IPC 网关（1.0.1）；gateway_d Badge 校验在源节点完成 | fastpath C-S9（per-node） |
 | 5 | logger_d | 日志消费守护（A-ULP）；logger_d 故障不影响 Badge 校验 | fastpath C-S9 |
-| 6 | macro_superv | 故障通知接收方 + 裁决执行者；通过 `AIRY_IPC_OP_ADJUDICATE` 下发裁决 | fastpath C-S9（持 FREEZE 权限位） |
+| 6 | macro_d | 故障通知接收方 + 裁决执行者；通过 `AIRY_IPC_OP_ADJUDICATE` 下发裁决 | fastpath C-S9（持 FREEZE 权限位） |
 | 7 | audit_d | 审计守护；所有 Badge 编译/撤销/冻结事件写入 audit_d 审计链 | fastpath C-S9 |
 | 8 | sched_d | sched_tac 策略守护进程；通过 `airy_sys_sched_ctl`（编号 2）控制调度参数 | fastpath C-S9 |
 | 9 | dev_d | 设备驱动守护；dev_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
 | 10 | net_d | 网络策略守护；net_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
 | 11 | vfs_d | VFS 用户态服务；vfs_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
-| 12 | config_daemon | 配置管理守护（A-UCS）；config_daemon 故障不影响 Badge 校验 | fastpath C-S9 |
+| 12 | config_d | 配置管理守护（A-UCS）；config_d 故障不影响 Badge 校验 | fastpath C-S9 |
 
-> **daemon 命名约定**：daemon 命名后缀统一为 `_d`（sec_d/cogn_d/mem_d/gateway_d/logger_d/audit_d/sched_d/dev_d/net_d/vfs_d），例外为 `macro_superv`（主监管守护进程，沿用 Unify Design 命名）和 `config_daemon`（配置管理，沿用 `_daemon` 后缀）。12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT。
+> **daemon 命名约定**：daemon 命名后缀统一为 `_d`（sec_d/cogn_d/mem_d/gateway_d/logger_d/audit_d/sched_d/dev_d/net_d/vfs_d），例外为 `macro_d`（主监管守护进程，沿用 Unify Design 命名）和 `config_d`（配置管理，沿用 `_daemon` 后缀）。12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT。
 
 ### 1.5 与 sched_tac 的协作（v1.1 新增）
 
@@ -503,16 +503,16 @@ int airy_eventfd_register(int efd)
 Macro-Supervisor 通过 io_uring 注册 eventfd 读事件，被唤醒后消费故障事件：
 
 ```c
-/* services/daemons/macro_superv/event_loop.c —— 接收故障通知 */
-static void macro_superv_handle_fault_event(struct airy_fault_event *ev)
+/* services/daemons/macro_d/event_loop.c —— 接收故障通知 */
+static void macro_d_handle_fault_event(struct airy_fault_event *ev)
 {
     syslog(LOG_WARNING, "airy: fault received ring=%u code=0x%x agent=%u",
            ev->ring_id, ev->fault_code, ev->agent_id);
 
     /* 查询上下文，进行裁决 */
     struct airy_fault_context ctx;
-    macro_superv_query_context(ev, &ctx);
-    macro_superv_adjudicate(&ctx);
+    macro_d_query_context(ev, &ctx);
+    macro_d_adjudicate(&ctx);
 }
 ```
 

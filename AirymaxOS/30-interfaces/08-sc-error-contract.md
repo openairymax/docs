@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Airymax 错误码与故障码体系** 的唯一权威源。Error 码空间分配、Fault 码空间分配、`AIRY_E*` 命名风格、`AIRY_FAULT_*` 命名风格、[DSL] 降级块均以本文件为唯一权威定义。物理宿主为 `kernel/include/uapi/linux/airymax/error.h`，agentrt 与 agentrt-linux 物理共享同一份头文件，逐字节相同。
 >
-> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check（能力校验）从独立的控制面操作"折叠"到 IPC 数据面消息传递 fastpath 中。其物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；其执行点是 fastpath C-S9 内联校验（`airy_cap_badge_ok()`，~10ns，3 个 READ_ONCE + 位运算 + 比较）。本契约新增的 `-78~-82` Capability 错误码与 `0x1001-0x1003` Fault 码是 Capability Folding 的错误语义 SSoT。
+> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check（能力校验）从独立的控制面操作"折叠"到 IPC 数据面消息传递 fastpath 中。其物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；其执行点是 fastpath C-S9 内联校验（`airy_cap_badge_ok()`，~10ns，3 个 READ_ONCE + 位运算 + 比较）。本契约新增的 `-78~-82` Capability 错误码与 `0x1001-0x1003` Fault 码是 Capability Folding 的错误语义 SSoT。
 >
 > 废弃风格声明：`AIRY_ERR_*`（详细前缀）已废弃，全部迁移为 `AIRY_E*`；`EAIRY_*`（errno 风格前缀）已废弃。本契约遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) 的技术选型（sched_tac + 纯 C LSM 不使用 BPF LSM + IORING_OP_URING_CMD + registered buffer + mmap 不使用 page flipping + alloc_pages + mmap 不使用 DMA 一致性内存）。
 
@@ -60,7 +60,7 @@ A-UEF（Unified Error and Fault Framework，统一错误码与故障定义体系
 - 使用内核 UAPI 类型 `int32_t` / `__s32`（不使用 `int`）
 - 禁止使用 `float` 类型
 - 禁止依赖任何非 UAPI 头文件
-- 使用 `__attribute__((packed))` 仅在需要紧凑布局时（错误码宏不涉及结构体，无需 packed）
+- 禁用 `__attribute__((packed))`，改用 `__aligned(64)` 或自然对齐（错误码宏不涉及结构体，无需对齐属性）
 
 ### 1.4 Capability Folding 错误码的 [SC]/[SS] 边界
 
@@ -246,8 +246,8 @@ v1.1 起，Fault 码空间按模块重新组织。`0x1001-0x1003` 为 Capability
 #define AIRY_FAULT_VM_FAULT      0x1006   /* 共享页映射损坏（v1.1 从 0x1002 迁移至此） */
 
 /* ===== 资源配额与驱动 Fault 码（v1.1 新增预留） ===== */
-#define AIRY_FAULT_MEMORY_QUOTA_EXCEEDED  0x1007   /* 记忆配额溢出（mem_d 检测，macro_superv 强制降级/终止） */
-#define AIRY_FAULT_TOKEN_BUDGET_EXCEEDED  0x1008   /* Token 预算溢出（cogn_d 检测，macro_superv 强制降级/终止） */
+#define AIRY_FAULT_MEMORY_QUOTA_EXCEEDED  0x1007   /* 记忆配额溢出（mem_d 检测，macro_d 强制降级/终止） */
+#define AIRY_FAULT_TOKEN_BUDGET_EXCEEDED  0x1008   /* Token 预算溢出（cogn_d 检测，macro_d 强制降级/终止） */
 #define AIRY_FAULT_DMA                    0x1009   /* Agent 设备 DMA 故障（driver model 上报，A-ULS 升级处理） */
 
 /* ===== io_uring / 审计 Fault 码（R9 补强注册） ===== */
@@ -280,8 +280,8 @@ v1.1 起，Fault 码空间按模块重新组织。`0x1001-0x1003` 为 Capability
 | `AIRY_FAULT_TIMEOUT` | Agent 心跳超时且未响应冻结 | 强制 STOPPED 态 | Macro-Supervisor 裁决 |
 | `AIRY_FAULT_ABNORMAL_CAP` | Capability 树完整性校验失败 | 立即终止 Agent（SIGKILL） | 进入 DEAD 态 |
 | `AIRY_FAULT_VM_FAULT` | 共享页映射损坏（MemoryRovol 检测） | 立即标记 Ring 不可用 | 回退到 printk_safe |
-| `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED` | 记忆配额溢出（mem_d 检测） | macro_superv 强制降级/终止 | 释放记忆卷载或终止 Agent |
-| `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED` | Token 预算溢出（cogn_d 检测） | macro_superv 强制降级/终止 | 降级 LLM 推理或终止 Agent |
+| `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED` | 记忆配额溢出（mem_d 检测） | macro_d 强制降级/终止 | 释放记忆卷载或终止 Agent |
+| `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED` | Token 预算溢出（cogn_d 检测） | macro_d 强制降级/终止 | 降级 LLM 推理或终止 Agent |
 | `AIRY_FAULT_DMA` | Agent 设备 DMA 故障（driver model 上报） | A-ULS 升级处理 | 释放 devm 资源或终止 Agent |
 | `AIRY_FAULT_URING_MALFORMED` | malformed SQE/CQE 输入（io_uring hardened 路径检测，opcode/flags/payload_len 越界） | 触发 `airy_security_fault(agent_id, 0x100A, cmd)` 通知 Micro-Supervisor + 冻结 Ring | Micro-Supervisor 裁决（重启 Ring 或终止 Agent） |
 | `AIRY_FAULT_AUDIT_TAMPER` | 审计哈希链断裂（`airy_audit_chain_verify` 检测到 `prev_hash` 不匹配或签名校验失败） | 紧急 CRITICAL 告警 + 停止审计写入 + 安全团队介入 | 安全团队人工介入，密钥轮换 + 审计卷重建 |
@@ -456,7 +456,7 @@ jobs:
 - [10-unify-design.md](../10-architecture/10-unify-design.md) §10 —— SSoT 技术选型权威声明
 - [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §2 —— [SC] 共享契约层
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2 —— [DSL] 降级块机制
-- [02-ipc-protocol.md](02-ipc-protocol.md) —— Layout C v4 消息头定义（`capability_badge` offset 44-51）
+- [02-ipc-protocol.md](02-ipc-protocol.md) —— Layout C v4 消息头定义（`capability_badge` offset 40-47）
 - [07-ipc-fastpath.md](07-ipc-fastpath.md) —— fastpath C-S0~C-S12 检查链（C-S9 Badge 校验触发 -78~-82）
 - [01-syscalls.md](01-syscalls.md) —— syscall 12→4 映射（`airy_sys_call` 编译 Badge）
 - [03-capability-model.md](../110-security/03-capability-model.md) —— Capability 模型（Badge 编译/撤销/校验）

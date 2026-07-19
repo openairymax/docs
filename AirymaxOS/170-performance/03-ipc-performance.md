@@ -32,7 +32,7 @@ agentrt-linux（AirymaxOS）IPC 性能工程为 A-IPC（Airymax Unify IPC Fabric
 
 ### 1.2 适用范围
 
-- A-IPC 128 字节统一消息头（Layout C v4，magic=`0x41524531` 'ARE1'，含 `capability_badge` offset 44-51，IRON-9 v3 [SC] 共享契约层）
+- A-IPC 128 字节统一消息头（Layout C v4，magic=`0x41524531` 'ARE1'，含 `capability_badge` offset 40-47，IRON-9 v3 [SC] 共享契约层）
 - Linux 6.6 内核基线 io_uring 异步 I/O 子系统（IORING_OP_URING_CMD）
 - 内核 kthread 间通信用 kfifo + wait_event_interruptible
 - Agent kthread 与用户态 daemon 双向消息通道
@@ -88,7 +88,7 @@ A-IPC 128 字节统一消息头（Layout C v4，定义于 `include/uapi/linux/ai
 
 ```c
 /* include/uapi/linux/airymax/ipc.h —— 128B IPC 消息头（[SC] 共享契约层，Layout C v4）
- * v1.1: Layout C v4 含 capability_badge (offset 44-51, 8B)
+ * v1.1: Layout C v4 含 capability_badge (offset 40-47, 8B)
  * 详见 30-interfaces/02-ipc-protocol.md §2 Layout C v4 完整定义
  */
 #ifndef AIRY_IPC_H
@@ -103,7 +103,7 @@ A-IPC 128 字节统一消息头（Layout C v4，定义于 `include/uapi/linux/ai
 #include <airymax/ipc.h>
 /* 结构体名称：struct airy_ipc_msg_hdr（Layout C v4，物理宿主见
  * 30-interfaces/02-ipc-protocol.md §2 + 50-engineering-standards/120-cross-project-code-sharing.md §2.7）
- * v1.1 关键字段：capability_badge (offset 44-51, 8B, Badge 64-bit Native Word)
+ * v1.1 关键字段：capability_badge (offset 40-47, 8B, Badge 64-bit Native Word)
  */
 
 /* 消息类型枚举 */
@@ -119,7 +119,7 @@ enum airy_ipc_msg_type {
 #endif /* AIRY_IPC_H */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `30-interfaces/02-ipc-protocol.md` §2 Layout C v4）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C v4）。v1.1 关键字段：`capability_badge`（offset 44-51，8B，Badge 64-bit Native Word = `Epoch<<48 | RandomTag<<16 | Perms`），由 sec_d 编译并写入 `agent_caps[agent_id]` 静态数组。原 Layout D（21 字段）已废弃，原 Layout C v1-v3 由 v4 替代。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `30-interfaces/02-ipc-protocol.md` §2 Layout C v4）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C v4）。v1.1 关键字段：`capability_badge`（offset 40-47，8B，Badge 64-bit Native Word = `Epoch<<48 | RandomTag<<16 | Perms`），由 sec_d 编译并写入 `agent_caps[agent_id]` 静态数组。原 Layout D（21 字段）已废弃，原 Layout C v1-v3 由 v4 替代。
 
 ### 2.2 零拷贝传输机制
 
@@ -843,7 +843,7 @@ out_err:
 | 版本 | 日期 | 变更摘要 |
 |------|------|---------|
 | 0.1.1 | 2026-07-10 | 初版：io_uring 零拷贝 + kfifo 批量读取性能工程设计 |
-| **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) 新增 FAST_SEND ~158ns / SLOW_SEND ~600ns-5.5μs 性能 SLO；(2) 新增 §1.5/§1.6 FAST_SEND/SLOW_SEND 性能拆解；(3) §2.1 128B 消息头更新为 Layout C v4 + capability_badge (offset 44-51)；(4) §6 错误码体系完全重写（-800~-899 废弃 → -41~-70 IPC + -78~-82 Capability + 0x1001~0x1006 Fault）；(5) §7.1 Cupolas 权限校验重构为 fastpath C-S9 + slowpath LSM 职责分割；(6) §9 IRON-9 v3 同源映射对齐 Badge 64-bit Native Word + agent_caps[] 静态数组；(7) §10 相关文档新增 8 份 v1.1 引用；(8) 全文 AgentsIPC→A-IPC 统一术语 |
+| **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) 新增 FAST_SEND ~158ns / SLOW_SEND ~600ns-5.5μs 性能 SLO；(2) 新增 §1.5/§1.6 FAST_SEND/SLOW_SEND 性能拆解；(3) §2.1 128B 消息头更新为 Layout C v4 + capability_badge (offset 40-47)；(4) §6 错误码体系完全重写（-800~-899 废弃 → -41~-70 IPC + -78~-82 Capability + 0x1001~0x1006 Fault）；(5) §7.1 Cupolas 权限校验重构为 fastpath C-S9 + slowpath LSM 职责分割；(6) §9 IRON-9 v3 同源映射对齐 Badge 64-bit Native Word + agent_caps[] 静态数组；(7) §10 相关文档新增 8 份 v1.1 引用；(8) 全文 AgentsIPC→A-IPC 统一术语 |
 
 ---
 

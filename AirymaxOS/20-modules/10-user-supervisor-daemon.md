@@ -48,13 +48,13 @@ Macro-Supervisor 是用户态守护进程，接收 Micro-Supervisor 的故障通
 
 | 组件 | 路径 | 说明 |
 |------|------|------|
-| 主进程 | `services/daemons/macro_superv/main.c` | 事件循环、裁决分发 |
-| 事件循环 | `services/daemons/macro_superv/event_loop.c` | io_uring + eventfd |
-| 裁决引擎 | `services/daemons/macro_superv/adjudicate.c` | 故障裁决策略 |
-| 调度注入 | `services/daemons/macro_superv/sched.c` | 调度参数注入 |
-| Capability 注入 | `services/daemons/macro_superv/cap_inject.c` | io_uring_cmd 注入 |
-| 心跳检查 | `services/daemons/macro_superv/heartbeat.c` | Agent 进程状态检查 |
-| systemd unit | `systemd/airymax-macro-superv.service` | 自动重启管理 |
+| 主进程 | `services/daemons/macro_d/main.c` | 事件循环、裁决分发 |
+| 事件循环 | `services/daemons/macro_d/event_loop.c` | io_uring + eventfd |
+| 裁决引擎 | `services/daemons/macro_d/adjudicate.c` | 故障裁决策略 |
+| 调度注入 | `services/daemons/macro_d/sched.c` | 调度参数注入 |
+| Capability 注入 | `services/daemons/macro_d/cap_inject.c` | io_uring_cmd 注入 |
+| 心跳检查 | `services/daemons/macro_d/heartbeat.c` | Agent 进程状态检查 |
+| systemd unit | `systemd/agentrt-macro.service` | 自动重启管理 |
 
 ### 1.3 12 个 daemon 职责
 
@@ -62,9 +62,9 @@ Macro-Supervisor 管理的 12 个 daemon 及其职责：
 
 | # | Daemon | 职责 | Agent 态管理 |
 |---|--------|------|------------|
-| 1 | macro_superv | 主监管守护进程（A-ULS） | 自身（高优先级） |
+| 1 | macro_d | 主监管守护进程（A-ULS） | 自身（高优先级） |
 | 2 | logger_d | 日志消费（A-ULP） | 心跳监控 |
-| 3 | config_daemon | 配置管理（A-UCS） | 心跳监控 |
+| 3 | config_d | 配置管理（A-UCS） | 心跳监控 |
 | 4 | gateway_d | 网关守护 | 心跳监控 |
 | 5 | sched_d | 调度守护 | 8 态生命周期 |
 | 6 | vfs_d | VFS 用户态服务 | 心跳监控 |
@@ -84,7 +84,7 @@ Macro-Supervisor 管理的 12 个 daemon 及其职责：
 Macro-Supervisor 作为 systemd service 管理 12 个 daemon 的生命周期：
 
 ```ini
-# /etc/systemd/system/airymax-macro-superv.service
+# /etc/systemd/system/agentrt-macro.service
 [Unit]
 Description=Airymax Macro-Supervisor (A-ULS user-side)
 After=systemd-modules-load.service airy-log.service
@@ -94,7 +94,7 @@ After=airy-superv.service
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/airy-macro-superv --config=/etc/airymax/macro_superv.conf
+ExecStart=/usr/sbin/airy-macro-d --config=/etc/airymax/macro_d.conf
 # 自动重启：崩溃后 1 秒内重启
 Restart=always
 RestartSec=1
@@ -121,7 +121,7 @@ WantedBy=multi-user.target
 Macro-Supervisor 启动后按依赖顺序拉起 12 个 daemon：
 
 ```c
-/* services/daemons/macro_superv/main.c —— daemon 拉起 */
+/* services/daemons/macro_d/main.c —— daemon 拉起 */
 struct daemon_spec {
     const char *name;
     const char *exec;
@@ -136,14 +136,14 @@ static const struct daemon_spec daemons[] = {
     { "cogn_d",        "/usr/sbin/airy-cogn-d",        "/etc/airymax/cognition.conf",  SCHED_DEADLINE, 0, 3 },
     { "mem_d",         "/usr/sbin/airy-mem-d",         "/etc/airymax/memory.conf",     SCHED_FIFO, 40, 5 },
     { "sec_d",         "/usr/sbin/airy-sec-d",         "/etc/airymax/sec.conf",        SCHED_FIFO, 60, 5 },
-    { "config_daemon", "/usr/sbin/airy-config-daemon", "/etc/airymax/config.conf",     SCHED_NORMAL, 0, 5 },
-    /* ... 其余 daemon（gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_superv）
+    { "config_d", "/usr/sbin/airy-config-d", "/etc/airymax/config.conf",     SCHED_NORMAL, 0, 5 },
+    /* ... 其余 daemon（gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_d）
      * 注: v1.1 Capability Folding 后 IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，
      * 不存在独立 ipc daemon；Badge 编译由 sec_d 承担，跨节点 IPC 由 gateway_d 承担。
      */
 };
 
-static int macro_superv_spawn_daemons(void)
+static int macro_d_spawn_daemons(void)
 {
     for (int i = 0; i < ARRAY_SIZE(daemons); i++) {
         const struct daemon_spec *d = &daemons[i];
@@ -151,9 +151,9 @@ static int macro_superv_spawn_daemons(void)
         if (pid == 0) {
             /* 子进程：设置调度策略（sched_tac） */
             if (d->sched_policy == SCHED_DEADLINE) {
-                macro_superv_set_deadline(getpid(), d);
+                macro_d_set_deadline(getpid(), d);
             } else if (d->sched_policy == SCHED_FIFO) {
-                macro_superv_set_fifo(getpid(), d->sched_priority);
+                macro_d_set_fifo(getpid(), d->sched_priority);
             }
             execv(d->exec, (char *[]){ (char *)d->name, "--config", (char *)d->config, NULL });
             _exit(1);
@@ -171,11 +171,11 @@ daemon 拉起遵循依赖顺序，避免循环依赖：
 
 ```
 1. logger_d        （无依赖，最先启动）
-2. config_daemon   （依赖 logger_d）
-3. mem_d           （依赖 config_daemon）
+2. config_d   （依赖 logger_d）
+3. mem_d           （依赖 config_d）
 4. sec_d           （依赖 mem_d；v1.1 替代原独立 ipc daemon——IPC 数据传递由 io_uring 承载，Badge 编译由 sec_d 承担）
 5. cogn_d          （依赖 sec_d，认知调度需要 Badge）
-6-12. 其他 daemon  （gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_superv，依赖前序）
+6-12. 其他 daemon  （gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_d，依赖前序）
 ```
 
 ---
@@ -195,7 +195,7 @@ Macro-Supervisor 定期检查 12 个 daemon 的进程状态，超时则触发裁
 ### 3.2 心跳实现
 
 ```c
-/* services/daemons/macro_superv/heartbeat.c —— 心跳检查 */
+/* services/daemons/macro_d/heartbeat.c —— 心跳检查 */
 struct agent_heartbeat {
     pid_t pid;
     __u64 last_heartbeat_ns;
@@ -237,11 +237,11 @@ static void heartbeat_loop(void)
             int ret = heartbeat_check(&g_heartbeats[i]);
             if (ret == HEARTBEAT_TIMEOUT) {
                 /* 触发降级裁决 */
-                macro_superv_adjudicate_fault(g_heartbeats[i].pid,
+                macro_d_adjudicate_fault(g_heartbeats[i].pid,
                                                AIRY_FAULT_TIMEOUT);
             } else if (ret == HEARTBEAT_DEAD) {
                 /* 进程已死，重启 */
-                macro_superv_restart_daemon(g_heartbeats[i].pid);
+                macro_d_restart_daemon(g_heartbeats[i].pid);
             }
         }
         sleep(1);
@@ -282,10 +282,10 @@ Macro-Supervisor                     内核 sec_d（Badge 唯一写者）
 ### 4.2 v1.1 请求实现
 
 ```c
-/* services/daemons/macro_superv/cap_inject.c —— v1.1 Badge 请求
+/* services/daemons/macro_d/cap_inject.c —— v1.1 Badge 请求
  * Macro-Supervisor 不再构造 CNode，而是请求 sec_d 编译 Badge
  */
-static int macro_superv_cap_request(__u32 agent_id, __u16 perms)
+static int macro_d_cap_request(__u32 agent_id, __u16 perms)
 {
     struct airy_ipc_cmd cmd = {
         .opcode = AIRY_IPC_OP_CAP_REQUEST,   /* 0x0010 */
@@ -325,7 +325,7 @@ static int macro_superv_cap_request(__u32 agent_id, __u16 perms)
 | `AIRY_CAP_PERM_REVOKE` | 0x0010 | 4 | 允许撤销 Badge（`airy_sys_call` + `REVOKE_BADGE`） | sec_d 专属 |
 | `AIRY_CAP_PERM_FREEZE` | 0x0020 | 5 | 允许冻结/解冻 Ring（FREEZE / UNFREEZE opcode） | FREEZE (0x0005) / UNFREEZE |
 | `AIRY_CAP_PERM_BATCH` | 0x0040 | 6 | 允许批量发送（SEND_BATCH opcode） | SEND_BATCH (0x0003) |
-| `AIRY_CAP_PERM_ADMIN` | 0x8000 | 15 | 管理员权限（包含所有 Perms，仅 sec_d / macro_superv） | —（v1.1 扩展，非 SSoT） |
+| `AIRY_CAP_PERM_ADMIN` | 0x8000 | 15 | 管理员权限（包含所有 Perms，仅 sec_d / macro_d） | —（v1.1 扩展，非 SSoT） |
 
 > **Perms SSoT 对齐声明**：`AIRY_CAP_PERM_SEND` ~ `AIRY_CAP_PERM_BATCH` 7 个权限位严格对齐 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT。`AIRY_CAP_PERM_ADMIN` (0x8000) 是 Macro-Supervisor 用户态扩展（聚合权限位，非 SSoT 定义）。CAP_REQUEST opcode (0x0010) 是自举路径，**无需权限位**（fastpath C-S9 直接放行，详见 [03-capability-model.md §2.6.1](../110-security/03-capability-model.md)）。
 
@@ -334,10 +334,10 @@ static int macro_superv_cap_request(__u32 agent_id, __u16 perms)
 **v1.1 新增**：Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码完成，立即失效所有已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，全局 Epoch 自增后所有 fastpath C-S9.EPOCH 检查（`badge_epoch == global_epoch`）立即失败。
 
 ```c
-/* services/daemons/macro_superv/cap_revoke.c —— v1.1 Badge 撤销
+/* services/daemons/macro_d/cap_revoke.c —— v1.1 Badge 撤销
  * 一行代码撤销所有 Badge，O(1) 复杂度
  */
-static int macro_superv_cap_revoke_all(void)
+static int macro_d_cap_revoke_all(void)
 {
     /* 1. 全局 Epoch 自增——立即失效所有已发出 Badge
      * 所有 fastpath C-S9.EPOCH 检查（badge_epoch == global_epoch）立即失败
@@ -353,13 +353,13 @@ static int macro_superv_cap_revoke_all(void)
 }
 
 /* 撤销单个 Agent 的 Badge（通过重新编译覆盖） */
-static int macro_superv_cap_revoke_one(__u32 agent_id)
+static int macro_d_cap_revoke_one(__u32 agent_id)
 {
     /* 重新编译 Badge 时，WRITE_ONCE 会覆盖 agent_caps[agent_id].randtag
      * 旧 Badge 的 RandomTag 立即失效（C-S9.RANDTAG 检查失败）
      * 详见 110-security/07-airy-lsm-design.md §3.5
      */
-    return macro_superv_cap_request(agent_id, 0);  /* perms=0 即撤销 */
+    return macro_d_cap_request(agent_id, 0);  /* perms=0 即撤销 */
 }
 ```
 
@@ -662,7 +662,7 @@ Agent CAP_REQUEST 请求
  *
  * 设计原则:
  *   1. 多层防护：per-Agent 配额 + 全局阈值 + 排队调度
- *   2. 优先级调度：关键 Agent（macro_superv/sched_d）优先级高
+ *   2. 优先级调度：关键 Agent（macro_d/sched_d）优先级高
  *   3. 公平性：同优先级 FIFO，避免饥饿
  *   4. 可观测：所有限流事件记录到 A-ULP 审计日志
  */
@@ -677,7 +677,7 @@ Agent CAP_REQUEST 请求
 enum airy_sec_d_prio {
     AIRY_SEC_D_PRIO_LOW      = 0,  /* 普通 Agent */
     AIRY_SEC_D_PRIO_NORMAL   = 4,  /* 业务 Agent */
-    AIRY_SEC_D_PRIO_HIGH     = 8,  /* 关键 daemon（macro_superv/sched_d）*/
+    AIRY_SEC_D_PRIO_HIGH     = 8,  /* 关键 daemon（macro_d/sched_d）*/
     AIRY_SEC_D_PRIO_CRITICAL = 16, /* 系统关键（仅 sec_d 自举）*/
 };
 
@@ -939,7 +939,7 @@ MemoryMax=256M
 NoNewPrivileges=true
 ProtectSystem=strict
 ReadWritePaths=/var/lib/airy/
-# 调度：SCHED_FIFO 优先级 85（高于 macro_superv 的 80）
+# 调度：SCHED_FIFO 优先级 85（高于 macro_d 的 80）
 IOSchedulingClass=realtime
 IOSchedulingPriority=1
 ```
@@ -1227,14 +1227,14 @@ eventfd 唤醒
 ### 5.3 裁决实现
 
 ```c
-/* services/daemons/macro_superv/adjudicate.c —— 温情裁决 */
+/* services/daemons/macro_d/adjudicate.c —— 温情裁决 */
 struct agent_violation_history {
     pid_t pid;
     __u32 violation_count[AIRY_FAULT_MAX];
     __u64 last_violation_ns;
 };
 
-static int macro_superv_adjudicate(struct airy_fault_event *ev)
+static int macro_d_adjudicate(struct airy_fault_event *ev)
 {
     struct agent_violation_history *hist = get_history(ev->agent_id);
     enum airy_adjudication action;
@@ -1258,13 +1258,13 @@ static int macro_superv_adjudicate(struct airy_fault_event *ev)
                ev->agent_id, ev->fault_code);
         break;
     case AIRY_ADJUD_DEGRADE:
-        macro_superv_degrade_agent(ev->agent_id);
+        macro_d_degrade_agent(ev->agent_id);
         break;
     case AIRY_ADJUD_PAUSE:
-        macro_superv_pause_agent(ev->agent_id);   /* kill(SIGSTOP) */
+        macro_d_pause_agent(ev->agent_id);   /* kill(SIGSTOP) */
         break;
     case AIRY_ADJUD_TERMINATE:
-        macro_superv_terminate_agent(ev->agent_id);  /* kill(SIGKILL) */
+        macro_d_terminate_agent(ev->agent_id);  /* kill(SIGKILL) */
         break;
     }
 
@@ -1330,14 +1330,14 @@ Macro-Supervisor 是用户态单点，其故障可能导致：
  * 新增 Badge 全局撤销：接管时立即失效所有 Badge
  */
 static struct timer_list airy_superv_watchdog;
-static __u64 last_macro_superv_heartbeat;
+static __u64 last_macro_d_heartbeat;
 
 /* watchdog 超时检查（每 10 秒执行一次） */
 static void airy_superv_watchdog_fn(struct timer_list *t)
 {
     __u64 now = ktime_get_real_ns();
     /* Macro-Supervisor 心跳超时 30 秒 */
-    if (now - last_macro_superv_heartbeat > 30ULL * 1000000000ULL) {
+    if (now - last_macro_d_heartbeat > 30ULL * 1000000000ULL) {
         pr_emerg("airy: Macro-Supervisor heartbeat lost, watchdog takeover\n");
 
         /* 1. 立即冻结所有活跃 Ring（防止无监管期间数据损坏，最优先） */
@@ -1407,8 +1407,8 @@ Macro-Supervisor 恢复
 Macro-Supervisor 通过 IORING_OP_URING_CMD 执行裁决，避免新增 syscall。裁决指令通过 io_uring_cmd 回调传递到内核 Micro-Supervisor：
 
 ```c
-/* services/daemons/macro_superv/main.c —— io_uring_cmd 裁决执行 */
-static int macro_superv_execute_adjudication(pid_t pid,
+/* services/daemons/macro_d/main.c —— io_uring_cmd 裁决执行 */
+static int macro_d_execute_adjudication(pid_t pid,
                                               enum airy_adjudication action)
 {
     struct airy_ipc_cmd cmd = {

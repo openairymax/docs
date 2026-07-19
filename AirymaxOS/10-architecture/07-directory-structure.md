@@ -1279,7 +1279,7 @@ tests-linux/
 ├── benchmark/                        # 性能基准
 │   ├── CMakeLists.txt
 │   ├── bench_ipc_latency.c          # IPC 延迟（~160ns 目标）
-│   ├── bench_cap_check.c            # Capability 检查（~160ns）
+│   ├── bench_cap_check.c            # fastpath C-S9 Badge 校验（~10ns）
 │   ├── bench_freeze.c              # 冻结（~200ns）
 │   ├── bench_eventfd.c             # eventfd（~50ns）
 │   ├── bench_frozen_check.c        # frozen 检查（~1ns）
@@ -1896,23 +1896,30 @@ agentrt/          agentrt-linux/
 | dev_d | 6 | dev_d.c / dev_drv.c / dev_tool.c / dev_plugin.c / dev_discover.c / dev_d.h |
 | **合计** | **74** | — |
 
-## 附录 C：12 系统调用清单（[SC] syscalls.h）
+## 附录 C：v1.1 系统调用清单（[SC] syscalls.h，4 核心 + 20 预留 = 24 槽位）
+
+> **v1.1 Capability Folding 决策**：8 个 seL4 风格 IPC 原语（SEND/RECV/NBSEND/NBRECV/REPLYRECV/YIELD/REPLY/NOTIFY）已全部移除，IPC 数据面完全由 io_uring `IORING_OP_URING_CMD` 承载（零 syscall）。
 
 | # | 系统调用 | 编号 | 类别 | 说明 |
 |---|---------|------|------|------|
-| 1 | `AIRY_SYS_CALL` | 0 | IPC 原语 | 同步调用 |
-| 2 | `AIRY_SYS_SEND` | 1 | IPC 原语 | 异步发送 |
-| 3 | `AIRY_SYS_RECV` | 2 | IPC 原语 | 接收 |
-| 4 | `AIRY_SYS_NBSEND` | 3 | IPC 原语 | 非阻塞发送 |
-| 5 | `AIRY_SYS_NBRECV` | 4 | IPC 原语 | 非阻塞接收 |
-| 6 | `AIRY_SYS_REPLYRECV` | 5 | IPC 原语 | 回复并接收 |
-| 7 | `AIRY_SYS_YIELD` | 6 | IPC 原语 | 让出 |
-| 8 | `AIRY_SYS_REPLY` | 7 | IPC 原语 | 回复 |
-| 9 | `AIRY_SYS_ROVOLCTL` | 8 | 控制原语 | MemoryRovol 控制 |
-| 10 | `AIRY_SYS_SCHEDCTL` | 9 | 控制原语 | 调度控制 |
-| 11 | `AIRY_SYS_CLTNOTIFY` | 10 | 控制原语 | CoreLoopThree 通知 |
-| 12 | `AIRY_SYS_NOTIFY` | 11 | 通知 | 异步通知 |
-| 13-24 | 预留 | 12-23 | 预留 | 12 个预留槽位 |
+| 1 | `AIRY_SYS_CALL` | 512 | Capability Invocation | sec_d 专属管理入口（Badge 编译/撤销 + LSM_ctl + Wasm_load） |
+| 2 | `AIRY_SYS_ROVOL_CTL` | 513 | 控制原语 | MemoryRovol 记忆卷载控制 |
+| 3 | `AIRY_SYS_SCHED_CTL` | 514 | 控制原语 | 调度策略配置 |
+| 4 | `AIRY_SYS_CLT_NOTIFY` | 515 | 控制原语 | CoreLoopThree 通知 + kthread 注册 |
+| 5-24 | 预留 | 516-535 | 预留 | 20 个预留槽位（未来扩展） |
+
+**废弃 syscall 清单**（v1.0 → v1.1 移除）：
+
+| # | 废弃系统调用 | 编号 | 废弃原因 |
+|---|------------|------|---------|
+| — | `AIRY_SYS_SEND` | 1 | v1.1 Capability Folding：IPC 数据面零 syscall，由 io_uring 承载 |
+| — | `AIRY_SYS_RECV` | 2 | 同上 |
+| — | `AIRY_SYS_NBSEND` | 3 | 同上 |
+| — | `AIRY_SYS_NBRECV` | 4 | 同上 |
+| — | `AIRY_SYS_REPLYRECV` | 5 | 同上 |
+| — | `AIRY_SYS_YIELD` | 6 | 同上 |
+| — | `AIRY_SYS_REPLY` | 7 | 同上 |
+| — | `AIRY_SYS_NOTIFY` | 11 | 同上 |
 
 ---
 

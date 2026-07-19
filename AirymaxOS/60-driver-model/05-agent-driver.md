@@ -77,7 +77,7 @@ agentrt-linux 遵循 K-1 内核极简原则——Agent 设备模型的"业务逻
 | devm 资源托管框架 | Token 预算策略裁决 |
 | sysfs 节点创建/删除 | 记忆卷载内容管理 |
 | io_uring `uring_cmd` 回调入口 | 工具调用业务执行 |
-| Capability 校验（airy_lsm 钩子） | 配额策略下发（macro_superv） |
+| Capability 校验（airy_lsm 钩子） | 配额策略下发（macro_d） |
 
 > **OS-DRV-082**： 内核态 Agent 驱动代码体积（不含通用 devm/cdev 框架）单驱动**不得超过 2000 行**——这是 K-1 极简原则的量化约束。超过此阈值的业务逻辑必须迁移到用户态 daemon。
 
@@ -94,7 +94,7 @@ sequenceDiagram
     participant A as Agent 驱动模块
     participant K as 内核 agent driver 框架
     participant L as airy_lsm（Micro-SV）
-    participant U as macro_superv / dev_d
+    participant U as macro_d / dev_d
     participant M as misc 框架
     A->>K: airy_agent_driver_register(drv)
     K->>L: driver_register_check()
@@ -120,7 +120,7 @@ sequenceDiagram
 ### 3.2 注册流程五步
 
 1. **Capability 校验**：`airy_lsm` 校验调用方持有 `CAP_AGENT_DRIVER_REGISTER`（纯 C LSM 钩子，冷酷执法）
-2. **A-ULS 审核**：上报 `macro_superv` + `dev_d`，由策略裁决是否允许注册（温情裁决，可申诉）
+2. **A-ULS 审核**：上报 `macro_d` + `dev_d`，由策略裁决是否允许注册（温情裁决，可申诉）
 3. **driver_register**：调用 Linux 标准 `driver_register` 将驱动加入 `agent_bus_type`
 4. **deferred probe**：扫描已注册但未绑定驱动的 Agent device，触发 `match` + `probe`
 5. **devm + misc 注册**：probe 回调内通过 `airy_dev_alloc` 申请资源，`devm_airy_misc_register` 创建设备节点
@@ -182,7 +182,7 @@ int airy_agent_driver_register(struct airy_agent_driver *drv, u32 cap_mask)
         return rc;
     }
 
-    /* 3. A-ULS 审核（异步等待 macro_superv 裁决） */
+    /* 3. A-ULS 审核（异步等待 macro_d 裁决） */
     rc = airy_usv_audit_driver_register(drv);
     if (rc) {
         airy_ulps_log(AIRY_ULPS_ERROR,
@@ -525,7 +525,7 @@ sequenceDiagram
     participant U as 用户态 Agent 进程
     participant K as 内核 Agent 驱动
     participant D as cogn_d/mem_d/dev_d
-    participant S as macro_superv
+    participant S as macro_d
     U->>K: io_uring_submit(IORING_OP_URING_CMD, sense_req)
     K->>K: airy_cogn_uring_cmd() 入口
     K->>D: 委托推理（通过 IPC 通道）
@@ -595,8 +595,8 @@ static int cogn_d_handle_dev_ready(u32 agent_id, u32 dev_type)
     if (IS_ERR(sess->engine))
         return PTR_ERR(sess->engine);
 
-    /* 3. 注册到 macro_superv（纳入监管） */
-    macro_superv_register_agent(agent_id, AIRY_AGENT_CLASS_COGN);
+    /* 3. 注册到 macro_d（纳入监管） */
+    macro_d_register_agent(agent_id, AIRY_AGENT_CLASS_COGN);
 
     return 0;
 }

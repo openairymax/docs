@@ -26,8 +26,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 子系统 | 关系 |
 |--------|------|
 | mem_d | 提供 L3/L4 记忆数据源，执行记忆恢复 |
-| config_daemon | 提供配置文件备份与恢复入口 |
-| macro_superv | 协调恢复流程，重启 Agent |
+| config_d | 提供配置文件备份与恢复入口 |
+| macro_d | 协调恢复流程，重启 Agent |
 | audit_d | 备份自身聚合数据，记录备份恢复事件 |
 | sec_d | 提供备份加密与签名，验证恢复完整性 |
 | [DSL] 降级模式 | 灾难恢复时启用，保证最小可运行子集 |
@@ -64,7 +64,7 @@ AirymaxOS 备份对象分为五大类：
 - L2 短期记忆：每 Agent 1GB，变化频繁，可通过 L3 重建。
 - 临时文件：`/tmp/`、`/var/tmp/`。
 - 内核状态：进程列表、内存映射、文件描述符等运行时状态。
-- 日志 Ring Buffer：logger_daemon 内存中的缓冲，已通过 journal 持久化。
+- 日志 Ring Buffer：logger_d 内存中的缓冲，已通过 journal 持久化。
 
 ### 2.3 Agent 状态备份
 
@@ -105,8 +105,8 @@ L3 采用增量备份，记录自上次备份后变更的"记忆块"（默认 4K
 /etc/airy/
 ├── airy.conf                  # 主配置
 ├── daemons/                   # 各 daemon 配置
-│   ├── macro_superv.conf
-│   ├── logger_daemon.conf
+│   ├── macro_d.conf
+│   ├── logger_d.conf
 │   └── ...
 ├── monitor/                   # 监控阈值
 │   └── thresholds.yaml
@@ -143,7 +143,7 @@ AirymaxOS 采用"增量 + 全量"两级备份策略：
 
 增量备份由 audit_d 协调，每小时整点触发：
 
-1. **触发**：macro_superv 通过 cron-like 任务每小时向 audit_d 发送备份指令。
+1. **触发**：macro_d 通过 cron-like 任务每小时向 audit_d 发送备份指令。
 2. **快照**：mem_d 对 L3 记忆创建只读快照（基于文件系统 snapshot 或 copy-on-write）。
 3. **比对**：audit_d 比对当前快照与上次备份的差异，生成变更块列表。
 4. **打包**：将变更块打包为 `incremental_<YYYYMMDDHH>.tar.zst`。
@@ -154,10 +154,10 @@ AirymaxOS 采用"增量 + 全量"两级备份策略：
 
 ### 3.3 全量备份
 
-全量备份在每日凌晨 01:00 执行，由 macro_superv 协调：
+全量备份在每日凌晨 01:00 执行，由 macro_d 协调：
 
-1. **触发**：macro_superv 在 01:00 向所有 daemon 发送"备份准备"通知。
-2. **静默**：logger_daemon 暂停日志轮转，mem_d 暂停 L1/L2 淘汰，避免数据漂移。
+1. **触发**：macro_d 在 01:00 向所有 daemon 发送"备份准备"通知。
+2. **静默**：logger_d 暂停日志轮转，mem_d 暂停 L1/L2 淘汰，避免数据漂移。
 3. **快照**：各 daemon 创建一致性快照。
 4. **打包**：audit_d 将所有快照打包为 `full_<YYYYMMDD>.tar.zst`。
 5. **校验**：计算 SHA256 并签名。
@@ -329,11 +329,11 @@ audit_d 每周日凌晨 05:00 执行全量备份校验：
                           ┌────────────────────────────────────┐
                           │  分阶段恢复                         │
                           ├────────────────────────────────────┤
-                          │ 1. config_daemon 读取配置备份        │
+                          │ 1. config_d 读取配置备份        │
                           │ 2. sec_d 恢复密钥库                  │
                           │ 3. mem_d 恢复 L4 记忆（深度压缩）    │
                           │ 4. mem_d 恢复 L3 记忆（增量合并）    │
-                          │ 5. macro_superv 重启 Agent           │
+                          │ 5. macro_d 重启 Agent           │
                           │ 6. audit_d 恢复监控数据              │
                           └────────────────────────────────────┘
                                                   │
@@ -350,7 +350,7 @@ audit_d 每周日凌晨 05:00 执行全量备份校验：
 
 - **自动触发**：P0 事件响应流程判定需要恢复（如文件系统损坏）。
 - **人工触发**：运维人员通过 `airyctl recover` 命令。
-- **演练触发**：定期演练（每月一次），由 macro_superv 自动执行。
+- **演练触发**：定期演练（每月一次），由 macro_d 自动执行。
 
 ```bash
 # 列出可用备份
@@ -366,16 +366,16 @@ airyctl recover --point-in-time "2026-07-18T14:00:00Z"
 airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 ```
 
-### 6.3 config_daemon 读取备份
+### 6.3 config_d 读取备份
 
 恢复的第一阶段是恢复配置：
 
-1. config_daemon 接收恢复指令，读取备份中的 `/etc/airy/` 内容。
+1. config_d 接收恢复指令，读取备份中的 `/etc/airy/` 内容。
 2. 校验配置文件完整性（SHA256 与备份 manifest 一致）。
 3. 备份当前（损坏的）配置到 `/etc/airy.corrupt.<timestamp>/`。
 4. 替换为备份中的配置。
 5. 触发 SIGHUP 通知所有 daemon 重新加载配置。
-6. config_daemon 上报恢复完成。
+6. config_d 上报恢复完成。
 
 ### 6.4 mem_d 恢复记忆
 
@@ -396,9 +396,9 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 4. 加载 L3 索引到内存。
 5. 触发 L1/L2 重建（按需，从 L3 提取热数据）。
 
-### 6.5 macro_superv 重启 Agent
+### 6.5 macro_d 重启 Agent
 
-记忆恢复完成后，macro_superv 逐步重启 Agent：
+记忆恢复完成后，macro_d 逐步重启 Agent：
 
 1. 读取备份中的 Agent 元数据与状态。
 2. 按优先级排序（管理 Agent > 业务 Agent）。
@@ -415,7 +415,7 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 3. **记忆完整性**：mem_d 抽样验证 L3/L4 数据可读。
 4. **IPC 测试**：发起测试 IPC，验证延迟正常。
 5. **监控恢复**：audit_d 重新加载监控数据，确认指标正常。
-6. 验证通过后，macro_superv 退出 DSL 模式。
+6. 验证通过后，macro_d 退出 DSL 模式。
 
 ### 6.7 恢复失败处理
 
@@ -443,8 +443,8 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 
 灾难恢复时，系统以 [DSL] 降级模式启动：
 
-1. **最小启动**：仅 macro_superv / logger_daemon / config_daemon / sec_d / audit_d / mem_d 启动。
-2. **配置加载**：config_daemon 加载降级模式专用配置 `airy-dsl.conf`。
+1. **最小启动**：仅 macro_d / logger_d / config_d / sec_d / audit_d / mem_d 启动。
+2. **配置加载**：config_d 加载降级模式专用配置 `airy-dsl.conf`。
 3. **只读挂载**：/var/lib 以只读模式挂载，避免进一步损坏。
 4. **备份挂载**：将备份存储挂载到 `/mnt/backup/`。
 5. **恢复准备**：audit_d 验证备份完整性，准备恢复。
@@ -455,9 +455,9 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 
 | 组件 | 状态 | 用途 |
 |------|------|------|
-| macro_superv | 运行 | 协调恢复 |
-| logger_daemon | 运行（WARN 级） | 记录恢复日志 |
-| config_daemon | 运行 | 加载配置 |
+| macro_d | 运行 | 协调恢复 |
+| logger_d | 运行（WARN 级） | 记录恢复日志 |
+| config_d | 运行 | 加载配置 |
 | sec_d | 运行（最高警戒） | 保护恢复过程 |
 | audit_d | 运行 | 恢复监控数据 |
 | mem_d | 运行 | 恢复记忆 |
@@ -468,14 +468,14 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 
 降级模式下按以下顺序逐步恢复：
 
-1. **配置恢复**：config_daemon 恢复 `/etc/airy/`。
+1. **配置恢复**：config_d 恢复 `/etc/airy/`。
 2. **密钥恢复**：sec_d 恢复密钥库。
 3. **记忆恢复**：mem_d 恢复 L4 → L3。
 4. **核心 daemon 启动**：sched_d、vfs_d、net_d 启动。
 5. **管理 Agent 启动**：ID=1 的管理 Agent 启动。
 6. **业务 Agent 启动**：按优先级逐步启动。
 7. **辅助 daemon 启动**：cogn_d、dev_d 启动。
-8. **退出降级模式**：macro_superv 验证全部就绪，退出 DSL。
+8. **退出降级模式**：macro_d 验证全部就绪，退出 DSL。
 
 每一步完成后等待 30 秒稳定期，再进入下一步。完整恢复耗时目标 ≤15 分钟。
 

@@ -47,7 +47,7 @@ agentrt-linux v1.0 **全面修正**早期文档中关于 sched_ext 与 SCHED_AGE
 | 支柱 | 核心思想 | 参考来源 | 落地子仓 |
 |------|----------|----------|----------|
 | **微内核设计思想** | 最小化特权态代码（Liedtke minimality）、服务用户态化、消息传递通信、capability 安全 | seL4（ADR-014，唯一来源） | kernel / services / security |
-| **agentrt-linux 工程基线** | 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范，兼容企业级 Linux 生态 | Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-013） | system / tests-linux / cloudnative |
+| **agentrt-linux 工程基线** | 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范，兼容企业级 Linux 生态 | Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-016） | system / tests-linux / cloudnative |
 | **Airymax 同源性** | 与 agentrt 共享 MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree 设计理念，天然适配无适配层 | agentrt atoms/cupolas/coreloopthree | 全部 8 子仓 |
 
 ---
@@ -130,7 +130,7 @@ graph TB
 | 2 | [02-five-dimensional-principles.md](02-five-dimensional-principles.md) | 五维正交 24 原则与 agentrt-linux 落地映射（S/K/C/E/A 全维度） | v1.0 | 维护中 |
 | 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | v1.0 | 维护中 |
 | 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | v1.0 | 维护中 |
-| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~014（14 个核心决策） | v1.0 | 维护中 |
+| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~016（16 个核心决策，含 ADR-015 已撤销 + ADR-016 版本基线锁定） | v1.0 | 维护中 |
 | 6 | [06-iron9-shared-model.md](06-iron9-shared-model.md) | **IRON-9 v3 四层模型**（[SC] 共享契约 + [SS] 语义同源 + [IND] 独立实现 + [DSL] 降级生存） | v1.0 | 维护中 |
 | 7 | [07-directory-structure.md](07-directory-structure.md) | 源码目录结构设计（8 子仓 submodule + [SC] 物理隔离 + 模型 A 完整 fork） | v1.0 | 维护中 |
 | 8 | [08-threat-model.md](08-threat-model.md) | 威胁模型（capability 攻击面 + LSM 钩子 + 纯 C LSM 安全分析） | v1.0 | 维护中 |

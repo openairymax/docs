@@ -126,7 +126,7 @@ kernel.shmmax = 68719476736
 net.core.somaxconn = 4096
 net.ipv4.tcp_max_syn_backlog = 8192
 
-# --- 文件系统（logger_daemon 日志 + 记忆卷）---
+# --- 文件系统（logger_d 日志 + 记忆卷）---
 fs.file-max = 1048576
 fs.inotify.max_user_watches = 524288
 ```
@@ -145,7 +145,7 @@ fs.inotify.max_user_watches = 524288
 
 `/etc/agentrt/` 是 agentrt-linux 12 daemons 的系统级配置根目录，与 agentrt 用户态运行时同源（IRON-9 v3 同源且部分代码共享）。目录包含：`agentrt.conf`（全局配置，日志等级/IPC 端口/运行模式）、12 个 daemon 配置（`macro-superv.conf`/`logger.conf`/`config.conf`/`gateway.conf`/`sched.conf`/`vfs.conf`/`net.conf`/`mem.conf`/`cogn.conf`/`sec.conf`/`audit.conf`/`dev.conf`）、`airy_ipc.conf`（AgentsIPC 协议参数）、`microcorert.conf`（MicroCoreRT 用户态适配参数）、`keys/`（密钥目录，`0600`）与 `conf.d/`（drop-in 覆盖目录）。
 
-**OS-OPS-126**：每个 daemon 必须有独立的 `<daemon>.conf`，禁止共用配置文件；配置文件名与二进制名一一对应（`*_d` 守护进程取基础名，`macro_superv`/`logger_daemon`/`config_daemon` 取去 `_daemon` 后缀的短名，K-1 内核极简的延伸：配置职责单一）。
+**OS-OPS-126**：每个 daemon 必须有独立的 `<daemon>.conf`，禁止共用配置文件；配置文件名与二进制名一一对应（`*_d` 守护进程取基础名，`macro_d`/`logger_d`/`config_d` 取去 `_daemon` 后缀的短名，K-1 内核极简的延伸：配置职责单一）。
 
 **OS-OPS-127**：`/etc/agentrt/agentrt.conf` 是全局配置，仅包含所有 daemon 共享的参数（日志等级、IPC 基础端口、运行模式）；daemon 专属参数必须放在各自的 `<daemon>.conf` 中。
 
@@ -232,9 +232,9 @@ Environment=AIRY_COGN_CACHE_SIZE=8192
 
 | daemon | 配置文件 | 关键参数 | 关联契约 |
 |--------|---------|---------|---------|
-| `macro_superv` | `macro-superv.conf` | registry, ttl, max_agents | A-ULS |
-| `logger_daemon` | `logger.conf` | trace_buffer, sample_rate | A-ULP |
-| `config_daemon` | `config.conf` | plugin_dirs, sandbox | A-UCS |
+| `macro_d` | `macro-superv.conf` | registry, ttl, max_agents | A-ULS |
+| `logger_d` | `logger.conf` | trace_buffer, sample_rate | A-ULP |
+| `config_d` | `config.conf` | plugin_dirs, sandbox | A-UCS |
 | `gateway_d` | `gateway.conf` | listen, port, workers | AgentsIPC |
 | `sched_d` | `sched.conf` | policy, quantum, preempt | MicroCoreRT（调度类） |
 | `vfs_d` | `vfs.conf` | hook_dirs, exec_policy | capability |
@@ -1007,7 +1007,7 @@ int config_layer_merge(const struct config_layer *layers,
 #define SYSCTL_NET_SOMAXCONN         "net.core.somaxconn"
 #define SYSCTL_NET_TCP_SYN_BACKLOG   "net.ipv4.tcp_max_syn_backlog"
 
-/* --- 文件系统子系统（logger_daemon 日志 + 记忆卷）--- */
+/* --- 文件系统子系统（logger_d 日志 + 记忆卷）--- */
 #define SYSCTL_FS_FILE_MAX           "fs.file-max"
 #define SYSCTL_FS_INOTIFY_WATCHES    "fs.inotify.max_user_watches"
 

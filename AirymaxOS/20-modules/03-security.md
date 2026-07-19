@@ -513,7 +513,7 @@ int sec_d_compile_badge(uint32_t agent_id, uint16_t perms, uint32_t *out_randtag
 | WAL | 两次 Snapshot 之间，每次 Badge 编译/撤销追加写 WAL 日志条目（含 slot_idx + old_badge + new_badge + epoch） | 实时 |
 | 两阶段恢复 | 阶段 1：加载最近 Snapshot；阶段 2：重放 WAL 日志至 last_sync_lsn | 启动时 < 1s |
 | Epoch 自增 | 恢复完成后强制 `atomic_inc(&airy_cap_global_epoch)`，使所有飞行中的旧 Badge 失效 | O(1) |
-| systemd watchdog | `macro_superv` 通过 systemd watchdog 监控 sec_d 心跳（默认 30s），超时强制重启 | 30s 触发 |
+| systemd watchdog | `macro_d` 通过 systemd watchdog 监控 sec_d 心跳（默认 30s），超时强制重启 | 30s 触发 |
 
 > **崩溃一致性**：WAL 追加采用 `write()` + `fdatasync()` 两步，崩溃后通过 WAL last_sync_lsn 校验保证不重放已提交条目（幂等）。Snapshot 文件采用原子替换（`rename()`）保证一致性。
 
@@ -601,7 +601,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | `sqe->flags` 无保留位被置位 | 保留位置位 → 触发 `AIRY_FAULT_URING_MALFORMED = 0x100A` |
 | CRC32 校验 `sqe->cmd` 完整性 | 不匹配 → 触发 `AIRY_FAULT_URING_MALFORMED = 0x100A` |
 
-**故障处理**：检测到 malformed SQE 时，调用 `airy_security_fault(agent_id, AIRY_FAULT_URING_MALFORMED, cmd)` 通知 Micro-Supervisor（`macro_superv`）+ 冻结对应 io_uring Ring，由 Micro-Supervisor 裁决重启 Ring 或终止 Agent。详见 [08-sc-error-contract.md §3.2](../30-interfaces/08-sc-error-contract.md)。
+**故障处理**：检测到 malformed SQE 时，调用 `airy_security_fault(agent_id, AIRY_FAULT_URING_MALFORMED, cmd)` 通知 Micro-Supervisor（`macro_d`）+ 冻结对应 io_uring Ring，由 Micro-Supervisor 裁决重启 Ring 或终止 Agent。详见 [08-sc-error-contract.md §3.2](../30-interfaces/08-sc-error-contract.md)。
 
 **完成接口**：所有 io_uring `IORING_OP_URING_CMD` 路径必须使用 4 参数 `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 完成（OLK 6.6 标准），不允许使用旧版 2 参数变体。
 
@@ -636,7 +636,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | `AIRY_FAULT_URING_MALFORMED` | 0x100A | malformed SQE/CQE 输入（opcode/flags/payload_len 越界） | `airy_security_fault()` 通知 Micro-Supervisor + 冻结 Ring |
 | `AIRY_FAULT_AUDIT_TAMPER` | 0x100B | 审计哈希链断裂（`airy_audit_chain_verify` 检测到 `prev_hash` 不匹配） | 紧急 CRITICAL 告警 + 停止审计写入 + 安全团队介入 |
 
-> **Error vs Fault**：Error（负数 errno）由调用方处理；Fault（正数 0x1000+）触发 `airy_security_fault()` 上报 Micro-Supervisor，由 `macro_superv` 裁决。两者码空间严格不重叠。详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
+> **Error vs Fault**：Error（负数 errno）由调用方处理；Fault（正数 0x1000+）触发 `airy_security_fault()` 上报 Micro-Supervisor，由 `macro_d` 裁决。两者码空间严格不重叠。详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
 
 ### 4.13 ADR 引用（v1.1 Capability Folding 决策溯源）
 
@@ -832,7 +832,7 @@ sequenceDiagram
 
 ### 9.2 与 12 daemon 协作
 
-AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_superv` / `config_daemon`）与安全子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
+AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_d` / `config_d`）与安全子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
 
 | Daemon | 职责 | 与安全子仓的协作 | 安全机制 |
 | --- | --- | --- | --- |
@@ -841,13 +841,13 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_sup
 | `mem_d` | 记忆卷载管理（MemoryRovol L1-L4） | MemoryRovol 分层访问受 Badge 权限控制（详见 [04-memory.md §4.x](04-memory.md)） | Badge perms + TEE 加密 |
 | `gateway_d` | 跨节点 IPC（分布式 Agent 通信） | 跨节点 Badge 一致性 gossip 同步（100ms Epoch 收敛） | gossip Epoch 同步 |
 | `logger_d` | 统一日志（128B 记录） | 接收安全审计日志（`AIRY_LOG_MAGIC=0x414C4F47`） | 日志完整性 + magic 区分 |
-| `macro_superv` | 宏观监管（系统级看门狗 + daemon 重启） | 监控 sec_d 心跳（systemd watchdog 30s），处置 `AIRY_FAULT_*` 故障 | systemd watchdog + 故障裁决 |
+| `macro_d` | 宏观监管（系统级看门狗 + daemon 重启） | 监控 sec_d 心跳（systemd watchdog 30s），处置 `AIRY_FAULT_*` 故障 | systemd watchdog + 故障裁决 |
 | `audit_d` | 审计哈希链 | 检测 `AIRY_FAULT_AUDIT_TAMPER=0x100B`（哈希链断裂），告警安全团队 | 审计哈希链 + 紧急告警 |
 | `sched_d` | sched_tac 策略守护 | 调度策略变更需 sec_d 校验调用方 Badge | capability perms 校验 |
 | `dev_d` | 设备驱动用户态化 | 设备 DMA 访问受 capability 控制（`AIRY_FAULT_DMA` 检测） | capability + VFIO 隔离 |
 | `net_d` | 网络栈用户态化 | 网络包过滤 + 零信任网络策略 | Landlock + LSM 钩子 |
 | `vfs_d` | VFS 用户态化 | 文件访问受 `security_file_open()` 钩子 + Landlock 沙箱控制 | LSM hook + Landlock |
-| `config_daemon` | 统一配置管理 | 安全策略热更新（YAML/JSON）经 sec_d 校验后下发 | 策略签名 + capability 校验 |
+| `config_d` | 统一配置管理 | 安全策略热更新（YAML/JSON）经 sec_d 校验后下发 | 策略签名 + capability 校验 |
 
 > **sec_d 是 12 daemon 的安全核心**：所有 daemon 的 capability 颁发、Badge 编译、LSM 策略加载均经 `sec_d` 通过 `airy_sys_call`（编号 0）串行化处理。其他 11 daemon 通过 io_uring 数据面 / char dev / eBPF ringbuf / sysfs 等通道与 sec_d 间接协作。
 

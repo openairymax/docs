@@ -31,7 +31,7 @@ agentrt-linux 采用三大设计支柱:
 **参考来源**:
 - seL4: 形式化验证的微内核，~10-12 kSLOC，capability-based + MCS（Mixed Criticality System）+ 消息传递 IPC（Endpoint/Notification）
 
-### 1.2 agentrt-linux 工程基线（Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-013））
+### 1.2 agentrt-linux 工程基线（Linux 6.6 内核基线（1.x.x）/ Linux 7.1（2.x.x，ADR-016））
 
 **核心原则**: 采用 agentrt-linux 自身的模块设计、技术规格、标准和规范
 
@@ -211,14 +211,14 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 |---|---|---|
 | 认知循环系统 | Linux 6.6 内核基线（SP3 增强） | cognition |
 | 超节点 OS | Linux 6.6 内核基线（SP3 增强） | cloudnative |
-| 超节点沙箱 | Linux 7.1（2.x.x 基线，ADR-013） | cognition |
+| 超节点沙箱 | Linux 7.1（2.x.x 基线，ADR-016） | cognition |
 | Token 能效优化 | agentrt-linux Token 能效框架 2026 | cognition |
-| 具身智能 Claw | Linux 7.1（2.x.x 基线，ADR-013） | cognition |
+| 具身智能 Claw | Linux 7.1（2.x.x 基线，ADR-016） | cognition |
 | DevStation | agentrt-linux 工程基线 | system |
 
 ## 5. 架构决策记录
 
-> 以下为 14 个核心 ADR 的摘要，权威定义见 [05-adrs.md](05-adrs.md)。
+> 以下为 16 个核心 ADR 的摘要，权威定义见 [05-adrs.md](05-adrs.md)。
 
 | 决策 | 内容 | 日期 |
 |---|---|---|
@@ -234,8 +234,10 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 | ADR-010 | 与 agentrt 同源且部分代码共享（IRON-9 v3，无适配层天然契合） | 2026-07-06 |
 | ADR-011 | 7 层架构模型范围界定与 agentrt 用户态关系论证 | 2026-07-09 |
 | ADR-012 | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发） | 2026-07-09 |
-| ADR-013 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1） | 2026-07-09 |
+| ADR-013 | 调度框架决策（sched_tac，非 sched_ext） | 2026-07-19 |
 | ADR-014 | 微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3） | 2026-07-09 |
+| ADR-015 | （已撤销——定位调整方向错误） | Deprecated |
+| ADR-016 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1） | 2026-07-09 |
 
 ---
 
@@ -243,24 +245,29 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 > **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v3 四层共享模型——[SC] 共享契约层完全共享代码（10 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
 
-### 6.1 三层模型概览
+### 6.1 四层模型概览
 
 | 层次 | 共享程度 | 本文档涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/uapi/linux/airymax/{syscalls,ipc,sched,security_types,memory_types,cognition_types}.h`，物理宿主在 kernel 子仓 `kernel/include/uapi/linux/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
+| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/uapi/linux/airymax/{error,log_types,ipc,sched,memory_types,security_types,cognition_types,syscalls,uapi_compat,lsm_types}.h`，物理宿主在 kernel 子仓 `kernel/include/uapi/linux/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_tac/io_uring） |
+| **[DSL] 降级生存层** | [SC] 损坏时最小可运行子集 | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
 
 ### 6.2 [SC] 共享契约层——10 个头文件在本架构层的角色
 
 | 头文件 | 在系统架构中的角色 | 消费方 |
 |--------|-------------------|--------|
-| `sched.h` | 任务描述符 magic（0x41475453 'AGTS'）+ 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF 调度类 + vtime 衰减公式 + 优先级范围 0-139 | kernel / cognition |
+| `error.h` | `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块 | 全部子仓 |
+| `log_types.h` | `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射 | kernel / services |
 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码 | kernel / services |
-| `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.1 Capability Folding 后）| kernel / cognition |
-| `security_types.h` | POSIX capability 41 ID 枚举 + LSM 钩子 252 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
+| `sched.h` | 任务描述符 magic（0x41475453 'AGTS'）+ 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF 调度类 + vtime 衰减公式 + 优先级范围 0-139 | kernel / cognition |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | kernel / memory |
+| `security_types.h` | POSIX capability 41 ID 枚举 + LSM 钩子 252 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
 | `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
+| `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.1 Capability Folding 后）| kernel / cognition |
+| `uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 跨端 |
+| `lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | kernel / security |
 
 ### 6.3 [SS] 语义同源层——agentrt 7 大模块 ↔ agentrt-linux 8 子仓映射
 
@@ -278,7 +285,7 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 | 独立项 | agentrt 实现 | agentrt-linux 实现 | 独立原因 |
 |--------|-------------|-------------------|---------|
-| 调度器核心 | 用户态 priority queue + 协程 | sched_tac 用户态调度策略 | 跨平台约束（macOS/Windows 无 sched_ext） |
+| 调度器核心 | 用户态 priority queue + 协程 | sched_tac 用户态调度策略 | 跨平台约束（macOS/Windows 无 Linux 6.6 原生调度类组合） |
 | IPC 传输层 | 用户态 POSIX MQ + mmap | 内核 io_uring + SQPOLL | 内核态性能优势 |
 | 安全执行 | 用户态 Landlock + seccomp | 内核 LSM + Landlock + capability | 内核态安全纵深 |
 | 内存后端 | 用户态 malloc/mmap | 内核 slab/buddy/MGLRU | 内核态内存管理 |
@@ -305,8 +312,12 @@ graph TB
         OS_COG[cognition<br/>kthread + Wasm 3.0]
     end
 
-    subgraph "[SC] 共享契约层（6 头文件）"
-        SC[sched.h / ipc.h / syscalls.h<br/>security_types.h / memory_types.h / cognition_types.h]
+    subgraph "[SC] 共享契约层（10 头文件）"
+        SC[error.h / log_types.h / ipc.h / sched.h<br/>memory_types.h / security_types.h / cognition_types.h<br/>syscalls.h / uapi_compat.h / lsm_types.h]
+    end
+
+    subgraph "[DSL] 降级生存层"
+        DSL["#ifdef AIRY_SC_FALLBACK<br/>38 POSIX 错误码 + printk + 最小 128B IPC<br/>+ EEVDF 默认 + POSIX capability + 统一 Panic"]
     end
 
     RT_CORE -.->|"API 同源 [SS]"| OS_KERN
@@ -325,7 +336,10 @@ graph TB
     OS_MEM ==>|"共享代码 [SC]"| SC
     OS_COG ==>|"共享代码 [SC]"| SC
 
+    SC -.->|"损坏时降级"| DSL
+
     style SC fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style DSL fill:#fff8e1,stroke:#f57c00,stroke-width:2px,stroke-dasharray: 5 5
     style RT_CORE fill:#e3f2fd,stroke:#1565c0
     style OS_KERN fill:#fff3e0,stroke:#e65100
 ```

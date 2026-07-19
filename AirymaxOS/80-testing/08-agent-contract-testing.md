@@ -51,7 +51,7 @@ flowchart TB
         B2["Token 预算契约<br/>消耗 ≤ 预算 / 溢出处理"]
         B3["记忆配额契约<br/>L1-L4 层级访问权限"]
         B4["认知循环契约<br/>CoreLoopThree 三阶段时序"]
-        B5["daemon 交互契约<br/>cogn_d / mem_d / macro_superv / audit_d"]
+        B5["daemon 交互契约<br/>cogn_d / mem_d / macro_d / audit_d"]
     end
     A --> B1
     A --> B2
@@ -656,7 +656,7 @@ agentrt-linux 的 12 daemon 中，`cogn_d` 与 `mem_d` 与 Agent 行为紧密耦
 |--------|------|---------------|
 | `cogn_d` | Agent 认知循环守护 | 契约 14：cogn_d 必须在 Agent READY 时启动 CoreLoopThree；在 Agent STOPPING 时停止循环 |
 | `mem_d` | Agent 记忆管理守护 | 契约 15：mem_d 必须在 Agent DEAD 时回收所有记忆（L1-L4）；回收完成前 Agent 资源不释放 |
-| `macro_superv` | 宏观监督守护 | 契约 16：macro_superv 必须在 Agent STOPPING 后 1s 内启动资源回收 |
+| `macro_d` | 宏观监督守护 | 契约 16：macro_d 必须在 Agent STOPPING 后 1s 内启动资源回收 |
 | `audit_d` | 审计守护 | 契约 17：audit_d 必须在 Agent DEAD 后记录完整生命周期日志 |
 
 ### 7.2 daemon 契约 kselftest
@@ -735,20 +735,20 @@ TEST_F(airy_daemon_contract, mem_d_recycles_on_dead) {
     ASSERT_EQ(0, mem_remaining);  /* 全部回收 */
 }
 
-/* 契约 16：macro_superv 必须在 Agent STOPPING 后 1s 内启动回收 */
-TEST_F(airy_daemon_contract, macro_superv_recycles_within_1s) {
+/* 契约 16：macro_d 必须在 Agent STOPPING 后 1s 内启动回收 */
+TEST_F(airy_daemon_contract, macro_d_recycles_within_1s) {
     ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_READY));
     ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_STOPPING));
     
-    /* macro_superv 必须在 1s 内启动回收 */
+    /* macro_d 必须在 1s 内启动回收 */
     usleep(1000000);
-    int recycle_started = airy_daemon_query(airy_daemon_connect("macro_superv"),
+    int recycle_started = airy_daemon_query(airy_daemon_connect("macro_d"),
         AIRY_DAEMON_QUERY_RECYCLE_STARTED, self->agent_fd);
     ASSERT_EQ(1, recycle_started);
 }
 ```
 
-**OS-TEST-096**：daemon 契约测试必须覆盖 cogn_d / mem_d / macro_superv / audit_d 四个 daemon 与 Agent 的交互契约；任一契约违反即视为系统级缺陷。
+**OS-TEST-096**：daemon 契约测试必须覆盖 cogn_d / mem_d / macro_d / audit_d 四个 daemon 与 Agent 的交互契约；任一契约违反即视为系统级缺陷。
 
 ---
 
@@ -861,7 +861,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
     {"id": 13, "name": "cogn_phase_latency_sla",           "test": "airy_contract_cogn_phase_latency_sla"},
     {"id": 14, "name": "daemon_cogn_d_loop_lifecycle",     "test": "cogn_d_starts_loop_when_ready"},
     {"id": 15, "name": "daemon_mem_d_recycle_on_dead",     "test": "mem_d_recycles_on_dead"},
-    {"id": 16, "name": "daemon_macro_superv_recycle_1s",   "test": "macro_superv_recycles_within_1s"},
+    {"id": 16, "name": "daemon_macro_d_recycle_1s",   "test": "macro_d_recycles_within_1s"},
     {"id": 17, "name": "daemon_audit_d_lifecycle_log",     "test": "audit_d_logs_lifecycle"}
   ]
 }
@@ -950,18 +950,18 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 ## 15. 多 Daemon 灾难恢复测试（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 §1-§14 覆盖单 Agent 行为契约与 cogn_d / mem_d / macro_superv / audit_d 单 daemon 交互契约，但未覆盖 v1.1 引入的 12 daemon 协同架构在多 daemon 同时故障下的灾难恢复场景。本章节定义多 daemon 灾难恢复测试矩阵（S1-S7）、故障注入机制、恢复 SLO 验证与数据一致性验证，作为 §1-§14 的增量补强，不替换现有任何内容。
+> **补强背景**：80-testing/ 现有 §1-§14 覆盖单 Agent 行为契约与 cogn_d / mem_d / macro_d / audit_d 单 daemon 交互契约，但未覆盖 v1.1 引入的 12 daemon 协同架构在多 daemon 同时故障下的灾难恢复场景。本章节定义多 daemon 灾难恢复测试矩阵（S1-S7）、故障注入机制、恢复 SLO 验证与数据一致性验证，作为 §1-§14 的增量补强，不替换现有任何内容。
 
 ### 15.1 测试场景矩阵（S1-S7）
 
-v1.1 的 12 daemon 包括：`sec_d`、`cogn_d`、`mem_d`、`gateway_d`、`logger_d`、`macro_superv`、`audit_d`、`sched_d` 等。本测试矩阵覆盖 3 类单故障 + 3 类双故障 + 1 类全故障：
+v1.1 的 12 daemon 包括：`sec_d`、`cogn_d`、`mem_d`、`gateway_d`、`logger_d`、`macro_d`、`audit_d`、`sched_d` 等。本测试矩阵覆盖 3 类单故障 + 3 类双故障 + 1 类全故障：
 
 | 场景 | 故障 daemon | 验证重点 | 恢复 SLO |
 |------|-----------|---------|---------|
 | **S1** | `sec_d` 单独故障 | Badge 校验降级至 slowpath LSM 钩子；agent_caps[] 状态不丢失 | ≤ 5s 重启恢复 |
 | **S2** | `cogn_d` 单独故障 | 运行中 Agent 的 CoreLoopThree 暂停；Agent 状态保持 RUNNING 但进入"认知暂停" | ≤ 3s 重启恢复 |
 | **S3** | `mem_d` 单独故障 | L1-L4 记忆访问阻塞；Agent 进入 BLOCKED 状态 | ≤ 5s 重启恢复 |
-| **S4** | `sec_d` + `cogn_d` 双故障 | 安全校验 + 认知循环同时不可用；macro_superv 必须冻结所有 Agent | ≤ 10s 联合恢复 |
+| **S4** | `sec_d` + `cogn_d` 双故障 | 安全校验 + 认知循环同时不可用；macro_d 必须冻结所有 Agent | ≤ 10s 联合恢复 |
 | **S5** | `mem_d` + `logger_d` 双故障 | 记忆 + 日志同时不可用；audit_d 必须接管日志缓冲 | ≤ 10s 联合恢复 |
 | **S6** | `gateway_d` + `audit_d` 双故障 | 跨节点 IPC + 审计同时不可用；sec_d 必须阻断跨节点 Badge 校验 | ≤ 15s 联合恢复 |
 | **S7** | 全部 12 daemon 故障 | 内核 fastpath 必须独立运行；agent_caps[] 状态由内核持久化 | ≤ 30s 全量恢复 |
@@ -1075,7 +1075,7 @@ TEST_F(airy_disaster_recovery, S7_full_recovery_within_30s) {
     system("airy_disaster_inject.sh S7");
     /* 验证全部 12 daemon 恢复 */
     const char *daemons[] = {"sec_d","cogn_d","mem_d","gateway_d","logger_d",
-                              "macro_superv","audit_d","sched_d"};
+                              "macro_d","audit_d","sched_d"};
     for (int i = 0; i < 8; i++) {
         int fd = airy_daemon_connect(daemons[i]);
         while (airy_daemon_query(fd, AIRY_DAEMON_QUERY_ALIVE, 0) != 1) {
@@ -1096,7 +1096,7 @@ TEST_F(airy_disaster_recovery, S7_full_recovery_within_30s) {
 |--------|---------|---------|
 | `agent_caps[]` 状态完整 | 遍历 1024 个 cap_entry，校验 `epoch` 单调递增、`random_tag` 非零 | 任一异常即标记测试失败 |
 | Epoch 连续性 | `agent_caps[i].epoch` 与 `airy_global_epoch` 一致 | 不一致即触发 sec_d 重初始化 |
-| Agent 状态机一致性 | 全部 Agent 状态 ∈ 8 态合法枚举；无"僵尸"状态 | 异常 Agent 由 macro_superv 强制转 STOPPING |
+| Agent 状态机一致性 | 全部 Agent 状态 ∈ 8 态合法枚举；无"僵尸"状态 | 异常 Agent 由 macro_d 强制转 STOPPING |
 | 审计哈希链完整 | audit_d 重启后验证审计日志哈希链无断裂 | 断裂即标记 audit_d 恢复失败 |
 | Token 账本平衡 | `sum(agent_tokens) == global_token_pool` | 不平衡即触发 sec_d 重新对账 |
 | L1-L4 配额一致 | `sum(agent_L1_usage) <= L1_total_quota`（L2/L3/L4 同理） | 超额即触发 mem_d 配额回收 |

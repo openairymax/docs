@@ -21,7 +21,7 @@ Pull Request 流程（03 卷）定义 PR 的创建、合并、关闭流程，本
 
 ### 1.2 适用范围
 
-本文档适用于 agentrt-linux 全部 8 子仓以及 12 daemon（macro_superv / logger_daemon / config_daemon / gateway_d / sched_d / vfs_d / net_d / mem_d / cogn_d / sec_d / audit_d / dev_d）。涉及 [SC] 头文件的审查必须额外满足第 4 节的强制要求。
+本文档适用于 agentrt-linux 全部 8 子仓以及 12 daemon（macro_d / logger_d / config_d / gateway_d / sched_d / vfs_d / net_d / mem_d / cogn_d / sec_d / audit_d / dev_d）。涉及 [SC] 头文件的审查必须额外满足第 4 节的强制要求。
 
 ### 1.3 关键术语
 
@@ -271,9 +271,9 @@ Agent 代码（cognition 子仓）必须通过 Agent 契约一致性校验。
 
 | daemon | 审查重点 | 必审维护者 |
 |--------|---------|-----------|
-| macro_superv | 监管逻辑、崩溃恢复 | system 子系统 + 总维护者 |
-| logger_daemon | 128B 记录格式、ring buffer | memory 子系统 |
-| config_daemon | 配置加载、A-UCS 一致性 | system 子系统 |
+| macro_d | 监管逻辑、崩溃恢复 | system 子系统 + 总维护者 |
+| logger_d | 128B 记录格式、ring buffer | memory 子系统 |
+| config_d | 配置加载、A-UCS 一致性 | system 子系统 |
 | gateway_d | 网络协议、认证 | net 子系统 + 安全子系统 |
 | sched_d | sched_tac 实现 | kernel 子系统 + 总维护者 |
 | vfs_d | 文件系统、权限 | kernel 子系统 |
@@ -296,7 +296,7 @@ Agent 代码（cognition 子仓）必须通过 Agent 契约一致性校验。
 | 6 | 日志 | 使用 A-ULP 统一日志 |
 | 7 | 配置 | 使用 A-UCS 统一配置 |
 | 8 | IPC | 使用 A-IPC（IORING_OP_URING_CMD） |
-| 9 | 监管 | 接入 A-ULS（macro_superv 监管） |
+| 9 | 监管 | 接入 A-ULS（macro_d 监管） |
 | 10 | 测试 | 行覆盖 ≥ 80%，分支覆盖 ≥ 70% |
 
 ---

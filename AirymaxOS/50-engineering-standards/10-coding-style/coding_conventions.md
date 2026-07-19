@@ -2382,7 +2382,7 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 - 每个 Cupolas 是一个独立的服务进程，通过 IPC Bus 与 CoreKern 通信
 - Cupolas 之间相互隔离，通过消息传递进行协作
-- 典型的 Cupolas 包括：cogn_d、dev_d、mem_d、logger_daemon 等
+- 典型的 Cupolas 包括：cogn_d、dev_d、mem_d、logger_d 等
 - 目录名为 `cupolas/`（小写），代码前缀为 `cupolas_`
 
 #### 1.7 TaskFlow
@@ -2451,7 +2451,7 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 | `dev_d` | Device Daemon | 工具调用管理，工具注册表，执行沙箱，结果校验 |
 | `sched_d` | Scheduler Daemon | 任务调度引擎，优先级队列，资源分配，负载均衡 |
 | `mem_d` | Memory Daemon | 信息聚合服务，知识检索，上下文注入，数据转换 |
-| `logger_daemon` | Logger Daemon | 可观测性服务，Metrics 采集，Tracing，健康检查 |
+| `logger_d` | Logger Daemon | 可观测性服务，Metrics 采集，Tracing，健康检查 |
 | `audit_d` | Audit Daemon | 监控告警服务，阈值检测，告警路由，自愈策略 |
 | `gateway_d` | Gateway Daemon | 能力市场，计费计量，配额管理 |
 | `net_d` | Network Daemon | 通道管理服务，长连接管理，流式通道，会话保持 |

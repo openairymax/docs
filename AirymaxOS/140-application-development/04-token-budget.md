@@ -213,7 +213,7 @@ struct airy_token_usage {
     uint8_t  model;          /* LLM 模型 ID */
     uint16_t reserved;
     uint64_t latency_ns;
-} __attribute__((packed));
+};
 ```
 
 ---

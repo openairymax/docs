@@ -34,7 +34,7 @@ perf 是 Linux 6.6 内核基线提供的官方性能剖析工具集，由 `tools
 
 1. **硬件级精度**：perf 直接驱动 PMU 硬件计数器，提供 cycles/instructions/cache-misses/branch-misses 等微架构级指标，是sched_tac 调度延迟微秒级归因的唯一可靠手段。
 2. **与 ftrace/eBPF 共生**：perf 可消费 tracepoint 事件、采样 BPF 程序输出，与可观测性 L1/L2 层共享数据通路，不引入新的基础设施。
-3. **零运行时开销（采样模式）**：在 `perf record -F 99` 采样模式下，perf 开销 < 1% CPU，可在生产环境长期开启，符合 A-ULS 模块 macro_superv 的"可观测性不破坏系统稳态"原则。
+3. **零运行时开销（采样模式）**：在 `perf record -F 99` 采样模式下，perf 开销 < 1% CPU，可在生产环境长期开启，符合 A-ULS 模块 macro_d 的"可观测性不破坏系统稳态"原则。
 
 **OS-OBS-031: perf 是 agentrt-linux 可观测性 L3 层的强制基线，性能剖析必须以 perf 为统一前端，不得引入 vtune、perfctr 等第三方工具。**
 
@@ -104,7 +104,7 @@ perf stat -e sched:sched_switch,sched:sched_stat_runtime,airy:airy_sched_class_s
 
 ### 2.3 perf stat 输出格式
 
-agentrt-linux 定义了标准 CSV 输出格式，供 A-ULS 模块 macro_superv 自动归集：
+agentrt-linux 定义了标准 CSV 输出格式，供 A-ULS 模块 macro_d 自动归集：
 
 ```bash
 perf stat -x, -e cycles,instructions,cache-misses -- \
@@ -113,7 +113,7 @@ perf stat -x, -e cycles,instructions,cache-misses -- \
 
 CSV 字段顺序：`value,unit,event,runtime,percent,counted`
 
-**OS-OBS-032: 性能基准测试必须使用 `perf stat -x,` CSV 格式输出，便于 macro_superv 自动解析；不得使用人类可读格式作为基准数据源。**
+**OS-OBS-032: 性能基准测试必须使用 `perf stat -x,` CSV 格式输出，便于 macro_d 自动解析；不得使用人类可读格式作为基准数据源。**
 
 **OS-STD-022: 性能基准测试运行期间，必须关闭 IRQ affinity 平衡（`echo 0 > /proc/sys/kernel/irq_balancing`），避免 CPU 迁移污染数据。**
 
@@ -132,7 +132,7 @@ perf record -F 99 -g --call-graph dwarf -a -- sleep 30
 # Agent 决策路径专用采样
 perf record -F 99 -g --call-graph dwarf \
     -e cycles,instructions,sched:sched_switch,airy:airy_cognition_enter \
-    -p $(pgrep -f macro_superv) -- sleep 60
+    -p $(pgrep -f macro_d) -- sleep 60
 ```
 
 ### 3.2 perf report 分析
@@ -252,7 +252,7 @@ perf sched record -a -- sleep 30
 perf sched latency -p
 # 输出：
 #   Task                  |   Runtime ms  | Switches | Average delay ms | Maximum delay ms |
-#   agent_42:macro_superv |      1234.56  |     5678 |           0.0234 |           0.1234 |
+#   agent_42:macro_d |      1234.56  |     5678 |           0.0234 |           0.1234 |
 #   agent_43:cogn_d       |       987.65  |     4321 |           0.0456 |           0.2345 |
 ```
 
@@ -266,7 +266,7 @@ agentrt-linux sched_tac 调度延迟基线（10000 次采样）：
 | SCHED_FIFO | 45μs | 32μs | 125μs | 287μs | 567μs |
 | EEVDF | 234μs | 178μs | 678μs | 1.23ms | 4.56ms |
 
-**OS-OBS-035: SCHED_DEADLINE Agent 的 P99 调度延迟必须 ≤ 100μs；超限视为sched_tac 失效，需触发 macro_superv 告警。**
+**OS-OBS-035: SCHED_DEADLINE Agent 的 P99 调度延迟必须 ≤ 100μs；超限视为sched_tac 失效，需触发 macro_d 告警。**
 
 ### 5.4 调度类切换开销
 
@@ -438,18 +438,18 @@ airy-perf-bench --suite c-prime-vs-eevdf --duration 300 \
 | Unify 模块 | 关系 | 在 perf 分析中的体现 |
 |-----------|------|---------------------|
 | **A-UEF** | 辅助 | A-UEF 的 `AIRY_FAULT_*` 码触发频率通过 perf stat 统计 |
-| **A-ULP** | **核心** | perf record 采样 A-ULP Ring Buffer 写入路径，定位 logger_daemon 消费瓶颈 |
+| **A-ULP** | **核心** | perf record 采样 A-ULP Ring Buffer 写入路径，定位 logger_d 消费瓶颈 |
 | **A-UCS** | 辅助 | A-UCS 热重载事件通过 perf stat 计数 |
-| **A-ULS** | **核心** | perf sched 测量sched_tac 调度延迟，验证 macro_superv 监管有效性 |
+| **A-ULS** | **核心** | perf sched 测量sched_tac 调度延迟，验证 macro_d 监管有效性 |
 | **A-IPC** | 辅助 | perf record 分析 IPC fastpath 端到端延迟 |
 
 ### 9.2 与 12 daemon 的性能分析映射
 
 | Daemon | 主要 perf 指标 | 基线 |
 |--------|---------------|------|
-| macro_superv | 调度延迟、CPU 占用 | P99 ≤ 100μs，CPU ≤ 5% |
-| logger_daemon | 日志吞吐、消费延迟 | ≥ 1M rec/s，P99 ≤ 10μs |
-| config_daemon | 热重载延迟 | ≤ 1ms |
+| macro_d | 调度延迟、CPU 占用 | P99 ≤ 100μs，CPU ≤ 5% |
+| logger_d | 日志吞吐、消费延迟 | ≥ 1M rec/s，P99 ≤ 10μs |
+| config_d | 热重载延迟 | ≤ 1ms |
 | gateway_d | IPC 吞吐、延迟 | ≥ 8M msg/s，P99 ≤ 5μs |
 | sched_d | 调度类切换开销 | ≤ 3000 cycles |
 | vfs_d | 文件 IO 延迟 | P99 ≤ 100μs |

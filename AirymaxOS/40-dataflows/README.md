@@ -18,7 +18,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 3. **IPC 消息流（IPC Flow，A-IPC）**：进程 A → io_uring（IORING_OP_URING_CMD）零拷贝 → 进程 B，128B 定长消息头同源 agentrt AgentsIPC，落地于 `kernel`（同源 agentrt atoms/corekern IPC）。
 4. **调度数据流（Scheduling Flow，A-ULS）**：任务提交 → sched_tac 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF）→ 执行，实现可插拔调度策略，落地于 `kernel`。
 5. **日志 Ring Buffer 数据流（Ring Buffer Logging，A-ULP）**：内核 trace_printk/printk → Ring Buffer → 用户态消费，结构化 JSON 日志 + ANSI 颜色，落地于 `kernel` + `services`。
-6. **Logger Daemon 数据流（Logger Daemon Design，A-ULP）**：Logger Daemon 消费 Ring Buffer → 结构化日志输出 → 多后端持久化，落地于 `services`（同源 agentrt daemons/logger_daemon）。
+6. **Logger Daemon 数据流（Logger Daemon Design，A-ULP）**：Logger Daemon 消费 Ring Buffer → 结构化日志输出 → 多后端持久化，落地于 `services`（同源 agentrt daemons/logger_d）。
 7. **Panic 生存数据流（Panic Survival Path，A-ULP + A-ULS）**：内核 Panic → printk-bridge 落盘日志 → Logger Daemon 持久化 → 重启恢复，落地于 `kernel` + `services`。
 
 7 大数据流通过 `trace_id` 贯穿 OpenTelemetry 全链路追踪，满足 NFR-O-002 Tracing 覆盖率与 NFR-O-001 Metrics 完整性。
@@ -160,8 +160,8 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 | 记忆卷载 | memoryrovol + heapstore | 四层递进 + 堆存储 | CXL 池化 + MGLRU 多代 LRU（Linux 6.6）+ alloc_pages + mmap | [SC] memory_types.h + [SS] 四层卷载 + [IND] 内核态 |
 | IPC 消息 | atoms/corekern IPC | 128B 消息头 + 零拷贝 | io_uring（IORING_OP_URING_CMD）原生 + sched_tac 集成 | [SC] ipc.h + [SS] 128B 消息头 + [IND] io_uring |
 | 调度 | atoms/corekern Task | 微核心调度 | sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类组合） | [SC] sched.h + [SS] 调度语义 + [IND] 内核态 |
-| 日志 Ring Buffer | daemons/logger_daemon | 日志消费 | 内核 Ring Buffer + trace_printk + alloc_pages | [SC] log_types.h + [SS] 日志语义 + [IND] 内核态 |
-| Logger Daemon | daemons/logger_daemon | 日志守护进程 | 多后端持久化 + Panic 生存落盘 | [SS] 守护进程语义 + [IND] systemd 集成 |
+| 日志 Ring Buffer | daemons/logger_d | 日志消费 | 内核 Ring Buffer + trace_printk + alloc_pages | [SC] log_types.h + [SS] 日志语义 + [IND] 内核态 |
+| Logger Daemon | daemons/logger_d | 日志守护进程 | 多后端持久化 + Panic 生存落盘 | [SS] 守护进程语义 + [IND] systemd 集成 |
 | Panic 生存 | 无（新增） | — | printk-bridge + 落盘 + 恢复 | [IND] 独立实现 |
 
 **同源红利**：

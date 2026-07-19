@@ -685,8 +685,8 @@ static void test_ipc_hdr_serialize(void)
 	/* 两端断言：序列化后字节序一致 */
 	assert(sizeof(hdr) == AIRY_IPC_HDR_SIZE);	/* 128 */
 	assert(hdr.magic == 0x41524531u);
-	/* offset 44 处 capability_badge 字段存在且对齐 */
-	assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 44);
+	/* offset 40 处 capability_badge 字段存在且对齐 */
+	assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 40);
 	assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52);
 }
 ```

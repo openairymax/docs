@@ -3256,7 +3256,7 @@ struct airy_ipc_msg_hdr {
 	__u64	dst_task;		/* offset 32, 8 bytes */
 	__u32	payload_len;		/* offset 40, 4 bytes */
 	__u8	reserved[84];		/* offset 44, 84 bytes */
-} __attribute__((packed));
+} __attribute__((aligned(64)));
 
 #endif /* _AIRY_IPC_H */
 ```

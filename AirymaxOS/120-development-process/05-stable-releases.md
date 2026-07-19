@@ -295,9 +295,9 @@ RC 测试由 QA 团队执行，包括：
 | # | RPM 包名 | 内容 | 依赖 |
 |---|---------|------|------|
 | 1 | `agentrt-linux-kernel` | 内核镜像 + 模块 + airy_defconfig | — |
-| 2 | `agentrt-linux-macro-superv` | macro_superv daemon | kernel |
-| 3 | `agentrt-linux-logger` | logger_daemon | kernel |
-| 4 | `agentrt-linux-config` | config_daemon | kernel |
+| 2 | `agentrt-linux-macro-superv` | macro_d daemon | kernel |
+| 3 | `agentrt-linux-logger` | logger_d | kernel |
+| 4 | `agentrt-linux-config` | config_d | kernel |
 | 5 | `agentrt-linux-gateway` | gateway_d | kernel + net |
 | 6 | `agentrt-linux-sched` | sched_d | kernel |
 | 7 | `agentrt-linux-vfs` | vfs_d | kernel |

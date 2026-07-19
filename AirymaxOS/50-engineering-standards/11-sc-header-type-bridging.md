@@ -122,7 +122,7 @@ struct airy_log_record {
     airy_u32  payload_len;
     char      payload[96];
     airy_u64  reserved;
-} __attribute__((packed));
+} __attribute__((aligned(64)));
 
 #endif /* _AIRYM_LOG_TYPES_H */
 ```
@@ -199,10 +199,10 @@ typedef bool      airy_bool;
 
 /* 结构体对齐宏：确保三环境二进制布局一致 */
 #ifdef __KERNEL__
-#define AIRY_PACKED __attribute__((packed))
+#define AIRY_PACKED  /* D-9: 禁用 __attribute__((packed))，改用自然对齐 */
 #define AIRY_ALIGNED(x) __attribute__((aligned(x)))
 #else
-#define AIRY_PACKED __attribute__((packed))
+#define AIRY_PACKED  /* D-9: 禁用 __attribute__((packed))，改用自然对齐 */
 #define AIRY_ALIGNED(x) __attribute__((aligned(x)))
 #endif
 

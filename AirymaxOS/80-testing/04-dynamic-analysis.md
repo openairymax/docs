@@ -213,9 +213,9 @@ KFENCE 是 agentrt-linux 生产环境**唯一**启用的动态分析工具（OS-
 [  234.567904] ==================================================================
 ```
 
-**OS-TEST-042**：生产环境 KFENCE 报告必须通过 `airy_dyn_kfence_report` tracepoint 实时上报至 A-ULP 日志系统（对应 Unify Design A-ULP 模块）；logger_daemon 必须将 KFENCE 报告标记为 `LOG_LEVEL_FATAL` 并触发 audit_d 审计。
+**OS-TEST-042**：生产环境 KFENCE 报告必须通过 `airy_dyn_kfence_report` tracepoint 实时上报至 A-ULP 日志系统（对应 Unify Design A-ULP 模块）；logger_d 必须将 KFENCE 报告标记为 `LOG_LEVEL_FATAL` 并触发 audit_d 审计。
 
-**OS-KER-112**：KFENCE 报告触发的 Agent 必须立即进入 STOPPING 状态（Agent 8 态生命周期的第 6 态），由 macro_superv daemon 强制终止；禁止 KFENCE 报告的 Agent 继续运行，防止错误扩散。
+**OS-KER-112**：KFENCE 报告触发的 Agent 必须立即进入 STOPPING 状态（Agent 8 态生命周期的第 6 态），由 macro_d daemon 强制终止；禁止 KFENCE 报告的 Agent 继续运行，防止错误扩散。
 
 ---
 
@@ -298,7 +298,7 @@ KCSAN（Kernel Concurrency SANitizer）通过编译时插桩（`-fsanitize=threa
 
 agentrt-linux 的 Agent 8 态生命周期状态机涉及多线程并发访问：
 
-- `macro_superv` daemon 遍历 Agent 状态表
+- `macro_d` daemon 遍历 Agent 状态表
 - `sched_d` daemon 调度 Agent 执行
 - `audit_d` daemon 审计 Agent 行为
 
@@ -309,7 +309,7 @@ agentrt-linux 的 Agent 8 态生命周期状态机涉及多线程并发访问：
 [  456.789013] BUG: KCSAN: data-race in airy_agent_state_read / airy_agent_state_write
 [  456.789014]
 [  456.789015] airy_agent_state_read+0x34/0x78
-[  456.789016]  macro_superv_supervise+0x120/0x340
+[  456.789016]  macro_d_supervise+0x120/0x340
 [  456.789017]  process_one_work+0x1f0/0x3c0
 [  456.789018]
 [  456.789019] airy_agent_state_write+0x45/0x90

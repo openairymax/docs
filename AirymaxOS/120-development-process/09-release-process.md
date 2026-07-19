@@ -162,9 +162,9 @@ flowchart TD
 | # | RPM 包名 | 内容 | 架构 |
 |---|---------|------|------|
 | 1 | `agentrt-linux-kernel` | 内核镜像 + 模块 + `airy_defconfig` | x86_64 / aarch64 / riscv64 / loongarch64 |
-| 2 | `agentrt-linux-macro-superv` | macro_superv daemon | x86_64 / aarch64 |
-| 3 | `agentrt-linux-logger` | logger_daemon | x86_64 / aarch64 |
-| 4 | `agentrt-linux-config` | config_daemon | x86_64 / aarch64 |
+| 2 | `agentrt-linux-macro-superv` | macro_d daemon | x86_64 / aarch64 |
+| 3 | `agentrt-linux-logger` | logger_d | x86_64 / aarch64 |
+| 4 | `agentrt-linux-config` | config_d | x86_64 / aarch64 |
 | 5 | `agentrt-linux-gateway` | gateway_d | x86_64 / aarch64 |
 | 6 | `agentrt-linux-sched` | sched_d | x86_64 / aarch64 |
 | 7 | `agentrt-linux-vfs` | vfs_d | x86_64 / aarch64 |

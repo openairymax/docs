@@ -188,7 +188,8 @@ struct airy_sched_attr {
     __u64 sched_period;
     __u32 sched_priority;
     __u32 sched_flags;
-} __attribute__((packed));
+};
+/* D-9 修复：移除 __attribute__((packed))，所有 __u64 字段自然 8 字节对齐 */
 
 /* 调度策略选择（sched_tac 三层） */
 #define AIRY_SCHED_DEADLINE   0   /* 实时 Agent：SCHED_DEADLINE */
@@ -201,7 +202,7 @@ struct airy_sched_attr {
 实时 Agent（如认知推理 Agent）使用 `sched_setattr()` 设置 SCHED_DEADLINE 参数：
 
 ```c
-/* services/daemons/macro_superv/sched.c —— 设置 SCHED_DEADLINE */
+/* services/daemons/macro_d/sched.c —— 设置 SCHED_DEADLINE */
 static int airy_agent_set_deadline(pid_t pid, struct airy_sched_attr *attr)
 {
     struct sched_attr sa = {
@@ -222,7 +223,7 @@ static int airy_agent_set_deadline(pid_t pid, struct airy_sched_attr *attr)
 中断/IPC Agent 使用 `sched_setscheduler()` 设置 SCHED_FIFO：
 
 ```c
-/* services/daemons/macro_superv/sched.c —— 设置 SCHED_FIFO */
+/* services/daemons/macro_d/sched.c —— 设置 SCHED_FIFO */
 static int airy_agent_set_fifo(pid_t pid, struct airy_sched_attr *attr)
 {
     struct sched_param sp = {
@@ -296,7 +297,7 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 |------|------|------|
 | [SC] 头文件 | `kernel/include/uapi/linux/airymax/sched.h` | 双端逐字节共享 |
 | 内核实现 | `kernel/superv/airy_sched.c` | 调度策略实现 |
-| 用户态实现 | `services/daemons/macro_superv/sched.c` | 调度参数注入 |
+| 用户态实现 | `services/daemons/macro_d/sched.c` | 调度参数注入 |
 
 ### 6.2 版本号
 

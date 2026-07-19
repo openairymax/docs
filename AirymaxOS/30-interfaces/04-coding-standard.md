@@ -55,13 +55,13 @@ agentrt-linux 全部公共符号使用统一命名空间前缀，与 agentrt 同
 
 ### 2.2 Daemon 二进制命名
 
-守护进程二进制遵循 `<service_name>_d` 命名约定（与 agentrt daemons 同源）；A-ULS/A-ULP/A-UCS 三大基础 daemon 使用语义全名（`macro_superv`/`logger_daemon`/`config_daemon`）。12 daemons 统一归属 `services/daemons/`，由 A-ULS 统一生命周期管理：
+守护进程二进制遵循 `<service_name>_d` 命名约定（与 agentrt daemons 同源）；A-ULS/A-ULP/A-UCS 三大基础 daemon 使用语义全名（`macro_d`/`logger_d`/`config_d`）。12 daemons 统一归属 `services/daemons/`，由 A-ULS 统一生命周期管理：
 
 | Daemon 二进制 | 职责 | 所属子仓 |
 |--------------|------|---------|
-| `macro_superv` | 主监管守护进程（A-ULS） | services/daemons/ |
-| `logger_daemon` | 日志消费守护进程（A-ULP） | services/daemons/ |
-| `config_daemon` | 配置管理守护进程（A-UCS） | services/daemons/ |
+| `macro_d` | 主监管守护进程（A-ULS） | services/daemons/ |
+| `logger_d` | 日志消费守护进程（A-ULP） | services/daemons/ |
+| `config_d` | 配置管理守护进程（A-UCS） | services/daemons/ |
 | `gateway_d` | 网关守护进程 | services/daemons/ |
 | `sched_d` | 调度守护进程 | services/daemons/ |
 | `vfs_d` | VFS 用户态服务守护进程 | services/daemons/ |
@@ -277,7 +277,7 @@ struct airy_ipc_msg_hdr {
     __u16 opcode;         /**< SQE/CQE 操作码 */
     __u16 flags;          /**< 标志位 */
     /* ... 其余字段见 SSoT Layout C */
-} __attribute__((packed));
+} __attribute__((aligned(64)));
 ```
 
 ### 6.3 文件头注释模板

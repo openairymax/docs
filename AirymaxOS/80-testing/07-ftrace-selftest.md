@@ -363,7 +363,7 @@ ftrace 是 agentrt-linux 可观测性体系（90-observability）的基础设施
 
 ### 7.2 ftrace → A-ULP 集成
 
-agentrt-linux 的 `airy_trace_to_ulps` 模块将 ftrace tracepoint 事件转换为 A-ULP 128B 日志记录，供 logger_daemon 统一收集：
+agentrt-linux 的 `airy_trace_to_ulps` 模块将 ftrace tracepoint 事件转换为 A-ULP 128B 日志记录，供 logger_d 统一收集：
 
 ```c
 /* kernel/airymaxos/trace/airy_trace_to_ulps.c */

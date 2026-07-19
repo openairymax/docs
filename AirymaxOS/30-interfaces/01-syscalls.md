@@ -9,7 +9,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 44-51 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较，详见 [07-ipc-fastpath.md §3.1.1](07-ipc-fastpath.md)）。本设计直接后果：syscall 数从 12 精简为 4，8 个 seL4 风格 IPC 原语全部移除，IPC 数据传递完全由 io_uring 数据面承载。
+> **Capability Folding 工程定义**（v1.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 `READ_ONCE` + 位运算 + 比较，详见 [07-ipc-fastpath.md §3.1.1](07-ipc-fastpath.md)）。本设计直接后果：syscall 数从 12 精简为 4，8 个 seL4 风格 IPC 原语全部移除，IPC 数据传递完全由 io_uring 数据面承载。
 >
 > **6 条硬约束 H1-H6**（v1.1 新增，源自 Capability Folding 决策）：H1 Layout C v4 总长 128B/magic 0x41524531；H2 `capability_badge` 进 [SC] 但校验属 [SS]；H3 agentrt 用户态 `capability_badge=0`；H4 agentrt-linux 内核 Badge 由 sec_d 编译、C-S9 校验；H5 纯 C LSM 职责不变、Badge 校验是 fastpath 内联；H6 [DSL] 降级模式 `capability_badge=0` 跳过 C-S9。详见 [02-ipc-protocol.md §2.6](02-ipc-protocol.md)。
 
@@ -645,7 +645,7 @@ if (ret < 0) {
 |--------|-------------------|--------|
 | `syscalls.h` | Syscall 编号体系（4 核心 + 20 预留 = 24 槽位） | 全部 4 个 syscall |
 | `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + MAC_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
-| `ipc.h` | `struct airy_ipc_msg_hdr` Layout C v4 128B 消息头（magic 0x41524531 'ARE1' + `capability_badge` offset 44 + `crc32` offset 52）+ 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
+| `ipc.h` | `struct airy_ipc_msg_hdr` Layout C v4 128B 消息头（magic 0x41524531 'ARE1' + `capability_badge` offset 40 + `crc32` offset 52）+ 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
 | `security_types.h` | capability 41 ID + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
 | `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPTION/THINKING/ACTION） | `airy_sys_clt_notify` |
@@ -701,7 +701,7 @@ graph TB
     subgraph "[SC] 共享契约层"
         SC0[syscalls.h<br/>24 槽位编号]
         SC1[sched.h<br/>AGTS magic]
-        SC2[ipc.h<br/>ARE1 magic + 128B hdr<br/>+ capability_badge offset 44]
+        SC2[ipc.h<br/>ARE1 magic + 128B hdr<br/>+ capability_badge offset 40]
         SC3[security_types.h<br/>41 cap ID + 7 cap_op<br/>+ Badge 位布局宏]
         SC4[error.h<br/>6 码空间]
     end

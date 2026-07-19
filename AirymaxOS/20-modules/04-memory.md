@@ -549,7 +549,7 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 **Badge Epoch 失效场景**：
 
 - `sec_d` 执行 `atomic_inc(&airy_cap_global_epoch)` 撤销时，所有飞行中的 MemoryRovol 操作 fastpath C-S9.EPOCH 校验失败，返回 `-AIRY_ECAP_FROZEN = -82`（capability 冻结）。
-- `mem_d` 收到 `-82` 后中止当前操作，通知 `macro_superv` 重启受影响 Agent。
+- `mem_d` 收到 `-82` 后中止当前操作，通知 `macro_d` 重启受影响 Agent。
 - 跨节点迁移时，`gateway_d` gossip 100ms 内同步 Epoch，确保 peer 节点 Badge 一致失效。
 
 > **设计原则**：MemoryRovol 分层访问的 Badge 校验遵循"机制在内核（fastpath C-S9），策略在用户态（sec_d 编译 Badge）"原则（ADR-014 seL4 思想借鉴）。mem_d 不自行决定权限，仅执行 Badge 校验结果。
@@ -571,7 +571,7 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 遵循微内核"机制在内核，策略在用户态"原则（Liedtke minimality principle）：
 
 - 内核提供 MemoryRovol 机制（snapshot、restore、migrate）\[SS]。
-- 记忆管理策略（何时快照、何时迁移）在用户态 daemon（`macro_superv`）\[SS]。
+- 记忆管理策略（何时快照、何时迁移）在用户态 daemon（`macro_d`）\[SS]。
 - L1-L4 数据结构 \[SC] 两端共享，确保记忆层级语义一致。
 
 ### 5.2 内存分层解耦
@@ -720,7 +720,7 @@ sequenceDiagram
 
 ### 9.2 与 12 daemon 协作
 
-AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_superv` / `config_daemon`）与记忆子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
+AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_d` / `config_d`）与记忆子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
 
 | Daemon | 职责 | 与记忆子仓的协作 | 数据通道 |
 | --- | --- | --- | --- |
@@ -729,13 +729,13 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_sup
 | `cogn_d` | 认知循环调度（CoreLoopThree） | CoreLoopThree 各阶段切换时同步记忆状态（perception→thinking→action） | `airy_sys_clt_notify`（编号 3） |
 | `gateway_d` | 跨节点 IPC | 跨节点记忆迁移通过 `gateway_d` 转发 + gossip 100ms Epoch 同步 | io_uring + gRPC/QUIC |
 | `logger_d` | 统一日志（128B 记录） | 接收 MemoryRovol 操作日志（快照/恢复/迁移事件） | char dev `/dev/airy_log` |
-| `macro_superv` | 宏观监管 | 监控 mem_d 心跳（systemd watchdog），Badge Epoch 失效时重启 Agent | systemd watchdog |
+| `macro_d` | 宏观监管 | 监控 mem_d 心跳（systemd watchdog），Badge Epoch 失效时重启 Agent | systemd watchdog |
 | `audit_d` | 审计哈希链 | 审计 MemoryRovol 跨 tier/跨节点迁移操作 | eBPF ringbuf |
 | `sched_d` | sched_tac 策略守护 | 记忆迁移感知——迁移期间调整调度优先级 | `airy_sys_sched_ctl`（编号 2） |
 | `dev_d` | 设备驱动用户态化 | CXL/PMEM 设备通过 dev_d 用户态驱动注册 | io_uring + VFIO |
 | `net_d` | 网络栈用户态化 | 跨节点记忆迁移数据传输 | io_uring + VFIO |
 | `vfs_d` | VFS 用户态化 | MemoryRovol 快照通过 vfs_d 持久化至文件系统 | io_uring + VFIO |
-| `config_daemon` | 统一配置管理 | MGLRU/CXL tier/THP 等运行时参数热更新 | sysfs + procfs |
+| `config_d` | 统一配置管理 | MGLRU/CXL tier/THP 等运行时参数热更新 | sysfs + procfs |
 
 > **mem_d 是 12 daemon 的记忆核心**：所有记忆卷载操作（快照/恢复/迁移/压缩）均经 `mem_d` 通过 `airy_sys_rovol_ctl`（编号 1）处理。mem_d 与 sec_d 协作完成 Badge 权限校验，与 cogn_d 协作完成 CoreLoopThree 阶段同步，与 gateway_d 协作完成跨节点迁移。
 

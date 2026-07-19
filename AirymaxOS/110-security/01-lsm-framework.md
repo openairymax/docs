@@ -437,7 +437,7 @@ Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"
 
 ### 8.3 与 A-IPC（Capability Folding）的桥接
 
-Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 44-51，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
+Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 40-47，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
 
 ### 8.4 Capability Folding 与 LSM 钩子的职责分割（v1.1 新增）
 
@@ -716,7 +716,7 @@ struct airy_cupolas_audit_event {
 - `110-security/03-capability-model.md`（v1.1: capability 模型，Badge 64-bit Native Word）
 - `110-security/07-airy-lsm-design.md`（纯 C LSM 模块设计，唯一权威源）
 - `20-modules/09-kernel-agent-supervisor.md`（v1.1: Micro-Supervisor，fastpath C-S9 + slowpath LSM 接管）
-- `30-interfaces/02-ipc-protocol.md`（v1.1: A-IPC 协议，Layout C v4 128B + capability_badge offset 44）
+- `30-interfaces/02-ipc-protocol.md`（v1.1: A-IPC 协议，Layout C v4 128B + capability_badge offset 40）
 - `30-interfaces/07-ipc-fastpath.md`（v1.1: fastpath C-S9 Badge 校验实现，~10ns）
 - `30-interfaces/08-sc-error-contract.md`（v1.1: Error/Fault 码，-78~-82 Badge 码 + 0x1001-0x1006 Fault 码）
 - `50-engineering-standards/04-engineering-philosophy.md`（双层稳定性哲学）

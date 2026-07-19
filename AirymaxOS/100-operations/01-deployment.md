@@ -278,13 +278,13 @@ WantedBy=multi-user.target
 
 ### 8.1 daemon 到 systemd unit 映射
 
-agentrt 的 12 个 daemons 在 agentrt-linux 中以 systemd 服务运行，遵循 IRON-9 v3 同源且部分代码共享原则——二进制名与 agentrt 同源（`macro_superv`/`logger_daemon`/`config_daemon` 及 `*_d` 后缀守护进程），systemd 服务名采用 `agentrt-*.service` 格式（独立）。
+agentrt 的 12 个 daemons 在 agentrt-linux 中以 systemd 服务运行，遵循 IRON-9 v3 同源且部分代码共享原则——二进制名与 agentrt 同源（`macro_d`/`logger_d`/`config_d` 及 `*_d` 后缀守护进程），systemd 服务名采用 `agentrt-*.service` 格式（独立）。
 
 | 二进制 | systemd unit | 职责 | 启动顺序 |
 |--------|--------------|------|---------|
-| `macro_superv` | `agentrt-macro-superv.service` | 主监管守护进程 | 1 |
-| `logger_daemon` | `agentrt-logger.service` | 日志消费守护进程 | 2 |
-| `config_daemon` | `agentrt-config.service` | 配置管理守护进程 | 3 |
+| `macro_d` | `agentrt-macro-superv.service` | 主监管守护进程 | 1 |
+| `logger_d` | `agentrt-logger.service` | 日志消费守护进程 | 2 |
+| `config_d` | `agentrt-config.service` | 配置管理守护进程 | 3 |
 | `gateway_d` | `agentrt-gateway.service` | 网关，对外入口（含 Agent 注册） | 1 |
 | `sched_d` | `agentrt-sched.service` | 调度守护进程 | 1 |
 | `vfs_d` | `agentrt-vfs.service` | VFS 用户态服务守护进程 | 2 |
@@ -631,14 +631,14 @@ graph LR
 | 2 | `cogn_d` | `agentrt-cogn.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
 | 3 | `dev_d` | `agentrt-dev.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
 | 4 | `sched_d` | `agentrt-sched.service` | `gateway_d` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
-| 5 | `macro_superv` | `agentrt-macro-superv.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 5 | `macro_d` | `agentrt-macro-superv.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
 | 6 | `audit_d` | `agentrt-audit.service` | `sched_d` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
 | 7 | `net_d` | `agentrt-net.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
 | 8 | `mem_d` | `agentrt-mem.service` | `gateway_d` + `sched_d` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
 | 9 | `sec_d` | `agentrt-sec.service` | `audit_d` | `agentrt-audit.service` | `agentrt-audit.service` | — |
-| 10 | `logger_daemon` | `agentrt-logger.service` | `audit_d` | `agentrt-audit.service` | `agentrt-audit.service` | — |
+| 10 | `logger_d` | `agentrt-logger.service` | `audit_d` | `agentrt-audit.service` | `agentrt-audit.service` | — |
 | 11 | `vfs_d` | `agentrt-vfs.service` | `net_d` + `sec_d` | `agentrt-net.service agentrt-sec.service` | — | `agentrt-net.service agentrt-sec.service` |
-| 12 | `config_daemon` | `agentrt-config.service` | `vfs_d` | `agentrt-vfs.service` | — | `agentrt-vfs.service` |
+| 12 | `config_d` | `agentrt-config.service` | `vfs_d` | `agentrt-vfs.service` | — | `agentrt-vfs.service` |
 
 #### 13.4.2 systemd 崩溃恢复策略表
 
@@ -649,7 +649,7 @@ graph LR
 | daemon OOM kill | `on-failure` | `10s` | `30s` | `MemoryMax` 触发 + cgroup OOM | 重启并降低 `MemoryMax`，告警 `audit_d` |
 | AgentsIPC 协议版本不匹配 | `on-failure` | `5s` | `30s` | IPC handshake 失败 | 拒绝启动，输出 `DAEMON_E_IPC`，触发版本锁校验 |
 | 依赖 daemon 未就绪 | — | — | `30s` | `Requires=` 依赖检查 | systemd 自动等待依赖，超时则标记失败 |
-| daemon 段错误（SIGSEGV） | `on-failure` | `5s` | `30s` | coredump 捕获 + journal 记录 | 重启，coredump 上报 `logger_daemon`，3 次连续崩溃触发告警 |
+| daemon 段错误（SIGSEGV） | `on-failure` | `5s` | `30s` | coredump 捕获 + journal 记录 | 重启，coredump 上报 `logger_d`，3 次连续崩溃触发告警 |
 
 #### 13.4.3 systemd target 依赖 Mermaid 图
 
@@ -673,7 +673,7 @@ graph TD
     end
 
     subgraph L3["第 3 层（序号 5-8）"]
-        MS["macro_superv<br/>序号 5"]
+        MS["macro_d<br/>序号 5"]
         AUDIT["audit_d<br/>序号 6"]
         NET["net_d<br/>序号 7"]
         MEM["mem_d<br/>序号 8"]
@@ -681,12 +681,12 @@ graph TD
 
     subgraph L4["第 4 层（序号 9-10）"]
         SEC["sec_d<br/>序号 9"]
-        LOGGER["logger_daemon<br/>序号 10"]
+        LOGGER["logger_d<br/>序号 10"]
     end
 
     subgraph L5["第 5 层（序号 11-12）"]
         VFS["vfs_d<br/>序号 11"]
-        CONFIG["config_daemon<br/>序号 12"]
+        CONFIG["config_d<br/>序号 12"]
     end
 
     AT --> GW
@@ -868,9 +868,9 @@ struct daemon_config {
  * 对齐表 8.1 daemon 到 systemd unit 映射
  */
 #define AIRY_DAEMON_COUNT          12
-#define AIRY_DAEMON_MACRO_SUPERV   "macro_superv"
-#define AIRY_DAEMON_LOGGER         "logger_daemon"
-#define AIRY_DAEMON_CONFIG         "config_daemon"
+#define AIRY_DAEMON_MACRO_SUPERV   "macro_d"
+#define AIRY_DAEMON_LOGGER         "logger_d"
+#define AIRY_DAEMON_CONFIG         "config_d"
 #define AIRY_DAEMON_GATEWAY        "gateway_d"
 #define AIRY_DAEMON_SCHED          "sched_d"
 #define AIRY_DAEMON_VFS            "vfs_d"
