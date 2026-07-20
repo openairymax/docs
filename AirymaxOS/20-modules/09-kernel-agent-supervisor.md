@@ -53,7 +53,7 @@ Micro-Supervisor 是内核态的纯 C LSM 模块，不做任何"人性化"决策
 | IPC 队列冻结 | `kernel/superv/airy_ipc_freeze.c` | `ring->frozen` 设置 |
 | die_notifier | `kernel/superv/airy_die_notify.c` | 内核崩溃通知链 |
 | eventfd 通知 | `kernel/superv/airy_eventfd.c` | 向 Macro-Supervisor 通知 |
-| [SC] 头文件 | `kernel/include/uapi/linux/airymax/superv.h` | 共享契约 |
+| [IND] 头文件 | `kernel/include/uapi/linux/airymax/superv.h` | 独立实现（不在 [SC] 10 头文件清单中，仅内核 Micro-Supervisor 使用） |
 
 ### 1.3 与其他模块的协作
 
@@ -84,7 +84,7 @@ Micro-Supervisor 作为内核态监管组件，与 Macro-Supervisor 管理的 12
 | 11 | vfs_d | VFS 用户态服务；vfs_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
 | 12 | config_d | 配置管理守护（A-UCS）；config_d 故障不影响 Badge 校验 | fastpath C-S9 |
 
-> **daemon 命名约定**：daemon 命名后缀统一为 `_d`（sec_d/cogn_d/mem_d/gateway_d/logger_d/audit_d/sched_d/dev_d/net_d/vfs_d），例外为 `macro_d`（主监管守护进程，沿用 Unify Design 命名）和 `config_d`（配置管理，沿用 `_daemon` 后缀）。12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT。
+> **daemon 命名约定**：daemon 命名后缀统一为 `_d`，**无例外**（v2.0 决策 C1）。12 daemon 完整名单：sec_d / cogn_d / mem_d / gateway_d / logger_d / macro_d / audit_d / sched_d / dev_d / net_d / vfs_d / config_d。完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT。
 
 ### 1.5 与 sched_tac 的协作（v1.1 新增）
 

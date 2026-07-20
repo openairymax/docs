@@ -126,17 +126,17 @@ graph TB
 
 | # | 文档 | 核心内容 | 版本 | 状态 |
 |---|------|---------|------|------|
-| 1 | [01-system-architecture.md](01-system-architecture.md) | 系统架构总览（三大支柱 + 整体架构 + 同源关系 + 前沿理论） | v1.0 | 维护中 |
-| 2 | [02-five-dimensional-principles.md](02-five-dimensional-principles.md) | 五维正交 24 原则与 agentrt-linux 落地映射（S/K/C/E/A 全维度） | v1.0 | 维护中 |
-| 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | v1.0 | 维护中 |
-| 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | v1.0 | 维护中 |
-| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~016（16 个核心决策，含 ADR-015 已撤销 + ADR-016 版本基线锁定） | v1.0 | 维护中 |
-| 6 | [06-iron9-shared-model.md](06-iron9-shared-model.md) | **IRON-9 v3 四层模型**（[SC] 共享契约 + [SS] 语义同源 + [IND] 独立实现 + [DSL] 降级生存） | v1.0 | 维护中 |
-| 7 | [07-directory-structure.md](07-directory-structure.md) | 源码目录结构设计（8 子仓 submodule + [SC] 物理隔离 + 模型 A 完整 fork） | v1.0 | 维护中 |
-| 8 | [08-threat-model.md](08-threat-model.md) | 威胁模型（capability 攻击面 + LSM 钩子 + 纯 C LSM 安全分析） | v1.0 | 维护中 |
-| 9 | [09-known-caveats.md](09-known-caveats.md) | 已知问题与注意事项（sched_tac 限制 + io_uring 边界 + 跨架构注意） | v1.0 | 维护中 |
-| 10 | [10-unify-design.md](10-unify-design.md) | **Airymax Unify Design 总纲**（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC 五模块统一设计） | v1.0 | 维护中 |
-| 11 | [11-degraded-survival-layer.md](11-degraded-survival-layer.md) | **[DSL] 降级生存层**（故障降级 + 资源不足降级 + Panic 生存策略） | v1.0 | 维护中 |
+| 1 | [01-system-architecture.md](01-system-architecture.md) | 系统架构总览（三大支柱 + 整体架构 + 同源关系 + 前沿理论） | v1.1 | 维护中 |
+| 2 | [02-five-dimensional-principles.md](02-five-dimensional-principles.md) | 五维正交 24 原则与 agentrt-linux 落地映射（S/K/C/E/A 全维度） | v1.1 | 维护中 |
+| 3 | [03-microkernel-strategy.md](03-microkernel-strategy.md) | 微内核化改造策略（seL4 思想 + 改造路径，ADR-014） | v1.1 | 维护中 |
+| 4 | [04-engineering-baseline.md](04-engineering-baseline.md) | agentrt-linux 工程基线（治理组对应 + AI 原生 + 技术规格） | v1.1 | 维护中 |
+| 5 | [05-adrs.md](05-adrs.md) | 架构决策记录 ADR-001~016（16 个核心决策，含 ADR-015 已撤销 + ADR-016 版本基线锁定） | v1.1 | 维护中 |
+| 6 | [06-iron9-shared-model.md](06-iron9-shared-model.md) | **IRON-9 v3 四层模型**（[SC] 共享契约 + [SS] 语义同源 + [IND] 独立实现 + [DSL] 降级生存） | v1.1 | 维护中 |
+| 7 | [07-directory-structure.md](07-directory-structure.md) | 源码目录结构设计（8 子仓 submodule + [SC] 物理隔离 + 模型 A 完整 fork） | v2.0 | 维护中 |
+| 8 | [08-threat-model.md](08-threat-model.md) | 威胁模型（capability 攻击面 + LSM 钩子 + 纯 C LSM 安全分析） | v1.1 | 维护中 |
+| 9 | [09-known-caveats.md](09-known-caveats.md) | 已知问题与注意事项（sched_tac 限制 + io_uring 边界 + 跨架构注意） | v1.1 | 维护中 |
+| 10 | [10-unify-design.md](10-unify-design.md) | **Airymax Unify Design 总纲**（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC 五模块统一设计） | v1.1 | 维护中 |
+| 11 | [11-degraded-survival-layer.md](11-degraded-survival-layer.md) | **[DSL] 降级生存层**（故障降级 + 资源不足降级 + Panic 生存策略） | v1.1 | 维护中 |
 
 ### 6.1 文档阅读顺序建议
 

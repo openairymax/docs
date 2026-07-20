@@ -559,7 +559,7 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 | ADR | 标题 | 在本子仓的体现 |
 | --- | --- | --- |
 | [ADR-012](../10-architecture/05-adrs.md#adr-012) | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想） | MemoryRovol 内核态实现基于 Linux 6.6 userfaultfd + MGLRU + CXL bus 改造，非从零实现 |
-| [ADR-013](../10-architecture/05-adrs.md#adr-013) | 版本基线锁定（1.x.x 锁定 Linux 6.6） | OLK 6.6 MGLRU + userfaultfd + THP + CXL bus + ZONE_DEVICE + DAX |
+| [ADR-016](../10-architecture/05-adrs.md#adr-016) | 版本基线锁定（1.x.x 锁定 Linux 6.6） | OLK 6.6 MGLRU + userfaultfd + THP + CXL bus + ZONE_DEVICE + DAX |
 | [ADR-014](../10-architecture/05-adrs.md#adr-014) | **微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）** | **机制与策略分离原则（MemoryRovol 机制在内核，策略在 mem_d 用户态）；三独立数据区物理隔离借鉴 seL4 capability 空间隔离思想；Badge 分层访问控制借鉴 seL4 capability-based security；不引入 Zircon VMO rights/Minix3 多服务器模型** |
 
 ***
@@ -720,7 +720,7 @@ sequenceDiagram
 
 ### 9.2 与 12 daemon 协作
 
-AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_d` / `config_d`）与记忆子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
+AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例外**，v2.0 决策 C1；12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT）与记忆子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
 
 | Daemon | 职责 | 与记忆子仓的协作 | 数据通道 |
 | --- | --- | --- | --- |

@@ -871,7 +871,7 @@ v1.1 Capability Folding 引入三类专属竞态场景：
 |------|---------|---------|---------|
 | **R1** | 1024 Agent 并发调用 `airy_cap_badge_compile()` 编译 Badge | `spinlock_t airy_cap_compile_lock`（串行化编译） | KCSAN + lockdep |
 | **R2** | fastpath 多读者读 `agent_caps[]` + slowpath 写者更新 cap_entry | RCU（`rcu_read_lock()` / `synchronize_rcu()`） | KCSAN |
-| **R3** | Epoch 撤销（写者递增 `airy_global_epoch`）+ Badge 校验（读者读 Epoch） | `seqlock_t airy_epoch_seqlock`（读侧不阻塞、写侧串行） | KCSAN + lockdep |
+| **R3** | Epoch 撤销（写者递增 `airy_cap_global_epoch`）+ Badge 校验（读者读 Epoch） | `seqlock_t airy_epoch_seqlock`（读侧不阻塞、写侧串行） | KCSAN + lockdep |
 
 ### 15.2 R1：1024 Agent 并发 Badge 编译
 
@@ -944,12 +944,12 @@ void airy_cap_revoke(int idx)
 
 ### 15.4 R3：Epoch 撤销 + Badge 校验（seqlock 保护）
 
-`airy_global_epoch` 是全局单调递增计数器，撤销时递增。fastpath 读取该计数器与 Badge 中的 Epoch 比对，使用 `seqlock_t` 保证读到一致的值：
+`airy_cap_global_epoch` 是全局单调递增计数器，撤销时递增。fastpath 读取该计数器与 Badge 中的 Epoch 比对，使用 `seqlock_t` 保证读到一致的值：
 
 ```c
 /* kernel/airymaxos/cap/airy_epoch.c */
 static seqlock_t airy_epoch_seqlock = __SEQLOCK_UNLOCKED(airy_epoch_seqlock);
-u64 airy_global_epoch = 0;
+u64 airy_cap_global_epoch = 0;
 
 /* 读者（fastpath） */
 u16 airy_epoch_read(void)
@@ -958,7 +958,7 @@ u16 airy_epoch_read(void)
     u16 epoch;
     do {
         seq = read_seqbegin(&airy_epoch_seqlock);
-        epoch = (u16)READ_ONCE(airy_global_epoch);
+        epoch = (u16)READ_ONCE(airy_cap_global_epoch);
     } while (read_seqretry(&airy_epoch_seqlock, seq));
     return epoch;
 }
@@ -967,7 +967,7 @@ u16 airy_epoch_read(void)
 void airy_epoch_advance(void)
 {
     write_seqlock(&airy_epoch_seqlock);
-    WRITE_ONCE(airy_global_epoch, airy_global_epoch + 1);
+    WRITE_ONCE(airy_cap_global_epoch, airy_cap_global_epoch + 1);
     write_sequnlock(&airy_epoch_seqlock);
 }
 ```
@@ -1040,11 +1040,11 @@ MODULE_LICENSE("GPL");
 | KCSAN data-race 报告数 | 0 | 任一报告即标记测试失败 |
 | lockdep 死锁/锁序违反 | 0 | 任一报告即标记测试失败 |
 | `agent_caps[].random_tag` 重复数 | 0 | 重复即 Badge 编译串行化失败 |
-| `airy_global_epoch` 回退次数 | 0 | 回退即 seqlock 实现错误 |
+| `airy_cap_global_epoch` 回退次数 | 0 | 回退即 seqlock 实现错误 |
 | fastpath 平均时延 | ≤ 10ns | 超过即 RCU 读路径过重 |
 | slowpath `airy_cap_revoke()` 平均时延 | ≤ 1μs | 超过即 `synchronize_rcu()` 耗时过长 |
 
-**OS-TEST-051**：CI nightly 必须加载 `airy_concurrent_test.ko`（`CONFIG_KCSAN=y` + `CONFIG_LOCKDEP=y`），1024 读者 + 1 写者运行 30 分钟，覆盖 R1/R2/R3 三类竞态场景；任一 KCSAN data-race 报告、lockdep 死锁报告、`random_tag` 重复或 `airy_global_epoch` 回退即标记 nightly 失败。
+**OS-TEST-051**：CI nightly 必须加载 `airy_concurrent_test.ko`（`CONFIG_KCSAN=y` + `CONFIG_LOCKDEP=y`），1024 读者 + 1 写者运行 30 分钟，覆盖 R1/R2/R3 三类竞态场景；任一 KCSAN data-race 报告、lockdep 死锁报告、`random_tag` 重复或 `airy_cap_global_epoch` 回退即标记 nightly 失败。
 
 **OS-KER-116**：v1.1 Capability Folding 并发竞态测试（§15）发现的 data-race 视为 P0 级缺陷，必须在 12 小时内修复（添加 `READ_ONCE()` / `WRITE_ONCE()` / RCU / seqlock）；禁止使用 `ASSERT_EXCLUSIVE_ACCESS()` 或 `__no_kcsan` 抑制报告，除非在评审中证明为有意设计的无锁读。
 

@@ -185,7 +185,7 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 | 跨 CPU fastpath（src 与 dst 不同 CPU） | 强制降级 SLOW_SEND（跨 CPU 需 IPI 唤醒，不满足无锁条件） |
 | payload_len > 0（有 payload） | 强制降级 SLOW_SEND（fastpath 仅处理 128B 消息头） |
 | kfifo 水位 > 高水位（`AIRY_IPC_KFIFO_HI_WMARK`） | 降级 SLOW_SEND，触发背压（见 §6.4） |
-| capability 令牌过期 / 权限不足 | 进入 ERROR，返回 `AIRY_ECAPABILITY`（OS-SEC-121） |
+| capability 令牌过期 / 权限不足 | 进入 ERROR，返回 `AIRY_ECAP_EPOCH`(-79) 或 `AIRY_ECAP_PERM`(-81)（OS-SEC-121，错误码 SSoT 见 [08-sc-error-contract.md](08-sc-error-contract.md) §3） |
 | `flags` 含 `AIRY_IPC_F_NOWAIT` 且需阻塞 | 不进入 SLOW_*，直接返回 `AIRY_EAGAIN` |
 
 ---

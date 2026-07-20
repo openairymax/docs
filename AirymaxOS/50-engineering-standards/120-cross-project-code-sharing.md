@@ -476,7 +476,7 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 - **[SC] 共享契约层（本头文件）**：`struct airy_ipc_msg_hdr` 数据结构、字段偏移与大小、magic 值、opcode 枚举、flags 位定义、Badge 位布局宏、Capability 权限位、`_Static_assert(sizeof == 128)`。
 - **[SS] 语义同源层（不在本头文件）**：`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、`airy_cap_global_epoch` atomic_t、Random Tag 生成、C-S9 校验逻辑、sec_d Badge 编译流程。
 - **[IND] 完全独立层**：agentrt 用户态不使用 `capability_badge`（始终为 0），使用传统 `cap_t` 引用；agentrt-linux 内核使用 `capability_badge` + C-S9 内联校验。
-- **[DSL] 降级生存层**：`capability_badge` 字段存在但被忽略（值=0），C-S9 跳过，退化到 radix tree 兜底路径。
+- **[DSL] 降级生存层**：`capability_badge` 字段存在但被忽略（值=0），C-S9 跳过，退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组）。
 
 ### 2.8 头文件 6：syscalls.h
 

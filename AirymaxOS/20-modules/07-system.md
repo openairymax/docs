@@ -52,7 +52,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 数据流 | 系统切入点 | 同源标注 |
 |--------|-----------|----------|
-| 调度数据流 | sysctl 调度参数（sched_agent_enabled）+ airymaxmon sched_tac 统计 | [SC] |
+| 调度数据流 | sysctl 调度参数（sched_tac 通过 `airy_sys_sched_ctl(514)` 配置）+ airymaxmon sched_tac 统计 | [SC] |
 | IPC 数据流 | DevStation io_uring 通道 + 128B 消息头 | [SC] |
 | eBPF 数据流 | bpftrace 动态追踪 + airymaxmon struct_ops 状态 | [SC] |
 | 记忆卷载数据流 | airymaxmon MemoryRovol L1-L4 指标监控 | [SC] |
@@ -209,8 +209,8 @@ gpgcheck=1
 **sysctl 配置**（sched_tac 参数引用 [SC] 共享类型）：
 ```ini
 # /etc/sysctl.d/99-airymaxos.conf
-# 调度优化（sched_tac [SC]）
-kernel.sched_agent_enabled = 1
+# 调度优化（sched_tac [SC]：SCHED_DEADLINE/SCHED_FIFO，ADR-013 禁止 sched_ext / SCHED_AGENT）
+# 注：sched_tac 不暴露 sched_agent_enabled sysctl，调度策略通过 airy_sys_sched_ctl(514) 配置
 
 # 内存优化（MemoryRovol L1-L4 [SC]）
 vm.swappiness = 10

@@ -795,13 +795,13 @@ security/
 │   ├── airy_lsm_policy.c            # 策略加载
 │   └── airy_lsm.h
 │
-├── capability/                       # Capability 系统
+├── capability/                       # Capability 系统（v1.1: agent_caps[1024] 静态数组）
 │   ├── Kbuild
-│   ├── airy_cap_init.c              # 初始化
-│   ├── airy_cap_tree.c              # radix_tree 派生树
+│   ├── airy_cap_init.c              # 初始化（agent_caps[1024] 静态数组 + 全局 Epoch）
+│   ├── airy_cap_array.c             # agent_caps[1024] 静态数组管理（v1.1 替代 radix_tree 派生树）
 │   ├── airy_cap_derive.c            # seL4 CNode 派生（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）
-│   ├── airy_cap_check.c             # 校验（badge & required_badge）
-│   ├── airy_cap_revoke.c            # 撤销
+│   ├── airy_cap_check.c             # slowpath 校验（fastpath C-S9 Badge 内联在 kernel/superv/airy_cap_check.c）
+│   ├── airy_cap_revoke.c            # 撤销（atomic_inc(&airy_cap_global_epoch) O(1) 立即生效）
 │   ├── airy_cap_rotate.c            # 轮换（Epoch 更新）
 │   └── airy_cap.h
 │
@@ -1405,7 +1405,7 @@ sc-dual-ci:
 **agentrt-linux [IND]（与 agentrt 完全不共享）**：
 - `kernel/`（除 include/uapi/linux/airymax/ 外）：内核驱动、Kbuild、内核 API、systemd、纯 C LSM、eBPF struct_ops、IORING_OP_URING_CMD、alloc_pages+mmap
 - `security/airy_lsm/`：DEFINE_LSM(airy) 纯 C LSM
-- `security/capability/`：radix_tree 派生模型
+- `security/capability/`：v1.1 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（替代 v1.0 radix_tree 派生模型）
 - `memory/memoryrovol/`：L1-L4 内核模块
 - `cognition/coreloopthree/`：kthread 实现
 - `cognition/kthread/`：kfifo + wait_event_interruptible
@@ -1776,7 +1776,7 @@ agentrt/          agentrt-linux/
 | **P1 本质优先** | ★★★★★ | 8 子仓均对应不可合并的职责域，每子仓一句话可说明 | 无 |
 | **P2 原子不可分** | ★★★★★ | services 内部分层不拆分（保持 8 子仓），保持职责清晰 | 无 |
 | **P3 单一宿主** | ★★★★★ | [SC] 10 头文件唯一物理宿主 kernel/include/uapi/linux/airymax/，禁止物理副本 | 无 |
-| **P4 内外一致** | ★★★★☆ | 子仓公共骨架统一（README/LICENSE/MAINTAINERS/...），daemon 命名统一 `_d` | 90-terminology.md 中 macro_superv/logger_daemon/config_daemon 旧名需同步更新（已在 §7.1 标注废弃） |
+| **P4 内外一致** | ★★★★★ | 子仓公共骨架统一（README/LICENSE/MAINTAINERS/...），daemon 命名统一 `_d`（v2.0 决策已落地，90-terminology.md 已将 macro_superv/logger_daemon/config_daemon 标注为 旧称/禁止使用） | 无 |
 | **P5 无冗余** | ★★★★★ | 跨子仓共享代码仅 [SC] 层，[IND] 完全独立，禁止共享库 | 无 |
 
 ### 11.2 与 v1.1 的美学提升

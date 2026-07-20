@@ -342,7 +342,7 @@ rules:
     operations:
       - file_open
     paths:
-      - /var/lib/airymaxos/**
+      - /var/lib/airy/**
 ```
 
 ### 4.3 Landlock + seccomp（用户态沙箱）\[SS]
@@ -643,7 +643,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | ADR | 标题 | 在本子仓的体现 |
 | --- | --- | --- |
 | [ADR-012](../10-architecture/05-adrs.md#adr-012) | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发） | capability 系统 + LSM 框架 + Landlock 沙箱 + 机密计算均基于 Linux 6.6 改造，非从零实现 |
-| [ADR-013](../10-architecture/05-adrs.md#adr-013) | 版本基线锁定（1.x.x 锁定 Linux 6.6） | OLK 6.6 LSM 框架 + Landlock + capability + 4 层密钥环 |
+| [ADR-016](../10-architecture/05-adrs.md#adr-016) | 版本基线锁定（1.x.x 锁定 Linux 6.6） | OLK 6.6 LSM 框架 + Landlock + capability + 4 层密钥环 |
 | [ADR-014](../10-architecture/05-adrs.md#adr-014) | **微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）** | **capability 模型来源 = seL4（ADR-014）；CNode/MDB/Badge 等概念仅溯源 seL4，不引入 Zircon rights/Minix3 多服务器模型；v1.1 Capability Folding 物理实现简化为 `agent_caps[1024]` + Badge 64-bit + atomic Epoch，仍属 seL4 思想借鉴范畴（性能优先，CBMC 全函数验证 fastpath）** |
 
 ***
@@ -832,7 +832,7 @@ sequenceDiagram
 
 ### 9.2 与 12 daemon 协作
 
-AirymaxOS 用户态 **12 daemon**（daemon 命名后缀 `_d`，例外 `macro_d` / `config_d`）与安全子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
+AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例外**，v2.0 决策 C1；12 daemon 完整名单以 [10-user-supervisor-daemon.md §1.3](10-user-supervisor-daemon.md) 为 SSoT）与安全子仓的协作关系（详见 [01-kernel.md §14.2](01-kernel.md)）：
 
 | Daemon | 职责 | 与安全子仓的协作 | 安全机制 |
 | --- | --- | --- | --- |

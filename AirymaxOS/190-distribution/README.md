@@ -130,9 +130,9 @@ A-UCS 的 `airy_defconfig` 通过 RPM 包分发，配置文件遵循 [SC] 共享
 dnf install agentrt-config
 
 # airy_defconfig 打包内容
-/etc/airymax/airy_defconfig      # [SC] 共享配置（二进制布局）
-/etc/airymax/airy_sysctl.conf    # [SS] sysctl 语义同源配置
-/etc/airymax/airy_config.json    # [SS] JSON 语义同源配置
+/etc/agentrt/airy_defconfig      # [SC] 共享配置（二进制布局）
+/etc/agentrt/airy_sysctl.conf    # [SS] sysctl 语义同源配置（YAML/TOML 格式，JSON 仅用于 IPC payload）
+/etc/agentrt/airy_config.yaml    # [SS] YAML 语义同源配置
 ```
 
 ### 4.2 A-ULS 12 daemon systemd 服务打包

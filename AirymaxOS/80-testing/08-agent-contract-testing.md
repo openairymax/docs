@@ -1095,7 +1095,7 @@ TEST_F(airy_disaster_recovery, S7_full_recovery_within_30s) {
 | 不变式 | 验证方法 | 失败处理 |
 |--------|---------|---------|
 | `agent_caps[]` 状态完整 | 遍历 1024 个 cap_entry，校验 `epoch` 单调递增、`random_tag` 非零 | 任一异常即标记测试失败 |
-| Epoch 连续性 | `agent_caps[i].epoch` 与 `airy_global_epoch` 一致 | 不一致即触发 sec_d 重初始化 |
+| Epoch 连续性 | `agent_caps[i].epoch` 与 `airy_cap_global_epoch` 一致 | 不一致即触发 sec_d 重初始化 |
 | Agent 状态机一致性 | 全部 Agent 状态 ∈ 8 态合法枚举；无"僵尸"状态 | 异常 Agent 由 macro_d 强制转 STOPPING |
 | 审计哈希链完整 | audit_d 重启后验证审计日志哈希链无断裂 | 断裂即标记 audit_d 恢复失败 |
 | Token 账本平衡 | `sum(agent_tokens) == global_token_pool` | 不平衡即触发 sec_d 重新对账 |

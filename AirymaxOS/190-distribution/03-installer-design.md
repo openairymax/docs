@@ -613,7 +613,7 @@ LABEL airymaxos
     APPEND initrd=/isolinux/initrd.img \
         inst.stage2=hd:LABEL=AIRYMAXOS \
         inst.ks=hd:LABEL=AIRYMAXOS:/isolinux/ks.cfg \
-        sched_ext.enable=1 agentrt.memoryrovol=1
+        agentrt.memoryrovol=1 airy.sec_d=1
 EOF
 
 echo "[5/6] 复制 RPM 包并生成仓库"

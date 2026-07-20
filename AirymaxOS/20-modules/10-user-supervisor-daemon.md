@@ -94,7 +94,7 @@ After=airy-superv.service
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/airy-macro-d --config=/etc/airymax/macro_d.conf
+ExecStart=/usr/sbin/airy-macro-d --config=/etc/agentrt/macro_d.conf
 # 自动重启：崩溃后 1 秒内重启
 Restart=always
 RestartSec=1
@@ -108,7 +108,7 @@ IOSchedulingPriority=2
 # 安全加固
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/airymax/
+ReadWritePaths=/var/lib/airy/
 # 委派权限：可管理其他 daemon
 Delegate=yes
 
@@ -132,11 +132,11 @@ struct daemon_spec {
 };
 
 static const struct daemon_spec daemons[] = {
-    { "logger_d",      "/usr/sbin/airy-logger-d",      "/etc/airymax/logger.conf",     SCHED_FIFO, 50, 5 },
-    { "cogn_d",        "/usr/sbin/airy-cogn-d",        "/etc/airymax/cognition.conf",  SCHED_DEADLINE, 0, 3 },
-    { "mem_d",         "/usr/sbin/airy-mem-d",         "/etc/airymax/memory.conf",     SCHED_FIFO, 40, 5 },
-    { "sec_d",         "/usr/sbin/airy-sec-d",         "/etc/airymax/sec.conf",        SCHED_FIFO, 60, 5 },
-    { "config_d", "/usr/sbin/airy-config-d", "/etc/airymax/config.conf",     SCHED_NORMAL, 0, 5 },
+    { "logger_d",      "/usr/sbin/airy-logger-d",      "/etc/agentrt/logger.conf",     SCHED_FIFO, 50, 5 },
+    { "cogn_d",        "/usr/sbin/airy-cogn-d",        "/etc/agentrt/cognition.conf",  SCHED_DEADLINE, 0, 3 },
+    { "mem_d",         "/usr/sbin/airy-mem-d",         "/etc/agentrt/memory.conf",     SCHED_FIFO, 40, 5 },
+    { "sec_d",         "/usr/sbin/airy-sec-d",         "/etc/agentrt/sec.conf",        SCHED_FIFO, 60, 5 },
+    { "config_d", "/usr/sbin/airy-config-d", "/etc/agentrt/config.conf",     SCHED_NORMAL, 0, 5 },
     /* ... 其余 daemon（gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_d）
      * 注: v1.1 Capability Folding 后 IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，
      * 不存在独立 ipc daemon；Badge 编译由 sec_d 承担，跨节点 IPC 由 gateway_d 承担。
@@ -241,7 +241,7 @@ static void heartbeat_loop(void)
                                                AIRY_FAULT_TIMEOUT);
             } else if (ret == HEARTBEAT_DEAD) {
                 /* 进程已死，重启 */
-                macro_d_restart_daemon(g_heartbeats[i].pid);
+                macro_d_restart(g_heartbeats[i].pid);
             }
         }
         sleep(1);
@@ -401,7 +401,7 @@ sec_d 崩溃
     │
     ▼
 [阶段 2] sec_d 加载持久化的 Badge 状态（<100ms）
-    │  ├── 读取 /var/lib/airymax/sec_d_state.json
+    │  ├── 读取 /var/lib/airy/sec_d_state.json
     │  ├── 恢复 agent_caps[] 的 randtag + perms + state
     │  └── 恢复 airy_cap_global_epoch 值
     │
@@ -422,7 +422,7 @@ sec_d 崩溃
 
 #### 4.5.4 agent_caps[] 状态持久化设计
 
-**关键设计**：sec_d 在每次 Badge 编译/撤销后，将 agent_caps[] 关键字段持久化到 `/var/lib/airymax/sec_d_state.json`，确保 sec_d 重启后可恢复。
+**关键设计**：sec_d 在每次 Badge 编译/撤销后，将 agent_caps[] 关键字段持久化到 `/var/lib/airy/sec_d_state.json`，确保 sec_d 重启后可恢复。
 
 ```c
 /* services/daemons/sec_d/persist.c —— agent_caps[] 状态持久化
@@ -489,7 +489,7 @@ static int airy_cap_persist_save(void)
     }
 
     /* 2. 原子写入：先写 .tmp 文件，再 rename（避免崩溃时文件损坏）*/
-    fd = open("/var/lib/airymax/sec_d_state.json.tmp",
+    fd = open("/var/lib/airy/sec_d_state.json.tmp",
               O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd < 0)
         return -errno;
@@ -503,8 +503,8 @@ static int airy_cap_persist_save(void)
     close(fd);
 
     /* 3. atomic rename */
-    ret = rename("/var/lib/airymax/sec_d_state.json.tmp",
-                 "/var/lib/airymax/sec_d_state.json");
+    ret = rename("/var/lib/airy/sec_d_state.json.tmp",
+                 "/var/lib/airy/sec_d_state.json");
     return ret < 0 ? -errno : 0;
 
 out:
@@ -525,7 +525,7 @@ static int airy_cap_persist_load(void)
     struct airy_cap_persist_entry *entries;
     int fd, ret, i;
 
-    fd = open("/var/lib/airymax/sec_d_state.json", O_RDONLY);
+    fd = open("/var/lib/airy/sec_d_state.json", O_RDONLY);
     if (fd < 0)
         return -errno;
 
@@ -593,7 +593,7 @@ sec_d 重启后，除了恢复 agent_caps[] 状态，还需与 Macro-Supervisor 
 
 #### 4.5.7 sec_d 持久化文件的完整性保护
 
-`/var/lib/airymax/sec_d_state.json` 是 sec_d 故障恢复的关键文件，需防止篡改：
+`/var/lib/airy/sec_d_state.json` 是 sec_d 故障恢复的关键文件，需防止篡改：
 
 | 保护机制 | 实现方式 |
 |---------|---------|
@@ -929,7 +929,7 @@ sec_d 重启
 # /etc/systemd/system/airy-sec_d.service
 [Service]
 Type=simple
-ExecStart=/usr/sbin/airy-sec_d --config=/etc/airymax/sec_d.conf
+ExecStart=/usr/sbin/airy-sec_d --config=/etc/agentrt/sec_d.conf
 Restart=always
 RestartSec=1
 WatchdogSec=3
@@ -1165,14 +1165,14 @@ static int airy_sec_d_wal_append(enum airy_sec_d_wal_op op, uint32_t agent_id,
 
 | 维度 | §4.5.4（原方案）| §4.7（增强方案）|
 |------|----------------|----------------|
-| 持久化文件 | `/var/lib/airymax/sec_d_state.json` | `/var/lib/airy/sec_d.snapshot` + `/var/lib/airy/sec_d.wal` |
+| 持久化文件 | `/var/lib/airy/sec_d_state.json` | `/var/lib/airy/sec_d.snapshot` + `/var/lib/airy/sec_d.wal` |
 | 写入策略 | 全量重写（O_TRUNC + rename）| Snapshot 周期全量 + WAL 增量追加 |
 | 写放大 | 每次操作写 ~12KB | 每次操作写 32B（WAL），5 分钟一次 16KB（Snapshot）|
 | 恢复粒度 | 恢复至最后一次持久化时刻 | 恢复至故障前最后一条 WAL 记录 |
 | 落盘保证 | fsync | O_DIRECT + fdatasync（绕过页缓存）|
 | 适用阶段 | 0.1.1（简单方案）| 0.1.1+（增强方案，推荐）|
 
-**兼容性**：§4.7 的 Snapshot 文件格式与 §4.5.4 的 `sec_d_state.json` 二进制兼容（相同的 magic + header + entries 结构），sec_d 启动时优先尝试加载 `/var/lib/airy/sec_d.snapshot`，若不存在则回退到 `/var/lib/airymax/sec_d_state.json`（向后兼容）。
+**兼容性**：§4.7 的 Snapshot 文件格式与 §4.5.4 的 `sec_d_state.json` 二进制兼容（相同的 magic + header + entries 结构），sec_d 启动时优先尝试加载 `/var/lib/airy/sec_d.snapshot`，若不存在则回退到 `/var/lib/airy/sec_d_state.json`（向后兼容）。
 
 ---
 

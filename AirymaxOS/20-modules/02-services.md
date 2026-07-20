@@ -62,9 +62,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次               | 共享程度                               | 服务子系统内容                                                                                                                                                                                                                                    | 组织方式                                 |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
 | **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`，含 `capability_badge` + `crc32` 字段）、SQE/CQE 操作码与标志位、ring 创建/注册参数、Badge 位布局宏、Capability 权限位                                                                                                                  | `include/uapi/linux/airymax/ipc.h`（与 kernel 共享） |
-| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_superv/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_daemon）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、v1.1 Capability Folding Badge 校验语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
+| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_d/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、v1.1 Capability Folding Badge 校验语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
 | **\[IND] 完全独立层** | 完全独立                               | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF\_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs）                                                                                        | 各自独立仓库                               |
-| **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 fastpath C-S9 校验、退化到 radix tree 兜底路径（`AIRY_ECAP_RADIX_MISS`/`STATIC_KEY`）、opcode 集缩减至 2 种（SEND/RECV）、Fault 码禁用统一 Panic                                                            | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
+| **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 fastpath C-S9 校验、退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组；`AIRY_ECAP_RADIX_MISS`/`STATIC_KEY` 保留编号但 v1.1 不触发）、opcode 集缩减至 2 种（SEND/RECV）、Fault 码禁用统一 Panic                                                            | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
 
 ### 2.1 维度对比
 
@@ -505,7 +505,7 @@ graph TD
         JOURNALD[journald 日志聚合]
     end
     subgraph DSL["[DSL] 降级生存层"]
-        FALLBACK["#ifdef AIRY_SC_FALLBACK<br/>capability_badge=0<br/>跳过 C-S9, radix tree 兜底"]
+        FALLBACK["#ifdef AIRY_SC_FALLBACK<br/>capability_badge=0<br/>跳过 C-S9, airy_cap_check() slowpath 兜底"]
     end
     IPC_HDR --> PRIMITIVES
     DAEMONS --> SYSTEMD
@@ -536,7 +536,7 @@ graph TD
 | **K-3 服务隔离**  | 每个服务独立地址空间 + capability + seccomp + Landlock |
 | **S-1 反馈闭环**  | systemd Restart=always + journald 日志反馈       |
 | **C-1 双系统协同** | io\_uring 零拷贝 + 用户态服务协同                      |
-| **E-2 可观测性**  | journald + uprobe/tracepoint + logger\_daemon    |
+| **E-2 可观测性**  | journald + uprobe/tracepoint + logger\_d         |
 | **A-1 极简主义**  | 服务最小权限 + capability 令牌                       |
 
 ***
@@ -600,7 +600,7 @@ graph TD
 
 | 维度            | agentrt                         | agentrt-linux services          | 一致性        |
 | ------------- | ------------------------------- | ------------------------------- | ---------- |
-| daemon 名称     | macro\_superv/logger\_daemon/...   | macro\_superv/logger\_daemon/...   | \[SS] 同源语义 |
+| daemon 名称     | macro\_d/logger\_d/config\_d/...    | macro\_d/logger\_d/config\_d/...    | \[SS] 同源语义 |
 | IPC magic     | 0x41524531 'ARE1'               | 0x41524531 'ARE1'               | \[SC] 共享契约 |
 | IPC 消息头       | `struct airy_ipc_msg_hdr`（128B） | `struct airy_ipc_msg_hdr`（128B） | \[SC] 共享契约 |
 | 通信原语          | channel/socket/fifo/eventpair   | channel/socket/fifo/eventpair   | \[SS] 同源语义 |
@@ -623,7 +623,7 @@ graph TD
 | 共享契约层 \[SC]  | §6.1 `include/uapi/linux/airymax/ipc.h` 完整定义（含 `capability_badge` + `crc32`）    | <br /> |
 | 语义同源层 \[SS]  | §6.2 12 daemons + 8 项 IPC 原语同源（20 项）+ v1.1 Capability Folding Badge 校验语义 | <br /> |
 | 完全独立层 \[IND] | §6.3 10 项独立实现明确划分                    | <br /> |
-| 降级生存层 \[DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 C-S9、退化 radix tree 兜底 | <br /> |
+| 降级生存层 \[DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 C-S9、退化 `airy_cap_check()` slowpath 兜底（`agent_caps[1024]` 静态数组） | <br /> |
 
 ***
 

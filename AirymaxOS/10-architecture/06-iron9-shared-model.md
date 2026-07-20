@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IRON-9 v3 共享模型
 > **文档定位**：Airymax IRON-9 v3 跨端共享模型的唯一权威定义（AirymaxOS 侧）\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.1（Capability Folding 集成版）\
+> **最后更新**：2026-07-20\
 > **上级文档**：[Airymax Unify Design 总纲](10-unify-design.md)\
 > **设计依据**：综合修正方案 §2.3（IRON-9 模型 SSoT）+ §3.1（P0 级缺失文档 #6）
 
