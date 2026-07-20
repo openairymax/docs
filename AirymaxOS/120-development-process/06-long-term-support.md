@@ -64,7 +64,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **分支**：从 `stable-vX.Y` 重命名为 `lts-vX.Y`（保留 `stable-vX.Y` 作为别名）。
 - **tag**：在 LTS 起始时标记 `vX.Y.0-lts`。
 - **文档**：在 README 与 release notes 中标记该版本为 LTS。
-- **RPM**：LTS 版本的 RPM 包名附加 `-lts` 后缀，例如 `agentrt-linux-kernel-lts-1.0.0`。
+- **RPM**：LTS 版本的 RPM 包名附加 `-lts` 后缀，例如 `agentrt-linux-kernel-lts-0.1.1`。
 
 ---
 

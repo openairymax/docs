@@ -454,12 +454,12 @@ on:
 
 | 指标 | 工具 | 基线 |
 |------|------|------|
-| IPC 延迟 | `ipc-latency-bench` | v1.0.0 |
-| 调度延迟 | `sched-latency-bench` | v1.0.0 |
-| 内存分配延迟 | `mem-alloc-bench` | v1.0.0 |
-| 128B 日志吞吐 | `log-throughput-bench` | v1.0.0 |
-| Agent 启动时间 | `agent-startup-bench` | v1.0.0 |
-| 内核构建时间 | `kernel-build-bench` | v1.0.0 |
+| IPC 延迟 | `ipc-latency-bench` | v0.1.1 |
+| 调度延迟 | `sched-latency-bench` | v0.1.1 |
+| 内存分配延迟 | `mem-alloc-bench` | v0.1.1 |
+| 128B 日志吞吐 | `log-throughput-bench` | v0.1.1 |
+| Agent 启动时间 | `agent-startup-bench` | v0.1.1 |
+| 内核构建时间 | `kernel-build-bench` | v0.1.1 |
 
 - **报告**：与基线对比，列出回归/改进指标。
 - **告警**：回归超过 5% 自动通知维护者。

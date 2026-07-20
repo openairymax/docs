@@ -416,7 +416,7 @@ static void bench_llm_inference(void)
 
 /**
  * bench_stress_1000_agents - 1000 个 Agent 并发压力测试
- * 验证 MAC_MAX_AGENTS 1024 上限
+ * 验证 AIRY_CAP_MAX_AGENTS 1024 上限
  */
 static void bench_stress_1000_agents(void)
 {

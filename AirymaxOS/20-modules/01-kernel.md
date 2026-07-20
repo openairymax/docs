@@ -765,7 +765,7 @@ airy_vtime_decay(airy_vtime_t vtime, u64 consumed_slice, u32 weight)
 | `AIRY_WEIGHT_MIN`   | 1     | 最小权重         |
 | `AIRY_WEIGHT_MAX`   | 10000 | 最大权重         |
 | `AIRY_SLICE_DFL` | 20    | 默认时间片（ms）    |
-| `MAC_MAX_AGENTS`    | 1024  | 并发 Agent 硬上限 |
+| `AIRY_CAP_MAX_AGENTS`    | 1024  | 并发 Agent 硬上限 |
 
 **注意**：vtime 使用 Q16.16 定点数（`int32_t`），因内核态禁止浮点运算（`-mno-80387`）。agentrt 用户态可使用 `float`，但跨 \[SC] 边界统一使用 Q16.16。
 

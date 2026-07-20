@@ -97,7 +97,7 @@ IRON-9 v3 [SC] 共享契约层包含 10 个头文件，物理宿主于 `kernel/i
 | 1 | `error.h` | 错误码体系（`airy_err_t`）+ 错误码枚举 + `AIRY_ECAP_FROZEN = -82` + `AIRY_ESEC_D_THROTTLED = -83` + `AIRY_FAULT_AUDIT_TAMPER = 0x100B` + `AIRY_FAULT_URING_MALFORMED = 0x100A` | 全部 | 全部子仓 |
 | 2 | `log_types.h` | 日志类型定义 + 5 级日志枚举 + 128B `airy_log_record`（含 `caller_id` / `payload_len` / `reserved` 字段，`__aligned(64)`）+ `AIRY_FAC_*` facility 枚举 | **A-ULP** | kernel + services |
 | 3 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | — | kernel + memory |
-| 4 | `security_types.h` | POSIX capability 41 ID + LSM 钩子 250 ID + Cupolas blob 布局 + capability 派生模型 + Vault backend + 策略裁决 4 值枚举 | **A-ULS** | kernel + security |
+| 4 | `security_types.h` | POSIX capability 44 ID（41 标准 + 3 Airymax 扩展）+ LSM 钩子 250 ID 枚举（`AIRY_LSM_KERNEL_HOOK_TOTAL=250`，对齐 Linux 6.6 框架总插槽；Airy M0 实际注册 5 钩子 `AIRY_LSM_HOOK_IMPLEMENTED=5`）+ Cupolas blob 布局 + capability 派生模型 + Vault backend + 策略裁决 4 值枚举 | **A-ULS** | kernel + security |
 | 5 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + 上下文结构 + Token 能效指标 + GPU/NPU 描述符 | **A-UEF** | kernel + cognition |
 | 6 | `sched.h` | sched_tac 调度类约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF，**禁止 SCHED_AGENT 宏**）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + AIRY_SLICE_DFL | **A-UEF** + **A-ULS** | kernel |
 | 7 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`，`__aligned(64)`）+ SQE/CQE 操作码与标志位 + IORING_OP_URING_CMD 命令码 | **A-IPC** | kernel + services |

@@ -686,8 +686,8 @@ static int agent_bus_match(struct device *dev, struct device_driver *drv)
         return 0;
 
     /* 2. agent_id 校验：与 sched.h 任务描述符交叉验证 */
-    if (adev->agent_id == 0 || adev->agent_id > MAC_MAX_AGENTS)
-        return 0;  /* agent_id 越界（MAC_MAX_AGENTS=1024） */
+    if (adev->agent_id == 0 || adev->agent_id > AIRY_CAP_MAX_AGENTS)
+        return 0;  /* agent_id 越界（AIRY_CAP_MAX_AGENTS=1024） */
 
     return 1;  /* 匹配成功 */
 }
@@ -702,7 +702,7 @@ struct bus_type agent_bus_type = {
 };
 ```
 
-> **OS-DRV-016**： `agent_bus_match` 必须校验 `agent_id` 范围（1 ≤ agent_id ≤ `MAC_MAX_AGENTS`=1024）。越界的 agent_id 指示 sched.h 任务描述符损坏，匹配必须失败以防止绑定到非法 Agent 实例。
+> **OS-DRV-016**： `agent_bus_match` 必须校验 `agent_id` 范围（1 ≤ agent_id ≤ `AIRY_CAP_MAX_AGENTS`=1024）。越界的 agent_id 指示 sched.h 任务描述符损坏，匹配必须失败以防止绑定到非法 Agent 实例。
 
 > **OS-DRV-017**： `agent_bus_type` 的 `probe`/`remove` 回调不得直接调用 daemon 的阻塞函数。它们通过 `kobject_uevent` 异步通知 daemon，daemon 在 5 秒内未响应时触发超时回退（OS-KER-149）。
 

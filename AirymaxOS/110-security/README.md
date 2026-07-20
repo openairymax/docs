@@ -36,7 +36,7 @@ agentrt-linux 安全加固体系是系统可信运行的核心保障。它继承
 
 ### 1.2 agentrt-linux 扩展
 
-- **纯 C `airy_lsm`**：不使用 BPF LSM（对齐 openEuler 纯 C 模式），250 个 LSM 钩子 ID 通过 `security_hook_list` 注册
+- **纯 C `airy_lsm`**：不使用 BPF LSM（对齐 openEuler 纯 C 模式），M0 基线注册 5 个 LSM 钩子（uring_cmd/task_alloc/task_free/task_kill/file_open）通过 `security_hook_list` 注册；`security_types.h` 定义 250 ID 枚举对齐 Linux 6.6 LSM 框架总插槽（`AIRY_LSM_KERNEL_HOOK_TOTAL=250`，仅文档用途，非全部注册）
 - **IPC 数据面自治**：Ring 生命周期解耦、离线缓存校验、Reconciliation 三原则
 - **io_uring 加固**：`IORING_OP_URING_CMD` 命令白名单、registered buffer 完整性校验、Ring 冻结机制
 - **Cupolas 安全穹顶**：从 agentrt 同源的 7 大子系统（Guards/Permission/Sanitizer/Audit/Workbench/Vault/Network）

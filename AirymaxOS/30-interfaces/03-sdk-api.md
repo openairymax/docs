@@ -523,7 +523,7 @@ client = AirymaxClient(
 | 头文件 | 在 SDK 中的角色 | 消费客户端 |
 |--------|----------------|-----------|
 | `syscalls.h` | 4 核心（v1.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
-| `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + MAC_MAX_AGENTS=1024 | CognitionClient.submit_task |
+| `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | CognitionClient.submit_task |
 | `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
 | `security_types.h` | capability 41 ID + mint/revoke/derive 签名 + 250 LSM 钩子 | SafetyClient.check_capability |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + Token 能效 | CognitionClient / ChatClient |

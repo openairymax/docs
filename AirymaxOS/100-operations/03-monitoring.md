@@ -561,7 +561,7 @@ audit_d 自身操作（写入、删除、查询）通过 LSM hook 记录到 `/va
 
 ## 12. 版本演进
 
-### 12.1 v1.0.0 → v1.0.1 变更
+### 12.1 v0.1.1 → v1.0.1 变更
 
 - 新增 `airy_token_total_cost_usd` 指标。
 - 修复 `airy_sched_latency_p99_ms` 在 SCHED_DEADLINE 任务下计算偏差。

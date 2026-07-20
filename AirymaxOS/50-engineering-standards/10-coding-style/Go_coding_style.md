@@ -1765,7 +1765,7 @@ func ExampleRegister() {
     manifest := &plugin.PluginManifest{
         PluginID:     "com.spharx.my-plugin",
         Name:         "My Plugin",
-        Version:      "1.0.0",
+        Version:      "0.1.1",
         Description:  "示例插件",
         Capabilities: []string{"data-processing"},
     }

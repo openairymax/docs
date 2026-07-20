@@ -382,7 +382,7 @@ flowchart LR
 
 ### 6.3 升级测试
 
-- **环境**：已安装上一版本（如 v1.0.0）。
+- **环境**：已安装上一版本（如 v0.1.1）。
 - **步骤**：
   1. `dnf upgrade agentrt-linux-*`。
   2. 重启系统。
@@ -434,7 +434,7 @@ agentrt-linux 提供 `airy-rollback` 命令用于一键回滚：
 airy-rollback
 
 # 回滚到指定版本
-airy-rollback --to 1.0.0
+airy-rollback --to 0.1.1
 
 # 回滚到指定快照
 airy-rollback --snapshot 2026-02-05

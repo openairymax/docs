@@ -287,11 +287,11 @@ typedef __s32 airy_vtime_t;
 #define AIRY_WEIGHT_MAX	10000
 
 /*
- * MAC_MAX_AGENTS: hard limit for concurrent agent scheduling.
+ * AIRY_CAP_MAX_AGENTS: hard limit for concurrent agent scheduling.
  * SSoT value: 1024 (validated by benchmark to 1000 concurrent).
  * All modules MUST reference this constant instead of local MAX_AGENTS.
  */
-#define MAC_MAX_AGENTS	1024
+#define AIRY_CAP_MAX_AGENTS	1024
 
 /**
  * airy_vtime_decay - Compute vtime after slice consumption

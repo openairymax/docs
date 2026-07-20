@@ -150,7 +150,7 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uap
 | `error.h` | 38 个 POSIX 码 + `AIRY_ECFGVERSION` | 39 个错误码 |
 | `log_types.h` | 仅 `LOG_FATAL` + `LOG_ERROR` 两级 | 2 个日志级别 |
 | `ipc.h` | 最简 128B 消息头（magic + opcode + payload_len + **capability_badge=0**） | 4 个字段（H6 落地） |
-| `sched.h` | 仅 `AIRY_TASK_MAGIC` + `MAC_MAX_AGENTS` | 2 个符号 |
+| `sched.h` | 仅 `AIRY_TASK_MAGIC` + `AIRY_CAP_MAX_AGENTS` | 2 个符号 |
 | `memory_types.h` | 仅 L1 记忆结构 | 1 个结构 |
 | `security_types.h` | 仅 POSIX 41 个 capability + **Badge 访问宏**（H6 落地） | 41 个 ID + 3 个宏 |
 | `cognition_types.h` | 仅 `airy_cog_phase` 三阶段枚举 | 1 个枚举 |

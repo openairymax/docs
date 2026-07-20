@@ -555,7 +555,7 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 >
 > - **调度参数**（引用 §2.6 `sched.h`）：`AIRY_PRIO_MIN = 0` / `AIRY_PRIO_MAX = 139`（优先级范围）、
 >   `AIRY_WEIGHT_MIN = 1` / `AIRY_WEIGHT_MAX = 10000`（权重范围）、
->   `AIRY_SLICE_DFL = 20`（默认时间片）、`MAC_MAX_AGENTS = 1024`（并发上限）、
+>   `AIRY_SLICE_DFL = 20`（默认时间片）、`AIRY_CAP_MAX_AGENTS = 1024`（并发上限）、
 >   `airy_vtime_t`（Q16.16 定点，非浮点）。配置文件中 `<daemon>.conf [sched]` 段的字段名
 >   与取值范围必须与上述 [SC] 常量一致。
 > - **IPC 配置参数**（引用 §2.7 `ipc.h`）：`AIRY_IPC_HDR_SIZE = 128`（消息头定长）、

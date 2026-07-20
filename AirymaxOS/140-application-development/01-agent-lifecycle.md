@@ -442,7 +442,7 @@ struct airy_exit_info {
 /* 借鉴 seL4 include/object/structures.h */
 compile_assert(agent_state_size, sizeof(struct airy_agent_state) == 64);
 compile_assert(token_budget_alignment, IS_ALIGNED(sizeof(struct airy_token_budget), 16));
-compile_assert(agent_id_max, MAC_MAX_AGENTS <= 1024);
+compile_assert(agent_id_max, AIRY_CAP_MAX_AGENTS <= 1024);
 ```
 
 ---

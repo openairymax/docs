@@ -91,7 +91,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 
 **A4 IPC 消息通道**：128B 消息头 `struct airy_ipc_msg_hdr`，magic `0x41524531`（'ARE1'），5 种 payload type，4 种操作码（SEND/RECV/SEND\_BATCH/CANCEL）。magic 与 checksum 共同保证消息完整性，`trace_id` 支持全链路追踪。IPC 是 Agent 间通信的唯一合法通道，篡改将导致跨租户越权。
 
-**A5 Agent 任务描述符**：`struct airy_task_desc`，magic `0x41475453`（'AGTS'），sched_tac 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF），优先级 0-139，`MAC_MAX_AGENTS=1024`。描述符伪造将导致 Agent 身份冒充，绕过 capability 授权。
+**A5 Agent 任务描述符**：`struct airy_task_desc`，magic `0x41475453`（'AGTS'），sched_tac 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF），优先级 0-139，`AIRY_CAP_MAX_AGENTS=1024`。描述符伪造将导致 Agent 身份冒充，绕过 capability 授权。
 
 **A6 LLM 推理状态**：CoreLoopThree kthread 维护的三阶段认知循环状态（`cognition_types.h` 三阶段枚举）。推理状态含 Agent 上下文、提示词、中间张量，属高价值认知数据。跨租户泄露违反 Agent 数据隔离原则。
 
@@ -151,7 +151,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 | **攻击向量** | ① 资源耗尽——恶意 Agent 耗尽 slab/kfifo 导致其他 Agent 无法分配；② IPC 风暴——高频 `AIRY_IPC_OP_SEND` 占满 fastpath 与 slowpath 队列；③ LLM 推理饥饿——恶意 Agent 持续提交推理请求占用 CoreLoopThree kthread；④ capability 表膨胀——派生大量 capability 耗尽 CSpace；⑤ 触发频繁 `cond_resched()` 路径拖慢调度                                                                   |
 | **攻击场景** | 恶意 Agent 以线速发送 IPC 消息（SEND\_BATCH 批量发送），占满 kfifo 与等待队列，导致合法 Agent 的 io_uring CQE poll 长期阻塞，引发系统级 DoS                                                                                                                                                                                                          |
 | **影响评估** | 中高。单租户 DoS 可降级全系统可用性，但不应影响内核 L1 稳定性                                                                                                                                                                                                                                                                         |
-| **防护措施** | ① IPC 每租户速率限制（per-Agent token bucket）；② capability 表大小上限 `MAC_MAX_AGENTS=1024`，CNode 槽位上限强制；③ CoreLoopThree kthread 公平调度（sched\_ext SCHED\_AGENT，按 Agent 配额）；④ 长循环抢占点规则——耗时 >1ms 或迭代 >1000 次必须 `cond_resched()`（OS-KER-228），防止单 Agent 独占 CPU；⑤ Landlock 沙箱限制 Agent 资源访问面；⑥ kfifo 满时 slowpath 排队而非丢消息，配合超时机制 |
+| **防护措施** | ① IPC 每租户速率限制（per-Agent token bucket）；② capability 表大小上限 `AIRY_CAP_MAX_AGENTS=1024`，CNode 槽位上限强制；③ CoreLoopThree kthread 公平调度（sched\_ext SCHED\_AGENT，按 Agent 配额）；④ 长循环抢占点规则——耗时 >1ms 或迭代 >1000 次必须 `cond_resched()`（OS-KER-228），防止单 Agent 独占 CPU；⑤ Landlock 沙箱限制 Agent 资源访问面；⑥ kfifo 满时 slowpath 排队而非丢消息，配合超时机制 |
 
 ### 3.6 E - Elevation of Privilege（权限提升）
 

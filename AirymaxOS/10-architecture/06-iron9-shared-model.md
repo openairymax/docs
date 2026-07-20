@@ -95,7 +95,7 @@ v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **10 个**，新增 `error.
 | 1 | `error.h` | `include/uapi/linux/airymax/error.h` | `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块 | A-UEF | [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) |
 | 2 | `log_types.h` | `include/uapi/linux/airymax/log_types.h` | `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射 | A-ULP | [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) |
 | 3 | `ipc.h` | `include/uapi/linux/airymax/ipc.h` | IPC magic + 128B 消息头 + SQE/CQE 操作码 | A-IPC | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) |
-| 4 | `sched.h` | `include/uapi/linux/airymax/sched.h` | Agent 8 态生命周期 + sched_tac 调度参数 + `MAC_MAX_AGENTS` | A-ULS | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) |
+| 4 | `sched.h` | `include/uapi/linux/airymax/sched.h` | Agent 8 态生命周期 + sched_tac 调度参数 + `AIRY_CAP_MAX_AGENTS` | A-ULS | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) |
 | 5 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 接口 | 记忆 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
 | 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID + LSM 钩子 250 ID + Cupolas blob 布局 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
 | 7 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 三阶段 + Thinkdual 模式 | 认知 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |

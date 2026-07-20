@@ -317,7 +317,7 @@ typedef enum {
 #define AIRY_SCHED_SLICE_DFL   20          /* ms */
 #define AIRY_PRIO_MIN          0
 #define AIRY_PRIO_MAX          139
-#define MAC_MAX_AGENTS            1024
+#define AIRY_CAP_MAX_AGENTS            1024
 
 /* 禁止定义 SCHED_AGENT 内核调度类宏，使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类 */
 

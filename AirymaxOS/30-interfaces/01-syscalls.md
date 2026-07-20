@@ -644,7 +644,7 @@ if (ret < 0) {
 | 头文件 | 在系统调用中的角色 | 消费方 |
 |--------|-------------------|--------|
 | `syscalls.h` | Syscall 编号体系（4 核心 + 20 预留 = 24 槽位） | 全部 4 个 syscall |
-| `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + MAC_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
+| `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
 | `ipc.h` | `struct airy_ipc_msg_hdr` Layout C v4 128B 消息头（magic 0x41524531 'ARE1' + `capability_badge` offset 40 + `crc32` offset 52）+ 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
 | `security_types.h` | capability 41 ID + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
