@@ -613,7 +613,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | --- | --- | --- | --- | --- |
 | `AIRY_IPC_MAGIC` | `0x41524531` | `'ARE1'` | `airy_ipc_msg_hdr` Layout C v4 128B 消息头 magic（C-S1 校验） | `include/uapi/linux/airymax/ipc.h` |
 | `AIRY_LOG_MAGIC` | `0x414C4F47` | `'ALOG'` | `airy_log_record` 128B 日志记录 magic | `include/uapi/linux/airymax/log_types.h` |
-| `AIRY_TASK_MAGIC` | `0x41475453` | `'AGTS'` | `struct airy_task_desc` 任务描述符 magic（优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024） | `include/uapi/linux/airymax/sched.h` |
+| `AIRY_TASK_MAGIC` | `0x41475453` | `'AGTS'` | `struct airy_task_desc` 任务描述符 magic（优先级 0-139 + MAC_MAX_AGENTS=1024） | `include/uapi/linux/airymax/sched.h` |
 
 > **H1 硬约束**：IPC magic `0x41524531` 'ARE1' 与日志/任务 magic 互不重叠，禁止复用同一 magic。详见 [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md)。
 
