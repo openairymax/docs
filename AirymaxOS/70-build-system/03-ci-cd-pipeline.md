@@ -243,7 +243,7 @@ jobs:
       - run: sudo apt-get install -y sparse
       - name: sparse make C=2 W=2 (OS-STD-TOOL-081-CI)
         run: |
-          make ARCH=x86_64 defconfig
+          make ARCH=x86_64 airy_defconfig
           make ARCH=x86_64 C=2 W=2 -j$(nproc) 2>&1 | tee sparse.log
           ! grep -E "warning:" sparse.log
 
@@ -275,7 +275,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: kselftest on QEMU (OS-TEST-013~022)
         run: |
-          make ARCH=x86_64 defconfig
+          make ARCH=x86_64 airy_defconfig
           ./tools/testing/kselftest/run_kselftest.sh --tap > kselftest.tap
           python3 agentrt-linux/tools/parse-tap.py --input kselftest.tap --fail-on-not-ok
 ```
@@ -417,7 +417,7 @@ sparse 是 Linux 内核基线的类型检查器，通过 `make C=2` 启用。W �
 ```yaml
 - name: sparse make C=2 W=2 (OS-STD-TOOL-081-CI)
   run: |
-    make ARCH=x86_64 defconfig
+    make ARCH=x86_64 airy_defconfig
     make ARCH=x86_64 C=2 W=2 -j$(nproc) 2>&1 | tee sparse.log
     ! grep -E "warning:" sparse.log
 ```
@@ -504,7 +504,7 @@ kselftest 是 agentrt-linux 系统级测试框架，默认在 QEMU 上运行（C
 ```yaml
 - name: kselftest on QEMU (OS-TEST-013~022)
   run: |
-    make ARCH=x86_64 defconfig
+    make ARCH=x86_64 airy_defconfig
     ./tools/testing/kselftest/run_kselftest.sh --tap > kselftest.tap
     python3 agentrt-linux/tools/parse-tap.py --input kselftest.tap --fail-on-not-ok
 ```
@@ -560,7 +560,7 @@ chaos-test:
 ```yaml
 - name: Coverage gate (OS-STD-TOOL-121/122/124)
   run: |
-    make ARCH=x86_64 defconfig
+    make ARCH=x86_64 airy_defconfig
     ./tools/testing/kunit/kunit.py run --arch=um --make_options=GCOV=1
     lcov --capture --directory . --output-file coverage.info
     python3 agentrt-linux/tools/coverage-gate.py \
