@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）验收标准与质量门禁
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）开发详细方案（路线图）模块第 6 文档\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt `agentrt工程标准规范手册.md` v29.0（§38.10 ACC-OS04 + 149 项 ACC）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）\
@@ -430,7 +430,7 @@ graph LR
 
 ## 16. 文档版本与维护
 
-- **当前版本**: v1.0（2026-07-06）
+- **当前版本**: v1.0.1（2026-07-21）
 - **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何 OS-ACC 验收标准变更必须经过 RFC → 评审 → 工程规范委员会批准流程
 - **回顾周期**: 里程碑回顾（每 M 完成时验收）+ 季度验收标准回顾 + 年度大版本校准

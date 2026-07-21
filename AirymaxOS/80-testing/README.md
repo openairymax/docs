@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）测试体系设计
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系主索引（KUnit + kselftest + 集成测试 + CI 流水线）\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt 7 层自动化验证 + Linux 6.6 测试框架（KUnit/kselftest/动态分析）\
 > **理论根基**：Linux 内核测试体系 + Airymax E-8 可测试性 + A-4 完美主义 + SSoT v2 CI 强制校验
@@ -155,6 +155,7 @@ agentrt-linux v1.0 测试体系在内核调度、IPC 传输、安全钩子、内
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立 KUnit/kselftest 核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（测试体系作为验证守护者）；新增 Airymax Unify Design 映射（sched_tac 调度测试 + IPC 零拷贝测试 + [SC] 逐字节校验为核心）；文档索引对齐实际目录文件 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
@@ -174,7 +175,7 @@ tools/testing/airy_regression/
 │   ├── kunit_regression.list          # KUnit 回归用例列表
 │   ├── kselftest_regression.list      # kselftest 回归用例列表
 │   ├── contract_regression.list       # Agent 契约回归用例（17 条契约）
-│   ├── cap_folding_regression.list    # v1.1 Capability Folding 回归用例
+│   ├── cap_folding_regression.list    # v1.0.1 Capability Folding 回归用例
 │   ├── perf_regression.list           # 性能回归基准（fastpath/io_uring/Badge）
 │   └── daemon_recovery_regression.list # 多 daemon 灾难恢复回归用例
 ├── baselines/
@@ -358,7 +359,7 @@ fi
 
 ## 9. 长时稳定性测试（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 现有测试均为短时（分钟级至小时级），缺少 24h+ 高负载稳定性测试。v1.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组、Epoch 单调递增计数器等数据结构在长期高负载下可能累积微小问题（内存碎片、计数器回绕、RCU grace period 延迟累积）。本章节定义 24h nightly + 7d release 前的长时稳定性测试。
+> **补强背景**：80-testing/ 现有测试均为短时（分钟级至小时级），缺少 24h+ 高负载稳定性测试。v1.0.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组、Epoch 单调递增计数器等数据结构在长期高负载下可能累积微小问题（内存碎片、计数器回绕、RCU grace period 延迟累积）。本章节定义 24h nightly + 7d release 前的长时稳定性测试。
 
 ### 9.1 测试场景
 
@@ -431,7 +432,7 @@ airy-stress \
 
 ## 10. Live Patch 兼容性测试（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 未定义 live patch（kpatch/kexec）对 AirymaxOS 数据结构的影响。v1.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组布局、Epoch 全局计数器、Badge 64-bit 格式等若在 live patch 中被修改，将导致运行中 Agent 的 Badge 全部失效或内存损坏。本章节定义 live patch 兼容性测试范围与回滚机制。
+> **补强背景**：80-testing/ 未定义 live patch（kpatch/kexec）对 AirymaxOS 数据结构的影响。v1.0.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组布局、Epoch 全局计数器、Badge 64-bit 格式等若在 live patch 中被修改，将导致运行中 Agent 的 Badge 全部失效或内存损坏。本章节定义 live patch 兼容性测试范围与回滚机制。
 
 ### 10.1 测试范围
 
@@ -553,7 +554,7 @@ fi
 
 ## 11. 升级/降级测试（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 未定义 AirymaxOS 版本升级/降级测试。v1.1 Capability Folding 架构引入 `agent_caps[1024]` 静态数组与 Badge 64-bit 格式，与 v1.0.x 的 41 ID 权限模型不兼容，必须定义明确的升级/降级路径与数据迁移。本章节定义版本间升级、降级、config 迁移、ABI 兼容性测试。
+> **补强背景**：80-testing/ 未定义 AirymaxOS 版本升级/降级测试。v1.0.1 Capability Folding 架构引入 `agent_caps[1024]` 静态数组与 Badge 64-bit 格式，与 v1.0.x 的 41 ID 权限模型不兼容，必须定义明确的升级/降级路径与数据迁移。本章节定义版本间升级、降级、config 迁移、ABI 兼容性测试。
 
 ### 11.1 升级路径
 

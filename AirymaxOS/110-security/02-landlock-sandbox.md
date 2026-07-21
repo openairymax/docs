@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # Landlock 用户态沙箱
 > **文档定位**：agentrt-linux（AirymaxOS）安全工程体系第 2 主题文档——Landlock 用户态安全沙箱深度剖析\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生\

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）工程思想
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范的第 4 主题文档——工程体系的思想核心。\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-12\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：`docs/AirymaxRT/10-architecture/00-architectural-principles.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v3 同源且部分代码共享）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）开发流程设计
 > **文档定位**：agentrt-linux（AirymaxOS）开发流程工程体系主索引（代码审查 + 贡献流程 + 版本管理 + 发布流程 + SSoT v2 单一权威源模型 + CI 强制校验）\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt 开发流程 + Linux 6.6 内核开发流程（development-process.rst 8 章）\
 > **理论根基**：Linux 内核开发流程 + Airymax S-4 涌现性管理 + C-2 增量演化 + SSoT v2 单一权威源
@@ -170,6 +170,7 @@ agentrt-linux 开发流程遵循 SSoT v2（Single Source of Truth v2）单一权
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立补丁生命周期/维护者层级核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（CI 强制校验阻断偏离）；新增 Airymax Unify Design 映射（SSoT v2 单一权威源模型 + CI 强制校验为五模块治理核心）；新增 SSoT v2 权威源清单；文档索引对齐实际目录文件 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Airymax Unify Design 总纲
 > **文档定位**：Airymax Unify Design 五模块统一设计思想的唯一权威总纲\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[架构设计总览](01-system-architecture.md)\
 > **设计依据**：Airymax Unify Design 设计决策（任务 4）+ Capability Folding 决策（A-IPC 第一块基石重构）
 
@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 >
 > 本文件遵循 **sched_tac**（SCHED_DEADLINE / SCHED_FIFO / EEVDF + seL4 MCS 语义映射），IPC 采用 **Capability Folding 单平面架构**（io_uring `IORING_OP_URING_CMD` + registered buffer + mmap + fastpath C-S9 Badge 内联校验，不使用 page flipping，无双平面、无独立 capability syscall），安全采用 **纯 C LSM 模块**（不使用 BPF LSM），日志内存采用 **alloc_pages + mmap**（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
-> **v1.1 Capability Folding 决策声明**（A-IPC 第一块基石）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns）。6 条硬约束 H1-H6 不可妥协。详见 §8 与 [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md)。
+> **v1.0.1 Capability Folding 决策声明**（A-IPC 第一块基石）：A-IPC 采用 Capability Folding 设计模式——将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；执行点是 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns）。6 条硬约束 H1-H6 不可妥协。详见 §8 与 [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md)。
 
 ---
 
@@ -44,7 +44,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | C-05 | 错误码双轨制 | agentrt 全仓库 `AIRY_E*` 与 `AIRY_ERR_*` 并存 | A-UEF 统一为 `AIRY_E*`（Error 负数空间）+ `AIRY_FAULT_*`（Fault 正数空间） |
 | C-06 | 日志双轨制 | `LOG_*` 与 `AIRY_LOG_*` 并存，128B 记录格式多处定义 | A-ULP 统一为 `LOG_*` 枚举 + 128B 固定记录格式，单一权威源 |
 | C-07 | DMA 一致性内存误用 | 14 个文件误用 DMA 一致性内存用于日志/IPC 共享内存 | A-ULP/A-IPC 统一 `alloc_pages(GFP_KERNEL)` + mmap，x86_64 默认缓存一致 |
-| C-08（v1.1 新增） | 控制面/数据面双平面架构死锁 | v1.0 的 12 syscall 中 8 个是 seL4 风格同步阻塞 IPC，与 io_uring 异步数据面形成双平面，导致死锁、不可通约、排序丢失 | A-IPC v1.1 Capability Folding 单平面架构：syscall 12→4，IPC 数据传递即能力校验（C-S9 内联 Badge） |
+| C-08（v1.0.1 新增） | 控制面/数据面双平面架构死锁 | v1.0 的 12 syscall 中 8 个是 seL4 风格同步阻塞 IPC，与 io_uring 异步数据面形成双平面，导致死锁、不可通约、排序丢失 | A-IPC v1.0.1 Capability Folding 单平面架构：syscall 12→4，IPC 数据传递即能力校验（C-S9 内联 Badge） |
 
 ### 1.2 设计哲学
 
@@ -53,7 +53,7 @@ Airymax Unify Design 的设计哲学可概括为四句话：
 1. **机制在内核，策略在用户态**——直接借鉴 seL4 微内核思想，内核只保留最小机制（IPC 回调、Ring Buffer、Micro-Supervisor），全部策略下沉到用户态守护进程。
 2. **内核冷酷执法，用户温情裁决**——A-ULS 的双 Supervisor 模型，内核侧立即冻结异常 Agent，用户侧根据上下文进行人性化裁决。
 3. **每个技术点只允许有一个权威源**——SSoT v2 单一权威源模型，[SC] 共享契约头文件物理宿主唯一，CI 强制逐字节校验。
-4. **（v1.1 新增）IPC 就是能力校验**——Capability Folding 将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。通信 = io_uring 数据面（唯一平面）；授权 = 1 个 Badge；撤销 = 1 条 atomic_inc。这是乔布斯/艾夫"简约就是美"哲学在内核工程上的落地——7 颗"看不见的螺丝"全部拧掉。
+4. **（v1.0.1 新增）IPC 就是能力校验**——Capability Folding 将 capability check 从独立控制面 syscall"折叠"到 IPC 数据面 fastpath 中。通信 = io_uring 数据面（唯一平面）；授权 = 1 个 Badge；撤销 = 1 条 atomic_inc。这是乔布斯/艾夫"简约就是美"哲学在内核工程上的落地——7 颗"看不见的螺丝"全部拧掉。
 
 ### 1.3 与 sched_tac 的关系
 
@@ -62,7 +62,7 @@ sched_tac 是 Airymax Unify Design 在调度领域的具体落地。Unify Design
 - **sched_tac**：调度机制选型（SCHED_DEADLINE / SCHED_FIFO / EEVDF + seL4 MCS 映射）
 - **Airymax Unify Design**：整体架构思想，A-ULS 模块内部使用 sched_tac 作为 Agent 8 态生命周期的调度承载
 
-### 1.4 与 Capability Folding 的关系（v1.1 新增）
+### 1.4 与 Capability Folding 的关系（v1.0.1 新增）
 
 Capability Folding 是 Airymax Unify Design 在通信领域的具体落地，是 A-IPC 模块的最终架构形态。Unify Design 不替代 Capability Folding，而是将 Capability Folding 纳入 A-IPC 模块的 IPC 数据面 + 能力校验统一承载实现。二者关系为：
 
@@ -185,7 +185,7 @@ Fault 码从 `0x1000` 起步，每个 Fault 对应一个不可恢复的异常场
 | Fault 码 | 值 | 语义 | 触发场景 |
 |---------|-----|------|---------|
 | `AIRY_FAULT_CAP_FORGED` | `0x1001` | Badge 伪造 | C-S9 检测到 `badge_randtag` 不匹配（v1.1 从 `AIRY_FAULT_CAP_FAULT` 精确化） |
-| `AIRY_FAULT_CAP_LEAK` | `0x1002` | Badge 泄漏 | sec_d 审计检测到跨 Agent 使用 Badge（v1.1 新增） |
+| `AIRY_FAULT_CAP_LEAK` | `0x1002` | Badge 泄漏 | sec_d 审计检测到跨 Agent 使用 Badge（v1.0.1 新增） |
 | `AIRY_FAULT_RING_CORRUPT` | `0x1003` | Ring 数据损坏 | CRC32 校验失败 + Ring 元数据不一致（v1.1 从 `AIRY_FAULT_IPC_FAULT` 精确化） |
 | `AIRY_FAULT_TIMEOUT` | `0x1004` | 超时故障 | Agent 心跳超时且未响应冻结 |
 | `AIRY_FAULT_ABNORMAL_CAP` | `0x1005` | 异常 Capability | Capability 树完整性校验失败 |
@@ -347,7 +347,7 @@ A-ULS 定义 Agent 8 态生命周期，与 Linux 进程状态天然映射（sche
 
 核心论断：**"IPC 不是承载能力校验——IPC 就是能力校验。"**
 
-| 维度 | v1.0 双平面架构 | v1.1 Capability Folding 单平面架构 |
+| 维度 | v1.0 双平面架构 | v1.0.1 Capability Folding 单平面架构 |
 |------|---------------|-----------------------------------|
 | 控制面 | 12 syscall（8 seL4 IPC 原语 + 4 控制原语），同步阻塞 | 4 syscall（1 Capability Invocation + 3 控制原语），低频管理 |
 | 数据面 | io_uring CQE 异步 | io_uring `IORING_OP_URING_CMD` 唯一平面 |
@@ -516,7 +516,7 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 
 ### 8.10 与 v1.0 的对比总结
 
-| 维度 | v1.0 双平面架构 | v1.1 Capability Folding 单平面架构 |
+| 维度 | v1.0 双平面架构 | v1.0.1 Capability Folding 单平面架构 |
 |------|---------------|-----------------------------------|
 | syscall 数量 | 12（8 seL4 IPC 原语 + 4 控制原语） | 4（1 Capability Invocation + 3 控制原语） |
 | 能力校验路径 | 双路径（控制面 decode_and_invoke + 数据面 cap_check_fast） | 单路径（数据面 fastpath C-S9 内联） |
@@ -553,9 +553,9 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 #endif /* AIRY_SC_FALLBACK */
 ```
 
-### 9.2 [DSL] ipc.h 降级块（v1.1 新增，H6）
+### 9.2 [DSL] ipc.h 降级块（v1.0.1 新增，H6）
 
-v1.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIRY_SC_FALLBACK` 生效时，`capability_badge` 字段存在但被忽略（值=0，跳过 C-S9 校验）：
+v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIRY_SC_FALLBACK` 生效时，`capability_badge` 字段存在但被忽略（值=0，跳过 C-S9 校验）：
 
 ```c
 /* kernel/include/uapi/linux/airymax/ipc.h 底部 */
@@ -577,13 +577,13 @@ v1.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIR
 - **IPC 消息头**：Layout C v4 128B 消息头（`capability_badge=0`，跳过 C-S9 Badge 校验，H6）
 - **调度**：EEVDF 默认调度（不依赖 SCHED_DEADLINE / SCHED_FIFO 配置）
 - **日志**：printk_safe 原生路径（不依赖 Ring Buffer）
-- **能力校验（v1.1 新增）**：传统 cap_t 引用模式（无 Badge 防伪造，依赖 LSM 完整校验）
+- **能力校验（v1.0.1 新增）**：传统 cap_t 引用模式（无 Badge 防伪造，依赖 LSM 完整校验）
 
 ### 9.4 与 IRON-9 v3 的关系
 
 [DSL] 是 IRON-9 v3 的第四层，详见 [06-iron9-shared-model.md](06-iron9-shared-model.md) §1。IRON-9 演进路径：v1（两层）→ v2（[SC]/[SS]/[IND] 三层）→ v3（新增 [DSL] 第四层）。
 
-### 9.5 [DSL] 错误码空间（v1.1 新增）
+### 9.5 [DSL] 错误码空间（v1.0.1 新增）
 
 [DSL] 错误码空间 `[-201, -300]`，详见 [30-interfaces/08-sc-error-contract.md §2.6](../30-interfaces/08-sc-error-contract.md)。
 
@@ -602,7 +602,7 @@ v1.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIR
 > - 日志内存：alloc_pages(GFP_KERNEL) + mmap，不使用 DMA 一致性内存
 > - [SC] 物理宿主：`kernel/include/uapi/linux/airymax/`，共 10 个头文件
 >
-> **v1.1 Capability Folding 决策权威声明**（A-IPC 第一块基石）：
+> **v1.0.1 Capability Folding 决策权威声明**（A-IPC 第一块基石）：
 > - 6 条硬约束 H1-H6 不可妥协（详见 §8.2）
 > - Layout C v4 128B 消息头一经发布即冻结（magic 0x41524531 'ARE1'）
 > - syscall 12→4 精确映射（详见 §8.5 + [01-syscalls.md §2.2.1](../30-interfaces/01-syscalls.md)）
@@ -619,7 +619,7 @@ v1.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIR
 - [03-microkernel-strategy.md](03-microkernel-strategy.md) —— 微内核化策略（A-ULS 决策依据）
 - [06-iron9-shared-model.md](06-iron9-shared-model.md) —— IRON-9 v3 四层模型
 - [11-degraded-survival-layer.md](11-degraded-survival-layer.md) —— [DSL] 降级生存层
-- [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) —— 系统调用接口（v1.1 Capability Folding 集成版，syscall 12→4 SSoT）
+- [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) —— 系统调用接口（v1.0.1 Capability Folding 集成版，syscall 12→4 SSoT）
 - [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) —— IPC 协议（Layout C v4 + Capability Folding Badge 模型 SSoT）
 - [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— IPC Fastpath 状态机（C-S9 Badge 校验 + 7 态状态机 SSoT）
 - [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— A-UEF [SC] error.h 契约（6 码空间 SSoT）
@@ -636,7 +636,8 @@ v1.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `AIR
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Airymax Unify Design 5 模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）完整设计；消解 7 个架构冲突点；四大技术领域覆盖度；[DSL] 降级生存层；sched_tac + IORING_OP_URING_CMD + 纯 C LSM + alloc_pages/mmap 技术选型固化；SSoT 声明 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**：(1) §1.1 新增 C-08 双平面架构死锁冲突点；(2) §1.2 新增"IPC 就是能力校验"设计哲学；(3) §1.4 新增与 Capability Folding 的关系；(4) §8 A-IPC 全面重写为单平面架构（Capability Folding 工程定义 + 6 条硬约束 H1-H6 + Layout C v4 + syscall 12→4 + C-S9 Badge 校验 + 数据结构隔离三原则 + IRON-9 v3 四层落地 + v1.0/v1.1 对比）；(5) §9 [DSL] 新增 ipc.h 降级块（H6）+ [DSL] 错误码空间；(6) §10 SSoT 声明新增 Capability Folding 决策权威声明；(7) §11 相关文档新增 01-syscalls.md / 07-ipc-fastpath.md / 110-security/03-capability-model.md / 120-cross-project-code-sharing.md 引用；(8) 清除所有内部审查文档路径引用 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | Airymax Unify Design 总纲 | v1.1 | 2026-07-18
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | Airymax Unify Design 总纲 | v1.0.1 | 2026-07-21

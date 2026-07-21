@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 需求分析
 > **文档定位**：agentrt-linux（AirymaxOS）需求分析体系的总入口与纲领性文档，定义需求分层模型、需求来源、需求追溯关系，并向下展开为业务需求、功能需求、非功能需求三个子文档。\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **正式全称**：agentrt-linux（AirymaxOS，极境智能体操作系统，简称 AirymaxOS）\
 > **仓库别名**：agentrt-linux（仓库名）\
 > **上级文档**：[agentrt-linux 总览](../README.md)
@@ -197,6 +197,7 @@ agentrt-linux 需求采用统一的「前缀-序号」编号规则：
 | 0.1.1 | 2026-07-06 | 初始版本，建立需求分层模型与追溯框架 |
 | 0.1.1 | 2026-07-13 | 补充版本基线锁定战略决策说明 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型；新增 Airymax Unify Design 五模块需求映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

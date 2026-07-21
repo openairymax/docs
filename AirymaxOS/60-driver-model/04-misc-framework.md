@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型 — misc 设备框架与轻量字符设备
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块第四篇——misc 设备框架与 `/dev/airy_*` 设备节点创建\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[60-driver-model README](README.md)\
 > **同源映射**：agentrt `daemons`（用户态 vfs_d 守护进程）+ Linux 6.6 `drivers/char/misc.c`（misc 设备框架实现）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-IPC 设备访问 fastpath）\

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # [SC] log_types.h 二进制契约
 > **文档定位**：A-ULP（统一日志与打印系统）模块的 [SC] 共享契约权威定义\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5\
 > **设计依据**：综合修正方案 §2.3（日志类型 SSoT）+ §4.2.2（A-ULP 设计）
 
@@ -259,7 +259,8 @@ Linux 6.6 的 `printk` 定义 8 级日志级别（`KERN_EMERG` ~ `KERN_DEBUG`）
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：A-ULP [SC] log_types.h 二进制契约；128B 固定记录格式（magic/level/facility/timestamp/caller_id/payload/reserved）；5 级日志枚举（LOG_DEBUG~LOG_FATAL）；printk 8 级映射；物理宿主 `kernel/include/uapi/linux/airymax/log_types.h` |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] log_types.h 二进制契约 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] log_types.h 二进制契约 | v1.0.1 | 2026-07-21

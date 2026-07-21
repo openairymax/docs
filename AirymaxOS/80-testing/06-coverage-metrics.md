@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）覆盖率度量
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 6 卷——代码覆盖率度量（Coverage Metrics）。本卷规定覆盖率度量体系（行/分支/函数覆盖率）、CI 覆盖率门槛（kernel ≥90%、security ≥95%、ipc ≥90%）、覆盖率工具链（gcov + lcov + genhtml）、nightly workflow 生成覆盖率报告、Codecov 趋势追踪，以及 agentrt-linux 专属 Agent 行为路径覆盖率。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L6（覆盖度量）+ Linux 6.6 内核基线 `gcov`、`KCOV`、`lib/Makefile`\
 > **理论根基**：Linux 6.6 内核基线覆盖率思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / A-4 完美主义）\
@@ -711,7 +711,7 @@ int airy_coverage_agent_path_illegal_count(void)
 
 ### 8.3 后续版本规划
 
-- v1.1：新增 `airy_coverage_token_budget` Token 预算路径覆盖率。
+- v1.0.1：新增 `airy_coverage_token_budget` Token 预算路径覆盖率。
 - v1.2：与 10-formal-verification 联动，将形式化验证的属性覆盖纳入覆盖率报告。
 - v1.3：支持分支覆盖率的 MC/DC（Modified Condition/Decision Coverage）度量。
 
@@ -750,11 +750,11 @@ int airy_coverage_agent_path_illegal_count(void)
 
 ## 12. 性能回归 CI（v1.1 增量补强）
 
-> **补强背景**：170-performance/ 目录当前无 .md 文档落地（v1.1 待补），性能回归检测缺乏 CI 自动化。v1.1 Capability Folding 引入 fastpath C-S9 内联校验（~10ns SLA）、Badge 编译等新性能敏感路径，若无 CI 性能回归守护，延迟退化可能悄然合入主干。本章节作为 170-performance/ 文档缺位期间的临时落地，待 170-performance/03-ipc-performance.md 建立后迁移。
+> **补强背景**：170-performance/ 目录当前无 .md 文档落地（v1.1 待补），性能回归检测缺乏 CI 自动化。v1.0.1 Capability Folding 引入 fastpath C-S9 内联校验（~10ns SLA）、Badge 编译等新性能敏感路径，若无 CI 性能回归守护，延迟退化可能悄然合入主干。本章节作为 170-performance/ 文档缺位期间的临时落地，待 170-performance/03-ipc-performance.md 建立后迁移。
 
 ### 12.1 基准测试集
 
-| 基准 | 测量函数 | SLA（v1.1） | 测量方法 |
+| 基准 | 测量函数 | SLA（v1.0.1） | 测量方法 |
 |------|---------|-----------|---------|
 | fastpath C-S9 延迟 | `airy_cap_badge_ok()` fastpath | ≤ 10ns | `bpf_perf_event` + 100 万次取 P99 |
 | io_uring 提交延迟 | `IORING_OP_URING_CMD` 提交至完成 | ≤ 160ns | `io_uring_enter` 前后 `ktime_get_ns()` 差值 |

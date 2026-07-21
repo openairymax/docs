@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # 上游追踪策略
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义追踪 Linux 6.6 上游 stable 补丁、merge window 策略与 CVE backport 流程\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 LTS 内核维护流程（IRON-9 v3 [IND] 完全独立层，上游追踪为 agentrt-linux 专属策略）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\

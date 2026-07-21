@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IPC 数据面自治三原则
 > **文档定位**：A-IPC（统一进程间通信体系）数据面自治三大设计原则的唯一权威定义\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §8\
-> **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ v1.1 Capability Folding 决策
+> **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ v1.0.1 Capability Folding 决策
 
 ---
 
@@ -128,11 +128,11 @@ static void airy_ipc_ring_release(struct airy_ipc_ring *ring)
 
 > **v1.1 重构说明**（Capability Folding 集成版）：原则二的**目标不变**（控制面离线时数据面仍可校验），但**实现机制升级**——
 > - v1.0：`radix tree` 缓存查找 + TTL 过期 + 两层校验（fastpath 查缓存 / slowpath 查控制面）
-> - v1.1：`agent_caps[1024]` 静态数组 + 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
+> - v1.0.1：`agent_caps[1024]` 静态数组 + 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
 >
-> v1.1 Capability Folding 通过 Badge 模型天然满足离线校验要求：Badge 由 sec_d 在控制面在线时编译并写入 `agent_caps[src_task]`，控制面离线后 fastpath C-S9 仍可基于 `agent_caps[]` 内联校验（数组无锁多读者）。v1.0 的 `radix tree` 缓存、TTL 过期、`AIRY_ECAP_RADIX_MISS` 兜底码仅在 [DSL] 降级模式下作为 fallback 路径保留（H6）。v1.1 实现详情见 [03-capability-model.md §13.2](03-capability-model.md) 与 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)。
+> v1.0.1 Capability Folding 通过 Badge 模型天然满足离线校验要求：Badge 由 sec_d 在控制面在线时编译并写入 `agent_caps[src_task]`，控制面离线后 fastpath C-S9 仍可基于 `agent_caps[]` 内联校验（数组无锁多读者）。v1.0 的 `radix tree` 缓存、TTL 过期、`AIRY_ECAP_RADIX_MISS` 兜底码仅在 [DSL] 降级模式下作为 fallback 路径保留（H6）。v1.1 实现详情见 [03-capability-model.md §13.2](03-capability-model.md) 与 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)。
 >
-> 下文 §3.1~§3.5 保留 v1.0 原始设计描述（radix tree 缓存模型），作为原则二的设计语义参考；实际实现以 v1.1 Capability Folding 为准。
+> 下文 §3.1~§3.5 保留 v1.0 原始设计描述（radix tree 缓存模型），作为原则二的设计语义参考；实际实现以 v1.0.1 Capability Folding 为准。
 
 ### 3.1 原则定义
 
@@ -371,7 +371,8 @@ A-IPC 模块组成
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：IPC 数据面自治三原则；原则一 Ring 生命周期解耦（内核 alloc_pages + 引用计数独立）；原则二离线缓存校验（radix tree + TTL + 两层校验）；原则三 Reconciliation（最终一致 + reconciliation log）；与 A-IPC/A-ULS/[DSL] 模块协作关系 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**——① §3 原则二添加 v1.1 重构说明：实现机制从 v1.0 `radix tree` 缓存升级为 v1.1 `agent_caps[1024]` 静态数组 + 64-bit Badge 内联校验（fastpath C-S9 ~10ns），原则目标不变；② §3.5 错误码 `AIRY_ECAP_OFFLINE` 替换为 `AIRY_EDSL_CAP_MINIMAL`（-206，[DSL] 兜底码）；③ §3.3 `AIRY_ECAP_NOT_FOUND` 替换为 `AIRY_ECAP_RADIX_MISS`（-76，[DSL] 兜底码）；④ 全文术语对齐 v1.1（Capability Folding 单平面架构） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | IPC 数据面自治三原则 | v1.1 | 2026-07-18
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | IPC 数据面自治三原则 | v1.0.1 | 2026-07-21

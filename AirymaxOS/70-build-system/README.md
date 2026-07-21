@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）构建系统设计
 > **文档定位**：agentrt-linux（AirymaxOS）构建系统工程设计主索引（Kconfig + Kbuild + CMake + RPM spec + airy_defconfig）\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统\
 > **理论根基**：Linux Kbuild 递归构建 + Airymax E-7 文档即代码 + SSoT v2 单一权威源
@@ -150,6 +150,7 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立 Kbuild/Kconfig 核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（通过 `airy_defconfig` 编译期锁定）；新增 Airymax Unify Design 映射（A-UCS airy_defconfig 为核心）；文档索引对齐实际目录文件（含 03-ci-cd-pipeline.md） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

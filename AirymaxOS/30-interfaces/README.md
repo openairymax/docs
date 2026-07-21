@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 接口设计
 > **文档定位**：agentrt-linux（AirymaxOS） 接口设计层的总览与索引\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-19\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
 > **设计依据**：综合修正方案 §3.1（P0 级缺失文档 #3/#4）+ §6.2.1（30-interfaces 一致性检查）
 

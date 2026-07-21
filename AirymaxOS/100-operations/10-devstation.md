@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：AirymaxOS v1.0.1 运维分册 · 开发运维工作站设计文档，定义 devstation 的功能、界面、集成与安装方式\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[100-operations README](README.md)
 
 ---

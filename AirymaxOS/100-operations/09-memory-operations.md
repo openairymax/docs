@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：AirymaxOS v1.0.1 运维分册 · 记忆运维设计文档，定义 MemoryRovol L1-L4 四层记忆层级的运维策略、碎片整理、迁移与安全擦除\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[100-operations README](README.md)
 
 ---

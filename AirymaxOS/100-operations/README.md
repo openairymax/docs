@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）运维体系设计
 > **文档定位**：agentrt-linux（AirymaxOS）运维工程体系主索引（部署 + 配置 + 监控 + 告警 + 日志收集 + 12 daemon 清单）\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt daemons（12 个用户态服务）+ Linux 6.6 systemd 集成\
 > **理论根基**：Linux 发行版运维哲学 + Airymax S-1 反馈闭环 + E-2 可观测性
@@ -178,6 +178,7 @@ agentrt-linux v1.0 运维体系在内核调度、IPC 传输、安全钩子、内
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立部署/配置核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明；新增 Airymax Unify Design 映射（A-UCS 配置管理 + A-ULP 日志收集 + A-ULS 监控告警为核心）；新增 12 daemon 清单（统一归属 services/daemons/，systemd 服务名 `agentrt-*.service` 格式）；文档索引对齐实际目录文件 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

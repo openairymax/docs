@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）动态分析
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 4 卷——运行时动态分析（Dynamic Analysis）。本卷规定 KASAN（内核地址 sanitizer）、KFENCE（采样式内存错误检测）、UBSAN（未定义行为 sanitizer）、KCSAN（并发 sanitizer）、lockdep（锁依赖分析）、kmemleak（内存泄漏检测）的启用模型、Kconfig 选项、报告格式，以及 agentrt-linux 专属动态分析（Token 预算溢出、Agent 内存泄漏、IPC Ring 生命周期）与 CI nightly workflow 集成。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L4（动态分析）+ Linux 6.6 内核基线 `lib/kasan/`、`mm/kfence/`、`lib/ubsan/`、`kernel/kcsan/`、`kernel/locking/lockdep.c`\
 > **理论根基**：Linux 6.6 内核基线动态分析思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / A-4 完美主义）\
@@ -821,7 +821,7 @@ jobs:
 
 ### 11.3 后续版本规划
 
-- v1.1：新增 `airy_dyn_lsm_hook`（纯 C LSM 钩子死锁检测）。
+- v1.0.1：新增 `airy_dyn_lsm_hook`（纯 C LSM 钩子死锁检测）。
 - v1.2：将 `airy_dyn_*` 模块的报告通过 tracepoint 暴露，便于 ftrace 实时追踪。
 - v1.3：与 110-security 联动，将 KASAN/KCSAN 报告自动同步至安全运营中心。
 
@@ -861,11 +861,11 @@ jobs:
 
 ## 15. AirymaxOS 专属并发竞态测试（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 §5（KCSAN）覆盖通用并发 sanitizer，但未针对 v1.1 Capability Folding 架构引入的专属并发场景（1024 Agent 并发 Badge 编译、fastpath 多读者 + slowpath 写者、Epoch 撤销 + Badge 校验）进行专项测试。本章节定义 AirymaxOS 专属并发竞态测试矩阵（R1-R3）、内核测试模块与验证门槛，作为 §1-§14 的增量补强，不替换现有任何内容。
+> **补强背景**：80-testing/ 现有 §5（KCSAN）覆盖通用并发 sanitizer，但未针对 v1.0.1 Capability Folding 架构引入的专属并发场景（1024 Agent 并发 Badge 编译、fastpath 多读者 + slowpath 写者、Epoch 撤销 + Badge 校验）进行专项测试。本章节定义 AirymaxOS 专属并发竞态测试矩阵（R1-R3）、内核测试模块与验证门槛，作为 §1-§14 的增量补强，不替换现有任何内容。
 
 ### 15.1 竞态场景矩阵（R1/R2/R3）
 
-v1.1 Capability Folding 引入三类专属竞态场景：
+v1.0.1 Capability Folding 引入三类专属竞态场景：
 
 | 场景 | 竞态描述 | 同步机制 | 检测工具 |
 |------|---------|---------|---------|
@@ -1046,7 +1046,7 @@ MODULE_LICENSE("GPL");
 
 **OS-TEST-051**：CI nightly 必须加载 `airy_concurrent_test.ko`（`CONFIG_KCSAN=y` + `CONFIG_LOCKDEP=y`），1024 读者 + 1 写者运行 30 分钟，覆盖 R1/R2/R3 三类竞态场景；任一 KCSAN data-race 报告、lockdep 死锁报告、`random_tag` 重复或 `airy_cap_global_epoch` 回退即标记 nightly 失败。
 
-**OS-KER-116**：v1.1 Capability Folding 并发竞态测试（§15）发现的 data-race 视为 P0 级缺陷，必须在 12 小时内修复（添加 `READ_ONCE()` / `WRITE_ONCE()` / RCU / seqlock）；禁止使用 `ASSERT_EXCLUSIVE_ACCESS()` 或 `__no_kcsan` 抑制报告，除非在评审中证明为有意设计的无锁读。
+**OS-KER-116**：v1.0.1 Capability Folding 并发竞态测试（§15）发现的 data-race 视为 P0 级缺陷，必须在 12 小时内修复（添加 `READ_ONCE()` / `WRITE_ONCE()` / RCU / seqlock）；禁止使用 `ASSERT_EXCLUSIVE_ACCESS()` 或 `__no_kcsan` 抑制报告，除非在评审中证明为有意设计的无锁读。
 
 ---
 

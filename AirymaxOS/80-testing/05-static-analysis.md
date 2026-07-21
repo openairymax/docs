@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）静态分析
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 5 卷——编译时静态分析（Static Analysis）。本卷规定 Sparse（内核静态分析工具）、Smatch（语义匹配）、Coccinelle（语义补丁检测）、Clang Static Analyzer、Coverity 扫描集成、checkpatch.pl 扩展、[SC] 头文件编译器无关性检查（`check-uapi-compiler-agnostic.sh`）的启用模型、规则配置与 `ci-kernel` workflow 集成。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L5（静态分析）+ Linux 6.6 内核基线 `scripts/sparse/`、`scripts/coccinelle/`、`scripts/checkpatch.pl`\
 > **理论根基**：Linux 6.6 内核基线静态分析思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / A-4 完美主义）\
@@ -703,7 +703,7 @@ CI 必须同时启用两者，静态分析阻断 PR，动态分析阻断 nightly
 
 ### 11.3 后续版本规划
 
-- v1.1：新增 `airy_sparse_rules` 5 项规则，覆盖 IPC Ring 锁序、Token 预算原子性。
+- v1.0.1：新增 `airy_sparse_rules` 5 项规则，覆盖 IPC Ring 锁序、Token 预算原子性。
 - v1.2：将 `check-uapi-compiler-agnostic.sh` 扩展至 5 编译器 × 5 标准 × 5 架构 = 125 组合。
 - v1.3：与 10-formal-verification 联动，将形式化验证的属性检查集成至静态分析阶段。
 

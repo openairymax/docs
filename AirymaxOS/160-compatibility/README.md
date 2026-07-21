@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 兼容性设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系主索引——ABI 稳定性、POSIX 兼容、上游跟踪与跨发行版兼容\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)
 
 ---
@@ -174,6 +174,7 @@ IRON-9 v3 的 [DSL] 降级生存层为兼容性提供最后防线：当 [SC] 头
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，5/5 文档完成（ABI + POSIX + 上游 + IPC 版本 + 跨发行版） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）；IORING_OP_URING_CMD（不使用 page flipping）；纯 C LSM（不使用 BPF LSM）；alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v3 四层模型（新增 [DSL] 降级生存层）；新增内核基线兼容声明（标准 Linux 6.6 为唯一原生基线，其余版本仅作 DKMS 兼容目标）；新增 Airymax Unify Design 五模块映射（[SC] 共享契约 ABI 稳定性 / [IND] 独有兼容层） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

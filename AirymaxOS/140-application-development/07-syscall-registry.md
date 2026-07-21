@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # Agent 系统调用编号注册表（SSoT）
 > **文档定位**：agentrt-linux（AirymaxOS）专用系统调用编号的唯一权威注册表（Single Source of Truth），统一编号分配、命名前缀、ABI 稳定性约束、UAPI 头文件模板与注册审批流程\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 `include/uapi/asm-generic/unistd.h`（编号注册表）+ seL4 `libsel4/include/api/syscall.xml`（接口契约代码生成）\
 > **文档性质**：实现方案文档（非设计文档）。本注册表不替代 [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) 的接口设计与 [50-engineering-standards/20-contracts/contracts.md](../50-engineering-standards/20-contracts/contracts.md) 的契约定义，仅作为编号分配的唯一权威来源（SSoT）对所有设计文档与契约文档的编号进行统一收口\
@@ -963,6 +963,7 @@ static void test_syscall_number_stability(struct kunit *test)
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。整合 30-interfaces/01-syscalls.md（20 个编号）与原 syscall_api_contract.md（编号段规则，已合并入 contracts.md）为统一 SSoT 注册表。扩展至 31 个已分配编号（新增 Agent 生命周期 9 个 + 1.0.1 阶段补充 2 个）。建立完整编号分配规则、UAPI 头文件模板、注册审批流程、ABI 稳定性约束、Agent 生命周期 API 映射、已知不一致问题清单 |
 | 1.0.1 | 2027-XX-XX | 编号分配完成，UAPI 头文件由代码生成器自动生成（R-01），内核入口表建立，KUnit 测试覆盖 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

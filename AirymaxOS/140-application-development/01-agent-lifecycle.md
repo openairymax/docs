@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # Agent 应用生命周期管理
 > **文档定位**：agentrt-linux Agent 应用的完整生命周期管理\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt Agent 生命周期 + Linux 6.6 进程模型 + seL4 TCB 生命周期\
 > **设计参考**：seL4 `src/object/tcb.c` (线程生命周期) + Linux `kernel/exit.c` (进程退出)

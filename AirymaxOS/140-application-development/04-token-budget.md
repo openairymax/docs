@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # Token 预算契约
 > **文档定位**：agentrt-linux（AirymaxOS）Agent Token 预算的完整工程契约，定义令牌桶算法、数据结构、分配策略、消耗计量、耗尽处理、恢复机制、系统调用集成、调度集成与 SDK 集成\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 CFS 带宽控制（`cpu.cfs_quota_us` / `cpu.cfs_period_us`）+ seL4 MCS 调度上下文（Scheduling Context）+ agentrt Token 能效工程\
 > **文档性质**：实现方案文档（非设计文档）。本契约在 [01-agent-lifecycle.md](01-agent-lifecycle.md) 第 3.3 节 Token 预算管理与 [170-performance/01-scheduling-performance.md](../170-performance/01-scheduling-performance.md) 第 3.3 节 Token 预算感知权重的基础上，补充完整的预算模型、接口定义、状态机与错误处理\
@@ -1057,6 +1057,7 @@ agentrt-linux 独有的维度：
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。定义令牌桶算法、三级阈值设计、核心数据结构（`airy_token_budget` + `airy_token_budget_config` + `airy_token_usage`）、三级预算层级、消耗计量与审计、耗尽状态机、恢复机制（自动补充 + 手动注入 + 借用）、系统调用集成（523/524）、调度集成（token_factor Q16.16）、SDK 集成（四语言）、性能约束（Token/Watt/Latency）、错误码统一（AIRY_EBUDGET_EXHAUSTED = -15）、KUnit 测试 |
 | 1.0.1 | 2027-XX-XX | 内核实现完成，自适应补充算法落地，多级预算层级支持，性能基准达标 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）长期支持策略
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 6 卷——长期支持（LTS）策略。本文档详述 LTS 版本选择、5 年支持周期、回溯策略、兼容性保证、安全策略、文档维护以及与上游 Linux 6.6 LTS 的对齐关系，是稳定版本发布（05 卷）在长期支持维度的延伸。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt LTS 策略 + Linux 6.6 LTS（kernel.org LTS 选择与维护规则）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax C-2 增量演化 + S-4 涌现性管理 + SSoT v2 单一权威源\

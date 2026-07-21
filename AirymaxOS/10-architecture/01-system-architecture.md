@@ -3,10 +3,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 架构设计
 > **文档定位**：agentrt-linux（AirymaxOS）架构设计\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **设计原则**：微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源性
-> **系统定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——通过 seL4 微内核工程思想进行系统化改造，落地 v1.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。详见 ADR-012（微内核化改造技术路线确认）+ ADR-014（微内核设计思想来源单一化）。
+> **系统定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——通过 seL4 微内核工程思想进行系统化改造，落地 v1.0.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。详见 ADR-012（微内核化改造技术路线确认）+ ADR-014（微内核设计思想来源单一化）。
 
 ---
 
@@ -265,7 +265,7 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | kernel / memory |
 | `security_types.h` | POSIX capability 41 ID 枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
 | `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
-| `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.1 Capability Folding 后）| kernel / cognition |
+| `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.0.1 Capability Folding 后）| kernel / cognition |
 | `uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 跨端 |
 | `lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | kernel / security |
 

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Agent 应用开发设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）Agent 应用开发工程体系主索引——SDK、API、示例、MemoryRovol API 与认知 API\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)
 
 ---
@@ -179,6 +179,7 @@ Agent 应用 SDK 遵循 **IRON-9 v3 四层模型**与 agentrt SDK 同源：[SC] 
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，7/7 文档完成（Agent 生命周期 + SDK + Token + MemoryRovol + 部署 + 注册表） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）；IORING_OP_URING_CMD（不使用 page flipping）；纯 C LSM（不使用 BPF LSM）；alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v3 四层模型（新增 [DSL] 降级生存层）；新增 Airymax Unify Design 五模块映射（A-IPC SDK IPC 接口 / A-UEF 错误码 API / A-UCS 配置 API） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

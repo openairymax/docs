@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）Pull Request 流程规范
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 3 卷——Pull Request 流程规范。本文档详述从 fork 到 PR 合并的完整链路，是补丁生命周期（01 卷）在 GitHub PR 工作流维度的展开，规定 PR 创建、PR 模板、PR 审查、合并策略、自动关闭策略等具体操作。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt PR 流程 + Linux 6.6 内核 `submitting-patches.rst`（GitHub PR 替代 git send-email）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax S-4 涌现性管理 + C-2 增量演化 + SSoT v2 单一权威源\

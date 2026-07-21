@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # io_uring 安全加固设计
 > **文档定位**：A-IPC（统一进程间通信体系）io_uring 在 Agent 环境安全加固的唯一权威设计\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-19\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §8\
 > **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ §6.2.1 C-02（page flipping 修正）
 
@@ -660,7 +660,8 @@ OLK 6.6 的 `IORING_REGISTER_PBUF_RING` 支持 `IOU_PBUF_RING_MMAP` 标志，由
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：io_uring 安全加固设计；io_uring_disabled sysctl（0/1/2 三级控制）；opcode 白名单（仅 IORING_OP_URING_CMD + NOP）；纯 C LSM 双重校验（opcode + Capability，不使用 BPF LSM）；registered buffer 安全（注册前 Capability 校验 + 地址 + 大小限制）；与 A-IPC/纯 C LSM/seL4 Capability 模型关系 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | io_uring 安全加固设计 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | io_uring 安全加固设计 | v1.0.1 | 2026-07-21

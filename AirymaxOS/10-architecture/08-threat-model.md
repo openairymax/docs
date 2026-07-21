@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS）安全威胁模型与防护设计，基于 STRIDE 框架识别资产、分析威胁、设计防护措施，作为 1.0.1 开发阶段安全设计的总纲\
 > **文档版本**：0.2.8\
-> **最后更新**：2026-07-15\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：STRIDE 威胁建模方法论 + seL4 capability 安全模型（ADR-014）+ Linux 6.6 LSM/Landlock/capability\
 > **版本基线**：1.x.x 锁定 Linux 6.6 LTS / 2.x.x 锁定 Linux 7.1（ADR-013）\
@@ -381,7 +381,7 @@ agentrt-linux 集成 syzkaller 风格的内核 fuzzing：
 
 | Fuzzing 目标      | 覆盖 syscall                   | 关注威胁    |
 | --------------- | ---------------------------- | ------- |
-| `airy_sys_call` | 4 核心 syscall 全覆盖（v1.1）            | S/T/E   |
+| `airy_sys_call` | 4 核心 syscall 全覆盖（v1.0.1）            | S/T/E   |
 | IPC 操作码         | SEND/RECV/SEND\_BATCH/CANCEL | T/D     |
 | capability 操作   | mint/mintcopy/derive/revoke  | E       |
 | Landlock 域施加    | fork 后 restrict\_self 时序     | E（沙箱逃逸） |

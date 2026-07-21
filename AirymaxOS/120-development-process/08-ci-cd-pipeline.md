@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）CI/CD 流水线详细设计
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 8 卷——CI/CD 流水线详细设计。本文档详述 6 个 CI workflow 的设计、触发条件、资源管理、失败处理，是补丁生命周期（01 卷）CI 强制校验在工具层的完整展开。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt CI/CD 流水线 + Linux 6.6 内核 CI（kernelci.org + 0-Day）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax S-4 涌现性管理 + SSoT v2 单一权威源 + C-2 增量演化\

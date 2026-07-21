@@ -1,11 +1,11 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
-# agentrt-linux（AirymaxOS）整体目录结构设计 v2.0
+# agentrt-linux（AirymaxOS）整体目录结构设计 v1.0.1
 
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）整体目录结构的唯一权威设计文档。本文件定义 1 个管理仓 + 8 个子仓的目录拓扑、文件级职责、跨子仓依赖关系、[SC] 共享契约头文件物理宿主、IRON-9 v3 四层模型落地路径、12 daemon 命名统一规范、ALK 6.6 内核子仓内部结构。所有 agentrt-linux 子仓的目录规划、文件创建、构建配置必须以本文件为唯一权威源。\
-> **文档版本**：v2.0（取代 v1.1）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档总纲](README.md)\
 > **作者**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）\
 > **理论根基**：乔布斯/艾夫"简约就是美"设计哲学 + seL4 Liedtke minimality principle + Linux 6.6 内核基线工程思想\
@@ -23,14 +23,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|---------|------|
 | v1.0 | 2026-07-10 | 初版目录结构，8 子仓 + 文件级树 | 已废弃 |
 | v1.1 | 2026-07-14 | 增加 [SC] 头文件宿主说明、daemon 命名表 | 已废弃 |
-| **v2.0** | **2026-07-18** | **基于乔布斯/艾夫"简约就是美"哲学重构；9 个设计决策全部解决；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 四层模型落地；12 daemon 命名统一为 `_d` 后缀；ALK 6.6 内核子仓内部结构；与 agentrt 对比；工程美学自评；SSoT 登记** | **当前权威** |
+| **v1.0.1** | **2026-07-18** | **基于乔布斯/艾夫"简约就是美"哲学重构；9 个设计决策全部解决；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 四层模型落地；12 daemon 命名统一为 `_d` 后缀；ALK 6.6 内核子仓内部结构；与 agentrt 对比；工程美学自评；SSoT 登记** | **当前权威** |
 
-### 0.2 v1.1 → v2.0 主要差异
+### 0.2 v1.1 → v1.0.1 主要差异
 
 1. **结构重整**：从 §1-§6 扩展为 §0-§12 共 13 节，覆盖设计哲学、顶层结构、设计决策、8 子仓详树、[SC] 头文件清单、IRON-9 v3 落地、daemon 命名、跨子仓依赖图、ALK 6.6 内核内部、agentrt 对比、工程美学自评、SSoT 登记。
-2. **9 决策闭环**：v1.1 仅解决 5 个问题（A-E），v2.0 补齐 4 个决策（F-I），覆盖 [SC] 头文件补齐、最小可编译骨架、scripts/tools 划分、跨子仓共享代码组织。
-3. **daemon 命名统一**：v1.1 存在 `macro_superv` / `logger_daemon` / `config_daemon` 与 `*_d` 混用问题，v2.0 统一为 12 个 `_d` 后缀。
-4. **[SC] 10 头文件清单**：v1.1 截断于 ipc.h 第 3 行，v2.0 完整列出 10 头文件的物理宿主、职责、magic、include 路径。
+2. **9 决策闭环**：v1.1 仅解决 5 个问题（A-E），v1.0.1 补齐 4 个决策（F-I），覆盖 [SC] 头文件补齐、最小可编译骨架、scripts/tools 划分、跨子仓共享代码组织。
+3. **daemon 命名统一**：v1.1 存在 `macro_superv` / `logger_daemon` / `config_daemon` 与 `*_d` 混用问题，v1.0.1 统一为 12 个 `_d` 后缀。
+4. **[SC] 10 头文件清单**：v1.1 截断于 ipc.h 第 3 行，v1.0.1 完整列出 10 头文件的物理宿主、职责、magic、include 路径。
 5. **IRON-9 v3 落地**：新增 §6 详细说明 [SC]+[SS]+[IND]+[DSL] 四层在目录结构中的物理映射。
 6. **ALK 6.6 内核内部**：新增 §9 详述 Model A 完整 fork 的目录组织（arch/ + include/ + corekern/ + kernel/kernel/superv/ + ...）。
 7. **工程美学自评**：新增 §11 基于 5 条简约原则对目录结构进行自评，量化每条原则的达成度。
@@ -1787,12 +1787,12 @@ agentrt/          agentrt-linux/
 | **P1 本质优先** | ★★★★★ | 8 子仓均对应不可合并的职责域，每子仓一句话可说明 | 无 |
 | **P2 原子不可分** | ★★★★★ | services 内部分层不拆分（保持 8 子仓），保持职责清晰 | 无 |
 | **P3 单一宿主** | ★★★★★ | [SC] 10 头文件唯一物理宿主 kernel/include/uapi/linux/airymax/，禁止物理副本 | 无 |
-| **P4 内外一致** | ★★★★★ | 子仓公共骨架统一（README/LICENSE/MAINTAINERS/...），daemon 命名统一 `_d`（v2.0 决策已落地，90-terminology.md 已将 macro_superv/logger_daemon/config_daemon 标注为 旧称/禁止使用） | 无 |
+| **P4 内外一致** | ★★★★★ | 子仓公共骨架统一（README/LICENSE/MAINTAINERS/...），daemon 命名统一 `_d`（v1.0.1 决策已落地，90-terminology.md 已将 macro_superv/logger_daemon/config_daemon 标注为 旧称/禁止使用） | 无 |
 | **P5 无冗余** | ★★★★★ | 跨子仓共享代码仅 [SC] 层，[IND] 完全独立，禁止共享库 | 无 |
 
 ### 11.2 与 v1.1 的美学提升
 
-| 维度 | v1.1 | v2.0 | 提升 |
+| 维度 | v1.1 | v1.0.1 | 提升 |
 |------|------|------|------|
 | 子仓数 | 8 | 8（不变，保持原子性） | 无变化（P2 达成） |
 | daemon 命名一致性 | 混乱（_superv/_daemon/_d） | 统一 `_d`（12 个） | P4 提升 |
@@ -1860,7 +1860,7 @@ agentrt/          agentrt-linux/
 |------|------|---------|--------|
 | 2026-07-10 | v1.0 | 初版目录结构 | 架构委员会 |
 | 2026-07-14 | v1.1 | 增加 [SC] 头文件宿主说明、daemon 命名表 | 架构委员会 |
-| 2026-07-18 | v2.0 | 基于乔布斯/艾夫"简约就是美"哲学重构；9 决策闭环；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 落地；12 daemon 命名统一 `_d`；ALK 6.6 内核内部；agentrt 对比；工程美学自评；SSoT 登记 | 架构委员会 |
+| 2026-07-18 | v1.0.1 | 基于乔布斯/艾夫"简约就是美"哲学重构；9 决策闭环；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 落地；12 daemon 命名统一 `_d`；ALK 6.6 内核内部；agentrt 对比；工程美学自评；SSoT 登记 | 架构委员会 |
 
 ### 12.4 后续演进路线
 
@@ -1909,7 +1909,7 @@ agentrt/          agentrt-linux/
 
 ## 附录 C：v1.1 系统调用清单（[SC] syscalls.h，4 核心 + 20 预留 = 24 槽位）
 
-> **v1.1 Capability Folding 决策**：8 个 seL4 风格 IPC 原语（SEND/RECV/NBSEND/NBRECV/REPLYRECV/YIELD/REPLY/NOTIFY）已全部移除，IPC 数据面完全由 io_uring `IORING_OP_URING_CMD` 承载（零 syscall）。
+> **v1.0.1 Capability Folding 决策**：8 个 seL4 风格 IPC 原语（SEND/RECV/NBSEND/NBRECV/REPLYRECV/YIELD/REPLY/NOTIFY）已全部移除，IPC 数据面完全由 io_uring `IORING_OP_URING_CMD` 承载（零 syscall）。
 
 | # | 系统调用 | 编号 | 类别 | 说明 |
 |---|---------|------|------|------|
@@ -1919,11 +1919,11 @@ agentrt/          agentrt-linux/
 | 4 | `AIRY_SYS_CLT_NOTIFY` | 515 | 控制原语 | CoreLoopThree 通知 + kthread 注册 |
 | 5-24 | 预留 | 516-535 | 预留 | 20 个预留槽位（未来扩展） |
 
-**废弃 syscall 清单**（v1.0 → v1.1 移除）：
+**废弃 syscall 清单**（v1.0 → v1.0.1 移除）：
 
 | # | 废弃系统调用 | 编号 | 废弃原因 |
 |---|------------|------|---------|
-| — | `AIRY_SYS_SEND` | 1 | v1.1 Capability Folding：IPC 数据面零 syscall，由 io_uring 承载 |
+| — | `AIRY_SYS_SEND` | 1 | v1.0.1 Capability Folding：IPC 数据面零 syscall，由 io_uring 承载 |
 | — | `AIRY_SYS_RECV` | 2 | 同上 |
 | — | `AIRY_SYS_NBSEND` | 3 | 同上 |
 | — | `AIRY_SYS_NBRECV` | 4 | 同上 |

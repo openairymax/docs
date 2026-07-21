@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # AgentsIPC 版本协商实现方案
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 AgentsIPC 协议的版本化演进与运行时协商机制\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 系统调用兼容性（IRON-9 v3 [SC] 共享契约层，IPC 消息头与 agentrt 共享）\
 > **理论根基**：Linux 6.6 UABI 永不破坏哲学 + seL4 接口契约 XML 思想 + Airymax K-2 接口契约化 + C-2 增量演化\
@@ -348,7 +348,7 @@ payload 版本化遵循"只追加不修改"原则：
 
 ### 8.1 操作码编号约束
 
-操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.1 起保持稳定，永不重定义、永不复用：
+操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.0.1 起保持稳定，永不重定义、永不复用：
 
 ```c
 /* include/uapi/linux/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
@@ -463,7 +463,7 @@ static const struct {
     const char *description;
 } airy_ipc_supported_versions[] = {
     { AIRY_IPC_VERSION_1_0, 0, "v1.0 基础版本" },
-    { AIRY_IPC_VERSION_1_1, AIRY_IPC_FEAT_TRACE_ID, "v1.1 新增 trace_id" },
+    { AIRY_IPC_VERSION_1_1, AIRY_IPC_FEAT_TRACE_ID, "v1.0.1 新增 trace_id" },
     { AIRY_IPC_VERSION_1_2,
       AIRY_IPC_FEAT_TRACE_ID | AIRY_IPC_FEAT_BATCH_SUBMIT,
       "v1.2 新增批量提交" },

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）配置管理
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）运维体系第 2 卷——配置工程。本文档规定从内核运行时参数到 Agent 级配置的完整配置栈：sysctl 内核运行时参数、`/etc/sysctl.d/` 组织、`/etc/agentrt/` 配置目录、systemd 单元配置、12 daemons 配置文件、环境变量、配置验证、配置版本控制、agentrt-linux 三级配置分层（系统级 / 用户级 / Agent 级）。\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt daemons（12 个用户态服务配置）+ Linux 6.6 sysctl + systemd 单元配置\
 > **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 五维正交 24 原则 + S-1 反馈闭环\
@@ -560,7 +560,7 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 >   与取值范围必须与上述 [SC] 常量一致。
 > - **IPC 配置参数**（引用 §2.7 `ipc.h`）：`AIRY_IPC_HDR_SIZE = 128`（消息头定长）、
 >   `AIRY_IPC_RING_DEF_ENTRIES = 256` / `AIRY_IPC_RING_MAX_ENTRIES = 32768`（ring 容量范围）、
->   `AIRY_IPC_OP_*` 宏（7 操作码：SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE，v1.1 Capability Folding）。
+>   `AIRY_IPC_OP_*` 宏（7 操作码：SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE，v1.0.1 Capability Folding）。
 >   配置文件中 `airy_ipc.conf [transport]` 段的 `queue_depth` 必须落在上述 ring 容量范围内。
 
 **约束**：`<daemon>.conf [sched].prio` 必须在 `[AIRY_PRIO_MIN, AIRY_PRIO_MAX]` 范围内，`airy_ipc.conf [protocol].header_size` 必须等于 `AIRY_IPC_HDR_SIZE`（128）；任何 [SC] 参数边界的变更必须经工程规范委员会签字，且两端同步升级头文件版本。

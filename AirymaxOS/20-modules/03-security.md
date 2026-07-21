@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 安全设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）安全设计文档（security，极境安全）\
-> **文档版本**：v1.1（2026-07-07）\
+> **文档版本**：v1.0.1\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 cupolas 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 LSM/Landlock/capability 实现独立\
 > **子仓编号**：03\
@@ -20,10 +20,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v3-四层共享模型)
 - [3. 目录结构](#3-目录结构)
 - [4. 核心特性](#4-核心特性)
-  - [4.10 sec_d 运行时设计（v1.1 Capability Folding 核心枢纽）](#410-sec_d-运行时设计v11-capability-folding-核心枢纽)
+  - [4.10 sec_d 运行时设计（v1.0.1 Capability Folding 核心枢纽）](#410-sec_d-运行时设计v11-capability-folding-核心枢纽)
   - [4.11 OLK 6.6 io_uring 安全](#411-olk-66-io_uring-安全)
   - [4.12 错误码与 magic 一致性](#412-错误码与-magic-一致性)
-  - [4.13 ADR 引用（v1.1 Capability Folding 决策溯源）](#413-adr-引用v11-capability-folding-决策溯源)
+  - [4.13 ADR 引用（v1.0.1 Capability Folding 决策溯源）](#413-adr-引用v11-capability-folding-决策溯源)
 - [5. 微内核思想体现](#5-微内核思想体现)
 - [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v3-四层共享模型落地)
 - [7. agentrt-linux 工程基线](#7-agentrt-linux-工程基线)
@@ -244,7 +244,7 @@ graph TD
  * 设计一致：64-bit 整数句柄，标识 CNode 中某个 capability slot，轻量、可在
  * 用户态/内核态间零拷贝传递。
  *
- * v1.1 Capability Folding 后，cap_t 物理指向 agent_caps[1024] 静态数组中的
+ * v1.0.1 Capability Folding 后，cap_t 物理指向 agent_caps[1024] 静态数组中的
  * 某个 slot（slot 内嵌 Badge 64-bit Native Word 自包含权限与派生信息）。
  * 派生模型语义（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate 7 操作）在 [SC]
  * 层与 agentrt 共享；物理实现属 [IND] 独立层（详见 §4.1 v1.1 表格）。
@@ -263,10 +263,10 @@ typedef uint64_t cap_t;
  *                CAP_OP_REVOKE, CAP_OP_DELETE, CAP_OP_ROTATE } airy_cap_op_t; */
 ```
 
-**v1.1 Capability Folding 物理实现**（`security/airy/`，SSoT：[03-capability-model.md](../110-security/03-capability-model.md) + [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) + [01-kernel.md §5.0](01-kernel.md)）：
+**v1.0.1 Capability Folding 物理实现**（`security/airy/`，SSoT：[03-capability-model.md](../110-security/03-capability-model.md) + [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) + [01-kernel.md §5.0](01-kernel.md)）：
 
 ```c
-/* v1.1 Capability Folding: 静态数组 + Badge 64-bit 编码（替代 v1.0 capability 元数据结构体） */
+/* v1.0.1 Capability Folding: 静态数组 + Badge 64-bit 编码（替代 v1.0 capability 元数据结构体） */
 #define AIRY_CAP_MAX_AGENTS        1024
 #define AIRY_CAP_GLOBAL_EPOCH_INIT 1
 
@@ -290,9 +290,9 @@ extern struct airy_cap_table airy_cap_global_table;
 #define agent_caps  (airy_cap_global_table.slots)
 ```
 
-**v1.1 Capability Folding 集成**（CNode/CSpace 概念保留 + 物理存储重构）：
+**v1.0.1 Capability Folding 集成**（CNode/CSpace 概念保留 + 物理存储重构）：
 
-**v1.1 重构**：自 v1.1 起，agentrt-linux 的 capability 存储从 v1.0 的 `airy_cnode`（radix-tree）+ `airy_cap_mdb`（MDB 派生树）+ v1.0 capability 元数据结构体（含 cap_id/cap_type/rights/parent_cap_id/mint_depth/mint_quota 六字段）重构为 **Capability Folding 单平面架构**——`airy_cnode`/`airy_cspace`/v1.0 capability 元数据结构体作为逻辑/语义概念保留（[03-capability-model.md §2.1-2.4](../110-security/03-capability-model.md)），但物理存储改用 `agent_caps[1024]` 内核静态数组 + Badge 64-bit Native Word，撤销机制改用 `atomic_inc(&airy_cap_global_epoch)` O(1) 全局失效。
+**v1.1 重构**：自 v1.0.1 起，agentrt-linux 的 capability 存储从 v1.0 的 `airy_cnode`（radix-tree）+ `airy_cap_mdb`（MDB 派生树）+ v1.0 capability 元数据结构体（含 cap_id/cap_type/rights/parent_cap_id/mint_depth/mint_quota 六字段）重构为 **Capability Folding 单平面架构**——`airy_cnode`/`airy_cspace`/v1.0 capability 元数据结构体作为逻辑/语义概念保留（[03-capability-model.md §2.1-2.4](../110-security/03-capability-model.md)），但物理存储改用 `agent_caps[1024]` 内核静态数组 + Badge 64-bit Native Word，撤销机制改用 `atomic_inc(&airy_cap_global_epoch)` O(1) 全局失效。
 
 | 维度 | v1.0 实现（已废弃） | v1.1 实现（当前权威） |
 |------|-------------------|---------------------|
@@ -303,7 +303,7 @@ extern struct airy_cap_table airy_cap_global_table;
 | 校验方式 | 独立 `airy_cap_check()` 前置 + radix tree 查找 | fastpath C-S9 内联 Badge 校验（~10ns）+ slowpath LSM 钩子接管 |
 | slot 对齐 | 动态分配（无对齐保证） | `__aligned(64)` cache line 对齐（防 false sharing + 侧信道） |
 
-> **权威定义**：v1.1 Capability Folding 完整设计以 [03-capability-model.md](../110-security/03-capability-model.md) 和 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) 为 SSoT 权威源。本文件仅做概念性引用，不重新定义实现细节。
+> **权威定义**：v1.0.1 Capability Folding 完整设计以 [03-capability-model.md](../110-security/03-capability-model.md) 和 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) 为 SSoT 权威源。本文件仅做概念性引用，不重新定义实现细节。
 
 **与 seL4 的差异**：seL4 的 CNode/MDB 实现完全在微内核中（形式化验证）；agentrt-linux v1.1 借鉴其 capability 思想但物理实现基于 **`agent_caps[1024]` 静态数组 + atomic Epoch + Badge 64-bit Native Word**（性能优先，CBMC 全函数验证 fastpath），属于 \[IND] 实现独立层。capability ID 枚举与派生模型（mint/mintcopy/derive/revoke）的语义在 \[SC] 层与 agentrt 共享。该简化符合"对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造"定位（ADR-012 + ADR-014），不引入 seL4 完整 CSpace/MDB 实现复杂度。
 
@@ -320,7 +320,7 @@ extern struct airy_cap_table airy_cap_global_table;
 
 - `call_int_hook`：fail-fast first-deny 短路语义，任一钩子返回非零即终止。
 - `call_void_hook`：遍历全部钩子，无短路。
-- `DEFINE_LSM(airy)`：Cupolas（内核态模块名 `airy`）通过 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位初始化注册（v1.1：airy_lsm 必须使用 `LSM_ORDER_MUTABLE`，不得使用早期启动排序——OLK 6.6 注释明确早期启动排序仅用于 capabilities），不打 `LSM_FLAG_EXCLUSIVE` 标记（穹顶叠加而非替代）。详见 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §2.1。
+- `DEFINE_LSM(airy)`：Cupolas（内核态模块名 `airy`）通过 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位初始化注册（v1.0.1：airy_lsm 必须使用 `LSM_ORDER_MUTABLE`，不得使用早期启动排序——OLK 6.6 注释明确早期启动排序仅用于 capabilities），不打 `LSM_FLAG_EXCLUSIVE` 标记（穹顶叠加而非替代）。详见 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §2.1。
 
 **策略示例**（YAML）：
 
@@ -477,9 +477,9 @@ typedef enum {
 | Security Vault 安全金库   | 敏感数据保护 | TPM + 机密计算          | \[SC] Vault 抽象 |
 | Network Security 网络安全 | 网络防护   | LSM + 防火墙           | \[SS]          |
 
-### 4.10 sec_d 运行时设计（v1.1 Capability Folding 核心枢纽）
+### 4.10 sec_d 运行时设计（v1.0.1 Capability Folding 核心枢纽）
 
-`sec_d` 是 12 daemon 之一，作为 v1.1 Capability Folding 的**核心枢纽**——`agent_caps[1024]` 静态数组唯一写者，所有 Badge 编译/撤销请求通过 `airy_sys_call`（编号 0）串行化处理。详见 [01-kernel.md §14.2](01-kernel.md)。
+`sec_d` 是 12 daemon 之一，作为 v1.0.1 Capability Folding 的**核心枢纽**——`agent_caps[1024]` 静态数组唯一写者，所有 Badge 编译/撤销请求通过 `airy_sys_call`（编号 0）串行化处理。详见 [01-kernel.md §14.2](01-kernel.md)。
 
 #### 4.10.1 串行化 Badge 编译（令牌桶限流 + 50ms SLO）
 
@@ -546,7 +546,7 @@ int sec_d_compile_badge(uint32_t agent_id, uint16_t perms, uint32_t *out_randtag
 
 ### 4.11 OLK 6.6 io_uring 安全
 
-OLK 6.6 内核基线下，io_uring 是 IPC 数据面唯一通道（v1.1 Capability Folding 后 8 个 seL4 风格 IPC 原语 syscall 已全部移除）。安全子仓在 io_uring 路径的职责：
+OLK 6.6 内核基线下，io_uring 是 IPC 数据面唯一通道（v1.0.1 Capability Folding 后 8 个 seL4 风格 IPC 原语 syscall 已全部移除）。安全子仓在 io_uring 路径的职责：
 
 #### 4.11.1 `security_uring_cmd` LSM 钩子（单参数）
 
@@ -638,13 +638,13 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 
 > **Error vs Fault**：Error（负数 errno）由调用方处理；Fault（正数 0x1000+）触发 `airy_security_fault()` 上报 Micro-Supervisor，由 `macro_d` 裁决。两者码空间严格不重叠。详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
 
-### 4.13 ADR 引用（v1.1 Capability Folding 决策溯源）
+### 4.13 ADR 引用（v1.0.1 Capability Folding 决策溯源）
 
 | ADR | 标题 | 在本子仓的体现 |
 | --- | --- | --- |
 | [ADR-012](../10-architecture/05-adrs.md#adr-012) | 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发） | capability 系统 + LSM 框架 + Landlock 沙箱 + 机密计算均基于 Linux 6.6 改造，非从零实现 |
 | [ADR-016](../10-architecture/05-adrs.md#adr-016) | 版本基线锁定（1.x.x 锁定 Linux 6.6） | OLK 6.6 LSM 框架 + Landlock + capability + 4 层密钥环 |
-| [ADR-014](../10-architecture/05-adrs.md#adr-014) | **微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）** | **capability 模型来源 = seL4（ADR-014）；CNode/MDB/Badge 等概念仅溯源 seL4，不引入 Zircon rights/Minix3 多服务器模型；v1.1 Capability Folding 物理实现简化为 `agent_caps[1024]` + Badge 64-bit + atomic Epoch，仍属 seL4 思想借鉴范畴（性能优先，CBMC 全函数验证 fastpath）** |
+| [ADR-014](../10-architecture/05-adrs.md#adr-014) | **微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）** | **capability 模型来源 = seL4（ADR-014）；CNode/MDB/Badge 等概念仅溯源 seL4，不引入 Zircon rights/Minix3 多服务器模型；v1.0.1 Capability Folding 物理实现简化为 `agent_caps[1024]` + Badge 64-bit + atomic Epoch，仍属 seL4 思想借鉴范畴（性能优先，CBMC 全函数验证 fastpath）** |
 
 ***
 
@@ -751,7 +751,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | 5  | Vault backend | TPM/SGX/SEV-SNP/TDX/CCA 硬件后端 | 降级为应用层加密（OpenSSL/国密软实现） | — |
 | 6  | 审计哈希链 | 内核 eBPF ringbuf + 哈希链 | 降级为用户态日志文件（无哈希链保护） | — |
 
-> **H6 硬约束**（源自 v1.1 Capability Folding 决策）：\[DSL] 降级模式下 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验。详见 [01-syscalls.md §1](../30-interfaces/01-syscalls.md) 与 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
+> **H6 硬约束**（源自 v1.0.1 Capability Folding 决策）：\[DSL] 降级模式下 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验。详见 [01-syscalls.md §1](../30-interfaces/01-syscalls.md) 与 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
 
 ### 6.5 跨态协作流
 
@@ -907,10 +907,10 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 
 - `110-security/01-lsm-framework.md`（LSM 框架详解）
 - `110-security/02-landlock-sandbox.md`（Landlock 用户态沙箱）
-- `110-security/03-capability-model.md`（v1.1 Capability Folding SSoT）
+- `110-security/03-capability-model.md`（v1.0.1 Capability Folding SSoT）
 - `110-security/07-airy-lsm-design.md`（airy_lsm 设计 SSoT）
 - `110-security/README.md`（安全加固体系主索引）
-- [01-kernel.md §5.0](01-kernel.md)（v1.1 Capability Folding 实现概览）
+- [01-kernel.md §5.0](01-kernel.md)（v1.0.1 Capability Folding 实现概览）
 - [01-kernel.md §14.2](01-kernel.md)（12 daemon 内核切入点）
 - [04-memory.md](04-memory.md)（MemoryRovol 加密与 TEE 协作）
 - `40-dataflows/` 各数据流文档（安全作为横切关注点切入）
@@ -930,7 +930,7 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 ## 13. 参考
 
 - **ADR-014: 微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）**——capability 模型来源 SSoT，详见 [10-architecture/05-adrs.md#adr-014](../10-architecture/05-adrs.md)
-- **ADR-012: 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发）**——v1.1 Capability Folding 工程简化定位依据
+- **ADR-012: 微内核化改造技术路线确认（基于 Linux 改造 + seL4 思想，非从零开发）**——v1.0.1 Capability Folding 工程简化定位依据
 - seL4 项目文档（capability 系统、CNode/MDB 派生，ADR-014）
 - Linux 6.6 `security/security.c`（LSM 框架核心）
 - Linux 6.6 `security/landlock/`（Landlock 实现）

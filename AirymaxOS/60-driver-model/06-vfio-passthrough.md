@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型 — VFIO 直通与 IOMMU 隔离
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块第六篇——VFIO 直通设计与 IOMMU 安全隔离\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[60-driver-model README](README.md)\
 > **同源映射**：agentrt `daemons`（macro_d + dev_d 共同监管）+ Linux 6.6 `drivers/vfio/`（VFIO 框架实现）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-ULS 设备生命周期监管）\

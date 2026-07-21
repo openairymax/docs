@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）稳定版本发布
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 5 卷——稳定版本发布。本文档详述稳定版本的发布周期、版本号体系、稳定分支维护、发布流程、发布清单、发布质量门与版本支持周期，是补丁生命周期（01 卷）阶段 5（Stable Release）的完整展开。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt 稳定版发布 + Linux 6.6 内核 `stable-kernel-rules.rst`（GitHub 分支替代 git send-email -stable 邮件列表）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax C-2 增量演化 + S-4 涌现性管理 + SSoT v2 单一权威源\

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型 — 驱动测试框架
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块第七篇——驱动测试策略与测试矩阵\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[60-driver-model README](README.md)\
 > **同源映射**：agentrt `daemons`（测试 daemon）+ Linux 6.6 `lib/kunit/` + `tools/testing/selftests/`\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-UEF 错误码 + A-ULP 日志）\

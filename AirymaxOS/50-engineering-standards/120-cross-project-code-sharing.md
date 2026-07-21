@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）IRON-9 v3 四层共享模型落地规范
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）与 agentrt（微核心用户态运行时）之间的 IRON-9 v3 四层代码共享模型落地规范。详细说明 \[SC] 共享契约层（10 个头文件）、\[SS] 语义同源层、\[IND] 完全独立层、\[DSL] 降级生存层的实施细节，含双向 CI 校验机制与 magic 设计原理。本文件落地 **IRON-9 v3 四层模型（[SC]+[SS]+[IND]+[DSL]）**，权威源为 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)。\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[10-unify-design.md](../10-architecture/10-unify-design.md)（Unify Design 总纲）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **编号权威**：[09-ssot-registry.md §3](./09-ssot-registry.md)\

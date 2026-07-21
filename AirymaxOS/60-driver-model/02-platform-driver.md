@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型 — platform 总线与 SoC 设备
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块第二篇——platform 总线实例与 SoC 设备资源管理\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt `daemons`（用户态 SoC 适配器）+ Linux 6.6 `drivers/base/platform.c`（platform_bus_type 实现）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则\

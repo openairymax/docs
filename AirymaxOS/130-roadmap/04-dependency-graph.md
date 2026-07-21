@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）依赖关系图
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）开发详细方案（路线图）模块第 4 文档\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt `0.1.1技术全面改进方案v3.0.md`（v4.2，§36 SP07-SP12 仓间依赖）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则（体系并行论）\
@@ -419,7 +419,7 @@ graph TD
 
 ## 11. 文档版本与维护
 
-- **当前版本**: v1.0（2026-07-06）
+- **当前版本**: v1.0.1（2026-07-21）
 - **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何依赖关系变更必须经过 RFC → 评审 → OS-ACC-087 验收流程
 - **回顾周期**: 里程碑回顾（每 M 完成时）+ 季度依赖图审查 + 年度大版本校准

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 集成标准总览
 > **文档定位**：agentrt-linux（AirymaxOS）集成标准的顶层入口，定义内核层→服务层→应用层的集成层次、与 agentrt 的集成规范、与 主流 Linux 发行版标准的兼容性集成、生态合作规范与第三方模块集成标准\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-13\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
 > **关联规范**：IRON-9 v3 工程铁律（工程标准规范） / [工程基线](../../10-architecture/04-engineering-baseline.md) / [五维正交 24 原则](../../10-architecture/02-five-dimensional-principles.md)\
@@ -454,3 +454,4 @@ graph TD
 | 0.1.1 | 2026-07-07 | 初始版本（三层集成架构 + agentrt 集成概述 + 主流 Linux 发行版标准四层兼容 + 生态合作规范 + 6 类第三方模块集成标准 + 集成测试标准） |
 | 0.1.1 | 2026-07-13 | OLK-6.6 ES-OLK-1~13 + seL4 设计模式 + IRON-9 v3 四层共享模型集成边界验证 |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步验证） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |

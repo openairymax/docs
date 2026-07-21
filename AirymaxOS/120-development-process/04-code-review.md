@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）代码审查标准
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 4 卷——代码审查标准。本文档详述代码审查清单、内核代码规范、[SC] 头文件审查、安全代码形式化审查、Agent 契约一致性校验、审查工具链与审查 SLA，是 Pull Request 流程（03 卷）在审查维度的展开。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt 代码审查标准 + Linux 6.6 内核 `submitting-patches.rst` §4-6（审查清单与编码规范）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax S-4 涌现性管理 + K-2 接口契约化 + SSoT v2 单一权威源\

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）模糊测试
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 9 卷——模糊测试（Fuzz Testing）。本卷规定 syzkaller 内核模糊测试框架集成、Agent syscall（512-631 编号）模糊测试、io_uring IORING_OP_URING_CMD 参数模糊、Agent 设备驱动 ioctl 参数模糊、持续模糊测试 CI 集成与长时间运行策略。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L9（模糊测试）+ Linux 6.6 内核基线 syzkaller 框架、KCOV 覆盖率引导\
 > **理论根基**：Linux 6.6 内核基线模糊测试思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / A-4 完美主义）\
@@ -570,7 +570,7 @@ agentrt-linux 计划在 v1.1 版本接入 Google syzbot 公开实例（`syzkalle
 
 ### 9.3 后续版本规划
 
-- v1.1：接入 syzbot 公开实例。
+- v1.0.1：接入 syzbot 公开实例。
 - v1.2：新增 `airy_fuzz_structured`（结构化模糊测试，基于 Agent 业务场景）。
 - v1.3：与 10-formal-verification 联动，将形式化验证的反例作为模糊测试种子。
 
@@ -607,13 +607,13 @@ agentrt-linux 计划在 v1.1 版本接入 Google syzbot 公开实例（`syzkalle
 
 ---
 
-## 13. v1.1 Capability Folding Fuzz 用例（v1.1 增量补强）
+## 13. v1.0.1 Capability Folding Fuzz 用例（v1.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 §1-§12 覆盖 120 个 Agent syscall（512-631）的通用 syzkaller 描述，但未针对 v1.1 Capability Folding 架构引入的攻击面（64-bit Badge 格式 `Epoch<<48 | RandomTag<<16 | Perms`、`agent_caps[1024]` 静态数组、SQE128 fastpath 路径）进行专项 fuzz。本章节定义 v1.1 Capability Folding 专属 fuzz 矩阵、syzkaller 描述、CI 集成与门槛，作为 §1-§12 的增量补强，不替换现有任何内容。
+> **补强背景**：80-testing/ 现有 §1-§12 覆盖 120 个 Agent syscall（512-631）的通用 syzkaller 描述，但未针对 v1.0.1 Capability Folding 架构引入的攻击面（64-bit Badge 格式 `Epoch<<48 | RandomTag<<16 | Perms`、`agent_caps[1024]` 静态数组、SQE128 fastpath 路径）进行专项 fuzz。本章节定义 v1.0.1 Capability Folding 专属 fuzz 矩阵、syzkaller 描述、CI 集成与门槛，作为 §1-§12 的增量补强，不替换现有任何内容。
 
 ### 13.1 攻击面与 fuzz 矩阵
 
-v1.1 Capability Folding 引入三类新攻击面，每类对应一个 fuzz 用例集：
+v1.0.1 Capability Folding 引入三类新攻击面，每类对应一个 fuzz 用例集：
 
 | 用例集 | 攻击面 | 输入空间 | 期望失败模式 | 关联模块 |
 |--------|--------|---------|------------|---------|
@@ -749,7 +749,7 @@ KUNIT_DEFINE_TEST(airy_cap_cache_fuzz_signed_underflow)
 
 ```
 # syzkaller/sys/airymaxos/airy_cap_folding.txt
-# v1.1 Capability Folding 专属 fuzz 描述
+# v1.0.1 Capability Folding 专属 fuzz 描述
 
 include <uapi/linux/airymax/cap.h>
 include <uapi/linux/airymax/uring_cmd.h>
@@ -780,7 +780,7 @@ type airy_cap_result int32[0:0xFFFFFFFF]
 
 ### 13.6 CI 集成与门槛
 
-v1.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（§6.1），新增 `cap-folding-fuzz` job：
+v1.0.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（§6.1），新增 `cap-folding-fuzz` job：
 
 ```yaml
 # .github/workflows/continuous-fuzzing.yml 新增 job（增量）
@@ -817,7 +817,7 @@ v1.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（§6
 
 **OS-TEST-108**：CI PR 阶段必须运行 KUnit 单元测试 `airy_cap_badge_fuzz_test` 与 `airy_cap_cache_fuzz_test`，覆盖率门槛遵循 06-coverage-metrics §3.2 的 A 级（`cap/` 模块 95% 行 + 95% 分支 + 100% 函数覆盖率）；任一 KUnit 失败即 PR 阻断。
 
-**OS-KER-161**：v1.1 Capability Folding 专属 fuzz（§13）发现的 crash 视为 P0 级安全缺陷，必须在 12 小时内修复或回滚；连续 24 小时发现 ≥ 3 个同类型 crash 即暂停 release 流程，直至根因分析与修复完成。
+**OS-KER-161**：v1.0.1 Capability Folding 专属 fuzz（§13）发现的 crash 视为 P0 级安全缺陷，必须在 12 小时内修复或回滚；连续 24 小时发现 ≥ 3 个同类型 crash 即暂停 release 流程，直至根因分析与修复完成。
 
 ---
 

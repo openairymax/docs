@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）数据流程设计
 > **文档定位**：agentrt-linux（AirymaxOS）数据流程设计层的总览与索引，覆盖认知循环、记忆卷载、IPC 消息、调度、日志 Ring Buffer、Logger Daemon、Panic 生存路径共 7 大数据流\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
 > **核心约束**：IRON-9 v3 同源代码共享——[SC] 共享契约层 10 个头文件落地于 `include/uapi/linux/airymax/`，[SS] 4 大数据流语义同源（认知循环/记忆卷载/IPC/调度），[IND] 各子仓驱动与运行时独立实现，[DSL] 降级生存层提供 [SC] 损坏时最小可运行子集（#ifdef AIRY_SC_FALLBACK）；安全为横切关注点，贯穿全部数据流
 
@@ -211,6 +211,7 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 | 0.1.1 | 2026-07-06 | 初始版本，定义 4 大数据流分类矩阵与索引 |
 | 0.1.1 | 2026-07-13 | D5（vtime `u64` → `__s32` Q16.16 定点）+ D6（64 字节对齐表述澄清为 [SC] 8 字节核心视图 + [IND] 扩展视图） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：废弃 AIRY_SCHED_AGENT 术语，统一为 sched_tac 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ stc_* 策略枚举；新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型（新增 [DSL] 降级生存层）；新增 A-ULP 数据流（`05-ring-buffer-logging.md` + `06-logger-daemon-design.md` + `07-panic-survival-path.md`）；数据流文档数 4 → 7；新增 Unify Design 五模块数据流映射（A-UEF/A-IPC/A-ULS/A-ULP） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

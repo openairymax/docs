@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # 非功能需求分析
 > **文档定位**：agentrt-linux（AirymaxOS） 非功能需求（Non-Functional Requirements）的详细分析，回答"agentrt-linux 的能力要做到多好（质量属性约束）"。\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---

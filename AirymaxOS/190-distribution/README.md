@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # 发行版管理设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）发行版管理工程体系主索引——RPM 打包、SBOM 生成、可重现构建、镜像构建、安装程序与发布流程\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[AirymaxOS 总览](../README.md)
 
 ---
@@ -199,6 +199,7 @@ A-ULS 的双 Supervisor 模型在发行版中体现为：内核 Micro-Supervisor
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，5/5 文档完成（RPM + dnf 仓库 + 安装器 + 更新 + 可重现构建） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）；IORING_OP_URING_CMD（不使用 page flipping）；纯 C LSM（不使用 BPF LSM）；alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v3 四层模型（新增 [DSL] 降级生存层）；新增 12 daemon RPM 包清单（agentrt-macro-superv / agentrt-logger / agentrt-config / agentrt-gateway / agentrt-sched / agentrt-vfs / agentrt-net / agentrt-mem / agentrt-cogn / agentrt-sec / agentrt-audit / agentrt-dev）；补全 06-sbom-generation.md 文档索引；新增 Airymax Unify Design 五模块映射（A-UCS airy_defconfig 打包 / A-ULS 12 daemon systemd 服务打包） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

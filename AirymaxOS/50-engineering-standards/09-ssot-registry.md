@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Airymax 全局规则 SSoT 注册表
 > **文档定位**：Airymax 全项目（agentrt 用户态运行时 + AirymaxOS/agentrt-linux 操作系统）全部编号、规则、命名的**唯一权威来源（Single Source of Truth）**。任何文档不得私自定义规则编号；所有规则编号必须在此注册表中登记后方可使用。\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-20\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **权威性声明**：本注册表是 Airymax 全部规则编号的 SSoT。当任何文档与本注册表冲突时，以本注册表为准。各主题文档可包含规则的详细说明与代码示例，但必须引用本注册表中的编号，**禁止在主题文档中私自定义新编号**。新增规则编号必须通过 RFC 流程在本注册表登记。  
 

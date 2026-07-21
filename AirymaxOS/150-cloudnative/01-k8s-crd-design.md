@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # K8s CRD 设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）云原生体系核心子文档，定义 Agent 自定义资源（CRD）的声明式模型、controller 逻辑与调度到 agentrt-linux 节点的机制\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt gateway + Linux 6.6 容器编排（IRON-9 v3 [IND] 完全独立层，云原生为 agentrt-linux 专属扩展）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\

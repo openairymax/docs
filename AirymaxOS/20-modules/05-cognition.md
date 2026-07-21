@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 认知设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）认知设计文档（cognition，极境认知）\
-> **文档版本**：v1.1（2026-07-07）\
+> **文档版本**：v1.0.1\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 coreloopthree 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 kthread 加速、Wasm runtime、GPU/NPU 驱动实现独立\
 > **子仓编号**：05\
@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次               | 共享程度                               | 认知子系统内容                                                                                                                                                                                                              | 组织方式                                |
 | ---------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **\[SC] 共享契约层**  | 完全共享代码                             | CoreLoopThree 阶段枚举 `airy_cog_phase`（PERCEPT=0/THINK=1/ACT=2）、Thinkdual 模式枚举 `airy_think_mode`（FAST=0/SLOW=1）、LLM 推理阶段枚举（PREFILL/DECODE/SPECULATIVE）、CoreLoopThree 上下文结构、Token 能效指标结构、GPU/NPU 能力描述符                                     | `include/uapi/linux/airymax/cognition_types.h` |
-| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | `coreloopthree_run()`、`coreloopthree_notify_phase()`、`thinkdual_switch()`、`llm_scheduler_submit()`、`llm_scheduler_query_phase()`、`wasm_runtime_instantiate()`、`gpu_npu_schedule()`、`token_efficiency_record()` 等 8 项；v1.1 Capability Folding Badge 校验语义 | 各自独立实现                              |
+| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | `coreloopthree_run()`、`coreloopthree_notify_phase()`、`thinkdual_switch()`、`llm_scheduler_submit()`、`llm_scheduler_query_phase()`、`wasm_runtime_instantiate()`、`gpu_npu_schedule()`、`token_efficiency_record()` 等 8 项；v1.0.1 Capability Folding Badge 校验语义 | 各自独立实现                              |
 | **\[IND] 完全独立层** | 完全独立                               | Wasm runtime 完整实现（wasmtime/WAMR）、GPU/NPU 驱动、超节点沙箱实现、具身智能框架（Claw）、KVC-Gateway/LMCache/Bifrost 集成、CoreLoopThree kthread 内核态实现                                                                                          | 各自独立仓库                              |
 | **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：cognition 子仓仅保留 `airy_cog_phase` 三阶段枚举最小骨架，`capability_badge=0` 跳过 fastpath C-S9，CoreLoopThree kthread 退化为用户态轮询 | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
 
@@ -414,9 +414,9 @@ typedef struct airy_token_efficiency_metric {
 - 多模态感知融合：视觉、听觉、触觉融合。
 - 安全监控：紧急停止机制。
 
-### 4.9 v1.1 Capability Folding 在 cognition 层的落地 \[SS]
+### 4.9 v1.0.1 Capability Folding 在 cognition 层的落地 \[SS]
 
-v1.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中，IPC 消息头 offset 40 的 `capability_badge` 字段承载 64-bit Native Word Badge（`Epoch<<48 | RandomTag<<16 | Perms`），由 fastpath C-S9 内联校验（~10ns），无双平面、无独立 capability syscall。cognition 子仓作为 CoreLoopThree kthread + LLM 推理调度的物理宿主，承载以下 Capability Folding 职责：
+v1.0.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中，IPC 消息头 offset 40 的 `capability_badge` 字段承载 64-bit Native Word Badge（`Epoch<<48 | RandomTag<<16 | Perms`），由 fastpath C-S9 内联校验（~10ns），无双平面、无独立 capability syscall。cognition 子仓作为 CoreLoopThree kthread + LLM 推理调度的物理宿主，承载以下 Capability Folding 职责：
 
 **4.9.1 cogn_d daemon 在 cognition 子仓中的设计** \[SS]
 

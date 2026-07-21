@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）user_events 接口
 > **文档定位**：agentrt-linux（AirymaxOS）可观测性体系 L5 层——用户态事件追踪桥接 user_events 的工程规范\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[90-observability README](README.md)\
 > **同源映射**：agentrt E-2 可观测性 + Linux 6.6 user_events/ftrace ring buffer\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + IRON-9 v3 四层模型\

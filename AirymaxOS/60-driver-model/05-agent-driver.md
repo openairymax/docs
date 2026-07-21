@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型 — Agent 虚拟设备驱动
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统 60 模块第五篇——agentrt-linux 专属 Agent 虚拟设备驱动模型（核心抽象）\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[60-driver-model README](README.md)\
 > **同源映射**：agentrt `daemons`（cogn_d/mem_d/dev_d 守护进程）+ Linux 6.6 `drivers/base/`（driver 框架扩展）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-ULS 设备生命周期 + A-IPC fastpath）\

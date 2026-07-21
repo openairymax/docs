@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：AirymaxOS v1.0.1 运维分册 · systemd 集成设计文档，定义 12 daemon 的 systemd 单元设计、依赖关系、资源限制与 target 聚合\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[100-operations README](README.md)
 
 ---

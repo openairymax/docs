@@ -3,8 +3,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 设计文档体系总览
 
 > **文档定位**：agentrt-linux（AirymaxOS 极境智能体操作系统）整体方案文档体系的总入口与纲领\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-20\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **正式全称**：agentrt-linux（极境智能体操作系统，英文名：AirymaxOS）\
 > **仓库别名**：agentrt-linux（仓库名）\
 > **文档维护**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）
@@ -22,7 +22,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 agentrt-linux 与 agentrt（AgentRT 极境智能体运行底座平台工程）同源：agentrt 是跨平台用户态运行时（Linux/macOS/Windows），agentrt-linux 是基于 Linux 6.6 内核基线的发行版（专为 Agent 工作负载优化），两者共享 Airymax 工程设计思想，agentrt 在 agentrt-linux 上运行天然更稳健和适配，架构同源，无适配层。
 
-> **项目定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——基于 Linux 6.6 内核基线，通过 seL4 微内核工程思想（Liedtke minimality principle、capability-based security、消息传递 IPC、服务用户态化）进行系统化改造，落地 v1.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。
+> **项目定位（极境内核标准）**：AirymaxOS（agentrt-linux）是**对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核**——基于 Linux 6.6 内核基线，通过 seL4 微内核工程思想（Liedtke minimality principle、capability-based security、消息传递 IPC、服务用户态化）进行系统化改造，落地 v1.0.1 Capability Folding 单平面架构（~10ns fastpath Badge 校验）+ 12 daemon 用户态服务化 + 纯 C LSM + sched_tac 调度优化。
 
 ***
 
@@ -269,6 +269,7 @@ agentrt（AirymaxAgentRT，跨平台用户态运行时）
 | 0.1.1 | 2026-07-06 | 初始版本，建立 19 模块文档体系                                                                                                                                                                                                                                          |
 | 0.1.1 | 2026-07-13 | 新增 07-directory-structure.md，\[SC] 头文件 Tab 8 缩进验证                                                                                                                                                                                                          |
 | v1.0  | 2026-07-17 | 升级为 v1.0：新增sched\_tac 技术选型声明（不使用 sched\_ext）、IORING\_OP\_URING\_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc\_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型（新增 \[DSL] 降级生存层）；新增 Airymax Unify Design 五模块映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）；文档索引更新为 20 子目录 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ***
 

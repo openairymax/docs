@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux ARE Standards 总览
 > **文档定位**：agentrt-linux ARE Standards 总览\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-13\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **理论根基**：体系并行论、五维正交24原则、IRON-9 v3 同源且部分代码共享\
 > **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\
@@ -504,6 +504,7 @@ ARE Standards 的设计全程遵循五维正交24原则，关键映射如下：
 |------|------|----------|------|
 | v0.1.1 | 2026-07-07 | 初始草案，完成文档体系结构 | Airymax Architecture Team |
 | v0.1.1 | 2026-07-13 | seL4 SEL4-01~08 + 6 项新发现设计模式 + OLK-6.6 ES-OLK-1~13 + IRON-9 v3 四层模型落地验证 | Airymax Architecture Team |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） | — |
 
 ---
 

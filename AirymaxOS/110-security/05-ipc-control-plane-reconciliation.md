@@ -2,10 +2,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # IPC 控制面 Reconciliation 设计
 > **文档定位**：A-IPC（统一进程间通信体系）控制面恢复后 Reconciliation 流程的唯一权威详细设计\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §8\
-> **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ [04-ipc-data-plane-autonomy.md](04-ipc-data-plane-autonomy.md) 原则三 + v1.1 Capability Folding 决策
+> **设计依据**：综合修正方案 §4.2.5（A-IPC 设计）+ [04-ipc-data-plane-autonomy.md](04-ipc-data-plane-autonomy.md) 原则三 + v1.0.1 Capability Folding 决策
 
 ---
 
@@ -461,7 +461,8 @@ Reconciliation 超时进入 [DSL] 降级后，IPC 行为调整：
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：IPC 控制面 Reconciliation 详细设计；完整流程（控制面重启 → 扫描数据面 → 差异检测 → 状态修复）；差异检测算法（Ring/Capability/暂存消息三类差异）；状态修复策略（补发缺失/丢弃过期/重建缓存）；超时处理触发 [DSL] 降级；最终一致性模型（≤30s） |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**——① §2.3 流程图扫描动作从 "radix tree 遍历" 更新为 "Ring 表遍历 + `agent_caps[1024]` 静态数组遍历"；② §5.2 错误码 `AIRY_ECAP_OFFLINE` 替换为 `AIRY_EDSL_CAP_MINIMAL`（-206，[DSL] 兜底码）；③ §5.3 表格同步更新；④ 全文术语对齐 v1.1（Capability Folding 单平面架构） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | IPC 控制面 Reconciliation 设计 | v1.1 | 2026-07-18
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | IPC 控制面 Reconciliation 设计 | v1.0.1 | 2026-07-21

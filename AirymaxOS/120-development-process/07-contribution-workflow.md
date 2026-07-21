@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）贡献者工作流
 > **文档定位**：agentrt-linux（AirymaxOS）120-development-process 模块第 7 卷——贡献者工作流。本文档详述贡献者等级体系、DCO 协议、贡献流程、新贡献者引导、认领机制、贡献统计与认可以及与 agentrt 社区的跨项目协调，是维护者层级制度（02 卷）在贡献者维度的展开。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[120-development-process README](README.md)\
 > **同源映射**：agentrt 贡献者工作流 + Linux 6.6 内核 `submitting-patches.rst` §1-3（贡献者协议与流程）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax A-3 人文关怀 + S-3 总体设计部 + C-2 增量演化\

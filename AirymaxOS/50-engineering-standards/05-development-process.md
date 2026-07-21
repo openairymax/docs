@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）开发流程标准
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范第 5 卷——开发流程。本卷规定从设计构想进入主线、稳定版到长期维护的完整生命周期，以及维护者层级制度、补丁格式、审查响应与稳定版规则。\
 > **文档版本**：1.0.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：docs/AirymaxRT/10-architecture/00-architectural-principles.md`（五维正交 24 原则）+ Linux 6.6 内核基线 `Documentation/process/development-process.rst\
 > **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
@@ -659,7 +659,7 @@ agentrt-linux 的 8 子仓各有独立的子系统手册，作为本卷的补丁
 
 ## 14. 文档版本与维护
 
-- **当前版本**: v1.0.1（2026-07-06）
+- **当前版本**: v1.0.1（2026-07-21）
 - **维护者**: 工程规范委员会（待成立，详见 07 卷）
 - **变更流程**: 任何本卷变更必须经过 RFC → 评审 → ACC 验收流程
 - **回顾周期**: 季度回顾 + 年度大版本
@@ -1411,7 +1411,7 @@ agentrt-linux 的工具链配置以代码形式存放在仓库中，确保所有
 
 ## 14. 文档版本与维护
 
-- **当前版本**: v1.0.1（2026-07-06）
+- **当前版本**: v1.0.1（2026-07-21）
 - **维护者**: 工程规范委员会（待成立，详见 07 卷）
 - **变更流程**: 任何本卷变更必须经过 RFC → 评审 → ACC 验收流程
 - **回顾周期**: 季度回顾 + 年度大版本

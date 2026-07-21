@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）工程标准规范手册
 > **文档定位**：交付成果 #3——工程标准规范手册。本文档是 agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准的执行依据，汇总 7 主题文档的核心规范条目、SSoT 规则编号注册表、IRON-9 v3 四层共享模型、合规性禁词清单与乔布斯美学审查标准，作为开发的强制执行依据。\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-12\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）+ seL4 微内核设计思想 + 主流 Linux 工程标准规范参考\
 > **配套文档**：comprehensive-review-report.md（交付成果 #1）、revision-changelog.md（交付成果 #2）\

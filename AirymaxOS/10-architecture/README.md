@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）架构设计
 > **文档定位**：agentrt-linux（AirymaxOS）架构设计层的总览与索引，包含系统架构、Airymax Unify Design 总纲、IRON-9 v3 共享模型、[DSL] 降级生存层、五维原则、微内核策略、工程基线、ADR、目录结构等\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-19\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 总览](../README.md)
 
 ---
@@ -219,6 +219,7 @@ agentrt-linux 与 agentrt 同源且部分代码共享（IRON-9 v3）。两者在
 | 0.1.1 | 2026-07-06 | 初始占位版本（含架构层 5 文档索引） |
 | 0.1.1 | 2026-07-13 | 新增 `07-directory-structure.md`，架构层文档数 5 → 6；[SC] 头文件 Tab 8 缩进验证通过 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：修正所有 sched_ext/SCHED_AGENT 旧表述为sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF）；新增 `06-iron9-shared-model.md`（IRON-9 v3 四层模型，含 [DSL] 降级生存层）；新增 `08-threat-model.md`、`09-known-caveats.md`、`10-unify-design.md`（Airymax Unify Design 总纲）、`11-degraded-survival-layer.md`（[DSL] 降级生存层）；架构层文档数 6 → 11；新增 Unify Design 五模块架构映射 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

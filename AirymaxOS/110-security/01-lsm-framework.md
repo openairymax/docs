@@ -2,12 +2,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # LSM 框架详解
 > **文档定位**：agentrt-linux（AirymaxOS）安全工程体系第 1 主题文档——Linux 安全模块（LSM）框架深度剖析\
-> **文档版本**：v1.1（Capability Folding 集成版）\
-> **最后更新**：2026-07-18\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt Cupolas（安全穹顶）+ Linux 6.6 LSM/Landlock/capability\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生\
-> **核心约束**：IRON-9 v3 同源且部分代码共享；v1.1 起 Capability Badge 校验由 fastpath C-S9 内联完成（LSM 钩子仅 slowpath 接管）
+> **核心约束**：IRON-9 v3 同源且部分代码共享；v1.0.1 起 Capability Badge 校验由 fastpath C-S9 内联完成（LSM 钩子仅 slowpath 接管）
 
 ---
 
@@ -17,7 +17,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 >
 > **OLK 6.6 对齐说明**：OLK 6.6 `include/linux/lsm_hooks.h:113` 注释明确 `LSM_ORDER_FIRST` "This is only for capabilities."——**airy_lsm 不使用 `LSM_ORDER_FIRST`**，改用 `LSM_ORDER_MUTABLE`（默认值），通过 `CONFIG_LSM` 默认值将 `airy` 置于 `capability` 之后、其他 LSM 之前。`capability` 模块正确使用 `LSM_ORDER_FIRST`（OLK 6.6 硬编码，仅用于 capabilities）。
 >
-> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，**Capability Badge 校验从 LSM 钩子中剥离**——fastpath C-S9 在 io_uring 数据面内联完成 Badge 校验（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)），**LSM 钩子不再在正常路径上执行 capability 校验**。LSM 钩子（如 `security_uring_cmd`）仅在 slowpath（C-S9 失败时）被调用，做策略裁决与冷酷执法（详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md)）。纯 C LSM 的职责不变——依然负责 inode/file/task/cred 钩子链的 4 值裁决（ALLOW/DENY/AUDIT/COMPLAIN），只是 capability 校验这部分从 LSM 钩子前置到 fastpath C-S9，避免 LSM 钩子在 hot path 上的开销。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，**Capability Badge 校验从 LSM 钩子中剥离**——fastpath C-S9 在 io_uring 数据面内联完成 Badge 校验（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)），**LSM 钩子不再在正常路径上执行 capability 校验**。LSM 钩子（如 `security_uring_cmd`）仅在 slowpath（C-S9 失败时）被调用，做策略裁决与冷酷执法（详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md)）。纯 C LSM 的职责不变——依然负责 inode/file/task/cred 钩子链的 4 值裁决（ALLOW/DENY/AUDIT/COMPLAIN），只是 capability 校验这部分从 LSM 钩子前置到 fastpath C-S9，避免 LSM 钩子在 hot path 上的开销。
 >
 > 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
@@ -437,11 +437,11 @@ Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"
 
 ### 8.3 与 A-IPC（Capability Folding）的桥接
 
-Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 40-47，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
+Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.0.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 40-47，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
 
-### 8.4 Capability Folding 与 LSM 钩子的职责分割（v1.1 新增）
+### 8.4 Capability Folding 与 LSM 钩子的职责分割（v1.0.1 新增）
 
-**v1.1 新增**：Capability Folding 引入 fastpath/slowpath 职责分割，明确"哪些校验在 fastpath 内联，哪些在 LSM 钩子中执行"：
+**v1.0.1 新增**：Capability Folding 引入 fastpath/slowpath 职责分割，明确"哪些校验在 fastpath 内联，哪些在 LSM 钩子中执行"：
 
 | 校验类型 | 执行位置 | 时机 | 延迟 | 说明 |
 |---------|---------|------|------|------|
@@ -643,7 +643,7 @@ graph LR
     style E fill:#bfdbfe,stroke:#1d4ed8
 ```
 
-Cupolas daemon 作为用户态策略引擎通过 A-IPC 总线（128B 消息头，magic `0x41524531` 'ARE1'）下发策略；内核 LSM 钩子在 `security_hook_heads` 链上执行策略裁决。COMPLAIN 裁决（学习模式）需要回询 daemon 时，5 秒超时后回退 ALLOW 并记录 AUDIT（OS-SEC-009）；所有裁决结果通过 Audit 子系统持久化。v1.1 起，Badge 64-bit Native Word 校验由 fastpath C-S9 内联完成，不进入 LSM 钩子链——LSM 钩子仅处理 inode/file/task/cred 策略裁决与 slowpath Badge 异常接管（§8.4）。
+Cupolas daemon 作为用户态策略引擎通过 A-IPC 总线（128B 消息头，magic `0x41524531` 'ARE1'）下发策略；内核 LSM 钩子在 `security_hook_heads` 链上执行策略裁决。COMPLAIN 裁决（学习模式）需要回询 daemon 时，5 秒超时后回退 ALLOW 并记录 AUDIT（OS-SEC-009）；所有裁决结果通过 Audit 子系统持久化。v1.0.1 起，Badge 64-bit Native Word 校验由 fastpath C-S9 内联完成，不进入 LSM 钩子链——LSM 钩子仅处理 inode/file/task/cred 策略裁决与 slowpath Badge 异常接管（§8.4）。
 
 #### 11.2.3 审计事件格式定义
 
@@ -675,7 +675,7 @@ struct airy_cupolas_audit_event {
 | OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
 | OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
-> **编号说明**：v1.1 新增规则原使用 OS-SEC-012/013，因与 02-landlock-sandbox.md 的 OS-SEC-012（3 层域叠加）/OS-SEC-013（访问掩码合并）冲突，重编号为 OS-SEC-016/017（SSoT 注册表下一可用编号）。详见 [09-ssot-registry.md §9.1](../50-engineering-standards/09-ssot-registry.md)。
+> **编号说明**：v1.0.1 新增规则原使用 OS-SEC-012/013，因与 02-landlock-sandbox.md 的 OS-SEC-012（3 层域叠加）/OS-SEC-013（访问掩码合并）冲突，重编号为 OS-SEC-016/017（SSoT 注册表下一可用编号）。详见 [09-ssot-registry.md §9.1](../50-engineering-standards/09-ssot-registry.md)。
 
 上述规则在 IRON-9 v3 [SC] 共享契约层约束下，保证 agentrt 用户态 Cupolas 与 agentrt-linux 内核态 LSM 钩子的语义同源；任何对钩子映射表的修改必须经 RFC 评审与 ABI 稳定性确认（OS-IRON-001）及五维原则映射检查（OS-STD-007）。
 
@@ -730,18 +730,18 @@ struct airy_cupolas_audit_event {
 | 字段 | 值 |
 |------|------|
 | 文档定位 | LSM 框架详解 |
-| 当前版本 | v1.1（Capability Folding 集成版） |
-| 最后更新 | 2026-07-18 |
+| 当前版本 | v1.0.1 |
+| 最后更新 | 2026-07-21 |
 | 维护者 | agentrt-linux 安全工程组 |
 | 同源映射 | agentrt Cupolas + Linux 6.6 LSM/Landlock/capability |
 | 理论根基 | Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + E-1 安全内生 |
-| 核心约束 | IRON-9 v3 同源且部分代码共享；v1.1 起 Capability Badge 校验由 fastpath C-S9 内联完成 |
+| 核心约束 | IRON-9 v3 同源且部分代码共享；v1.0.1 起 Capability Badge 校验由 fastpath C-S9 内联完成 |
 
 **变更历史**：
 
 - v0.1.1（2026-07-06）：初版占位，覆盖 LSM 框架核心机制
 - v1.0（2026-07-17）：LSM 框架完整版——钩子链表、blob 分配、排序机制、初始化流程、Cupolas 集成、IRON-9 v3 四层共享模型、Cupolas 7 子系统映射、OS-SEC 规则集、接口契约附录
-- v1.1（2026-07-18）：**Capability Folding 集成版**——① §8.3 AgentsIPC→A-IPC（128B Layout C v4，magic 0x41524531）；② §8.4 新增 fastpath C-S9 与 LSM 钩子职责分割表；③ §11.2.2 修正 4 值枚举（ASK/LOG→AUDIT/COMPLAIN），A-IPC 替代 AgentsIPC；④ §11.2.4 新增 OS-SEC-016/017（fastpath C-S9 内联 Badge 校验 + LSM slowpath 接管，原拟用 OS-SEC-012/013 因与 02-landlock-sandbox.md 冲突而重编号）；⑤ §12 规则编号集补齐 OS-SEC-008~011、OS-SEC-016~017；⑥ §13 相关文档新增 v1.1 引用；⑦ 全文 AgentsIPC→A-IPC（统一术语，对齐 v1.1 Capability Folding 单平面架构）
+- v1.1（2026-07-18）：**Capability Folding 集成版**——① §8.3 AgentsIPC→A-IPC（128B Layout C v4，magic 0x41524531）；② §8.4 新增 fastpath C-S9 与 LSM 钩子职责分割表；③ §11.2.2 修正 4 值枚举（ASK/LOG→AUDIT/COMPLAIN），A-IPC 替代 AgentsIPC；④ §11.2.4 新增 OS-SEC-016/017（fastpath C-S9 内联 Badge 校验 + LSM slowpath 接管，原拟用 OS-SEC-012/013 因与 02-landlock-sandbox.md 冲突而重编号）；⑤ §12 规则编号集补齐 OS-SEC-008~011、OS-SEC-016~017；⑥ §13 相关文档新增 v1.1 引用；⑦ 全文 AgentsIPC→A-IPC（统一术语，对齐 v1.0.1 Capability Folding 单平面架构）
 
 ---
 

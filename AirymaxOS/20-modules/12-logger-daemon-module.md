@@ -3,8 +3,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # Logger Daemon 模块设计
 
 > **文档定位**：AirymaxOS（agentrt-linux）`logger_d` 模块级设计——systemd unit 编排、配置文件 schema、日志轮转策略、zstd 压缩归档、审计哈希链完整性保护，作为 A-ULP（统一日志与打印系统）用户态消费侧的模块工程契约\
-> **文档版本**：v1.1\
-> **最后更新**：2026-07-19\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5（A-ULP 模块）\
 > **设计依据**：综合修正方案 §4.2.2（A-ULP 设计）+ §6.2.1 C-07（DMA 一致性内存修正）+ [ADR-012](../10-architecture/05-adrs.md#adr-012-微内核化改造技术路线确认基于-linux-改造--sel4-思想非从零开发)（微内核化改造技术路线）+ [ADR-014](../10-architecture/05-adrs.md#adr-014-微内核设计思想来源单一化仅-sel4不引入-zirconminix3)（微内核设计思想来源单一化：仅 seL4）\
 > **极境内核标准**：本模块遵循"对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造"定位，capability 单一安全模型、消息传递 IPC、服务用户态化均源自 seL4 工程思想（ADR-014）
@@ -29,9 +29,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **思想来源**：seL4 微内核工程思想（ADR-014）——Liedtke 极简原则、capability 单一安全模型、消息传递 IPC、服务用户态化
 - **服务用户态化**：`logger_d` 即 seL4 "服务用户态化"思想的落地——日志格式化、过滤、落盘、轮转、压缩等耗时操作均下沉到用户态守护进程，内核 fastpath 仅保留 `reserve → memcpy 128B raw binary → commit` 三步（~50-100ns），严禁任何格式化操作
 
-### 0.2 v1.1 Capability Folding 集成
+### 0.2 v1.0.1 Capability Folding 集成
 
-自 v1.1 起，`logger_d` 集成 Capability Folding 单平面架构（详见 §7）：
+自 v1.0.1 起，`logger_d` 集成 Capability Folding 单平面架构（详见 §7）：
 
 - `agent_caps[1024]` 静态数组（16KB，sec_d 唯一写者）为 `logger_d` 提供 O(1) Badge 校验入口
 - fastpath C-S9 内联校验（~10ns）拦截伪造/过期 Badge 的日志写入尝试
@@ -396,11 +396,11 @@ struct airy_audit_chain_signature {
 
 ---
 
-## §7 v1.1 Capability Folding 集成
+## §7 v1.0.1 Capability Folding 集成
 
 ### 7.1 单平面架构落地
 
-自 v1.1 起，`logger_d` 集成 Capability Folding 单平面架构（[SC] syscalls.h 4 核心 + 20 预留 = 24 槽位）。`logger_d` 不直接持有 capability，但其消费的每条 Ring Buffer 记录均可能携带 Badge 信息，需通过 `agent_caps[1024]` 静态数组反查校验。
+自 v1.0.1 起，`logger_d` 集成 Capability Folding 单平面架构（[SC] syscalls.h 4 核心 + 20 预留 = 24 槽位）。`logger_d` 不直接持有 capability，但其消费的每条 Ring Buffer 记录均可能携带 Badge 信息，需通过 `agent_caps[1024]` 静态数组反查校验。
 
 ### 7.2 agent_caps[1024] 在 logger_d 中的引用
 
@@ -570,4 +570,4 @@ vfs_d（VFS 用户态化）                  config_d（统一配置管理）
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | `logger_d` 模块设计 | v1.1 | 2026-07-19
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | `logger_d` 模块设计 | v1.0.1 | 2026-07-21

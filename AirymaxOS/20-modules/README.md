@@ -2,9 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）模块设计总览
 
-> **文档定位**：agentrt-linux（AirymaxOS）模块设计层的总览与索引，覆盖 8 子仓核心模块 + A-ULS/A-ULP/A-UCS 三大 Unify Design 模块 + `logger_d`/printk-bridge/unified-config 子模块；声明极境内核标准、v1.1 Capability Folding 单平面架构、IRON-9 v3 四层共享模型\
-> **文档版本**：v1.1\
-> **最后更新**：2026-07-19\
+> **文档定位**：agentrt-linux（AirymaxOS）模块设计层的总览与索引，覆盖 8 子仓核心模块 + A-ULS/A-ULP/A-UCS 三大 Unify Design 模块 + `logger_d`/printk-bridge/unified-config 子模块；声明极境内核标准、v1.0.1 Capability Folding 单平面架构、IRON-9 v3 四层共享模型\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 总览](../README.md)\
 > **极境内核标准**：本目录所有模块遵循"对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造的内核"定位（[ADR-012](../10-architecture/05-adrs.md#adr-012-微内核化改造技术路线确认基于-linux-改造--sel4-思想非从零开发) 确立技术路线 + [ADR-014](../10-architecture/05-adrs.md#adr-014-微内核设计思想来源单一化仅-sel4不引入-zirconminix3) 确立 seL4 唯一来源）\
 > **核心约束**：IRON-9 v3 同源代码共享——[SC] 共享契约层 10 个头文件落地于 `include/uapi/linux/airymax/`
@@ -32,7 +32,7 @@ agentrt-linux（AirymaxOS）的极境内核定位为 **"对 Linux 6.6 进行 seL
 2. **Unify Design 三大模块**：A-ULS（统一生命周期管理）、A-ULP（统一日志与打印系统）、A-UCS（统一配置管理体系），分别由 `09-kernel-agent-supervisor.md` + `10-user-supervisor-daemon.md`、`12-logger-daemon-module.md` + `13-printk-bridge.md`、`11-unified-config.md` 三个文档组承载。
 3. **[SC] 头文件清单**：10 个共享契约层头文件（完整列表见 §6），物理宿主于 `kernel/include/uapi/linux/airymax/`，其他子仓通过 `-I../kernel/include` 引用（OS-IRON-014 落地）。
 4. **12 daemon 完整名单**：sec_d / cogn_d / mem_d / gateway_d / logger_d / macro_d / audit_d / sched_d / dev_d / net_d / vfs_d / config_d（详见 §8）。
-5. **v1.1 Capability Folding 单平面架构**：4 核心 + 20 预留 = 24 syscall 槽位，agent_caps[1024] 静态数组，O(1) 撤销机制（详见 §9）。
+5. **v1.0.1 Capability Folding 单平面架构**：4 核心 + 20 预留 = 24 syscall 槽位，agent_caps[1024] 静态数组，O(1) 撤销机制（详见 §9）。
 
 ---
 
@@ -112,7 +112,7 @@ IRON-9 v3 [SC] 共享契约层包含 10 个头文件，物理宿主于 `kernel/i
 | 概念 | 语义定义 | seL4 源码证据 |
 |------|---------|---------------|
 | **POINT OF NO RETURN**（seL4 Fastpath 借鉴） | 12 项前置检查全部通过后进入**不可逆点**，直接切换线程上下文，避免回退开销 | `src/fastpath/fastpath.c:168-233` |
-| **fastpath C-S9 Badge 校验**（v1.1 Capability Folding） | `agent_caps[1024]` 静态数组内联校验 Badge Epoch/RandomTag/Perms（~10ns），O(1) 撤销 | ADR-014 seL4 capability 模型 |
+| **fastpath C-S9 Badge 校验**（v1.0.1 Capability Folding） | `agent_caps[1024]` 静态数组内联校验 Badge Epoch/RandomTag/Perms（~10ns），O(1) 撤销 | ADR-014 seL4 capability 模型 |
 | **io_uring 零拷贝优化**（IORING_OP_URING_CMD） | 固定 buffer + registered ring 路径，**buffer 共享避免数据拷贝** | （Linux 6.6 io_uring 子系统） |
 
 **核心澄清**：三者同名但不同义，**禁止混用**。seL4 Fastpath 是"批量验证后不可逆提交 + 线程上下文切换"；fastpath C-S9 是"Badge 64-bit 内联校验"；io_uring 零拷贝是"buffer 共享避免数据拷贝"（IORING_OP_URING_CMD，非 page flipping）。
@@ -129,7 +129,7 @@ IRON-9 v3 [SC] 共享契约层包含 10 个头文件，物理宿主于 `kernel/i
 | **A-ULP**（统一日志与打印系统） | `12-logger-daemon-module.md` + `13-printk-bridge.md` | `logger_d`（Ring Buffer 消费 + 结构化日志 + 审计哈希链 + Panic 生存落盘）+ printk-bridge（内核 printk → 用户态 `logger_d` 桥接 + 等级映射 + `AIRY_FAC_*` facility） | Ring Buffer + printk-bridge + SHA3-256 哈希链 + Ed25519 签名 + TPM 2.0 度量 + Panic 生存路径 |
 | **A-UCS**（统一配置管理体系） | `11-unified-config.md` | 统一配置管理体系（sysctl + Kconfig + airy_defconfig + 运行时配置热更新 + Capability Folding 配置项） | sysctl + Kconfig + airy_defconfig |
 | **A-UEF**（统一错误码与故障定义体系） | [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) + `05-cognition.md`（认知循环框架部分） | 错误码与故障定义体系（`AIRY_E*` + `AIRY_FAULT_*` + 扩展错误码 `AIRY_ECAP_FROZEN = -82` / `AIRY_ESEC_D_THROTTLED = -83` / `AIRY_FAULT_URING_MALFORMED = 0x100A` / `AIRY_FAULT_AUDIT_TAMPER = 0x100B`）+ CoreLoopThree kthread + Thinkdual 双系统协同 + Wasm 3.0 沙箱 + LLM 调度 | `AIRY_E*` / `AIRY_FAULT_*` 错误码体系 + CoreLoopThree kthread + sched_tac 调度 |
-| **A-IPC**（统一进程间通信体系） | `01-kernel.md` + `02-services.md` | io_uring 零拷贝 IPC（IORING_OP_URING_CMD）+ 128B 消息头 + 5 种 payload + v1.1 Capability Folding Badge 校验 | IORING_OP_URING_CMD + 128B 消息头（magic 0x41524531 'ARE1'，`__aligned(64)`）+ agent_caps[1024] + fastpath C-S9 |
+| **A-IPC**（统一进程间通信体系） | `01-kernel.md` + `02-services.md` | io_uring 零拷贝 IPC（IORING_OP_URING_CMD）+ 128B 消息头 + 5 种 payload + v1.0.1 Capability Folding Badge 校验 | IORING_OP_URING_CMD + 128B 消息头（magic 0x41524531 'ARE1'，`__aligned(64)`）+ agent_caps[1024] + fastpath C-S9 |
 
 ---
 
@@ -152,13 +152,13 @@ agentrt-linux 的 12 daemon 完整名单（与 [10-user-supervisor-daemon.md](10
 | 11 | `vfs_d` | VFS 用户态化 | 用户态 VFS + 文件系统抽象 |
 | 12 | `config_d` | 统一配置管理 | A-UCS 配置同步 + sysctl/JSON 热重载 + RCU 指针切换 |
 
-> **v1.1 Capability Folding 后**：IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，不存在独立 ipc daemon；Badge 编译由 `sec_d` 承担，跨节点 IPC 由 `gateway_d` 承担。
+> **v1.0.1 Capability Folding 后**：IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，不存在独立 ipc daemon；Badge 编译由 `sec_d` 承担，跨节点 IPC 由 `gateway_d` 承担。
 
 ---
 
-## 9. v1.1 Capability Folding 单平面架构
+## 9. v1.0.1 Capability Folding 单平面架构
 
-自 v1.1 起，agentrt-linux 引入 Capability Folding 单平面架构，作为 A-IPC 的第一块基石（详见 [11-unified-config.md](11-unified-config.md) §7）。
+自 v1.0.1 起，agentrt-linux 引入 Capability Folding 单平面架构，作为 A-IPC 的第一块基石（详见 [11-unified-config.md](11-unified-config.md) §7）。
 
 ### 9.1 Syscall 架构（4 核心 + 20 预留 = 24 槽位）
 
@@ -404,7 +404,7 @@ agentrt-linux v1.1 扩展错误码体系（权威源 [30-interfaces/08-sc-error-
 | 0.1.1 | 2026-07-06 | 初始版本，8 子仓模块设计 |
 | 0.1.1 | 2026-07-13 | [SC] 头文件 Tab 8 缩进验证通过；Fastpath 语义分层澄清 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增 sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型；新增 A-ULS 模块（`09-kernel-agent-supervisor.md` + `10-user-supervisor-daemon.md`）、A-ULP 模块（`12-logger-daemon-module.md` + `13-printk-bridge.md`）、A-UCS 模块（`11-unified-config.md`）；[SC] 头文件清单补全为完整 10 个列表；模块文档数 8 → 13 |
-| v1.1 | 2026-07-19 | 升级为 v1.1：声明极境内核标准（对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造）；新增 v1.1 Capability Folding 单平面架构章节（agent_caps[1024] 静态数组 + Badge 64-bit 布局 + O(1) 撤销 + fastpath C-S9 内联校验 + sec_d 串行化 Badge 编译）；新增 12 daemon 完整名单章节（sec_d/cogn_d/mem_d/gateway_d/logger_d/macro_d/audit_d/sched_d/dev_d/net_d/vfs_d/config_d）；新增审计哈希链完整性保护章节（SHA3-256 + Ed25519 + TPM 2.0，引用 40-dataflows/06-logger-daemon-design.md §5.5）；新增扩展错误码体系章节（`AIRY_ECAP_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_URING_MALFORMED`/`AIRY_FAULT_AUDIT_TAMPER`）；引用 ADR-012 + ADR-014；A-UEF 映射修正（错误码部分映射至 30-interfaces/08-sc-error-contract.md）；文档索引补全为 14 个（01-13 + README）；`__aligned(64)` 替换 packed 属性；配置路径统一为 `/etc/agentrt/` |
+| v1.1 | 2026-07-19 | 升级为 v1.0.1：声明极境内核标准（对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造）；新增 v1.0.1 Capability Folding 单平面架构章节（agent_caps[1024] 静态数组 + Badge 64-bit 布局 + O(1) 撤销 + fastpath C-S9 内联校验 + sec_d 串行化 Badge 编译）；新增 12 daemon 完整名单章节（sec_d/cogn_d/mem_d/gateway_d/logger_d/macro_d/audit_d/sched_d/dev_d/net_d/vfs_d/config_d）；新增审计哈希链完整性保护章节（SHA3-256 + Ed25519 + TPM 2.0，引用 40-dataflows/06-logger-daemon-design.md §5.5）；新增扩展错误码体系章节（`AIRY_ECAP_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_URING_MALFORMED`/`AIRY_FAULT_AUDIT_TAMPER`）；引用 ADR-012 + ADR-014；A-UEF 映射修正（错误码部分映射至 30-interfaces/08-sc-error-contract.md）；文档索引补全为 14 个（01-13 + README）；`__aligned(64)` 替换 packed 属性；配置路径统一为 `/etc/agentrt/` |
 
 ---
 

@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Macro-Supervisor 用户态守护进程设计
 > **文档定位**：A-ULS（统一生命周期管理）模块的用户态监管组件唯一权威设计\
-> **文档版本**：v1.1.1（落后内容修复版，基于 v1.1 Capability Folding）\
-> **最后更新**：2026-07-19\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
 > **设计依据**：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）+ A-IPC v1.1（Capability Folding 单平面架构）
 
@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Macro-Supervisor 用户态守护进程** 的唯一权威源。systemd unit 管理 12 个 daemon、心跳检查、**v1.1 Badge 请求与撤销**（通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 请求 sec_d 编译 Badge，通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码撤销所有 Badge）、故障裁决（警告/降级/暂停/终止）、"用户温情裁决"策略、单点故障 fallback（内核 watchdog 直接重启 + 全局 Epoch 撤销）、io_uring_cmd 执行裁决均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Macro-Supervisor 职责与裁决流程。
 >
-> **v1.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.1 起，Macro-Supervisor 不再直接注入 CNode 到 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge，sec_d 编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 通过 io_uring_cmd 执行裁决（不新增 syscall），所有裁决指令通过 `AIRY_IPC_OP_ADJUDICATE` opcode 传递到内核 Micro-Supervisor。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1) 立即失效所有已发出 Badge（无 drain、无 bitmap、无 IPI），详见 [09-kernel-agent-supervisor.md §6.4](09-kernel-agent-supervisor.md)。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，Macro-Supervisor 不再直接注入 CNode 到 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge，sec_d 编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 通过 io_uring_cmd 执行裁决（不新增 syscall），所有裁决指令通过 `AIRY_IPC_OP_ADJUDICATE` opcode 传递到内核 Micro-Supervisor。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1) 立即失效所有已发出 Badge（无 drain、无 bitmap、无 IPI），详见 [09-kernel-agent-supervisor.md §6.4](09-kernel-agent-supervisor.md)。
 >
 > 技术选型声明：IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（**不使用 page flipping**）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
@@ -138,7 +138,7 @@ static const struct daemon_spec daemons[] = {
     { "sec_d",         "/usr/sbin/airy-sec-d",         "/etc/agentrt/sec.conf",        SCHED_FIFO, 60, 5 },
     { "config_d", "/usr/sbin/airy-config-d", "/etc/agentrt/config.conf",     SCHED_NORMAL, 0, 5 },
     /* ... 其余 daemon（gateway_d / sched_d / vfs_d / net_d / audit_d / dev_d / macro_d）
-     * 注: v1.1 Capability Folding 后 IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，
+     * 注: v1.0.1 Capability Folding 后 IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，
      * 不存在独立 ipc daemon；Badge 编译由 sec_d 承担，跨节点 IPC 由 gateway_d 承担。
      */
 };
@@ -331,7 +331,7 @@ static int macro_d_cap_request(__u32 agent_id, __u16 perms)
 
 ### 4.4 v1.1 Badge 撤销（一行代码 O(1)）
 
-**v1.1 新增**：Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码完成，立即失效所有已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，全局 Epoch 自增后所有 fastpath C-S9.EPOCH 检查（`badge_epoch == global_epoch`）立即失败。
+**v1.0.1 新增**：Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码完成，立即失效所有已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，全局 Epoch 自增后所有 fastpath C-S9.EPOCH 检查（`badge_epoch == global_epoch`）立即失败。
 
 ```c
 /* services/daemons/macro_d/cap_revoke.c —— v1.1 Badge 撤销
@@ -363,7 +363,7 @@ static int macro_d_cap_revoke_one(__u32 agent_id)
 }
 ```
 
-### 4.5 sec_d 故障恢复流程（v1.1 新增）
+### 4.5 sec_d 故障恢复流程（v1.0.1 新增）
 
 **设计背景**：sec_d 是 Badge 的唯一编译者（H4），其崩溃会导致新 Agent 无法获取 Badge、Badge 撤销无法执行。但已发出 Badge 的 fastpath C-S9 校验**不依赖 sec_d**（agent_caps[] 是内核静态数组，sec_d 崩溃后仍可读取），因此 sec_d 崩溃**不影响已有 IPC 通信**，仅影响新 Badge 的编译与撤销。
 
@@ -1323,7 +1323,7 @@ Macro-Supervisor 是用户态单点，其故障可能导致：
 
 ### 7.2 内核 watchdog fallback（v1.1: 含 Badge 全局撤销）
 
-为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback。v1.1 起，watchdog 接管时**立即撤销所有 Badge**（`atomic_inc(&airy_cap_global_epoch)`），防止无监管期间恶意 Agent 利用已发出的 Badge 继续操作：
+为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback。v1.0.1 起，watchdog 接管时**立即撤销所有 Badge**（`atomic_inc(&airy_cap_global_epoch)`），防止无监管期间恶意 Agent 利用已发出的 Badge 继续操作：
 
 ```c
 /* kernel/kernel/superv/airy_watchdog.c —— v1.1 内核 watchdog fallback
@@ -1343,7 +1343,7 @@ static void airy_superv_watchdog_fn(struct timer_list *t)
         /* 1. 立即冻结所有活跃 Ring（防止无监管期间数据损坏，最优先） */
         airy_ipc_freeze_all(AIRY_FAULT_TIMEOUT);
 
-        /* 2. v1.1 新增：立即撤销所有 Badge（atomic_inc 一行代码 O(1)）
+        /* 2. v1.0.1 新增：立即撤销所有 Badge（atomic_inc 一行代码 O(1)）
          * 防止无监管期间恶意 Agent 利用已发出 Badge 操作
          * 所有 fastpath C-S9.EPOCH 检查立即失败（badge_epoch != global_epoch）
          */
@@ -1497,7 +1497,7 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 
 ## §10 相关文档
 
-### 10.1 v1.1 Capability Folding 相关（新增）
+### 10.1 v1.0.1 Capability Folding 相关（新增）
 
 - [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)（A-IPC 协议 SSoT，Layout C v4 + 7 种 opcode）
 - [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)（A-IPC fastpath SSoT，C-S9 Badge 校验 + fastpath/slowpath 职责分割）
@@ -1524,7 +1524,8 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 | v1.0 | 2026-07-17 | 初始版本：Macro-Supervisor 用户态守护进程设计；systemd unit 管理 12 个 daemon；心跳检查（进程存活/心跳消息/响应探测）；Capability 注入（io_uring_cmd）；故障裁决四选项（警告/降级/暂停/终止）；"用户温情裁决"策略矩阵；单点故障 fallback（内核 watchdog 直接重启 + [DSL] 降级）；io_uring_cmd 执行裁决（不新增 syscall） |
 | **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) §4 重构为 Badge 请求机制（`AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge 编译，替代 v1.0 CNode 注入 radix tree）；(2) §4.3 Capability 类型改为 Badge Perms 16-bit 位掩码（8 种 Perms）；(3) §4.4 新增 Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1)）；(4) §5.2 裁决策略矩阵对齐 v1.1 Fault 码 0x1001~0x1006（`AIRY_FAULT_CAP_FORGED` 首次即终止）；(5) §7.2 watchdog fallback 新增 Badge 全局撤销；(6) §9.1 性能 SLO 新增 Badge 请求/撤销延迟；(7) §10 相关文档新增 6 份 v1.1 引用，清除内部审查路径引用 |
 | **v1.1.1** | **2026-07-19** | **落后内容修复版**：① §1.3 修复 12 daemon 命名（原 logger/cognition/memory/security daemon 后缀统一为 `_d`，删除原独立 ipc daemon——IPC 由 io_uring 承载、Badge 编译由 sec_d 承担）；② §2.2/§2.3 daemon 拉起代码与依赖顺序对齐 12 daemon 命名；③ §4.3 Perms 表格完全重写——原 BADGE_PERM 前缀统一为 `AIRY_CAP_PERM_*`（对齐 03-capability-model.md SSoT），FREEZE 位编号修正为 bit 5 (0x0020)，移除 SSoT 不存在的 4 项非 SSoT opcode（CANCEL/CAP_REQUEST/CAP_REVOKE/RING_CREATE）；④ §4.5.4 修复原 packed 属性 → `__aligned(64)`（OLK 6.6 工程规范）；⑤ §7.2 watchdog fallback 修复原 force 系列 API → `orderly_poweroff(true)`（OLK 6.6 标准 API）+ 操作顺序调整（先冻结 Ring → 再撤销 Badge → 再降级 → 再重启，防止无监管期间数据损坏最优先）；⑥ §4.6 修复原限流机制表述——改为"多阶段限流机制"避免与 IRON-9 v3 四层模型语义冲突；⑦ §8.3 补充解冻协议完整流程说明（与 09-kernel-agent-supervisor.md §3.5 严格一致：sec_d 串行化 + Epoch 自增 + systemd watchdog 监控）；⑧ SSoT 声明新增 ADR-014 引用 + IRON-9 v3 四层模型引用 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | Macro-Supervisor 用户态守护进程设计 | v1.1.1 | 2026-07-19
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | Macro-Supervisor 用户态守护进程设计 | v1.0.1 | 2026-07-21

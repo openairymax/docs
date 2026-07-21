@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）ftrace 自测试
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 7 卷——ftrace 启动自检（Boot-time ftrace Selftest）。本卷规定 ftrace 自测试框架（`trace_selftest_*` API）、function tracer / function_graph tracer / hwlat tracer 功能验证、agentrt-linux 专属sched_tac 调度延迟追踪，以及与 90-observability 可观测性基础设施的关系。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L7（ftrace 启动自检）+ Linux 6.6 内核基线 `kernel/trace/trace_selftest.c`、`include/linux/trace.h`\
 > **理论根基**：Linux 6.6 内核基线 ftrace 思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环）\
@@ -484,7 +484,7 @@ CI 在解析 `dmesg` 时分别提取 `airy_selftest:` 与 `tracer_selftest:` 前
 
 ### 10.3 后续版本规划
 
-- v1.1：新增 `airy_trace_selftest_mem`（alloc_pages + mmap 内存路径追踪）。
+- v1.0.1：新增 `airy_trace_selftest_mem`（alloc_pages + mmap 内存路径追踪）。
 - v1.2：与 90-observability 联动，将 ftrace tracepoint 实时上报至 A-ULP 日志系统。
 - v1.3：支持 ftrace histogram 触发自检，验证 hist trigger 功能。
 

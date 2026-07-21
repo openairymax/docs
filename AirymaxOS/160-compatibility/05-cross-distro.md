@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # 跨发行版兼容性实现方案
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 agentrt-linux 与主流 Linux 发行版的二进制兼容性机制\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-09\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 发行版兼容性（IRON-9 v3 [IND] 完全独立层，发行版兼容为 agentrt-linux 专属）\
 > **理论根基**：Linux 6.6 LSB/FHS 兼容性 + 主流 Linux 发行版 发行版兼容性思想 + Airymax K-2 接口契约化 + C-2 增量演化\

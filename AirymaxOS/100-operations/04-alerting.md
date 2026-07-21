@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：AirymaxOS v1.0.1 运维分册 · 告警体系设计文档，定义告警级别、来源、传输路径、抑制策略与恢复确认机制\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[100-operations README](README.md)
 
 ---

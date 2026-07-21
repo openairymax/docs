@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # SDK API
 > **文档定位**：agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
 > **文档版本**：0.1.1\
-> **最后更新**：2026-07-06\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -514,7 +514,7 @@ client = AirymaxClient(
 
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（4 核心（v1.1） syscall 编号）+ `sched.h`（TaskDesc 结构）+ `ipc.h`（消息头与 payload）+ `security_types.h`（capability 模型）+ `cognition_types.h`（CoreLoopThree 阶段）+ `memory_types.h`（记忆快照） |
+| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（4 核心（v1.0.1） syscall 编号）+ `sched.h`（TaskDesc 结构）+ `ipc.h`（消息头与 payload）+ `security_types.h`（capability 模型）+ `cognition_types.h`（CoreLoopThree 阶段）+ `memory_types.h`（记忆快照） |
 | **[SS] 语义同源层** | SDK 层签名同源（同一份源码两端编译，构建期条件编译切换传输层），其他层语义同源 | agentrt sdk（4 语言）↔ agentrt-linux SDK（4 语言）的 `AirymaxClient` + 4 嵌套客户端签名一致 |
 | **[IND] 完全独立层** | 完全独立 | agentrt SDK 用户态传输（libc/gRPC）↔ agentrt-linux SDK 内核加速路径（io_uring/syscall 直达） |
 
@@ -522,7 +522,7 @@ client = AirymaxClient(
 
 | 头文件 | 在 SDK 中的角色 | 消费客户端 |
 |--------|----------------|-----------|
-| `syscalls.h` | 4 核心（v1.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
+| `syscalls.h` | 4 核心（v1.0.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
 | `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | CognitionClient.submit_task |
 | `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
 | `security_types.h` | capability 41 ID + mint/revoke/derive 签名 + 250 LSM 钩子 | SafetyClient.check_capability |

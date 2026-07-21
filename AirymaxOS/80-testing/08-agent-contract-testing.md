@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）Agent 行为契约测试
 > **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 8 卷——Agent 行为契约测试（Agent Contract Testing）。本卷是 agentrt-linux 专属 L8 层测试，规定 Agent 8 态生命周期状态机契约、Token 预算契约、记忆配额契约、CoreLoopThree 三阶段认知循环时序契约、与 cogn_d / mem_d daemon 的契约测试框架。\
 > **文档版本**：v1.0.1\
-> **最后更新**：2026-07-18\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L8（Agent 契约测试，agentrt-linux 专属）+ Linux 6.6 内核基线 KUnit / kselftest 载体\
 > **理论根基**：Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义 / S-1 反馈闭环 / IRON-9 v3 [IND] 独立实现层）\
@@ -909,7 +909,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 ### 11.3 后续版本规划
 
-- v1.1：新增 IPC 契约（契约 18-22，覆盖 IORING_OP_URING_CMD fastpath 行为）。
+- v1.0.1：新增 IPC 契约（契约 18-22，覆盖 IORING_OP_URING_CMD fastpath 行为）。
 - v1.2：新增 Capability 契约（契约 23-30，覆盖 41 ID 权限校验）。
 - v1.3：将契约定义导入 10-formal-verification，进行 TLA+ 形式化证明。
 

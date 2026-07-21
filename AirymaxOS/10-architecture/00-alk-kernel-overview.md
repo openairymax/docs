@@ -4,8 +4,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：极境内核（Airymax Linux Kernel 6.6，ALK-6.6）的总体架构权威定义文档。本文档是 ALK-6.6 物理形态、改造方式、微内核化体现、关键设计决策的唯一权威源，所有子文档必须引用本文档，禁止重新定义。
 >
-> **文档版本**：v1.2\
-> **最后更新**：2026-07-21\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **文档编号**：ALK-ARCH-00\
 > **权威等级**：SSoT（Single Source of Truth）\
 > **核心约束**：OS-ARCH-001（不修改 Linux 6.6 主线源码，仅增量添加）\
@@ -528,6 +528,7 @@ make ARCH=arm64 -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu-
 | v1.0 | 2026-07-20 | 初始版本：ALK-6.6 总体架构权威定义；物理形态、改造方式、6 大改造点、4 大技术支柱、seL4 机制映射、关键设计决策 | SPHARX 工程标准组 |
 | v1.1 | 2026-07-20 | 精简：移除非奠基内容（OLK-6.6 关系论述、工程基线审计），章节由 12 节精简至 10 节                     | SPHARX 工程标准组 |
 | v1.2 | 2026-07-21 | 全面更新：syscall 编号 512-515→454-457（避开 x32 历史区间）；superv 路径修正（kernel/kernel/superv/）；改造点扩展为 10 项；新增 §11 极境内核具体能力详解（corekern/log/ipc/configs 全景） | SPHARX 工程标准组 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） | — |
 
 ***
 
@@ -725,4 +726,4 @@ airy_cap_epoch_bump()                          [kernel/ipc/airy_ipc_capability.c
 
 ***
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | 极境内核 ALK-6.6 总体架构规范 | v1.2 | 2026-07-21
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | 极境内核 ALK-6.6 总体架构规范 | v1.0.1 | 2026-07-21

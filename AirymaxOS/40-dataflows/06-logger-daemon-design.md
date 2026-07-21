@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # Logger Daemon 详细设计
 > **文档定位**：A-ULP（统一日志与打印系统）用户态日志消费守护进程的唯一权威详细设计\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §5\
 > **设计依据**：综合修正方案 §4.2.2（A-ULP 设计）+ [05-ring-buffer-logging.md](05-ring-buffer-logging.md) §5
 
@@ -563,6 +563,7 @@ int airy_audit_chain_verify(const struct airy_audit_record *records,
 | v0.1.1 | SHA3-256 哈希链 + 文件系统密钥存储 | 基础完整性保护，密钥存于 `/var/lib/airy/audit.key` |
 | v1.0.1 | + Ed25519 签名 + TPM 2.0 集成 | 端到端签名保护，私钥密封于 TPM 2.0 |
 | v1.1+ | + 跨节点审计日志聚合签名 | 多节点审计链跨节点验证（与 gateway_d 协作） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 > **OS-SEC-131**（R4 新增）：v0.1.1 必须实现 SHA3-256 哈希链（基础完整性保护）；v1.0.1 必须集成 Ed25519 签名 + TPM 2.0 密钥密封；任一审计日志记录缺失 `prev_hash` 即视为完整性破坏，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 08-sc-error-contract.md §3.1 注册）。
 
@@ -688,7 +689,8 @@ static int logger_recover_state(struct airy_log_ring_header *hdr)
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Logger Daemon 详细设计；mmap 读取 Ring Buffer 128B raw binary 记录；sprintf 格式化引擎；level/facility/caller_id 三级过滤；按大小+时间轮转、gzip 压缩归档；systemd 自动重启崩溃恢复，Ring Buffer 不丢失；双 Daemon 主备冗余可选 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | Logger Daemon 详细设计 | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | Logger Daemon 详细设计 | v1.0.1 | 2026-07-21

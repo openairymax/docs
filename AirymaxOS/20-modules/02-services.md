@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 服务设计文档
 
 > **文档定位**：agentrt-linux 服务设计文档（Airymax Services 极境服务）\
-> **文档版本**：v1.1 2026-07-07\
+> **文档版本**：v1.0.1\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 daemons 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 用户态 VFS/网络栈/驱动框架/systemd 集成实现独立\
 > **子仓编号**：02\
@@ -62,7 +62,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次               | 共享程度                               | 服务子系统内容                                                                                                                                                                                                                                    | 组织方式                                 |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
 | **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`，含 `capability_badge` + `crc32` 字段）、SQE/CQE 操作码与标志位、ring 创建/注册参数、Badge 位布局宏、Capability 权限位                                                                                                                  | `include/uapi/linux/airymax/ipc.h`（与 kernel 共享） |
-| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_d/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、v1.1 Capability Folding Badge 校验语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
+| **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 12 daemons 语义（sec\_d/cogn\_d/mem\_d/gateway\_d/logger\_d/macro\_d/audit\_d/sched\_d/dev\_d/net\_d/vfs\_d/config\_d）、io\_uring IPC 通信原语（channel/socket/fifo/eventpair）、消息传递范式、v1.0.1 Capability Folding Badge 校验语义、daemon 生命周期（init→run→stop）等 20 项 | 各自独立实现                               |
 | **\[IND] 完全独立层** | 完全独立                               | 用户态 VFS 实现（seL4 服务用户态化参考，ADR-014）、用户态网络栈（DPDK/AF\_XDP）、用户态驱动框架（VFIO/libvfio）、systemd 集成、cgroup v2 资源管理、journald 日志聚合、具体文件系统实现（ext4/xfs/tmpfs/btrfs）                                                                                        | 各自独立仓库                               |
 | **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 fastpath C-S9 校验、退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组；`AIRY_ECAP_RADIX_MISS`/`STATIC_KEY` 保留编号但 v1.1 不触发）、opcode 集缩减至 2 种（SEND/RECV）、Fault 码禁用统一 Panic                                                            | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
 
@@ -298,7 +298,7 @@ WantedBy=airymaxos.target
  */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §2.7）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `__aligned(64)` 对齐（移除 packed 属性，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐的做法）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。v1.1 Capability Folding 后新增 `capability_badge`（offset 40，承载 64-bit Native Word Badge：`Epoch<<48 | RandomTag<<16 | Perms`）与 `crc32`（offset 52，覆盖 `header[0:52) + payload`）字段，`reserved` 收缩至 72 字节。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §2.7）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `__aligned(64)` 对齐（移除 packed 属性，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐的做法）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型。v1.0.1 Capability Folding 后新增 `capability_badge`（offset 40，承载 64-bit Native Word Badge：`Epoch<<48 | RandomTag<<16 | Perms`）与 `crc32`（offset 52，覆盖 `header[0:52) + payload`）字段，`reserved` 收缩至 72 字节。
 
 **零拷贝路径** \[SS]（不使用 page flipping，改用 `alloc_pages + mmap` + registered buffer）：
 
@@ -308,9 +308,9 @@ WantedBy=airymaxos.target
 - **禁止使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`），共享内存构建目标绑定 `alloc_pages + mmap` 实现源文件 \[IND]。
 - 跨节点 IPC 由 `gateway_d` daemon 承载（gRPC over QUIC/TCP + mTLS），入站时重新编译 Badge，不污染单节点 fastpath C-S9（详见 [30-interfaces/02-ipc-protocol.md §9](../30-interfaces/02-ipc-protocol.md)）\[IND]。
 
-### 4.6 v1.1 Capability Folding 在 services 层的落地 \[SS]
+### 4.6 v1.0.1 Capability Folding 在 services 层的落地 \[SS]
 
-v1.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中，IPC 消息头 offset 40 的 `capability_badge` 字段承载 64-bit Native Word Badge（`Epoch<<48 | RandomTag<<16 | Perms`），由 fastpath C-S9 内联校验（~10ns），无双平面、无独立 capability syscall。services 子仓作为 12 daemon 的物理宿主，承载以下 Capability Folding 职责：
+v1.0.1 Capability Folding 将 capability check 从独立控制面操作"折叠"到 IPC 数据面 fastpath 中，IPC 消息头 offset 40 的 `capability_badge` 字段承载 64-bit Native Word Badge（`Epoch<<48 | RandomTag<<16 | Perms`），由 fastpath C-S9 内联校验（~10ns），无双平面、无独立 capability syscall。services 子仓作为 12 daemon 的物理宿主，承载以下 Capability Folding 职责：
 
 **4.6.1 12 daemon 在 services 子仓中的实现** \[SS]
 
@@ -404,7 +404,7 @@ services 层 io\_uring IPC 实现严格遵循 OLK 6.6 工程规范：
 | `AIRY_IPC_OP_*` 宏（SEND/RECV/SEND\_BATCH/CANCEL）            | SQE 操作码                                                                                                           |
 | `AIRY_IPC_SQE_*` 宏（FIXED\_BUF/ASYNC/BUF\_SELECT/SKIP\_CQE） | SQE 标志位                                                                                                           |
 | `AIRY_IPC_CQE_F_*` 宏（BUFFER/MORE/NOTIF）                    | CQE 标志位                                                                                                           |
-| `struct airy_ipc_msg_hdr` 结构                               | 128B 消息头 Layout C v4（magic/opcode/flags/trace\_id/timestamp\_ns/src\_task/dst\_task/capability\_badge/payload\_len/crc32/reserved\[72]，含 v1.1 Capability Folding Badge + 完整性校验，`__aligned(64)` 对齐，D-9 修复后移除 packed） |
+| `struct airy_ipc_msg_hdr` 结构                               | 128B 消息头 Layout C v4（magic/opcode/flags/trace\_id/timestamp\_ns/src\_task/dst\_task/capability\_badge/payload\_len/crc32/reserved\[72]，含 v1.0.1 Capability Folding Badge + 完整性校验，`__aligned(64)` 对齐，D-9 修复后移除 packed） |
 
 ### 6.2 \[SS] 语义同源层——20 项 API 映射
 
@@ -435,7 +435,7 @@ services 层 io\_uring IPC 实现严格遵循 OLK 6.6 工程规范：
 | 2  | Socket            | 双向面向流           | 用户态流传输         | io\_uring SEND/RECV           |
 | 3  | FIFO              | 单向面向消息          | 用户态 FIFO       | io\_uring ring 单向             |
 | 4  | Eventpair         | 事件同步            | 用户态 eventfd    | io\_uring + eventfd           |
-| 5  | capability 令牌传递   | 消息携带 capability | 用户态 capability（`cap_t` 引用，badge=0） | v1.1 Capability Folding：64-bit Native Word Badge 内联 `capability_badge` 字段，fastpath C-S9 校验 \[SS] |
+| 5  | capability 令牌传递   | 消息携带 capability | 用户态 capability（`cap_t` 引用，badge=0） | v1.0.1 Capability Folding：64-bit Native Word Badge 内联 `capability_badge` 字段，fastpath C-S9 校验 \[SS] |
 | 6  | 零拷贝 IORING_OP_URING_CMD | registered buffer 引用传递 | 用户态 mmap | io\_uring registered buffer（不使用 page flipping） |
 | 7  | trace\_id 贯穿      | 链路追踪            | user\_data 字段  | io\_uring user\_data 字段 \[SC] |
 | 8  | daemon 生命周期       | init→run→stop   | 自研 supervisor  | systemd unit lifecycle        |
@@ -621,7 +621,7 @@ graph TD
 | IRON-9 v3 四层 | 本文档覆盖                                | 合规     |
 | ------------ | ------------------------------------ | ------ |
 | 共享契约层 \[SC]  | §6.1 `include/uapi/linux/airymax/ipc.h` 完整定义（含 `capability_badge` + `crc32`）    | <br /> |
-| 语义同源层 \[SS]  | §6.2 12 daemons + 8 项 IPC 原语同源（20 项）+ v1.1 Capability Folding Badge 校验语义 | <br /> |
+| 语义同源层 \[SS]  | §6.2 12 daemons + 8 项 IPC 原语同源（20 项）+ v1.0.1 Capability Folding Badge 校验语义 | <br /> |
 | 完全独立层 \[IND] | §6.3 10 项独立实现明确划分                    | <br /> |
 | 降级生存层 \[DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块：`capability_badge=0` 跳过 C-S9、退化 `airy_cap_check()` slowpath 兜底（`agent_caps[1024]` 静态数组） | <br /> |
 

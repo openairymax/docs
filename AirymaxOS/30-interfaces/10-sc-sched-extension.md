@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # [SC] sched.h 扩展契约 — sched_tac
 > **文档定位**：A-ULS（统一生命周期管理）模块的调度扩展 [SC] 共享契约，定义 Agent 8 态生命周期与sched_tac 调度接口的唯一权威契约\
-> **文档版本**：v1.0\
-> **最后更新**：2026-07-17\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
 > **设计依据**：综合修正方案 §1（sched_tac）+ §4.2.4（A-ULS 设计）
 
@@ -360,7 +360,8 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Agent 8 态生命周期枚举；3 态降级（RUNNING/STOPPED/DEAD）；sched_tac 接口（sched_setattr/sched_setscheduler）；seL4 MCS 映射（scBudget→sched_runtime, scPeriod→sched_deadline）；物理宿主 kernel/include/uapi/linux/airymax/sched.h |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] sched.h 扩展契约 — sched_tac | v1.0 | 2026-07-17
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] sched.h 扩展契约 — sched_tac | v1.0.1 | 2026-07-21

@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 记忆设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）记忆设计文档（memory，极境记忆&存储）\
-> **文档版本**：v1.1（2026-07-07）\
+> **文档版本**：v1.0.1\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 memoryrovol 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 CXL/PMEM/VFS 持久化实现独立\
 > **子仓编号**：04\
@@ -432,7 +432,7 @@ int airy_sys_rovol_ctl(enum airy_rovol_opcode op,
 
 #### 4.9.1 io_uring 工程规范
 
-OLK 6.6 内核基线下，记忆卷载数据面完全由 io_uring 承载（v1.1 Capability Folding 后 8 个 seL4 风格 IPC 原语 syscall 已全部移除）：
+OLK 6.6 内核基线下，记忆卷载数据面完全由 io_uring 承载（v1.0.1 Capability Folding 后 8 个 seL4 风格 IPC 原语 syscall 已全部移除）：
 
 | 规范 | 说明 |
 | --- | --- |
