@@ -631,22 +631,22 @@ agentrt-linux（AirymaxOS）采用双错误码体系的核心原因在于内核�
 | -118 | -E_SYS_DEVSTATION_FAILED | DevStation 失败 | 开发环境初始化失败 |
 | -119 | -E_SYS_LICENSE_INVALID | 许可证无效 | 软件许可证不兼容 |
 
-##### 2.2.3 调度错误码（-200 ~ -299）
+##### 2.2.3 调度错误码（-121 ~ -140，对齐 [SC] error.h）
 
-调度错误码由 kernel 子仓定义，涵盖调度器相关错误：
+调度错误码由 kernel 子仓定义，对齐 [SC] `include/uapi/linux/airymax/error.h` 中 `A-ULS Scheduler/Lifecycle Error Codes` 子空间（-121 ~ -140）。命名统一使用 `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*` 前缀（禁止 `E_AIRY_STC_*` / `E_SCHED_*` 等废弃前缀）：
 
 | 错误码 | 宏名称 | 含义 | 典型场景 |
 |--------|--------|------|----------|
-| -200 | -E_SCHED_CLASS_INVALID | 调度类无效 | 指定的调度类不存在 |
-| -201 | -E_SCHED_POLICY_INVALID | 调度策略无效 | 策略参数不合法 |
-| -202 | -E_SCHED_PRIORITY_INVALID | 优先级无效 | 优先级超出范围 |
-| -203 | -E_AIRY_STC_LOAD_FAIL | sched_tac 加载失败 | 用户态调度器加载失败 |
-| -204 | -E_AIRY_STC_UNLOAD_FAIL | sched_tac 卸载失败 | 用户态调度器卸载失败 |
-| -205 | -E_AIRY_STC_ATTACH_FAIL | sched_tac 附加失败 | 调度器附加到 CPU 失败 |
-| -206 | -E_AIRY_STC_DETACH_FAIL | sched_tac 分离失败 | 调度器从 CPU 分离失败 |
-| -207 | -E_AIRY_STC_VERIFY_FAIL | sched_tac 验证失败 | 调度器验证失败 |
-| -208 | -E_SCHED_CPU_OFFLINE | CPU 离线 | 目标 CPU 不可用 |
-| -209 | -E_SCHED_CPU_HOTPLUG_FAIL | CPU 热插拔失败 | CPU 热插拔操作失败 |
+| -121 | -AIRY_ESCHED_POLICY | 调度策略非法 | sched_tac 策略校验失败 |
+| -122 | -AIRY_ESCHED_BUDGET | 运行预算超限 | runtime_ns 预算耗尽 |
+| -123 | -AIRY_ESCHED_DEADLINE | 截止时间错过 | SCHED_DEADLINE 截止错过 |
+| -124 | -AIRY_ESCHED_PERIOD | 周期非法 | sched_tac 周期参数非法 |
+| -125 | -AIRY_ESCHED_PRIO | 优先级非法 | 优先级超出 [0,139] 范围 |
+| -126 | -AIRY_ESCHED_WEIGHT | EEVDF 权重非法 | 权重超出 [1,10000] 范围 |
+| -127 | -AIRY_ELIFECYCLE_STATE | 生命周期状态非法 | Agent 状态不在 8 态枚举内 |
+| -128 | -AIRY_ELIFECYCLE_TRANS | 状态迁移非法 | 违反 8 态合法转换矩阵 |
+| -129 | -AIRY_ELIFECYCLE_AGENT | Agent 不存在 | agent_id 未找到 |
+| -130 | -AIRY_ELIFECYCLE_ZOMBIE | Agent 僵尸态 | Agent 处于 zombie 无法操作 |
 | -210 | -E_SCHED_AFFINITY_INVALID | CPU 亲和性无效 | 亲和性掩码无效 |
 | -211 | -E_SCHED_CGROUP_INVALID | cgroup 无效 | cgroup 配置无效 |
 | -212 | -E_SCHED_DEADLINE_MISSED | 截止时间错过 | 实时任务错过截止时间 |
@@ -959,12 +959,15 @@ IPC 错误码由 kernel 和 services 联合定义：
 /* === 通用错误码（复用 Linux 内核 errno） === */
 /* 直接使用 Linux 内核标准 errno，无需重新定义 */
 
-/* === 调度错误码（-200 ~ -299） === */
-#define E_SCHED_CLASS_INVALID        (-200)  /**< 调度类无效 */
-#define E_SCHED_POLICY_INVALID       (-201)  /**< 调度策略无效 */
-#define E_SCHED_PRIORITY_INVALID     (-202)  /**< 优先级无效 */
-#define E_AIRY_STC_LOAD_FAIL         (-203)  /**< sched_tac 加载失败 */
-#define E_AIRY_STC_UNLOAD_FAIL       (-204)  /**< sched_tac 卸载失败 */
+/* === 调度错误码（对齐 [SC] error.h -121 ~ -140，禁止 E_AIRY_STC_* 废弃前缀） === */
+#define AIRY_ESCHED_POLICY           (-121)  /**< 调度策略非法 */
+#define AIRY_ESCHED_BUDGET           (-122)  /**< 运行预算超限 */
+#define AIRY_ESCHED_DEADLINE         (-123)  /**< 截止时间错过 */
+#define AIRY_ESCHED_PERIOD           (-124)  /**< 周期非法 */
+#define AIRY_ESCHED_PRIO             (-125)  /**< 优先级非法 */
+#define AIRY_ESCHED_WEIGHT           (-126)  /**< EEVDF 权重非法 */
+#define AIRY_ELIFECYCLE_STATE        (-127)  /**< 生命周期状态非法 */
+#define AIRY_ELIFECYCLE_TRANS        (-128)  /**< 状态迁移非法 */
 
 /* === IPC 错误码（-300 ~ -399） === */
 #define E_IPC_MSG_TOO_LARGE          (-300)  /**< 消息过大 */

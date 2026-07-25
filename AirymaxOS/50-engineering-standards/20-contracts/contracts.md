@@ -46,7 +46,7 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
 |------|------|------|------|------|---------|
 | magic | 0 | 4 | __u32 | 魔数 0x41524531（'ARE1'），协议识别 | 永不变更，与 agentrt 逐字节一致（[SC] 共享） |
 | opcode | 4 | 2 | __u16 | 操作码，见 [SC] `ipc.h` AIRY_IPC_OP_* 宏（SEND=0x0001/RECV=0x0002/SEND_BATCH=0x0003/CANCEL=0x0004/FREEZE=0x0005/CAP_REQUEST=0x0010/CAP_RESPONSE=0x0011） | 新增操作码只能追加，不覆写已有值 |
-| flags | 6 | 2 | __u16 | 标志位（NOWAIT/SIGNAL [SC] 基本标志 + 扩展标志） | 位定义见 Part I §2.3，低 2 位由 [SC] SSoT 锁定 |
+| flags | 6 | 2 | __u16 | 标志位（ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL/RESERVED，[SC] SSoT） | 位定义见 Part I §2.3，bits 5-15 保留位必须为零 |
 | trace_id | 8 | 8 | __u64 | OpenTelemetry 链路追踪 ID | 生成时使用单调递增加随机后缀 |
 | timestamp_ns | 16 | 8 | __u64 | CLOCK_REALTIME 纳秒时间戳 | 对齐北京时间（UTC+8） |
 | src_task | 24 | 8 | __u64 | 源任务 ID（agentrt task token / 内核 task ID） | 内核校验真实性，用户态不可伪造 |
@@ -60,16 +60,14 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
 
 | 标志位 | 值 | 层级 | 语义 | 安全约束 |
 |--------|-----|------|------|---------|
-| AIRY_IPC_F_NOWAIT | 0x0001 | [SC] SSoT | 非阻塞操作（对应 io_uring IOSQE_ASYNC） | 调用方须处理 EAGAIN |
-| AIRY_IPC_F_SIGNAL | 0x0002 | [SC] SSoT | 完成后投递信号（对应 io_uring IORING_CQE_F_NOTIF） | 信号目标须持有 sig_perm |
-| AIRY_IPC_F_ZEROCOPY | 0x0004 | [IND] 扩展 | 使用 io_uring 零拷贝路径（IORING_OP_URING_CMD + registered buffer） | 发送方必须注册 buffer |
-| AIRY_IPC_F_CAP_CARRY | 0x0008 | [IND] 扩展 | 消息携带 capability 令牌 | 内核校验令牌有效性 |
-| AIRY_IPC_F_COMPRESS | 0x0010 | [IND] 扩展 | payload 已压缩（LZ4） | 接收方自动解压 |
-| AIRY_IPC_F_ENCRYPT | 0x0020 | [IND] 扩展 | payload 已加密（SM4） | 密钥由 capability 携带 |
-| AIRY_IPC_F_URGENT | 0x0040 | [IND] 扩展 | 紧急消息，优先投递 | 仅 SCHED_FIFO 实时类可用 |
-| AIRY_IPC_F_NOREPLY | 0x0080 | [IND] 扩展 | 无需响应（单向通知） | 仅 EVENT payload 类型可用 |
+| AIRY_IPC_FLAG_ZEROCOPY | 0x0001 | [SC] SSoT | 零拷贝路径（IORING_OP_URING_CMD + registered buffer） | 发送方必须注册 buffer |
+| AIRY_IPC_FLAG_CAP_CARRY | 0x0002 | [SC] SSoT | 消息携带 capability Badge | 内核 fastpath C-S9 校验 Badge |
+| AIRY_IPC_FLAG_ENCRYPT | 0x0004 | [SC] SSoT | payload 已加密（保留，0.1.1 不启用） | 接收方需解密 |
+| AIRY_IPC_FLAG_COMPRESS | 0x0008 | [SC] SSoT | payload 已压缩（保留，0.1.1 不启用） | 接收方需解压 |
+| AIRY_IPC_FLAG_BATCH_TAIL | 0x0010 | [SC] SSoT | SEND_BATCH 的最后一个 SQE | io_uring 批量提交 |
+| AIRY_IPC_FLAG_RESERVED | 0xFFE0 | [SC] SSoT | bits 5-15 保留位，必须为零 | C-S10 校验 |
 
-> **bit 冲突消解说明**：SSoT [SC] 锁定 bit 0-1 为 NOWAIT/SIGNAL（`include/uapi/linux/airymax/ipc.h`）。扩展标志（ZEROCOPY/CAP_CARRY/COMPRESS/ENCRYPT/URGENT/NOREPLY）重新编号从 bit 2 开始，消除旧 `AIRY_IPC_FLAG_*` 前缀中 ZEROCOPY(bit 0)/CAP_CARRY(bit 1) 与 SSoT NOWAIT(bit 0)/SIGNAL(bit 1) 的 bit 位冲突。标志位类型为 `__u16`（对应消息头 `flags` 字段），前缀统一为 `AIRY_IPC_F_*`（对齐 SSoT 命名）。
+> **flag 命名说明**：SSoT [SC] `ipc.h` 统一使用 `AIRY_IPC_FLAG_*` 前缀（对齐 `AIRY_IPC_OP_*` 命名风格）。v1.0.1 起 NOWAIT/SIGNAL 已废弃，由 io_uring 原生机制（IOSQE_ASYNC / IORING_CQE_F_NOTIF）替代。标志位类型为 `__u16`（对应消息头 `flags` 字段，offset 6）。
 
 #### 2.4 消息头布局可视化
 
@@ -220,7 +218,7 @@ IPC 消息优先级与 sched_tac 调度策略优先级对齐（0-139），按任
 
 #### 5.1 传递流程
 
-当消息头 flags 中置位 AIRY_IPC_F_CAP_CARRY 时，消息可携带 capability 令牌跨进程传递。传递基于 Cupolas 安全模型，遵循 seL4 风格的不可伪造语义：
+当消息头 flags 中置位 AIRY_IPC_FLAG_CAP_CARRY 时，消息可携带 capability 令牌跨进程传递。传递基于 Cupolas 安全模型，遵循 seL4 风格的不可伪造语义：
 
 ```mermaid
 sequenceDiagram
@@ -336,7 +334,7 @@ agentrt 在 agentrt-linux 上运行时，IPC 消息头布局完全兼容，无�
 | 认证机制 | 说明 | 实现位置 |
 |---------|------|---------|
 | 任务身份验证 | src_task 由内核填充，用户态不可伪造 | 内核 current->task_token |
-| 消息完整性 | 可选 HMAC-SHA256（通过 AIRY_IPC_F_ENCRYPT 标志） | 发送方签名，接收方校验 |
+| 消息完整性 | 可选 HMAC-SHA256（通过 AIRY_IPC_FLAG_ENCRYPT 标志） | 发送方签名，接收方校验 |
 | 重放保护 | timestamp_ns 加单调递增 seq（STREAM 类型） | 接收方窗口校验 |
 
 #### 8.2 能力传递安全
@@ -753,7 +751,7 @@ agentrt-linux 与 agentrt 在以下 10 个头文件中实现代码字面共享�
 |--------|---------|----------------|
 | `syscalls.h` | v1.1: 4 核心 syscall 编号 + 20 预留槽位| 系统调用（SYS） |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | 内存管理（ROVOL） |
-| `security_types.h` | POSIX capability 41 ID 枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP） |
+| `security_types.h` | POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP） |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | 认知（CLT） |
 | `sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | 调度（SCHED） |
 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构 + SQE/CQE 操作码与标志位 | IPC |

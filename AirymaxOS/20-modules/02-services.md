@@ -285,7 +285,7 @@ WantedBy=airymaxos.target
  * 字段顺序（D-9 修复后 8 字节自然对齐）：
  *   offset  0: magic            (__u32)  0x41524531 'ARE1'
  *   offset  4: opcode           (__u16)  AIRY_IPC_OP_*
- *   offset  6: flags            (__u16)  AIRY_IPC_F_*
+ *   offset  6: flags            (__u16)  AIRY_IPC_FLAG_*
  *   offset  8: trace_id         (__u64)  OpenTelemetry trace ID
  *   offset 16: timestamp_ns     (__u64)  CLOCK_REALTIME ns
  *   offset 24: src_task         (__u64)  source Agent/daemon task_id

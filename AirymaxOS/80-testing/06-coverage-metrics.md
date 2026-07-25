@@ -597,7 +597,7 @@ agentrt-linux 的 Agent 8 态生命周期状态机（INACTIVE → SPAWNING → R
 /* kernel/airymaxos/coverage/airy_coverage_agent_path.c */
 #include <linux/module.h>
 #include <linux/atomic.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 /* 8x8 状态转换矩阵，记录每条路径被命中的次数 */
 static atomic_t airy_coverage_path_matrix[8][8];

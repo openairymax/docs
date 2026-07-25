@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L8（Agent 契约测试，agentrt-linux 专属）+ Linux 6.6 内核基线 KUnit / kselftest 载体\
 > **理论根基**：Airymax 五维正交 24 原则（E-8 可测试性 / A-4 完美主义 / S-1 反馈闭环 / IRON-9 v3 [IND] 独立实现层）\
-> **核心约束**：Agent 行为契约是不可妥协的工程基线——CI 在 PR 阶段强制校验所有契约，任一契约违反即阻断合入；契约定义源（SSoT）位于 `include/uapi/linux/airymax/agent.h`，本卷测试用例验证该 SSoT。
+> **核心约束**：Agent 行为契约是不可妥协的工程基线——CI 在 PR 阶段强制校验所有契约，任一契约违反即阻断合入；8 态生命周期契约定义源（SSoT）位于 [SC] `include/uapi/linux/airymax/sched.h`（`enum airy_agent_state`），Token 预算 / 记忆配额 / CoreLoop 契约为测试层内部契约（定义于 `kernel/airymaxos/contract/`），本卷测试用例验证这些契约。
 
 ---
 
@@ -46,7 +46,7 @@ agentrt-linux 的 Agent 行为契约以独立 `airy_agent_contract_*` 模块形�
 ```mermaid
 flowchart TB
     subgraph "Agent 行为契约层"
-        A["契约定义层（SSoT）<br/>include/uapi/linux/airymax/agent.h"]
+        A["契约定义层（SSoT）<br/>[SC] include/uapi/linux/airymax/sched.h"]
         B1["状态机契约<br/>8 态 14 合法转换 50 非法转换"]
         B2["Token 预算契约<br/>消耗 ≤ 预算 / 溢出处理"]
         B3["记忆配额契约<br/>L1-L4 层级访问权限"]
@@ -105,23 +105,23 @@ flowchart TB
 
 ### 2.1 状态定义
 
-Agent 8 态生命周期的 8 个状态定义于 `include/uapi/linux/airymax/agent.h`：
+Agent 8 态生命周期的 8 个状态定义于 [SC] `include/uapi/linux/airymax/sched.h`（`enum airy_agent_state`，SSoT 物理宿主；权威源文档 [10-sc-sched-extension.md §2.1](../../30-interfaces/10-sc-sched-extension.md)）：
 
 ```c
-/* include/uapi/linux/airymax/agent.h（[SC] 共享契约层 SSoT） */
-#ifndef _UAPI_AIRY_AGENT_H
-#define _UAPI_AIRY_AGENT_H
+/* include/uapi/linux/airymax/sched.h（[SC] 共享契约层 SSoT） */
+#ifndef _UAPI_AIRYMAX_SCHED_H
+#define _UAPI_AIRYMAX_SCHED_H
 
 enum airy_agent_state {
-    AIRY_AGENT_STATE_INACTIVE  = 0,  /* 未激活（初始态） */
-    AIRY_AGENT_STATE_SPAWNING  = 1,  /* 创建中 */
-    AIRY_AGENT_STATE_READY     = 2,  /* 就绪（可调度） */
-    AIRY_AGENT_STATE_RUNNING   = 3,  /* 运行中 */
-    AIRY_AGENT_STATE_BLOCKED   = 4,  /* 阻塞（等待资源） */
-    AIRY_AGENT_STATE_STOPPING  = 5,  /* 停止中（清理资源） */
-    AIRY_AGENT_STATE_STOPPED   = 6,  /* 已停止（待回收） */
-    AIRY_AGENT_STATE_DEAD      = 7,  /* 已死亡（资源已回收） */
-    AIRY_AGENT_STATE_MAX       = 8,
+    AIRY_AGENT_INACTIVE  = 0,  /* 未激活（初始态） */
+    AIRY_AGENT_SPAWNING  = 1,  /* 创建中 */
+    AIRY_AGENT_READY     = 2,  /* 就绪（可调度） */
+    AIRY_AGENT_RUNNING   = 3,  /* 运行中 */
+    AIRY_AGENT_BLOCKED   = 4,  /* 阻塞（等待资源） */
+    AIRY_AGENT_STOPPING  = 5,  /* 停止中（清理资源） */
+    AIRY_AGENT_STOPPED   = 6,  /* 已停止（待回收） */
+    AIRY_AGENT_DEAD      = 7,  /* 已死亡（资源已回收） */
+    AIRY_AGENT_STATE_MAX
 };
 
 /* 合法状态转换矩阵（1 = 合法，0 = 非法） */
@@ -130,7 +130,7 @@ enum airy_agent_state {
 
 extern const int airy_agent_transition_legal_table[8][8];
 
-#endif /* _UAPI_AIRY_AGENT_H */
+#endif /* _UAPI_AIRYMAX_SCHED_H */
 ```
 
 ### 2.2 合法状态转换矩阵
@@ -185,7 +185,7 @@ const int airy_agent_transition_legal_table[8][8] = {
 ```c
 /* kernel/airymaxos/contract/airy_agent_contract_state_test.c */
 #include <kunit/test.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 /* 测试 1：验证所有 14 条合法转换均可执行 */
 KUNIT_DEFINE_TEST(airy_contract_legal_transitions)
@@ -242,7 +242,7 @@ KUNIT_DEFINE_TEST(airy_contract_dead_is_terminal)
     int to;
     for (to = 0; to < 8; to++) {
         KUNIT_EXPECT_EQ(test, 0,
-            AIRY_AGENT_TRANSITION_LEGAL(AIRY_AGENT_STATE_DEAD, to));
+            AIRY_AGENT_TRANSITION_LEGAL(AIRY_AGENT_DEAD, to));
     }
 }
 
@@ -251,7 +251,7 @@ KUNIT_DEFINE_TEST(airy_contract_initial_state_inactive)
 {
     struct kunit *test = kunit_current;
     struct airy_agent *agent = airy_agent_alloc();
-    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STATE_INACTIVE, agent->state);
+    KUNIT_EXPECT_EQ(test, AIRY_AGENT_INACTIVE, agent->state);
     airy_agent_free(agent);
 }
 
@@ -263,7 +263,7 @@ KUNIT_DEFINE_TEST(airy_contract_spawn_to_ready_latency)
     struct airy_agent *agent = airy_agent_spawn();
     u64 latency_ns = ktime_get_ns() - start_ns;
     KUNIT_EXPECT_LE(test, latency_ns, AIRY_CONTRACT_SPAWN_TO_READY_SLA_NS);
-    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STATE_READY, agent->state);
+    KUNIT_EXPECT_EQ(test, AIRY_AGENT_READY, agent->state);
     airy_agent_stop(agent);
 }
 
@@ -286,7 +286,7 @@ KUNIT_DEFINE_TEST(airy_contract_state_machine_coverage)
 ```c
 /* tools/testing/selftests/airy_agent_contract/state_machine.c */
 #include "../kselftest_harness.h"
-#include <sys/airy_agent.h>
+#include <linux/airymax/sched.h>
 
 FIXTURE(airy_agent_contract) {
     int agent_fd;
@@ -304,12 +304,12 @@ FIXTURE_TEARDOWN(airy_agent_contract) {
 TEST_F(airy_agent_contract, legal_spawn_to_dead) {
     /* 验证完整生命周期：INACTIVE → SPAWNING → READY → RUNNING → STOPPING → STOPPED → DEAD */
     int states[] = {
-        AIRY_AGENT_STATE_SPAWNING,
-        AIRY_AGENT_STATE_READY,
-        AIRY_AGENT_STATE_RUNNING,
-        AIRY_AGENT_STATE_STOPPING,
-        AIRY_AGENT_STATE_STOPPED,
-        AIRY_AGENT_STATE_DEAD,
+        AIRY_AGENT_SPAWNING,
+        AIRY_AGENT_READY,
+        AIRY_AGENT_RUNNING,
+        AIRY_AGENT_STOPPING,
+        AIRY_AGENT_STOPPED,
+        AIRY_AGENT_DEAD,
     };
     int i;
     for (i = 0; i < 6; i++) {
@@ -319,14 +319,14 @@ TEST_F(airy_agent_contract, legal_spawn_to_dead) {
 
 TEST_F(airy_agent_contract, illegal_dead_to_running) {
     /* 先进入 DEAD 态 */
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_DEAD));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_DEAD));
     /* 尝试从 DEAD 转 RUNNING，必须失败 */
-    ASSERT_EQ(-EINVAL, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_RUNNING));
+    ASSERT_EQ(-EINVAL, airy_agent_set_state(self->agent_fd, AIRY_AGENT_RUNNING));
 }
 
 TEST_F(airy_agent_contract, illegal_inactive_to_running) {
     /* 尝试从 INACTIVE 直接转 RUNNING，必须失败 */
-    ASSERT_EQ(-EINVAL, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_RUNNING));
+    ASSERT_EQ(-EINVAL, airy_agent_set_state(self->agent_fd, AIRY_AGENT_RUNNING));
 }
 ```
 
@@ -340,10 +340,10 @@ TEST_F(airy_agent_contract, illegal_inactive_to_running) {
 
 ### 4.1 契约定义
 
-每个 Agent 在创建时分配 Token 预算，Agent 运行期间消耗 Token。Token 预算契约定义于 `include/uapi/linux/airymax/agent.h`：
+每个 Agent 在创建时分配 Token 预算，Agent 运行期间消耗 Token。Token 预算契约定义于测试层内部头文件 `kernel/airymaxos/contract/airy_agent_contract.h`（[IND] 独立实现层）：
 
 ```c
-/* include/uapi/linux/airymax/agent.h */
+/* kernel/airymaxos/contract/airy_agent_contract.h */
 struct airy_token_budget {
     u64  budget_total;       /* 总预算 */
     u64  budget_consumed;    /* 已消耗 */
@@ -367,7 +367,7 @@ struct airy_token_budget {
 ```c
 /* kernel/airymaxos/contract/airy_agent_contract_token_test.c */
 #include <kunit/test.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_token_consume_within_budget)
 {
@@ -398,7 +398,7 @@ KUNIT_DEFINE_TEST(airy_contract_token_overflow_triggers_stop)
     KUNIT_EXPECT_EQ(test, -AIRY_ERR_TOKEN_OVERFLOW, ret);
     
     /* Agent 必须进入 STOPPING 状态（契约 9） */
-    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STATE_STOPPING, agent->state);
+    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STOPPING, agent->state);
     
     /* tracepoint 必须触发（通过 airy_dyn_token_overflow_total 验证） */
     KUNIT_EXPECT_GE(test, airy_dyn_token_overflow_total(), 1);
@@ -415,7 +415,7 @@ KUNIT_DEFINE_TEST(airy_contract_token_zero_budget)
     /* 零预算下任何消耗均溢出 */
     int ret = airy_token_consume(agent, 1);
     KUNIT_EXPECT_EQ(test, -AIRY_ERR_TOKEN_OVERFLOW, ret);
-    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STATE_STOPPING, agent->state);
+    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STOPPING, agent->state);
     
     airy_agent_free(agent);
 }
@@ -432,7 +432,7 @@ KUNIT_DEFINE_TEST(airy_contract_token_zero_budget)
 Agent 的记忆系统分 L1-L4 四个层级，每个层级有独立的访问权限与配额：
 
 ```c
-/* include/uapi/linux/airymax/agent.h */
+/* kernel/airymaxos/contract/airy_agent_contract.h */
 enum airy_memory_level {
     AIRY_MEM_L1_WORKING    = 0,  /* 工作记忆（短期，进程内） */
     AIRY_MEM_L2_EPISODIC   = 1,  /* 情景记忆（中期，Agent 私有） */
@@ -466,7 +466,7 @@ struct airy_memory_quota {
 ```c
 /* kernel/airymaxos/contract/airy_agent_contract_mem_test.c */
 #include <kunit/test.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_mem_l1_self_access)
 {
@@ -520,7 +520,7 @@ KUNIT_DEFINE_TEST(airy_contract_mem_quota_exceeded)
         airy_mem_write(agent, AIRY_MEM_L1_WORKING, 100, data, 1));
     
     /* Agent 必须进入 STOPPING 状态（契约 11） */
-    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STATE_STOPPING, agent->state);
+    KUNIT_EXPECT_EQ(test, AIRY_AGENT_STOPPING, agent->state);
     
     airy_agent_free(agent);
 }
@@ -537,7 +537,7 @@ KUNIT_DEFINE_TEST(airy_contract_mem_quota_exceeded)
 Agent 的认知循环（CoreLoopThree）分三阶段：
 
 ```c
-/* include/uapi/linux/airymax/agent.h */
+/* kernel/airymaxos/contract/airy_agent_contract.h */
 enum airy_cogn_loop_phase {
     AIRY_COGN_PERCEIVE  = 0,  /* 感知阶段：从环境获取输入 */
     AIRY_COGN_DECIDE    = 1,  /* 决策阶段：基于感知结果决策 */
@@ -563,7 +563,7 @@ enum airy_cogn_loop_phase {
 ```c
 /* kernel/airymaxos/contract/airy_agent_contract_cogn_test.c */
 #include <kunit/test.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_cogn_phase_order)
 {
@@ -666,7 +666,7 @@ agentrt-linux 的 12 daemon 中，`cogn_d` 与 `mem_d` 与 Agent 行为紧密耦
 ```c
 /* tools/testing/selftests/airy_agent_contract/daemon_interaction.c */
 #include "../kselftest_harness.h"
-#include <sys/airy_agent.h>
+#include <linux/airymax/sched.h>
 #include <sys/airy_daemon.h>
 
 FIXTURE(airy_daemon_contract) {
@@ -693,7 +693,7 @@ FIXTURE_TEARDOWN(airy_daemon_contract) {
 /* 契约 14：cogn_d 必须在 Agent READY 时启动 CoreLoopThree */
 TEST_F(airy_daemon_contract, cogn_d_starts_loop_when_ready) {
     /* Agent 进入 READY 状态 */
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_READY));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_READY));
     
     /* cogn_d 必须在 100ms 内报告 CoreLoopThree 已启动 */
     usleep(100000);
@@ -704,9 +704,9 @@ TEST_F(airy_daemon_contract, cogn_d_starts_loop_when_ready) {
 
 /* 契约 14：cogn_d 必须在 Agent STOPPING 时停止循环 */
 TEST_F(airy_daemon_contract, cogn_d_stops_loop_when_stopping) {
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_READY));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_READY));
     usleep(100000);
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_STOPPING));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STOPPING));
     
     /* cogn_d 必须在 200ms 内报告 CoreLoopThree 已停止 */
     usleep(200000);
@@ -718,15 +718,15 @@ TEST_F(airy_daemon_contract, cogn_d_stops_loop_when_stopping) {
 /* 契约 15：mem_d 必须在 Agent DEAD 时回收所有记忆 */
 TEST_F(airy_daemon_contract, mem_d_recycles_on_dead) {
     /* Agent 写入 L1-L4 记忆 */
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_READY));
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_RUNNING));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_READY));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_RUNNING));
     /* 写入 L1 记忆 */
     ASSERT_EQ(0, airy_mem_write(self->agent_fd, AIRY_MEM_L1_WORKING, 0, "data", 4));
     
     /* Agent 进入 DEAD 状态 */
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_STOPPING));
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_STOPPED));
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_DEAD));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STOPPING));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STOPPED));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_DEAD));
     
     /* mem_d 必须在 1s 内回收所有记忆 */
     usleep(1000000);
@@ -737,8 +737,8 @@ TEST_F(airy_daemon_contract, mem_d_recycles_on_dead) {
 
 /* 契约 16：macro_d 必须在 Agent STOPPING 后 1s 内启动回收 */
 TEST_F(airy_daemon_contract, macro_d_recycles_within_1s) {
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_READY));
-    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STATE_STOPPING));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_READY));
+    ASSERT_EQ(0, airy_agent_set_state(self->agent_fd, AIRY_AGENT_STOPPING));
     
     /* macro_d 必须在 1s 内启动回收 */
     usleep(1000000);
@@ -867,7 +867,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 }
 ```
 
-**OS-STD-101**：每条契约必须有唯一 ID（1-17）、名称、对应测试函数名；新增契约必须更新 `airy_agent_contracts.json` 与 `include/uapi/linux/airymax/agent.h` 同步。
+**OS-STD-101**：每条契约必须有唯一 ID（1-17）、名称、对应测试函数名；新增契约必须更新 `airy_agent_contracts.json` 与 `kernel/airymaxos/contract/airy_agent_contract.h` 同步。
 
 **OS-TEST-098**：CI 必须运行 `airy_contract_coverage.py` 脚本，验证注册表中的所有契约均有对应测试；任一契约缺失测试即标记 PR 阻断。
 

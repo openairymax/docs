@@ -446,7 +446,7 @@ agentrt-linux 为每个 Agent 分配 Token 预算（用于约束 Agent 资源消
 #include <linux/module.h>
 #include <linux/atomic.h>
 #include <linux/printk.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 static atomic64_t airy_dyn_token_overflow_count = ATOMIC64_INIT(0);
 
@@ -484,7 +484,7 @@ u64 airy_dyn_token_overflow_total(void)
 #include <linux/rbtree.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
-#include <uapi/airymax/agent.h>
+#include <uapi/airymax/sched.h>
 
 struct airy_dyn_alloc_node {
     struct rb_node  node;

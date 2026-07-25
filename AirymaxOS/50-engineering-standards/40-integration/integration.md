@@ -227,7 +227,7 @@ typedef struct {
 |------|------|
 | 文件名 | `include/uapi/linux/airymax/security_types.h` |
 | 维护方 | agentrt |
-| 共享内容 | POSIX capability 41 ID 枚举、LSM 钩子 250 ID 枚举、Cupolas blob 布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 |
+| 共享内容 | POSIX capability 41 ID（0-40）枚举、LSM 钩子 250 ID 枚举、Cupolas blob 布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 |
 | agentrt-linux 使用方式 | 内核态 capability 系统使用相同的令牌格式与安全类型 |
 
 ```c

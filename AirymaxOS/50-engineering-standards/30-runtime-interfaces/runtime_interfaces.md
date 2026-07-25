@@ -1562,7 +1562,7 @@ int airy_cap_derive(are_cap_t parent, uint64_t subset,
 int airy_cap_revoke(are_cap_t cap);
 ```
 
-#### 2.3 POSIX capability 41 ID 枚举
+#### 2.3 POSIX capability 41 ID（0-40）枚举
 
 agentrt-linux（AirymaxOS）集成 Linux 6.6 标准 41 个 capabilities（ID 0-40）并扩展为 44 ID 枚举（ID 41-43 为 Airymax 专属）：
 

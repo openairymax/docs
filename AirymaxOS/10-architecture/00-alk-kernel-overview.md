@@ -317,18 +317,18 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 ```
 offset  0-3:   magic (0x41524531 'ARE1')
 offset  4-5:   opcode (AIRY_IPC_OP_*)
-offset  6-7:   flags (AIRY_IPC_F_*)
-offset  8-11:  src_agent_id
-offset 12-15:  dst_agent_id
-offset 16-23:  trace_id
-offset 24-31:  timestamp_ns
-offset 32-39:  payload_len
+offset  6-7:   flags (AIRY_IPC_FLAG_*)
+offset  8-15:  trace_id (64-bit)
+offset 16-23:  timestamp_ns (64-bit monotonic)
+offset 24-31:  src_task (64-bit)
+offset 32-39:  dst_task (64-bit)
 offset 40-47:  capability_badge (64-bit Native Word)
-offset 48-51:  crc32
-offset 52-127: reserved + payload
+offset 48-51:  payload_len (32-bit)
+offset 52-55:  crc32 (32-bit)
+offset 56-127: reserved[72]
 ```
 
-> **详细设计**：详见 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)。
+> **SSoT**：字段布局以 [SC] `include/uapi/linux/airymax/ipc.h` 中 `struct airy_ipc_msg_hdr` 为权威源。详细设计见 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)。
 
 ***
 

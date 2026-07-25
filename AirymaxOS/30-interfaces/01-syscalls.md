@@ -305,7 +305,7 @@ Capability Folding 决策将 0.1.1 的 12 核心 syscall 精简为 v1.0.1 的 4 
 | `airy_sys_delegate` | — | 移除 → sec_d 重编译 Badge | `airy_sys_call + COMPILE_BADGE`（由 sec_d 集中处理） |
 | `airy_sys_mint` | — | 移除 → sec_d 编译 Badge | `airy_sys_call + COMPILE_BADGE`（由 sec_d 集中处理） |
 | `airy_sys_revoke` | — | 移除 → sec_d 撤销 + atomic_inc | `airy_sys_call + REVOKE_BADGE`（1 行 atomic_inc） |
-| `airy_sys_call_batch` | — | 移除 → io_uring SQE 链 | 多个 `IORING_OP_URING_CMD` SQE + `AIRY_IPC_F_BATCH_TAIL` |
+| `airy_sys_call_batch` | — | 移除 → io_uring SQE 链 | 多个 `IORING_OP_URING_CMD` SQE + `AIRY_IPC_FLAG_BATCH_TAIL` |
 | `airy_sys_nbsend` | 515 | 移除 → io_uring NONBLOCK | `IORING_OP_URING_CMD + IOSQE_ASYNC=0`（fastpath 内联） |
 | `airy_sys_nbrecv` | 516 | 移除 → io_uring CQE poll | 接收方 poll CQE（无需 syscall） |
 | `airy_sys_reply_recv` | 517 | 移除 → io_uring URING_CMD + CQE | `IORING_OP_URING_CMD + cmd_op=IPC_SEND` + CQE poll |
@@ -638,7 +638,7 @@ if (ret < 0) {
 
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（4 核心 + 20 预留 = 24 槽位编号）+ `sched.h`（任务描述符 magic 0x41475453 'AGTS'、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`struct airy_ipc_msg_hdr` Layout C v4 含 `capability_badge` 字段）+ `security_types.h`（capability 41 ID + cap_op 7 操作 + Badge 位布局宏 + Capability 权限位）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举）+ `error.h`（POSIX/IPC/Capability/[SC]/[DSL]/Fault 码空间） |
+| **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（4 核心 + 20 预留 = 24 槽位编号）+ `sched.h`（任务描述符 magic 0x41475453 'AGTS'、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`struct airy_ipc_msg_hdr` Layout C v4 含 `capability_badge` 字段）+ `security_types.h`（capability 44 ID（41 POSIX + 3 Airymax 扩展） + cap_op 7 操作 + Badge 位布局宏 + Capability 权限位）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举）+ `error.h`（POSIX/IPC/Capability/[SC]/[DSL]/Fault 码空间） |
 | **[SS] 语义同源层** | 操作模式同源，签名独立演进 | agentrt `syscalls.h`（用户态 libc syscall 包装）↔ agentrt-linux `airy_syscalls.h`（内核 `SYSCALL_DEFINE*`）4 核心同源；Badge 校验机制（`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、`airy_cap_global_epoch` atomic_t）由 agentrt-linux 内核侧实现，agentrt 用户态不感知（H3） |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台 syscall 封装（Linux/macOS/Windows 三平台）↔ agentrt-linux 内核 syscall 表注册（`arch/x86/entry/syscalls/syscall_64.tbl` 新增段）；agentrt 用户态 `capability_badge=0`，agentrt-linux 内核 `capability_badge` 由 sec_d 编译 |
 | **[DSL] 降级生存层** | 降级模式生存 | [DSL] 模式下 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验（H6）；IPC 数据面 fastpath 仍可用，控制面 `airy_sys_call` 降级为传统 cap_t 引用模式 |
@@ -650,7 +650,7 @@ if (ret < 0) {
 | `syscalls.h` | Syscall 编号体系（4 核心 + 20 预留 = 24 槽位） | 全部 4 个 syscall |
 | `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | `airy_sys_call` / `airy_sys_sched_ctl` |
 | `ipc.h` | `struct airy_ipc_msg_hdr` Layout C v4 128B 消息头（magic 0x41524531 'ARE1' + `capability_badge` offset 40 + `crc32` offset 52）+ 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
-| `security_types.h` | capability 41 ID + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
 | `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPTION/THINKING/ACTION） | `airy_sys_clt_notify` |
 | `error.h` | POSIX [-1,-40] + IPC [-41,-70] + Capability [-71,-100] + [SC] [-101,-200] + [DSL] [-201,-300] + Fault [0x1000,0x1FFF] | 全部 4 个 syscall + fastpath C-S0~C-S12 |

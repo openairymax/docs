@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度                               | 云原生子系统内容                                                                                                                                                                                                                                                                                         | 组织方式                                                                                                                                        |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码（gateway\_d io\_uring 通道）；capability 41 ID 枚举（容器沙箱 + CNI 网络策略）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（Agent CRD cognition 字段引用）；v1.0.1 Capability Folding 的 `agent_caps[1024]` 静态数组与 64-bit Badge 布局 | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/cognition/memory 共享），清单见 §6.1 |
+| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 消息头（magic 0x41524531 'ARE1'）、128B 消息头结构（`struct airy_ipc_msg_hdr`）、SQE/CQE 操作码（gateway\_d io\_uring 通道）；capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举（容器沙箱 + CNI 网络策略）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（Agent CRD cognition 字段引用）；v1.0.1 Capability Folding 的 `agent_caps[1024]` 静态数组与 64-bit Badge 布局 | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/cognition/memory 共享），清单见 §6.1 |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | gateway 网关语义（agentrt gateway → K8s Ingress + gateway\_d）、SDK 管理接口语义（agentrt sdk → agentctl）、Agent 生命周期管理（agentrt lifecycle → CRD controller reconcile）、资源声明语义（agentrt resource → K8s resource spec）、可观测性 API（agentrt monitoring → OpenTelemetry）、containerd shim 生命周期、服务网格数据平面语义、CNI 网络语义等 10+ 项 | 各自独立实现                                                                                                                                      |
 | **\[IND] 完全独立层** | 完全独立                               | K8s CRD 定义与控制器实现、containerd shim v2 实现、OCI 镜像规范实现、CNI 插件实现、OpenTelemetry 集成、DPU/IPU 卸载框架、超节点 OS、K8s 自定义调度器、准入 webhook、Multus 多 CNI                                                                                                                                                               | 各自独立仓库                                                                                                                                      |
 | **\[DSL] 降级生存层** | 降级模式下最小可用 | 跨节点 Badge 一致性失效时（gossip 通道断开 ≥ 3s）gateway\_d 退化为单节点 Badge 本地校验 + 100ms 后强制 Epoch 推进；CRD controller 在 etcd 不可达时降级为本地 reconcile cache；containerd shim 在 OCI registry 不可达时降级为本地镜像缓存 + 只读运行 | 各自独立实现，但共享降级触发语义 |
@@ -82,7 +82,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 容器化       | 进程隔离                            | containerd shim v2（OCI）         | \[IND] |
 | 可观测性      | 自研监控                            | OpenTelemetry 标准化               | \[IND] |
 | 网络策略      | 应用层 ACL                         | CNI + eBPF 数据平面                 | \[IND] |
-| 容器沙箱      | capability 令牌                   | capability 41 ID + 容器沙箱         | \[SC]  |
+| 容器沙箱      | capability 令牌                   | capability 44 ID（41 POSIX + 3 Airymax 扩展） + 容器沙箱         | \[SC]  |
 | 认知循环      | CoreLoopThree 阶段                | CRD cognition 字段引用阶段枚举          | \[SC]  |
 | 跨平台       | Linux/macOS/Windows             | Linux 6.6 专属                    | \[IND] |
 
@@ -142,7 +142,7 @@ cloudnative/
 
 - `airymax-cni`：agentrt-linux CNI 插件 \[IND]。
 - `service-mesh`：服务网格（基于 eBPF 数据平面）\[IND]。
-- `network-policy`：网络策略（与 `security` 协作，capability 41 ID \[SC]）\[IND]。
+- `network-policy`：网络策略（与 `security` 协作，capability 44 ID（41 POSIX + 3 Airymax 扩展） \[SC]）\[IND]。
 - `multus`：Multus 多 CNI 支持 \[IND]。
 
 ### 3.5 agentctl/（对标 kubectl）\[SS]
@@ -372,7 +372,7 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 云原生贯穿 4 大数据流，通过 \[SC] 共享契约层确保与 agentrt 协议一致：
 
 - IPC 数据流：gateway\_d io\_uring 通道 + 128B 消息头 \[SC]。
-- 安全横切：容器沙箱 capability 41 ID \[SC]。
+- 安全横切：容器沙箱 capability 44 ID（41 POSIX + 3 Airymax 扩展） \[SC]。
 - 认知横切：CRD cognition 字段引用 CoreLoopThree 阶段枚举 \[SC]。
 
 ***
@@ -388,7 +388,7 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 | `include/uapi/linux/airymax/error.h`              | 扩展错误码（`AIRY_ESEC_D_THROTTLED = -83`、`AIRY_ECAP_FROZEN = -82`、`AIRY_FAULT_URING_MALFORMED = 0x100A`、`AIRY_FAULT_AUDIT_TAMPER = 0x100B`） | gateway\_d 跨节点 RPC 错误映射 + CRD controller reconcile 错误透传 |
 | `include/uapi/linux/airymax/log_types.h`          | trace\_id + 结构化日志类型枚举                                                                                   | OpenTelemetry trace\_id 贯穿 + journald 聚合 |
 | `include/uapi/linux/airymax/memory_types.h`        | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                            | 容器快照 + 跨节点迁移（与 memory 协作） |
-| `include/uapi/linux/airymax/security_types.h`  | capability 41 ID 枚举 + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 容器沙箱 capability 隔离 + CNI 网络策略 + 跨节点 Badge 一致性 |
+| `include/uapi/linux/airymax/security_types.h`  | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 容器沙箱 capability 隔离 + CNI 网络策略 + 跨节点 Badge 一致性 |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式枚举（SYSTEM1\_FAST/SYSTEM2\_SLOW）+ LLM 推理阶段枚举 | Agent CRD cognition 字段 + LLM 调度器 |
 | `include/uapi/linux/airymax/sched.h`              | sched\_tac 调度类约束（禁止 SCHED\_AGENT 宏）+ task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式 | K8s 自定义调度器与 sched\_d 协作时的调度类约束 |
 | `include/uapi/linux/airymax/ipc.h`                | IPC magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr` + SQE/CQE 操作码 + io\_uring ring 配置              | gateway\_d io\_uring 零拷贝 IPC 通道  |
@@ -519,7 +519,7 @@ sequenceDiagram
 graph TD
     subgraph SC["[SC] 共享契约层（10 头文件）"]
         IPC_HDR[include/uapi/linux/airymax/ipc.h<br/>magic ARE1 + 128B msg_hdr]
-        SEC_HDR[include/uapi/linux/airymax/security_types.h<br/>capability 41 ID + agent_caps + Badge 64-bit]
+        SEC_HDR[include/uapi/linux/airymax/security_types.h<br/>capability 44 ID（41 POSIX + 3 Airymax 扩展） + agent_caps + Badge 64-bit]
         COG_HDR[include/uapi/linux/airymax/cognition_types.h<br/>CoreLoopThree 阶段枚举]
         SYS_HDR[include/uapi/linux/airymax/syscalls.h<br/>v1.0.1 24 槽位 syscall]
         UAPI_HDR[include/uapi/linux/airymax/uapi_compat.h<br/>__aligned(64) + SQE128 cmd[80]]
@@ -605,7 +605,7 @@ graph TD
 | ------------- | ------------------------------ | ----------- |
 | `kernel`      | 提供 eBPF、io\_uring 等云原生所需内核特性   | \[IND]      |
 | `services`    | gateway\_d 提供网关，IPC 消息头共享      | \[SS]/\[SC] |
-| `security`    | 提供容器沙箱、网络策略（capability 41 ID）  | \[SC]       |
+| `security`    | 提供容器沙箱、网络策略（capability 44 ID（41 POSIX + 3 Airymax 扩展））  | \[SC]       |
 | `memory`      | 提供容器快照、迁移（MemoryRovol L1-L4）   | \[SC]       |
 | `cognition`   | Agent 容器化运行、CRD cognition 字段引用 | \[SC]       |
 | `system`      | 提供云原生管理工具                      | \[IND]      |

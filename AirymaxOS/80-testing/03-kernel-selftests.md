@@ -445,12 +445,12 @@ late_initcall(test_airy_lsm_250_hooks);
 #include <uapi/airymax/log_types.h>
 #include <uapi/airymax/sched.h>
 #include <uapi/airymax/ipc.h>
-#include <uapi/airymax/capability.h>
-#include <uapi/airymax/lsm.h>
-#include <uapi/airymax/mem.h>
-#include <uapi/airymax/agent.h>
-#include <uapi/airymax/dsl.h>
-#include <uapi/airymax/version.h>
+#include <uapi/airymax/security_types.h>
+#include <uapi/airymax/lsm_types.h>
+#include <uapi/airymax/memory_types.h>
+#include <uapi/airymax/cognition_types.h>
+#include <uapi/airymax/syscalls.h>
+#include <uapi/airymax/uapi_compat.h>
 #include "airy_selftest.h"
 
 /* 内核侧 [SC] 头文件 SHA-256，由构建系统从 agentrt 同源仓注入 */

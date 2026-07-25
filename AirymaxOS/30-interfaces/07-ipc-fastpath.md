@@ -186,7 +186,7 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 | payload_len > 0（有 payload） | 强制降级 SLOW_SEND（fastpath 仅处理 128B 消息头） |
 | kfifo 水位 > 高水位（`AIRY_IPC_KFIFO_HI_WMARK`） | 降级 SLOW_SEND，触发背压（见 §6.4） |
 | capability 令牌过期 / 权限不足 | 进入 ERROR，返回 `AIRY_ECAP_EPOCH`(-79) 或 `AIRY_ECAP_PERM`(-81)（OS-SEC-121，错误码 SSoT 见 [08-sc-error-contract.md](08-sc-error-contract.md) §3） |
-| `flags` 含 `AIRY_IPC_F_NOWAIT` 且需阻塞 | 不进入 SLOW_*，直接返回 `AIRY_EAGAIN` |
+| SQE 设置 `IOSQE_ASYNC`（替代旧 NOWAIT 消息头标志） | 不进入 SLOW_*，由 io_uring 异步完成 |
 
 ---
 
@@ -210,7 +210,7 @@ v1.0.1 起，fastpath 校验链为 **C-S0~C-S12 共 13 项**（含 Capability Fo
 | C-S7 | `cmd->reclaim == false`（无 reclaim flag） | 内联 | → ERROR | `AIRY_EIPC_RECLAIM`(-49) |
 | C-S8 | `in_task()`（per-cpu 上下文，非中断） | 内联 | → SLOW_SEND | `AIRY_EIPC_CONTEXT`(-50) |
 | **C-S9** | **Capability Folding Badge 校验**（见 §3.1.1 详解） | 内联 `airy_cap_badge_ok()`，~10ns | → ERROR 或 cap_pass | `AIRY_ECAP_BADGE`(-78) / `AIRY_ECAP_EPOCH`(-79) / `AIRY_ECAP_FORGED`(-80) / `AIRY_ECAP_PERM`(-81) |
-| C-S10 | `flags & AIRY_IPC_F_RESERVED == 0` 且不含 `ENCRYPT`/`COMPRESS` | 位测试 | → ERROR | `AIRY_EIPC_FLAGS`(-46) / `AIRY_EIPC_NOTSUPP`(-47) |
+| C-S10 | `flags & AIRY_IPC_FLAG_RESERVED == 0` 且不含 `ENCRYPT`/`COMPRESS` | 位测试 | → ERROR | `AIRY_EIPC_FLAGS`(-46) / `AIRY_EIPC_NOTSUPP`(-47) |
 | C-S11 | `preempt_disable()` 准备（保护 kfifo 操作） | 内联 | — | — |
 | C-S12 | CRC32 校验通过（覆盖 `header[0:52) + payload`，投递前） | 内联 `airy_ipc_crc32_ok()` | → ERROR + Fault | `AIRY_EIPC_CRC32`(-51) + `AIRY_FAULT_RING_CORRUPT`(0x1003) |
 
@@ -251,7 +251,7 @@ badge = hdr->capability_badge;
 /* (2) [DSL] 降级模式：badge == 0 跳过校验（H6） */
 /* agentrt 用户态：badge == 0（H3） */
 if (badge == 0) {
-    if (hdr->flags & AIRY_IPC_F_CAP_CARRY) {
+    if (hdr->flags & AIRY_IPC_FLAG_CAP_CARRY) {
         /* agentrt-linux 内核模式不应出现 badge=0 + CAP_CARRY */
         return -AIRY_ECAP_BADGE;  /* -78 */
     }
@@ -353,7 +353,7 @@ slowpath 在 §3 任一条件不满足时触发，具体降级路径如下：
 |------|------|------|
 | `timeout_ns` | 消息头无此字段，由 `flags` 高位 + `reserved` 协商或调用参数传入 | 5 s（与 OS-SEC-009 COMPLAIN 超时对齐） |
 | 超时动作 | 移出 wait queue，返回 `AIRY_ETIMEDOUT`，状态 → CANCEL | — |
-| `flags` 含 NOWAIT | 不进入 slowpath，直接返回 `AIRY_EAGAIN` | — |
+| SQE 设置 `IOSQE_ASYNC`（替代旧 NOWAIT） | 不进入 slowpath，由 io_uring 异步完成 | — |
 
 ---
 
@@ -510,7 +510,7 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
     /* [DSL] 降级模式：badge == 0 跳过校验（H6） */
     /* agentrt 用户态：badge == 0（H3） */
     if (badge == 0) {
-        if (hdr->flags & AIRY_IPC_F_CAP_CARRY) {
+        if (hdr->flags & AIRY_IPC_FLAG_CAP_CARRY) {
             /* agentrt-linux 内核模式不应出现 badge=0 + CAP_CARRY */
             return -AIRY_ECAP_BADGE;  /* -78 */
         }
@@ -544,10 +544,10 @@ cap_request_pass:
 cap_pass:
 
     /* C-S10: flags 检查 */
-    if (unlikely(hdr->flags & AIRY_IPC_F_RESERVED))
+    if (unlikely(hdr->flags & AIRY_IPC_FLAG_RESERVED))
         return -AIRY_EIPC_FLAGS;  /* -46 */
-    if (unlikely((hdr->flags & AIRY_IPC_F_ENCRYPT) ||
-                 (hdr->flags & AIRY_IPC_F_COMPRESS)))
+    if (unlikely((hdr->flags & AIRY_IPC_FLAG_ENCRYPT) ||
+                 (hdr->flags & AIRY_IPC_FLAG_COMPRESS)))
         return -AIRY_EIPC_NOTSUPP;  /* -47, 0.1.1 不支持 */
 
     /* C-S11: preempt_disable 准备（实际在 deliver 中执行） */
@@ -807,7 +807,7 @@ if (likely(kfifo_out_peek(&kfifo->fifo, &hdr, 1) == 1)) {
 
 | 水位 | 阈值 | 行为 |
 |------|------|------|
-| 低水位 `LO_WMARK` | 25%（1024 项） | 解除背压：恢复接收 SEND，关闭 `AIRY_IPC_F_BACKPRESSURE` |
+| 低水位 `LO_WMARK` | 25%（1024 项） | 解除背压：恢复接收 SEND，清除背压标记（kfifo 水位回低） |
 | 中水位 `MID_WMARK` | 50%（2048 项） | 正常 |
 | 高水位 `HI_WMARK` | 75%（3072 项） | 触发背压：新 SEND 降级 SLOW_SEND，发送方入 wait queue |
 | 满水位 `FULL` | 100%（4096 项） | `kfifo_is_full()` 为真，C-S6 失败，强制 SLOW_SEND |

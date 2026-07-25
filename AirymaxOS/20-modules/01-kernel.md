@@ -300,11 +300,11 @@ eBPF struct\_ops 扩展，struct\_ops 状态机与 common\_value \[SC] 与 agent
 内核对象管理基础设施，借鉴 seL4 capability 模型（ES-SEL4-05\~09）：
 
 - `airy_object.c`：内核对象管理基础原语（`DEFINE_SPINLOCK` + `LIST_HEAD`），为 capability 撤销、IPC 冻结等提供对象生命周期跟踪 \[IND]。
-- **设计溯源参考**（seL4 风格 CSpace/MDB，**v1.0.1 Capability Folding 后工程实现已简化**）：
-  - `cte.c`（设计参考）：CTE（Capability Table Entry）管理语义 \[SS]。
-  - `cspace.c`（设计参考）：CSpace 树形寻址（guard + radix）语义 \[SS]。
-  - `mdb.c`（设计参考）：MDB（Memory Disclosure Base）派生树维护语义 \[SS]。
-  - `cnode_ops.c`（设计参考）：7 种 CNode 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）语义 \[SS]。
+- **seL4 设计溯源参考**（seL4 源码文件，**agentrt-linux 不存在对应物理文件**；seL4 风格 CSpace/MDB 设计语义在 v1.0.1 Capability Folding 后工程实现已简化为 `agent_caps[1024]` 静态数组 + Badge 64-bit 编码）：
+  - seL4 `cte.c`（设计溯源，非 agentrt-linux 文件）：CTE（Capability Table Entry）管理语义 \[SS]。
+  - seL4 `cspace.c`（设计溯源，非 agentrt-linux 文件）：CSpace 树形寻址（guard + radix）语义 \[SS]。
+  - seL4 `mdb.c`（设计溯源，非 agentrt-linux 文件）：MDB（Memory Disclosure Base）派生树维护语义 \[SS]。
+  - seL4 `cnode_ops.c`（设计溯源，非 agentrt-linux 文件）：7 种 CNode 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）语义 \[SS]。
 - 实际 capability 工程实现位于 `security/airy/`（`airy_cap_derive.c` 等 7 操作），通过 \[SC] `security_types.h` + `lsm_types.h` 共享契约。
 
 > **v1.0.1 Capability Folding 实现注记**：seL4 风格 CSpace+MDB 派生树的设计语义（ES-SEL4-05\~09 设计溯源）在 v1.0.1 Capability Folding 后工程实现已**简化**为：
@@ -501,7 +501,7 @@ static __always_inline int airy_cap_badge_ok(__u64 badge, __u32 agent_id,
 
 | 维度         | seL4 实现                     | 代码证据                                    | agentrt-linux 落地                                     |
 | ---------- | --------------------------- | --------------------------------------- | ---------------------------------------------------- |
-| cap 类型     | 12 种定长 cap                  | `include/object/structures_64.bf:7-138` | 与 POSIX capability 41 ID 兼容（\[SC] security\_types.h） |
+| cap 类型     | 12 种定长 cap                  | `include/object/structures_64.bf:7-138` | 与 POSIX capability 41 ID（0-40）兼容（\[SC] security\_types.h） |
 | CTE 结构     | cap + mdb\_node             | `include/object/structures.h:60-75`     | 内核 CTE 结构 \[IND]                                     |
 | TCB 内嵌 CTE | 16 个槽位（TCB\_CNODE\_RADIX=4） | `include/object/structures.h:60-75`     | AgentTCB 内嵌 capability\_set \[SS]                    |
 
@@ -925,7 +925,7 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 | IPC magic | `AIRY_IPC_MAGIC`                                     | `0x41524531u`     | 'ARE1'（Airymax Runtime Engine v1）                                                                                                                                                      |
 | 消息头大小     | `AIRY_IPC_HDR_SIZE`                                    | 128               | 128 字节                                                                                                                                                                                 |
 | 消息头结构     | `struct airy_ipc_msg_hdr`                            | 11 字段              | magic(\_\_u32) + opcode(\_\_u16) + flags(\_\_u16) + trace\_id(\_\_u64) + timestamp\_ns(\_\_u64) + src\_task(\_\_u64) + dst\_task(\_\_u64) + capability\_badge(\_\_u64, offset 40, v1.0.1 Capability Folding) + payload\_len(\_\_u32) + crc32(\_\_u32, offset 52) + reserved[72](__u8, offset 56) |
-| 消息标志      | `AIRY_IPC_F_ZEROCOPY/CAP_CARRY/BATCH_TAIL`           | (1u<<0)/(1u<<1)/(1u<<4) | 零拷贝 / 携带 Badge / 批量尾（v1.0.1 废弃 NOWAIT/SIGNAL，由 io_uring `IOSQE_ASYNC` 与 CQE 通知替代）                                                                                                  |
+| 消息标志      | `AIRY_IPC_FLAG_ZEROCOPY/CAP_CARRY/BATCH_TAIL`           | (1u<<0)/(1u<<1)/(1u<<4) | 零拷贝 / 携带 Badge / 批量尾（v1.0.1 废弃 NOWAIT/SIGNAL，由 io_uring `IOSQE_ASYNC` 与 CQE 通知替代）                                                                                                  |
 | IPC 操作码   | `AIRY_IPC_OP_SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE` | 0x0001~0x0011 | 7 个操作码（v1.0.1 Capability Folding）                                                                                                                                                 |
 | SQE 标志    | `AIRY_IPC_SQE_F_FIXED_BUF/ASYNC/BUF_SELECT/SKIP_CQE` | (1u<<0)\~(1u<<3)  | io\_uring SQE 标志                                                                                                                                                                       |
 | CQE 标志    | `AIRY_IPC_CQE_F_BUFFER/MORE/NOTIF`                   | (1u<<0)\~(1u<<2)  | io\_uring CQE 标志                                                                                                                                                                       |
@@ -976,7 +976,7 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 | 语义域        | agentrt 实现                   | agentrt-linux 实现                    | \[SC] 契约依据                              |
 | ---------- | ---------------------------- | ----------------------------------- | --------------------------------------- |
 | 调度语义       | MicroCoreRT 用户态调度器           | sched_tac 策略框架（SCHED\_FIFO/SCHED\_DEADLINE，非用户态调度器）    | `sched.h`：任务描述符 + vtime + 优先级           |
-| 安全模型       | Cupolas 用户态策略引擎              | LSM 钩子（250 ID）+ capability 41 ID    | `security_types.h`：capability + verdict |
+| 安全模型       | Cupolas 用户态策略引擎              | LSM 钩子（250 ID）+ capability 44 ID（41 POSIX + 3 Airymax 扩展）    | `security_types.h`：capability + verdict |
 | IPC 传输     | 用户态消息队列（mqueue/io\_uring）    | 内核 io\_uring 驱动（数据面，零 syscall）+ 4 核心 syscall（控制面，v1.0.1 Capability Folding 后） | `ipc.h`：128B 消息头 + magic 'ARE1'         |
 | 记忆模型       | 用户态 heapstore（malloc + mmap） | 内核态 L1-L4 分层（kmalloc + pmem）        | `memory_types.h`：L1-L4 + GFP 掩码         |
 | 认知模型       | 用户态 CoreLoopThree 引擎         | 内核 kthread 认知通知                     | `cognition_types.h`：三阶段枚举               |

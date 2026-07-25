@@ -129,7 +129,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | `sched.h` | `struct airy_task_descr` 在 C↔Rust 之间的 FFI 映射 + vtime `__s32` Q16.16 定点跨语言一致 | A-UEF + A-ULS |
 | `ipc.h` | `struct airy_ipc_msg_hdr` 128B 消息头在 C↔Rust 之间的内存布局一致 + magic 0x41524531 跨语言校验 | A-IPC |
 | `log_types.h` | 日志级别枚举在 C↔Rust 之间的映射 + Ring Buffer 数据结构跨语言一致 | A-ULP |
-| `security_types.h` | capability 41 ID + LSM 钩子 250 ID 在 C↔Rust 之间的映射 | A-ULS |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + LSM 钩子 250 ID 在 C↔Rust 之间的映射 | A-ULS |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举在 C↔Rust 之间的映射 | A-UEF |
 | `syscalls.h` | `AIRY_SYS_*` 编号在 C↔Rust 之间的一致性 + UAPI 兼容性 | A-UCS |
 

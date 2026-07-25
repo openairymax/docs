@@ -418,12 +418,12 @@ A-IPC 的物理载体是 [SC] `ipc.h` Layout C v4 128B 定长消息头（2 cache
 
 v1.0 的 12 核心 syscall 精简为 v1.0.1 的 4 核心 syscall。8 个 seL4 风格 IPC 原语全部移除，IPC 数据传递完全由 io_uring 数据面 `IORING_OP_URING_CMD + cmd_op` 承载。完整映射表见 [01-syscalls.md §2.2.1](../30-interfaces/01-syscalls.md)。
 
-| 保留的 4 个 syscall | 注册号 | 职责 |
+| 保留的 4 个 syscall | Linux 注册号 | 职责 |
 |---|---|---|
-| `airy_sys_call` | 512 | Capability Invocation（sec_d 编译/撤销 Badge + LSM_ctl + Wasm_load） |
-| `airy_sys_rovol_ctl` | 513 | MemoryRovol 控制 |
-| `airy_sys_sched_ctl` | 514 | sched_tac 调度策略控制 |
-| `airy_sys_clt_notify` | 515 | 客户端事件通知 |
+| `airy_sys_call` | 548 | Capability Invocation（sec_d 编译/撤销 Badge + LSM_ctl + Wasm_load） |
+| `airy_sys_rovol_ctl` | 549 | MemoryRovol 控制 |
+| `airy_sys_sched_ctl` | 550 | sched_tac 调度策略控制 |
+| `airy_sys_clt_notify` | 551 | 客户端事件通知 |
 
 ### 8.6 fastpath C-S9 Badge 校验（H4, H5）
 
@@ -445,7 +445,7 @@ if (unlikely(hdr->opcode == AIRY_IPC_OP_CAP_REQUEST)) {
 
 badge = hdr->capability_badge;
 if (badge == 0) {
-    if (hdr->flags & AIRY_IPC_F_CAP_CARRY)
+    if (hdr->flags & AIRY_IPC_FLAG_CAP_CARRY)
         return -AIRY_ECAP_BADGE;  /* -78：CAP_CARRY 置位但 badge=0 矛盾 */
     goto cap_pass;  /* H3/H6: agentrt 用户态或 [DSL] 降级 */
 }
@@ -561,7 +561,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 /* kernel/include/uapi/linux/airymax/ipc.h 底部 */
 #ifdef AIRY_SC_FALLBACK
 /* [DSL] 降级块：capability_badge 字段存在但被忽略（H6） */
-/* fastpath C-S9 检测 capability_badge=0 + AIRY_IPC_F_CAP_CARRY=0 → 跳过 Badge 校验 */
+/* fastpath C-S9 检测 capability_badge=0 + AIRY_IPC_FLAG_CAP_CARRY=0 → 跳过 Badge 校验 */
 /* 此时 IPC 数据面 fastpath 仍可用，但所有 Agent 均以 cap_t 引用模式运行（无 Badge 防伪造） */
 #define AIRY_IPC_OP_CAP_REQUEST  0x0010  /* [DSL] 模式下此 opcode 仍可用，sec_d 直接返回 badge=0 */
 #define AIRY_IPC_OP_CAP_RESPONSE 0x0011

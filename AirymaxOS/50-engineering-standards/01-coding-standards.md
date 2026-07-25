@@ -802,7 +802,7 @@ config AIRY_DEVMEM_RW
 /* 正确：Tab 缩进，块边界清晰 */
 int airy_ipc_recv(struct airy_ipc_msg *msg)
 {
-	if (msg->hdr.flags & AIRY_IPC_F_NONBLOCK) {
+	if (msg->hdr.flags & AIRY_IPC_FLAG_ZEROCOPY) {
 		if (!try_wait_for_packet(msg)) {
 			return -EAGAIN;
 		}
@@ -815,7 +815,7 @@ int airy_ipc_recv(struct airy_ipc_msg *msg)
 /* 错误：4 空格缩进（隐藏了 4 层嵌套的坏味道） */
 int airy_ipc_recv(struct airy_ipc_msg *msg)
 {
-    if (msg->hdr.flags & AIRY_IPC_F_NONBLOCK) {
+    if (msg->hdr.flags & AIRY_IPC_FLAG_ZEROCOPY) {
         if (!try_wait_for_packet(msg)) {
             return -EAGAIN;
         }
@@ -2862,21 +2862,21 @@ int airy_ipc_send(struct airy_ipc_chan *chan, ...);
  * @chan: IPC channel to send on; must be initialized.
  * @msgs: Array of messages to send; length must equal @count.
  * @count: Number of messages in @msgs; must be > 0 and <= 64.
- * @flags: Send flags, bitwise OR of %AIRY_IPC_F_NOWAIT and
- *         %AIRY_IPC_F_SIGNAL.
+ * @flags: Send flags, bitwise OR of %AIRY_IPC_FLAG_ZEROCOPY and
+ *         %AIRY_IPC_FLAG_CAP_CARRY.
  *
  * Sends @count messages from @msgs to @chan atomically. If
- * %AIRY_IPC_F_NOWAIT is set, the function returns immediately if the
- * channel buffer is full; otherwise it blocks.
+ * %AIRY_IPC_FLAG_ZEROCOPY is set, the function uses the zero-copy
+ * path; otherwise it copies the payload.
  *
  * The function is idempotent on failure: no partial send occurs.
  *
  * Context: Process context. May sleep if @flags does not include
- *          %AIRY_IPC_F_NOWAIT. Takes and releases @chan->lock.
+ *          %AIRY_IPC_FLAG_ZEROCOPY. Takes and releases @chan->lock.
  * Return:
  * * 0 on success.
  * * -ENOMEM if internal allocation fails.
- * * -EAGAIN if %AIRY_IPC_F_NOWAIT is set and buffer is full.
+ * * -EAGAIN if %AIRY_IPC_FLAG_ZEROCOPY is set and buffer is full.
  * * -E2BIG if @count exceeds the channel maximum.
  */
 int airy_ipc_send_batch(struct airy_ipc_chan *chan,
@@ -3233,7 +3233,7 @@ $ ./scripts/kernel-doc -Wall -internal \
  * struct airy_ipc_msg_hdr - IPC message header (128 bytes)
  * @magic: Magic 0x41524531 ('ARE1'); validates protocol version.
  * @opcode: Operation code; see AIRY_IPC_OP_* macros in [SC] ipc.h.
- * @flags: Message flags, bitwise OR of %AIRY_IPC_F_*.
+ * @flags: Message flags, bitwise OR of %AIRY_IPC_FLAG_*.
  * @trace_id: Trace identifier; propagates across hops for debugging.
  * @timestamp_ns: Sender timestamp in nanoseconds (CLOCK_MONOTONIC).
  * @src_task: Source task ID; 0 for kernel-originated messages.

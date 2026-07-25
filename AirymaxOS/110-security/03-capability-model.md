@@ -39,14 +39,14 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
 
 - **seL4 风格**：用于 Agent 间的细粒度权限传递与撤销（令牌级、不可伪造、递归撤销）
 - **POSIX capability**：用于传统 Linux 兼容性（41 个标准 cap，进程级位图）
-- **LSM 桥接**：capability 作为 `LSM_ORDER_FIRST` 第一个 LSM，与 Landlock/Cupolas 共存
+- **LSM 桥接**：POSIX capability 模块（Linux 内核 `security/commoncap.c`）作为 `LSM_ORDER_FIRST` 第一个 LSM（OLK 6.6 硬编码，仅用于 capabilities）；agentrt-linux 的 `airy_lsm` 模块使用 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位（详见 [07-airy-lsm-design.md](07-airy-lsm-design.md) §2.2），与 Landlock/Cupolas 共存
 
 ### 1.3 设计目标
 
 1. **不可伪造**：capability 令牌由内核生成，用户态只持有 opaque handle，无法伪造
 2. **最小权限**：每个安全敏感操作需独立申请 capability 令牌，而非进程级全权
 3. **递归撤销**：Agent 终止时递归撤销所有派生 capability，无权限残留
-4. **IPC 传递**：capability 可通过 IPC 消息跨进程传递（`AIRY_IPC_F_CAP_CARRY`）
+4. **IPC 传递**：capability 可通过 IPC 消息跨进程传递（`AIRY_IPC_FLAG_CAP_CARRY`）
 5. **审计追踪**：所有 capability 操作（申请/派生/撤销/传递）可审计
 
 ### 1.4 在安全体系中的位置
@@ -57,7 +57,7 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
 |------|------|------|---------------------|
 | L1 | LSM 框架 | `security_hook_heads` | capability 注册为 LSM |
 | L2 | Landlock | 用户态沙箱 | capability 之后执行 |
-| **L3** | **capability** | **seL4 风格 + POSIX** | **LSM_ORDER_FIRST，永远第一** |
+| **L3** | **POSIX capability 模块** | **Linux 内核 security/commoncap.c** | **LSM_ORDER_FIRST（OLK 6.6 硬编码，仅用于 capabilities）** |
 | L4 | 模块签名 | eBPF 签名 | 独立于 capability |
 | L7 | Cupolas | Agent 行为约束 | 基于 capability 构建 |
 
@@ -698,7 +698,7 @@ int airy_cap_revoke(uint32_t src_cap);
 
 ### 4.1 41 ID 枚举
 
-对齐 `security_types.h`（[SC] 共享头文件）定义的 POSIX capability 41 ID 枚举。agentrt-linux 在 Linux 6.6 标准 41 个 POSIX capability（编号 0-40，CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40，无废弃）基础上，新增 Airymax 专属 capability（编号 41-43）：
+对齐 `security_types.h`（[SC] 共享头文件）定义的 POSIX capability 41 ID（0-40） 枚举。agentrt-linux 在 Linux 6.6 标准 41 个 POSIX capability（编号 0-40，CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40，无废弃）基础上，新增 Airymax 专属 capability（编号 41-43）：
 
 ```c
 /**
@@ -898,7 +898,7 @@ enum airy_cap_state {
 | CREATED | ACTIVE | sec_d 编译 Badge 成功 | `airy_sys_call`(548) + `COMPILE_BADGE` 子命令（sec_d 专属） | 内部 |
 | CREATED | DENIED | 策略裁决 DENY | 内部 | 内部 |
 | ACTIVE | DERIVED | sec_d 重编译 Badge（缩权限） | `airy_sys_call`(548) + `COMPILE_BADGE` 子命令 | 595/596/597 airy_sys_capability_derive/mint/mintcopy |
-| ACTIVE | TRANSFERRED | IPC `AIRY_IPC_F_CAP_CARRY` 标志 | A-IPC io_uring `IORING_OP_URING_CMD`（无 syscall） | 600 airy_sys_capability_transfer |
+| ACTIVE | TRANSFERRED | IPC `AIRY_IPC_FLAG_CAP_CARRY` 标志 | A-IPC io_uring `IORING_OP_URING_CMD`（无 syscall） | 600 airy_sys_capability_transfer |
 | ACTIVE/DERIVED | REVOKED | `airy_sys_call` + `REVOKE_BADGE`（1 行 atomic_inc） | `airy_sys_call`(548) + `REVOKE_BADGE` 子命令 | 593 airy_sys_capability_revoke |
 | ACTIVE | EXPIRED | `expires_ns` 到达 | 内核定时器 | 内核定时器 |
 
@@ -914,7 +914,7 @@ enum airy_cap_state {
 | `airy_sys_capability_mintcopy` | 597 | 移除 → `airy_sys_call` + `COMPILE_BADGE` | sec_d 专属 |
 | `airy_sys_capability_inspect` | 598 | 移除 → sysctl 查询 | `kernel.airy.cap_*` sysctl |
 | `airy_sys_lsm_audit_query` | 599 | 移除 → sysctl 查询 | `kernel.airy.lsm_audit_*` sysctl |
-| `airy_sys_capability_transfer` | 600 | 移除 → IPC + `AIRY_IPC_F_CAP_CARRY` | A-IPC io_uring fastpath |
+| `airy_sys_capability_transfer` | 600 | 移除 → IPC + `AIRY_IPC_FLAG_CAP_CARRY` | A-IPC io_uring fastpath |
 
 详细 syscall 12→4 精确映射见 [30-interfaces/01-syscalls.md §2.2](../30-interfaces/01-syscalls.md)。
 
@@ -1228,7 +1228,7 @@ struct airy_cmd_revoke_badge {
 
 ### 9.3 IPC 传递 capability（v1.0.1：通过 A-IPC fastpath，无 syscall）
 
-v1.0.1 起，capability 传递不再走独立 syscall，而是通过 A-IPC 消息头 `AIRY_IPC_F_CAP_CARRY` 标志在 fastpath 内联完成：
+v1.0.1 起，capability 传递不再走独立 syscall，而是通过 A-IPC 消息头 `AIRY_IPC_FLAG_CAP_CARRY` 标志在 fastpath 内联完成：
 
 ```c
 /* Agent A 通过 IPC 传递 capability 给 Agent B（v1.0.1: 无 syscall）*/
@@ -1248,7 +1248,7 @@ io_uring_submit(sq_cap_request);          /* A-IPC fastpath */
 /* 3. Agent A 携带 Badge 发送 IPC 给 Agent B */
 struct airy_ipc_msg_hdr carry_hdr = {
     .opcode = AIRY_IPC_OP_SEND,           /* 0x0001 */
-    .flags  = AIRY_IPC_F_CAP_CARRY,       /* 携带 Badge 传递 */
+    .flags  = AIRY_IPC_FLAG_CAP_CARRY,       /* 携带 Badge 传递 */
     .capability_badge = my_badge,         /* Agent A 的 Badge */
     .src_task = agent_a_id,
     .dst_task = agent_b_id,
@@ -1264,9 +1264,9 @@ io_uring_submit(sq_send);                 /* A-IPC fastpath C-S9 校验 Badge */
 
 ## 10. LSM 集成
 
-### 10.1 LSM_ORDER_FIRST 注册
+### 10.1 POSIX capability 模块注册（LSM_ORDER_FIRST）
 
-对齐 [01-lsm-framework.md](01-lsm-framework.md) 第 7 章，capability 作为 `LSM_ORDER_FIRST` 永远第一个执行：
+对齐 [01-lsm-framework.md](01-lsm-framework.md) 第 7 章，**POSIX capability 模块**（Linux 内核 `security/commoncap.c`，非 agentrt-linux 的 `airy_lsm`）作为 `LSM_ORDER_FIRST` 永远第一个执行（OLK 6.6 硬编码，仅用于 capabilities）：
 
 ```c
 /* security/commoncap.c（借鉴 Linux 6.6 实现）*/
@@ -1284,13 +1284,15 @@ DEFINE_LSM(capability) = {
 };
 ```
 
+> **关键区分**：上述 `LSM_ORDER_FIRST` 注册的是 **Linux 内核 POSIX capability 模块**（`security/commoncap.c`），不是 agentrt-linux 的 `airy_lsm` 模块。agentrt-linux 的 `airy_lsm`（`security/airy/airy_lsm.c`）使用 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位，在 capability 之后、其他 LSM 之前执行（详见 [07-airy-lsm-design.md](07-airy-lsm-design.md) §2.2）。OLK 6.6 `include/linux/lsm_hooks.h:113` 注释明确 `LSM_ORDER_FIRST` "This is only for capabilities."
+
 ### 10.2 与 Landlock/Cupolas 共存
 
 ```mermaid
 sequenceDiagram
     participant K as 内核路径
     participant SH as security_X() 入口
-    participant CAP as capability (LSM_ORDER_FIRST)
+    participant CAP as POSIX capability (commoncap.c, LSM_ORDER_FIRST)
     participant LL as Landlock
     participant CP as Cupolas
 
@@ -1413,13 +1415,13 @@ int airy_file_open(const char *path, int flags)
 
 ### 11.5 IPC 传递 capability（v1.0.1：通过 A-IPC fastpath，无 syscall）
 
-v1.0.1 起，capability 传递完全通过 A-IPC 消息头 `AIRY_IPC_F_CAP_CARRY` 标志，在 fastpath C-S9 校验通过后自动派生：
+v1.0.1 起，capability 传递完全通过 A-IPC 消息头 `AIRY_IPC_FLAG_CAP_CARRY` 标志，在 fastpath C-S9 校验通过后自动派生：
 
 ```c
 /* 发送方: 携带 capability_badge */
 struct airy_ipc_msg_hdr hdr = {
     .magic             = AIRY_IPC_MAGIC,
-    .flags             = AIRY_IPC_F_CAP_CARRY,    /* 携带 Badge 传递 */
+    .flags             = AIRY_IPC_FLAG_CAP_CARRY,    /* 携带 Badge 传递 */
     .opcode            = AIRY_IPC_OP_SEND,
     .capability_badge = my_badge,                 /* Agent A 的 Badge */
     .src_task          = agent_a_id,
@@ -1449,7 +1451,7 @@ io_uring_wait_cqe(ring, &cqe);
 
 | 共享内容 | 影响 |
 |---------|------|
-| POSIX capability 41 ID 枚举 | 编号一致 |
+| POSIX capability 41 ID（0-40） 枚举 | 编号一致 |
 | LSM 钩子 250 ID 枚举 | 钩子编号一致 |
 | Cupolas blob 布局（cred/inode/file/task） | 结构体一致 |
 | capability 派生模型（mint/mintcopy/derive/revoke） | 算法语义一致 |

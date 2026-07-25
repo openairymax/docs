@@ -189,14 +189,14 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 安全模型，�
 | 不可伪造   | capability 令牌由内核生成，用户态只持有 opaque handle | S（身份伪造）、E（提权） |
 | 最小权限   | 每个安全敏感操作独立申请 capability 令牌              | E（提权）         |
 | 递归撤销   | Agent 终止时递归撤销所有派生 capability（MDB 派生链）   | E（权限残留）       |
-| IPC 传递 | 通过 `AIRY_IPC_F_CAP_CARRY` 跨进程传递         | 跨租户授权         |
+| IPC 传递 | 通过 `AIRY_IPC_FLAG_CAP_CARRY` 跨进程传递         | 跨租户授权         |
 | 审计追踪   | 申请/派生/撤销/传递全可审计                         | R（抵赖）         |
 
 capability 使用 `LSM_ORDER_FIRST`（OLK 6.6 硬编码，仅用于 capabilities）作为第一个 LSM，永远在 Landlock/Cupolas 之前执行；airy_lsm 使用 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位置于 capability 之后。Cupolas 必须在 capability 之后初始化（OS-SEC-003），保证授权顺序。
 
 #### 4.1.2 41 ID capability 类型
 
-对齐 `security_types.h`（\[SC] 共享头文件）POSIX capability 41 ID 枚举：
+对齐 `security_types.h`（\[SC] 共享头文件）POSIX capability 41 ID（0-40）枚举：
 
 - **POSIX 41 ID**（编号 0-40）：完整对齐 Linux 6.6 标准 41 个 POSIX capability（含 `CAP_PERFMON=38`、`CAP_BPF=39`、`CAP_CHECKPOINT_RESTORE=40`，无废弃）
 - **Airymax 专属**（编号 41-43）：`AIRY_CAP_AGENT_SPAWN=41`（Agent 生成）等 3 个专属 capability，从 41 开始避免与 Linux 0-40 冲突
@@ -217,7 +217,7 @@ capability 令牌经安全通道传递，禁止日志打印原始值（OS-SEC-12
 
 #### 4.1.4 capability 空间隔离
 
-每个 Agent 拥有独立 CSpace（capability space），CNode 表 `__attribute__((aligned(64)))` 缓存行对齐。跨 Agent 访问 capability 必须通过 IPC 显式传递（`AIRY_IPC_F_CAP_CARRY`），禁止跨 CSpace 直接引用。
+每个 Agent 拥有独立 CSpace（capability space），CNode 表 `__attribute__((aligned(64)))` 缓存行对齐。跨 Agent 访问 capability 必须通过 IPC 显式传递（`AIRY_IPC_FLAG_CAP_CARRY`），禁止跨 CSpace 直接引用。
 
 ### 4.2 LSM + Landlock 沙箱（OS-STD-SEC-010\~011）
 
@@ -260,7 +260,7 @@ IPC 是 Agent 间通信的唯一合法通道，安全设计见 [`30-interfaces/0
 struct airy_ipc_msg_hdr {
     __u32 magic;          /* 魔数 'ARE1'（0x41524531） */
     __u16 opcode;         /* 操作码 SEND/RECV/SEND_BATCH/CANCEL */
-    __u16 flags;          /* 标志位（含 AIRY_IPC_F_CAP_CARRY） */
+    __u16 flags;          /* 标志位（含 AIRY_IPC_FLAG_CAP_CARRY） */
     __u32 src_task;       /* 发送方任务 ID（内核填充，禁止用户态设置） */
     __u32 dst_task;       /* 接收方任务 ID */
     __u64 trace_id;       /* 全链路追踪 ID */

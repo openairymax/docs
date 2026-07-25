@@ -307,7 +307,7 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 3. ipc.h（A-IPC，magic 0x41524531，~150 行）
 4. sched.h（A-ULS，magic 0x41475453，~120 行）
 5. memory_types.h（MemoryRovol，~60 行）
-6. security_types.h（capability 41 ID，~100 行）
+6. security_types.h（capability 44 ID（41 POSIX + 3 Airymax 扩展），~100 行）
 7. cognition_types.h（A-UCS，airy_q16_t，~70 行）
 8. syscalls.h（24 槽位，~90 行）
 9. uapi_compat.h（三路桥接，~80 行）
@@ -502,7 +502,7 @@ kernel/
 │   │   │   │   ├── ipc.h            # 3. A-IPC（magic 0x41524531）
 │   │   │   │   ├── sched.h          # 4. A-ULS（magic 0x41475453）
 │   │   │   │   ├── memory_types.h   # 5. MemoryRovol L1-L4
-│   │   │   │   ├── security_types.h # 6. capability 41 ID
+│   │   │   │   ├── security_types.h # 6. capability 44 ID（41 POSIX + 3 Airymax 扩展）
 │   │   │   │   ├── cognition_types.h # 7. A-UCS（airy_q16_t）
 │   │   │   │   ├── syscalls.h       # 8. 24 槽位系统调用
 │   │   │   │   ├── uapi_compat.h    # 9. 三路类型桥接
@@ -1327,7 +1327,7 @@ sc-dual-ci:
 | 3 | `ipc.h` | A-IPC | `0x41524531` ('ARE1') | `kernel/include/uapi/linux/airymax/ipc.h` | IPC 消息头（128B `struct airy_ipc_msg_hdr`，11 字段，D-9 修复后 `__attribute__((aligned(64)))`（移除 packed），`_Static_assert(sizeof==128)` + `_Static_assert(offsetof(capability_badge)==40)`）+ SQE/CQE 操作码与标志位 + Ring 常量（DEF=256, MAX=32768） |
 | 4 | `sched.h` | A-ULS | `0x41475453` ('AGTS') | `kernel/include/uapi/linux/airymax/sched.h` | 任务描述符（magic/prio/_pad/vtime）+ `airy_vtime_decay()` inline + AIRY_CAP_MAX_AGENTS=1024 + AIRY_SLICE_DFL=20 + 优先级 0-139 + 权重 1-10000 |
 | 5 | `memory_types.h` | MemoryRovol | — | `kernel/include/uapi/linux/airymax/memory_types.h` | L1-L4 enum（HOT/WARM/COLD/PMEM）+ GFP 掩码语义（AIRY_GFP_HOT/WARM/COLD/PMEM） |
-| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID（CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `uint64_t` |
+| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `uint64_t` |
 | 7 | `cognition_types.h` | A-UCS | — | `kernel/include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t`（= `__s32`，Q16.16 定点数，因 -mno-80387 禁 FPU）+ `enum airy_cog_phase`（PERCEPT/THINK/ACT）+ `enum airy_think_mode`（FAST/SLOW） |
 | 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.1: 4 核心系统调用（AIRY_SYS_CALL=0 ... AIRY_SYS_CLT_NOTIFY=3）+ 20 预留（4-23）= 24 槽位 |
 | 9 | `uapi_compat.h` | 桥接 | — | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`），确保 [SC] 头文件跨平台逐字节相同编译 |
@@ -1389,7 +1389,7 @@ sc-dual-ci:
 |----------|---------------------|----------------|----------|
 | `airy_ipc_send()` | `services/userland/ipc/airy_ipc_client.c` | `atoms/ipc/airy_ipc.c` | [SC] ipc.h（magic 0x41524531） |
 | `airy_sched_enqueue()` | `kernel/corekern/sched/stc_dispatch.c` | `atoms/sched/airy_sched.c` | [SC] sched.h（magic 0x41475453） |
-| `airy_cap_check()` | `security/capability/airy_cap_check.c` | `cupolas/airy_cupolas.c` | [SC] security_types.h（capability 41 ID） |
+| `airy_cap_check()` | `security/capability/airy_cap_check.c` | `cupolas/airy_cupolas.c` | [SC] security_types.h（capability 44 ID（41 POSIX + 3 Airymax 扩展）） |
 | `airy_log_emit()` | `kernel/log/airy_log_kern.c` | `commons/log/airy_log.c` | [SC] log_types.h（128B 记录） |
 | `airy_mr_alloc()` | `memory/memoryrovol/mr_l1.c` | `heapstore/airy_mr.c` | [SC] memory_types.h（L1-L4） |
 | `airy_cog_phase_set()` | `cognition/coreloopthree/clt_phase.c` | `atoms/cognition/clt.c` | [SC] cognition_types.h（airy_q16_t） |

@@ -396,7 +396,7 @@ static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd)
     /* H3: agentrt 用户态 capability_badge 始终为 0 */
     /* H6: [DSL] 降级模式 capability_badge=0，跳过校验 */
     if (badge == 0) {
-        if (unlikely(cmd->hdr->flags & AIRY_IPC_F_CAP_CARRY)) {
+        if (unlikely(cmd->hdr->flags & AIRY_IPC_FLAG_CAP_CARRY)) {
             /* 内核模式不应出现 badge=0 + CAP_CARRY */
             return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd,
                                         __func__, __LINE__);

@@ -137,7 +137,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | 层级 | 名称 | 权威强度 | 变更门槛 | CI 校验 | 覆盖范围 |
 |------|------|---------|---------|---------|---------|
 | **Tier 0** | 不可变权威源 | 最高——一经定义永不破坏 | 需 TSC 全体通过 + 跨端双向评审 + ADR 记录 | `sc-dual-ci.yml` 逐字节哈希锁定 | 用户空间 ABI（OS-IRON-001）、[SC] 共享契约物理宿主（`kernel/include/uapi/linux/airymax/*.h`）、IPC magic、日志 magic、128B 消息头布局 |
-| **Tier 1** | 强权威源 | 高——变更需 RFC + 双向评审 | RFC 流程 + 本注册表登记 + 主题文档同步 | `ssot-validate.yml` 一致性校验 | 错误码枚举、日志级别枚举、capability 41 ID、调度参数、IRON-9 四层模型、Unify Design 5 模块边界、[DSL] 降级块、内核基线（Linux 6.6 / 7.1）、Agent 8 态生命周期 |
+| **Tier 1** | 强权威源 | 高——变更需 RFC + 双向评审 | RFC 流程 + 本注册表登记 + 主题文档同步 | `ssot-validate.yml` 一致性校验 | 错误码枚举、日志级别枚举、capability 44 ID（41 POSIX + 3 Airymax 扩展）、调度参数、IRON-9 四层模型、Unify Design 5 模块边界、[DSL] 降级块、内核基线（Linux 6.6 / 7.1）、Agent 8 态生命周期 |
 | **Tier 2** | 常规权威源 | 中——变更需 PR 评审 | PR 评审 + 本注册表登记 | `ssot-validate.yml` 编号唯一性校验 | 本注册表第 2-13 章登记的 `OS-*` 规则编号、第 14 章 agentrt 17 类规则编号 |
 
 **层级判定规则**：
@@ -158,13 +158,13 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | 2 | 日志类型（`LOG_*` 5 级 + 128B 记录 + printk 8 级映射） | Tier 0 | [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) | [SC] `log_types.h` |
 | 3 | IPC 协议（128B 消息头 + magic 0x41524531 + 操作码） | Tier 0 | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) | [SC] `ipc.h` |
 | 4 | 调度策略（sched_tac：SCHED_DEADLINE/SCHED_FIFO/EEVDF） | Tier 1 | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) | [SC] `sched.h` |
-| 5 | 安全模型（capability 41 ID + LSM 钩子 + Cupolas blob） | Tier 1 | [03-capability-model.md](../110-security/03-capability-model.md) | [SC] `security_types.h` + `lsm_types.h` |
+| 5 | 安全模型（capability 44 ID = 41 POSIX + 3 Airymax 扩展 + LSM 钩子 + Cupolas blob） | Tier 1 | [03-capability-model.md](../110-security/03-capability-model.md) | [SC] `security_types.h` + `lsm_types.h` |
 | 6 | 微内核策略（seL4 思想分布落地 + 机制策略分离） | Tier 1 | [03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) | OS-ARCH-005 / OS-ARCH-006 |
 | 7 | IRON-9 模型（[SC]/[SS]/[IND]/[DSL] 四层） | Tier 1 | [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) | OS-IRON-008 / OS-IRON-014 |
 | 8 | Unify Design（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC 5 模块） | Tier 1 | [10-unify-design.md](../10-architecture/10-unify-design.md) | — |
 | 9 | [DSL] 降级生存层（[SC] 损坏时最小可运行子集） | Tier 1 | [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) | 每个 [SC] 头文件 `#ifdef AIRY_SC_FALLBACK` 块 |
 | 10 | 内核基线（1.x.x Linux 6.6 LTS / 2.x.x Linux 7.1） | Tier 1 | [04-engineering-baseline.md](../10-architecture/04-engineering-baseline.md) | ADR-013 |
-| 11 | Agent 8 态生命周期 | Tier 1 | [01-agent-lifecycle.md](../140-application-development/01-agent-lifecycle.md) | [SC] `cognition_types.h` |
+| 11 | Agent 8 态生命周期 | Tier 1 | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) §2.1 + [01-agent-lifecycle.md](../140-application-development/01-agent-lifecycle.md) | [SC] `sched.h`（`enum airy_agent_state`） |
 
 **使用规则**：
 

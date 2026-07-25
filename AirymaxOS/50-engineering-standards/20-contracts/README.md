@@ -91,7 +91,7 @@ graph TB
 | `error.h` | `include/uapi/linux/airymax/error.h` | A-UEF Error 码（负数空间 `[-300, -1]`）+ Fault 码（正数空间 `[0x1000, 0x1FFF]`）双轨制 + POSIX/IPC/Capability/[SC]/[DSL] 分层错误码 | A-UEF 错误码契约 |
 | `log_types.h` | `include/uapi/linux/airymax/log_types.h` | A-ULP LOG_* 枚举（LOG_DEBUG~LOG_FATAL）+ 128B 固定日志记录格式（magic=0x414C4F47 'ALOG'）+ facility 编号 | A-ULP 日志契约 |
 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | syscall API 契约 |
-| `security_types.h` | `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID 枚举 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP）契约 |
+| `security_types.h` | `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID（0-40）枚举 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP）契约 |
 | `lsm_types.h` | `include/uapi/linux/airymax/lsm_types.h` | LSM 钩子 250 ID 枚举 + Cupolas blob 布局（cred/inode/file/task）+ 纯 C LSM 模块接口契约 | 安全（LSM）契约 |
 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | syscall API 契约 |
 | `sched.h` | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | syscall API 契约 |

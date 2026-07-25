@@ -141,7 +141,7 @@ SYSCALL_DEFINE0(fork)
 	};
 
 	/* 若当前进程是 Agent，使用 airy_agent_fork 语义 */
-	if (parent && parent->state == AIRY_AGENT_STATE_RUNNING) {
+	if (parent && parent->state == AIRY_AGENT_RUNNING) {
 		/* 但保留 POSIX 行为：不强制 capability 声明 */
 		args.airy_inherit_caps = true;
 		args.airy_sched_class = parent->sched_class;

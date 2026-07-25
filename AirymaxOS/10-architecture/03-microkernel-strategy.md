@@ -76,7 +76,7 @@ seL4 的核心设计决策是 **capability 单一安全模型**（ES-SEL4-05 至
 | cap 身份  | 64 bit Badge 标识来源                                            | `src/object/cnode.c:798-819`                    |
 | cap 即内存 | CTE 直接内嵌在 TCB 中，cap 本身就是内存                                   | `include/object/structures.h`                   |
 
-**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 POSIX capability 41 ID 枚举 + LSM 钩子 250 ID 枚举 + capability 派生模型（mint / mintcopy / derive / revoke）。
+**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + capability 派生模型（mint / mintcopy / derive / revoke）。
 
 ### 1.3 形式化可验证性预留
 

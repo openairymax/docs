@@ -76,7 +76,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 3  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/uapi/linux/airymax/ipc.h`             |
 | 4  | `sched.h`           | sched_tac 调度约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL | `0x41475453` ('AGTS') | `include/uapi/linux/airymax/sched.h`           |
 | 5  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/uapi/linux/airymax/memory_types.h`    |
-| 6  | `security_types.h`  | POSIX capability 41 ID + LSM 钩子 250 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/uapi/linux/airymax/security_types.h`  |
+| 6  | `security_types.h`  | POSIX capability 41 ID（0-40） + LSM 钩子 250 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/uapi/linux/airymax/security_types.h`  |
 | 7  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/uapi/linux/airymax/cognition_types.h` |
 | 8  | `syscalls.h`        | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                                                     | —                     | `include/uapi/linux/airymax/syscalls.h`        |
 | 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/uapi/linux/airymax/uapi_compat.h`    |
@@ -197,7 +197,7 @@ enum airy_mem_level {
 
 #include <airymax/uapi_compat.h>
 
-/* POSIX capability 41 IDs (subset shown) */
+/* POSIX capability 41 IDs (0-40, subset shown) */
 #define AIRY_CAP_AGENT_SPAWN		41	/* Agent spawn capability (Airymax 专属，从 41 开始避免与 Linux 0-40 冲突) */
 #define AIRY_CAP_GPU_SCHED		42	/* GPU scheduling */
 #define AIRY_CAP_NPU_ACCESS		43	/* NPU access */
@@ -366,12 +366,12 @@ extern "C" {
 #define AIRY_IPC_OP_CAP_RESPONSE	0x0011  /* sec_d 返回编译好的 Badge */
 
 /* flags 定义 */
-#define AIRY_IPC_F_ZEROCOPY		0x0001
-#define AIRY_IPC_F_CAP_CARRY		0x0002  /* 携带 Badge（agentrt-linux 内核必置） */
-#define AIRY_IPC_F_ENCRYPT		0x0004  /* 保留，0.1.1 不启用 */
-#define AIRY_IPC_F_COMPRESS		0x0008  /* 保留，0.1.1 不启用 */
-#define AIRY_IPC_F_BATCH_TAIL		0x0010  /* SEND_BATCH 的最后一个 SQE */
-#define AIRY_IPC_F_RESERVED		0xFFE0  /* 必须为零 */
+#define AIRY_IPC_FLAG_ZEROCOPY		0x0001
+#define AIRY_IPC_FLAG_CAP_CARRY		0x0002  /* 携带 Badge（agentrt-linux 内核必置） */
+#define AIRY_IPC_FLAG_ENCRYPT		0x0004  /* 保留，0.1.1 不启用 */
+#define AIRY_IPC_FLAG_COMPRESS		0x0008  /* 保留，0.1.1 不启用 */
+#define AIRY_IPC_FLAG_BATCH_TAIL		0x0010  /* SEND_BATCH 的最后一个 SQE */
+#define AIRY_IPC_FLAG_RESERVED		0xFFE0  /* 必须为零 */
 
 /* SQE flags for io_uring IPC operations */
 #define AIRY_IPC_SQE_F_FIXED_BUF	(1u << 0)
@@ -388,7 +388,7 @@ extern "C" {
  * struct airy_ipc_msg_hdr - IPC message header (128 bytes, [SC] shared)
  * @magic:            Must be AIRY_IPC_MAGIC (0x41524531 'ARE1').
  * @opcode:           Operation code; see AIRY_IPC_OP_* above.
- * @flags:            Message flags; see AIRY_IPC_F_* above.
+ * @flags:            Message flags; see AIRY_IPC_FLAG_* above.
  * @trace_id:         OpenTelemetry trace ID, end-to-end tracing.
  * @timestamp_ns:     CLOCK_REALTIME nanoseconds, sender fills.
  * @src_task:         Source Agent/daemon task_id, bound to Badge at compile.
@@ -413,7 +413,7 @@ extern "C" {
 struct airy_ipc_msg_hdr {
 	__u32	magic;			/* offset  0, 'ARE1' 0x41524531 */
 	__u16	opcode;			/* offset  4, see AIRY_IPC_OP_* */
-	__u16	flags;			/* offset  6, see AIRY_IPC_F_* */
+	__u16	flags;			/* offset  6, see AIRY_IPC_FLAG_* */
 	__u64	trace_id;		/* offset  8, OpenTelemetry trace ID */
 	__u64	timestamp_ns;		/* offset 16, CLOCK_REALTIME nanoseconds */
 	__u64	src_task;		/* offset 24, source Agent/daemon task_id */
@@ -657,7 +657,7 @@ extern "C" {
 | 语义域                   | agentrt（用户态微核心）实现             | agentrt-linux（内核微内核）实现            | \[SC] 契约依据                              |
 | --------------------- | ----------------------------- | --------------------------------- | --------------------------------------- |
 | **调度语义**（MicroCoreRT） | 用户态调度器（协程/线程池）                | sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF，不含 sched\_ext）  | `sched.h`：任务描述符 + vtime + 优先级           |
-| **安全模型**（Cupolas）     | 用户态策略引擎（seccomp + capability） | 纯 C LSM 钩子（250 ID） + capability 41 ID | `security_types.h`：capability + verdict |
+| **安全模型**（Cupolas）     | 用户态策略引擎（seccomp + capability） | 纯 C LSM 钩子（250 ID） + capability 44 ID（41 POSIX + 3 Airymax 扩展） | `security_types.h`：capability + verdict |
 | **IPC 传输**（AgentsIPC） | 用户态消息队列（mqueue/io\_uring）     | 内核 io\_uring 驱动（`IORING_OP_URING_CMD`）                   | `ipc.h`：128B 消息头 + magic 'ARE1'         |
 | **记忆模型**（MemoryRovol） | 用户态 heapstore（malloc + mmap）  | 内核态 L1-L4 分层（`alloc_pages` + `mmap` + pmem）      | `memory_types.h`：L1-L4 + GFP 掩码         |
 
@@ -672,7 +672,7 @@ static void test_ipc_hdr_serialize(void)
 	struct airy_ipc_msg_hdr hdr = {
 		.magic		= AIRY_IPC_MAGIC,	/* 'ARE1' 0x41524531 */
 		.opcode		= AIRY_IPC_OP_SEND,	/* 0x0001 */
-		.flags		= AIRY_IPC_F_CAP_CARRY,	/* 携带 Badge */
+		.flags		= AIRY_IPC_FLAG_CAP_CARRY,	/* 携带 Badge */
 		.trace_id	= 0x1234,
 		.timestamp_ns	= 0,
 		.src_task	= 0x100,

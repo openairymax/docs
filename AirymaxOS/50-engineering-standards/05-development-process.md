@@ -1546,7 +1546,7 @@ done
 |---|--------|--------|----------|
 | 1 | `include/uapi/linux/airymax/syscalls.h` | SYS | v1.1: 4 核心 syscall 编号 + 20 预留槽位 |
 | 2 | `include/uapi/linux/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
-| 3 | `include/uapi/linux/airymax/security_types.h` | 安全 | capability 41 ID + LSM 250 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
+| 3 | `include/uapi/linux/airymax/security_types.h` | 安全 | capability 44 ID（41 POSIX + 3 Airymax 扩展） + LSM 250 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
 | 4 | `include/uapi/linux/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
 | 5 | `include/uapi/linux/airymax/sched.h` | 调度 | sched_tac 调度类约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
 | 6 | `include/uapi/linux/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |

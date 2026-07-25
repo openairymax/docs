@@ -344,7 +344,7 @@ static int detect_kernel_accel(void)
 |--------|------------------|--------|
 | `sched.h` | `struct airy_task_desc` 任务描述符（magic 0x41475453 'AGTS'）约束 task_submit/task_cancel/task_query 的语义同源 | agentrt `syscalls.h` + agentrt-linux `airy_syscalls.h` |
 | `ipc.h` | `struct airy_ipc_msg_hdr` 128B 消息头（magic 0x41524531 'ARE1'）约束 ipc_send/ipc_recv 的语义同源 | 同上 |
-| `security_types.h` | capability 41 ID 枚举约束 capability_request 的语义同源 | 同上 |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举约束 capability_request 的语义同源 | 同上 |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构约束 memory_write/rovol_snapshot 的语义同源 | 同上 |
 | `cognition_types.h` | CoreLoopThree 三阶段枚举约束 clt_phase_notify 的语义同源 | 同上 |
 | `syscalls.h` | 4 核心（v1.0.1） syscall 编号体系约束 airy_sys_call/rovol_ctl/sched_ctl/clt_notify 的语义同源 | 同上 |

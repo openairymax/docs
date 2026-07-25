@@ -552,7 +552,7 @@ func retryCreateVolume(req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse,
 | 层次 | 共享内容 | CSI 驱动使用方式 |
 |------|---------|-----------------|
 | **[SC] 共享契约层** | `include/uapi/linux/airymax/memory_types.h` L1-L4 数据结构 | 卷存储使用 [SC] 数据结构 |
-| **[SC] 共享契约层** | `include/uapi/linux/airymax/security_types.h` capability 41 ID | 卷操作的 capability 守卫 |
+| **[SC] 共享契约层** | `include/uapi/linux/airymax/security_types.h` capability 44 ID（41 POSIX + 3 Airymax 扩展） | 卷操作的 capability 守卫 |
 | **[IND] 完全独立层** | CSI gRPC 实现、卷生命周期、挂载协议 | agentrt-linux 专属 |
 
 ---

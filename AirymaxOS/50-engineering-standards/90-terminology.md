@@ -100,24 +100,30 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 1  | `error.h`           | A-UEF       | 错误码 + 故障码                      |
 | 2  | `log_types.h`       | A-ULP       | 日志级别 + 128B 记录                 |
 | 3  | `ipc.h`             | A-IPC       | magic 0x41524531 'ARE1'        |
-| 4  | `sched.h`           | A-ULS       | magic 0x41475453 'AGTS'（任务描述符） |
+| 4  | `sched.h`           | A-ULS       | magic 0x41475453 'AGTS'（任务描述符）+ Agent 8 态生命周期（`enum airy_agent_state`） |
 | 5  | `memory_types.h`    | MemoryRovol | L1-L4 四层记忆                     |
-| 6  | `security_types.h`  | 安全          | capability 41 ID + LSM 钩子      |
-| 7  | `cognition_types.h` | A-UCS       | CoreLoopThree + Agent 8 态生命周期  |
+| 6  | `security_types.h`  | 安全          | capability 44 ID（41 POSIX + 3 Airymax 扩展） + LSM 钩子      |
+| 7  | `cognition_types.h` | A-UCS       | CoreLoopThree（PERCEPT/THINK/ACT）+ Thinkdual（FAST/SLOW）+ Q16.16 定点数  |
 | 8  | `syscalls.h`        | 系统调用        | 24 槽位                          |
 | 9  | `uapi_compat.h`     | 桥接          | 三路类型桥接                         |
 | 10 | `lsm_types.h`       | 安全          | 纯 C LSM 类型                     |
 
 ### 2.6 调度相关错误码对照
 
+> **SSoT**：[SC] `error.h`（`A-ULS Scheduler/Lifecycle Error Codes` 子空间 -121 ~ -140）。下列错误码对齐 `error.h` 中 `AIRY_ESCHED_*` 与 `AIRY_ELIFECYCLE_*` 定义，命名遵循 `AIRY_E*` 前缀规范（禁止 `E_AIRY_STC_*` / `E_AIRY_SCHED_*` 等废弃前缀）。
+
 | 错误码      | 值                        | 名称              | 说明                 |
 | -------- | ------------------------ | --------------- | ------------------ |
-| -203     | `E_AIRY_STC_LOAD_FAIL`   | sched\_tac 加载失败 | 用户态调度器加载失败         |
-| -204     | `E_AIRY_STC_UNLOAD_FAIL` | sched\_tac 卸载失败 | 用户态调度器卸载失败         |
-| -205     | `E_AIRY_STC_ATTACH_FAIL` | sched\_tac 附加失败 | 调度器附加到 CPU 失败      |
-| -206     | `E_AIRY_STC_DETACH_FAIL` | sched\_tac 分离失败 | 调度器从 CPU 分离失败      |
-| -207     | `E_AIRY_STC_VERIFY_FAIL` | sched\_tac 验证失败 | 调度器验证失败            |
-| **禁止使用** | ~~`E_AIRY_SCHED_*`~~     | 废弃              | 已改为 `E_AIRY_STC_*` |
+| -121     | `AIRY_ESCHED_POLICY`     | 调度策略非法          | sched_tac 策略校验失败    |
+| -122     | `AIRY_ESCHED_BUDGET`     | 运行预算超限          | runtime_ns 预算耗尽     |
+| -123     | `AIRY_ESCHED_DEADLINE`   | 截止时间错过          | SCHED_DEADLINE 截止错过 |
+| -124     | `AIRY_ESCHED_PERIOD`     | 周期非法            | sched_tac 周期参数非法    |
+| -125     | `AIRY_ESCHED_PRIO`       | 优先级非法           | 优先级超出 [0,139] 范围   |
+| -126     | `AIRY_ESCHED_WEIGHT`     | EEVDF 权重非法      | 权重超出 [1,10000] 范围  |
+| -127     | `AIRY_ELIFECYCLE_STATE`  | 生命周期状态非法        | Agent 状态不在 8 态枚举内   |
+| -128     | `AIRY_ELIFECYCLE_TRANS`  | 状态迁移非法          | 违反 8 态合法转换矩阵       |
+| **禁止使用** | ~~`E_AIRY_STC_*`~~     | 废弃              | 已改为 `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*`（对齐 [SC] error.h） |
+| **禁止使用** | ~~`E_AIRY_SCHED_*`~~    | 废弃              | 同上，统一使用 `AIRY_ESCHED_*` 前缀 |
 
 ### 2.7 IPC 与任务描述符 magic 对照
 
@@ -209,7 +215,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **ADR-014 约束**： agentrt-linux capability 模型**唯一来源为 seL4**，不引入 Zircon handle 模型。
 
-**agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）安全子系统（security）实现 capability 系统（POSIX capability 41 ID + seL4 风格派生模型），与 Cupolas 同源。capability 令牌格式定义于 `include/uapi/linux/airymax/security_types.h`（IRON-9 v3 \[SC] 共享契约层），结合**纯 C LSM 模块**（对齐 openEuler 250 钩子，**不使用 BPF LSM**）实现纵深防御。
+**agentrt-linux 使用上下文**: agentrt-linux（AirymaxOS）安全子系统（security）实现 capability 系统（POSIX capability 41 ID（0-40） + seL4 风格派生模型），与 Cupolas 同源。capability 令牌格式定义于 `include/uapi/linux/airymax/security_types.h`（IRON-9 v3 \[SC] 共享契约层），结合**纯 C LSM 模块**（对齐 openEuler 250 钩子，**不使用 BPF LSM**）实现纵深防御。
 
 **系统内代码**: `airy_cap_*`
 

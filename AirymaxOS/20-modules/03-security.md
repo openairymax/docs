@@ -178,7 +178,7 @@ security/
 ```mermaid
 graph TD
     subgraph SC["[SC] 共享契约层 include/uapi/linux/airymax/security_types.h"]
-        CAP[capability 41 ID 枚举]
+        CAP[capability 44 ID（41 POSIX + 3 Airymax 扩展）枚举]
         LSM[LSM 钩子 250 ID 枚举]
         BLOB[Cupolas blob 布局<br/>cred / inode / file / task]
         DERIVE[capability 派生模型<br/>mint / mintcopy / derive / revoke]

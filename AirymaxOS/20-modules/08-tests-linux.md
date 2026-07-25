@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度                               | 测试子系统内容                                                                                                                                                                                                                                                                                                                  | 组织方式                                    |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 测试验证的消息头格式（magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr`）；调度器测试验证的 task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式；安全形式化验证的 capability 41 ID 枚举 + LSM 250 ID 枚举；struct\_ops 状态机验证（INIT/REGISTERED/ACTIVE/DRAINING）；MemoryRovol 快照一致性验证的 L1-L4 数据结构 + GFP 掩码语义；认知测试验证的 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举；v1.0.1 `agent_caps[1024]` 静态数组 + 64-bit Badge 布局；`AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码；纯 C LSM 类型（`DEFINE_LSM(airy)`） | `include/uapi/linux/airymax/` 10 个头文件（测试框架验证这些共享类型） |
+| **\[SC] 共享契约层**  | 完全共享代码                             | IPC 测试验证的消息头格式（magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr`）；调度器测试验证的 task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式；安全形式化验证的 capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + LSM 250 ID 枚举；struct\_ops 状态机验证（INIT/REGISTERED/ACTIVE/DRAINING）；MemoryRovol 快照一致性验证的 L1-L4 数据结构 + GFP 掩码语义；认知测试验证的 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举；v1.0.1 `agent_caps[1024]` 静态数组 + 64-bit Badge 布局；`AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码；纯 C LSM 类型（`DEFINE_LSM(airy)`） | `include/uapi/linux/airymax/` 10 个头文件（测试框架验证这些共享类型） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | 单元测试框架语义（agentrt cargo test/go test/googletest → OS 级同框架）、集成测试模式（agentrt 集成测试 → OS 级集成测试）、性能基准指标（IPC 延迟/调度延迟/内存吞吐/I/O 吞吐——两端同指标）、覆盖率目标（≥90%/≥80%/≥70%——两端同标准）、回归测试方法（性能不退化——两端同方法）等 8+ 项                                                                                                                                 | 各自独立实现                                  |
 | **\[IND] 完全独立层** | 完全独立                               | 形式化验证框架（CBMC + TLA+ + Coq/Isabelle，借鉴 seL4 l4v / capDL 方法论——OS 专属）、Soak Test 框架（72h 持续运行——OS 专属）、混沌工程框架（Chaos Mesh 类似——OS 专属）、eBPF 可观测性验证（OS 专属）、agentrt-linux 集成测试框架（OS 专属）、测试运行器与报告生成（OS 专属）                                                                                                                                                      | 各自独立仓库                                  |
 | **\[DSL] 降级生存层** | 降级模式下最小可用 | 测试框架自身的降级：[SC] 头文件 SHA-256 校验失败时启用 `#ifdef AIRY_SC_FALLBACK` 降级块验证；airymaxmon 在 struct_ops 状态不可读时降级为 Prometheus 拉取模式验证；config_d 配置源不可达时降级为内置默认配置 + 只读运行测试；DevStation 在 LLM 通道断开时降级为规则引擎模式测试 | 各自独立实现，但共享降级触发语义 |
@@ -83,7 +83,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 覆盖率目标     | ≥90%/≥80%/≥70%                    | ≥90%/≥80%/≥70%                           | \[SS]  |
 | IPC 消息头验证 | 验证 128B msg\_hdr                  | 验证 128B msg\_hdr（magic 0x41524531 \[SC]） | \[SC]  |
 | 调度器验证     | 不涉及内核调度                           | 验证 task\_desc（magic 0x41475453 \[SC]）    | \[SC]  |
-| 安全验证      | 用户态 capability 测试                 | capability 41 ID 形式化验证 \[SC]             | \[SC]  |
+| 安全验证      | 用户态 capability 测试                 | capability 44 ID（41 POSIX + 3 Airymax 扩展） 形式化验证 \[SC]             | \[SC]  |
 | 跨平台       | Linux/macOS/Windows               | Linux 6.6 专属                             | \[IND] |
 | [DSL] 降级验证 | 不涉及                          | [SC] 头文件 SHA-256 失败时降级块验证 + daemon 降级模式验证 | \[DSL] |
 
@@ -149,7 +149,7 @@ tests-linux/
 - `coq/`：Coq 证明（Capability 检查算法正确性：grant_then_check_pass / revoke_then_check_fail / grant_monotonic_other / ungranted_check_fail）\[IND]。
 - `spec/`：形式化规约 \[IND]。
   - `kernel-spec/`：内核规约（sched\_tac + task\_desc \[SC]）\[IND]。
-  - `capability-spec/`：capability 系统规约（capability 41 ID + agent_caps[1024] \[SC]）\[IND]。
+  - `capability-spec/`：capability 系统规约（capability 44 ID（41 POSIX + 3 Airymax 扩展） + agent_caps[1024] \[SC]）\[IND]。
   - `ipc-spec/`：IPC 规约（128B msg\_hdr + magic 0x41524531 \[SC]）\[IND]。
   - `memory-spec/`：MemoryRovol 规约（L1-L4 数据结构 \[SC]）\[IND]。
 - `proof/`：证明脚本 \[IND]。
@@ -231,7 +231,7 @@ tests-linux/
 - `include/uapi/linux/airymax/sched.h`：验证 task\_desc magic 0x41475453 + vtime 衰减 + sched\_tac 调度参数（仅 sched\_tac，不使用 BPF 调度器）\[SC]。
 - `include/uapi/linux/airymax/syscalls.h`：验证 4 核心 syscall 编号（v1.0.1）+ 20 预留 = 24 槽位（`airy_sys_call` / `airy_sys_rovol_ctl` / `airy_sys_sched_ctl` / `airy_sys_clt_notify`）\[SC]。
 - `include/uapi/linux/airymax/memory_types.h`：验证 MemoryRovol L1-L4 数据结构 + GFP 掩码语义 \[SC]。
-- `include/uapi/linux/airymax/security_types.h`：验证 capability 41 ID + LSM 250 ID + Cupolas blob 布局 + `agent_caps[1024]` 静态数组 + 64-bit Badge 布局（`Epoch<<48 | RandomTag<<16 | Perms`）\[SC]。
+- `include/uapi/linux/airymax/security_types.h`：验证 capability 44 ID（41 POSIX + 3 Airymax 扩展） + LSM 250 ID + Cupolas blob 布局 + `agent_caps[1024]` 静态数组 + 64-bit Badge 布局（`Epoch<<48 | RandomTag<<16 | Perms`）\[SC]。
 - `include/uapi/linux/airymax/cognition_types.h`：验证 CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 \[SC]。
 - `include/uapi/linux/airymax/uapi_compat.h`：验证三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）\[SC]。
 - `include/uapi/linux/airymax/lsm_types.h`：验证纯 C LSM 类型 + `DEFINE_LSM(airy)` 骨架 + `LSM_ORDER_MUTABLE` 注册（不使用 `LSM_ORDER_FIRST`，不使用 BPF LSM）\[SC]。
@@ -279,7 +279,7 @@ CBMC（C Bounded Model Checker）将 C 代码转换为布尔公式，通过 SAT/
 
 | 验证对象 | CBMC 验证属性 | 优先级 | \[SC] 引用 |
 |--------|------------|--------|----------|
-| `airy_cap_check` | 无越界 / 无 NULL 解引用 / 无整数溢出 / grant 后通过 / revoke 后失败 | P0 | capability 41 ID \[SC] |
+| `airy_cap_check` | 无越界 / 无 NULL 解引用 / 无整数溢出 / grant 后通过 / revoke 后失败 | P0 | capability 44 ID（41 POSIX + 3 Airymax 扩展） \[SC] |
 | `airy_ipc_fastpath` | 无越界 / 无 NULL 解引用 / Badge 校验单调不可绕过（C-S9 ~10ns） | P1 | 128B msg\_hdr + magic 0x41524531 \[SC] |
 | `airy_lsm_hook` | 无重复注册 / 无遗漏 / `LSM_ORDER_MUTABLE` 注册路径正确 | P2 | lsm\_types.h `DEFINE_LSM(airy)` \[SC] |
 
@@ -429,7 +429,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 
 | 验证对象          | 验证性质      | 工具           | \[SC] 引用                                  |
 | ------------- | --------- | ------------ | ----------------------------------------- |
-| capability 系统 | 不可伪造、可撤销、单调  | Coq + Isabelle/HOL | capability 41 ID + `agent_caps[1024]` \[SC] |
+| capability 系统 | 不可伪造、可撤销、单调  | Coq + Isabelle/HOL | capability 44 ID（41 POSIX + 3 Airymax 扩展） + `agent_caps[1024]` \[SC] |
 | IPC 机制        | 无死锁、无消息丢失、Badge 单调 | Coq + CBMC  | 128B msg\_hdr + magic 0x41524531 \[SC]    |
 | 调度器框架         | 公平性、有界延迟  | Isabelle/HOL | task\_desc magic 0x41475453 + vtime \[SC] |
 | MemoryRovol   | 快照一致性     | Coq          | MemoryRovol L1-L4 \[SC]                   |
@@ -601,7 +601,7 @@ sec_d 是 v1.0.1 Capability Folding 的唯一 Badge 编译者，必须保证串�
 
 **验证范围**（引用 \[SC] 共享契约层）：
 
-- capability 系统（最小权限保证，capability 41 ID \[SC]）\[IND]。
+- capability 系统（最小权限保证，capability 44 ID（41 POSIX + 3 Airymax 扩展） \[SC]）\[IND]。
 - IPC 机制（无死锁、无消息丢失，128B msg\_hdr \[SC]）\[IND]。
 - 调度器框架（公平性、有界延迟，task\_desc \[SC]）\[IND]。
 - MemoryRovol（快照一致性，L1-L4 \[SC]）\[IND]。
@@ -644,7 +644,7 @@ sec_d 是 v1.0.1 Capability Folding 的唯一 Badge 编译者，必须保证串�
 | `include/uapi/linux/airymax/sched.h`           | task\_desc magic 0x41475453 'AGTS' + vtime 衰减公式 + 优先级范围   | 单元测试 + 形式化验证（Isabelle/HOL 公平性）   |
 | `include/uapi/linux/airymax/syscalls.h`        | v1.0.1: 4 核心 syscall 编号 + 20 预留槽位 = 24 槽位                        | 单元测试 + syscall 调用验证              |
 | `include/uapi/linux/airymax/memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口            | 单元测试 + 形式化验证（Coq 快照一致性）+ Soak 监控 |
-| `include/uapi/linux/airymax/security_types.h`  | capability 41 ID 枚举 + LSM 250 ID + Cupolas blob 布局 + `agent_caps[1024]` + 64-bit Badge 布局 | 单元测试 + 形式化验证（Isabelle/HOL 不可伪造 + CBMC fastpath 校验）  |
+| `include/uapi/linux/airymax/security_types.h`  | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + LSM 250 ID + Cupolas blob 布局 + `agent_caps[1024]` + 64-bit Badge 布局 | 单元测试 + 形式化验证（Isabelle/HOL 不可伪造 + CBMC fastpath 校验）  |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举          | 单元测试 + 形式化验证（Coq 阶段转换）+ Soak 监控  |
 | `include/uapi/linux/airymax/uapi_compat.h`     | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）+ [SC] 双端契约 | 单元测试 + sc-dual-ci 双端校验 |
 | `include/uapi/linux/airymax/lsm_types.h`       | 纯 C LSM 类型 + `DEFINE_LSM(airy)` 骨架 + `LSM_ORDER_MUTABLE` 注册（不使用 `LSM_ORDER_FIRST`，不使用 BPF LSM） | 单元测试 + CBMC 注册逻辑验证 |
@@ -729,7 +729,7 @@ graph TD
         SCHED_TEST[sched.h 验证<br/>task_desc + vtime]
         SYS_TEST[syscalls.h 验证<br/>4 核心 + 20 预留 = 24 槽位]
         MEM_TEST[memory_types.h 验证<br/>MemoryRovol L1-L4]
-        SEC_TEST[security_types.h 验证<br/>capability 41 ID + agent_caps 1024]
+        SEC_TEST[security_types.h 验证<br/>capability 44 ID（41 POSIX + 3 Airymax 扩展） + agent_caps 1024]
         COG_TEST[cognition_types.h 验证<br/>CoreLoopThree 阶段]
         UAPI_TEST[uapi_compat.h 验证<br/>三路类型桥接]
         LSM_TEST[lsm_types.h 验证<br/>DEFINE_LSM airy + LSM_ORDER_MUTABLE]

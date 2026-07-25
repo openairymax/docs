@@ -525,7 +525,7 @@ client = AirymaxClient(
 | `syscalls.h` | 4 核心（v1.0.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
 | `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | CognitionClient.submit_task |
 | `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
-| `security_types.h` | capability 41 ID + mint/revoke/derive 签名 + 250 LSM 钩子 | SafetyClient.check_capability |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + mint/revoke/derive 签名 + 250 LSM 钩子 | SafetyClient.check_capability |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + Token 能效 | CognitionClient / ChatClient |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 | ToolClient（记忆上下文） |
 

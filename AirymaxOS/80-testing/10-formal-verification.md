@@ -247,7 +247,7 @@ Model checking completed: 0 errors, 8192 distinct states
 
 **OS-TEST-111**：TLA+ 模型检查必须验证至少 5 个 Agent 的并发状态转换；任一不变量或属性失败即视为形式化验证失败，PR 驳回。
 
-**OS-TEST-112**：TLA+ 规约文件 (`formal/agent_state_machine.tla`) 与契约定义 (`include/uapi/linux/airymax/agent.h`) 必须双向同步；CI 通过脚本验证二者状态转换矩阵一致。
+**OS-TEST-112**：TLA+ 规约文件 (`formal/agent_state_machine.tla`) 与契约定义 ([SC] `include/uapi/linux/airymax/sched.h`，`enum airy_agent_state`) 必须双向同步；CI 通过脚本验证二者状态转换矩阵一致。
 
 ---
 
@@ -754,7 +754,7 @@ on:
       - 'formal/**'
       - 'kernel/airymaxos/cap/**'
       - 'kernel/airymaxos/agent/**'
-      - 'include/uapi/linux/airymax/agent.h'
+      - 'include/uapi/linux/airymax/sched.h'
 
 jobs:
   tla-plus-check:
@@ -834,7 +834,7 @@ jobs:
         run: |
           python3 scripts/airy_formal_consistency.py \
             --tla formal/agent_state_machine.tla \
-            --contract include/uapi/linux/airymax/agent.h
+            --contract include/uapi/linux/airymax/sched.h
       - name: Verify Coq ↔ C consistency
         run: |
           python3 scripts/airy_formal_consistency.py \

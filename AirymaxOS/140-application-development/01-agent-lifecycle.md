@@ -12,43 +12,69 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. Agent 生命周期模型
 
-### 1.1 生命周期状态机
+### 1.1 生命周期状态机（8 态 SSoT 模型）
 
-Agent 应用在 agentrt-linux 上经历 7 个明确的状态转换。这一生命周期模型借鉴了 seL4 TCB 线程状态机（ThreadState_Running/Restart/Blocked/Inactive）和 Linux 进程状态模型（TASK_RUNNING/TASK_INTERRUPTIBLE 等），并扩展了 Token 预算和记忆卷载两个智能体专属维度。
+Agent 应用在 agentrt-linux 上经历 **8 个明确的生命周期状态**。这一模型是 agentrt-linux 的 SSoT（Single Source of Truth），物理宿主为 [SC] `sched.h`（`enum airy_agent_state`），权威源文档为 [10-sc-sched-extension.md §2.1](../30-interfaces/10-sc-sched-extension.md)。
+
+8 态模型借鉴了 seL4 TCB 线程状态机（ThreadState_Running/Restart/Blocked/Inactive）和 Linux 6.6 进程状态模型（TASK_RUNNING/TASK_INTERRUPTIBLE/TASK_STOPPED/EXIT_ZOMBIE 等），通过 sched_tac 调度参数（SCHED_DEADLINE/SCHED_FIFO/EEVDF）实现与 Linux 调度器的天然映射，无需新增内核调度器状态。
+
+**关键设计决策**：READY 与 RUNNING 分离——READY 态参与 EEVDF 虚拟时间衰减（等待 CPU），RUNNING 态消耗 sched_tac 预算（正在 CPU 执行）。这一分离使 sched_tac 能够精确控制 Agent 的 CPU 时间分配，同时保持与 Linux CFS/EEVDF 调度器的兼容性。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> REGISTERED : airy_agent_register()
-    REGISTERED --> CONFIGURED : airy_agent_configure()
-    CONFIGURED --> RUNNING : airy_agent_start()
-    RUNNING --> SUSPENDED : Token 预算耗尽 / SIGSTOP
-    SUSPENDED --> RUNNING : Token 预算恢复 / SIGCONT
-    RUNNING --> PAUSING : airy_agent_pause()
-    PAUSING --> PAUSED : 资源保存完成
-    PAUSED --> RUNNING : airy_agent_resume()
-    RUNNING --> TERMINATING : airy_agent_stop() / 异常
-    TERMINATING --> TERMINATED : 资源回收完成
-    TERMINATED --> [*]
+    [*] --> INACTIVE : 等待 fork
+    INACTIVE --> SPAWNING : airy_agent_spawn() / fork+exec
+    SPAWNING --> READY : 初始化完成，加入运行队列
+    READY --> RUNNING : 调度器选中（sched_tac 预算分配）
+    RUNNING --> READY : 时间片用完 / 被抢占
+    RUNNING --> BLOCKED : 等待 IPC / IO / 信号量
+    BLOCKED --> READY : 等待条件满足
+    RUNNING --> STOPPING : 异常检测 / SIGSTOP 发送中
+    BLOCKED --> STOPPING : 异常检测 / 强制冻结
+    STOPPING --> STOPPED : IPC 队列冻结完成
+    STOPPED --> READY : Macro-Supervisor 裁决恢复 / SIGCONT
+    STOPPED --> DEAD : Macro-Supervisor 裁决终止 / SIGKILL
+    READY --> STOPPING : Macro-Supervisor 主动暂停
+    RUNNING --> DEAD : fatal fault / 异常退出
+    DEAD --> [*] : waitpid 回收
 ```
 
-### 1.2 各状态详述
+### 1.2 各状态详述（8 态枚举对齐 [SC] sched.h）
 
-| 状态 | 枚举值 | 描述 | 可执行操作 |
-|------|--------|------|-----------|
-| **REGISTERED** | `AGENT_STATE_REGISTERED` | Agent 已注册，获得 Agent ID 和初始 capability 令牌 | configure, unregister |
-| **CONFIGURED** | `AGENT_STATE_CONFIGURED` | 配置已完成（Token 预算、记忆策略、认知参数） | start, reconfigure, unregister |
-| **RUNNING** | `AGENT_STATE_RUNNING` | 正常运行，参与 CoreLoopThree 循环 | pause, suspend, stop |
-| **SUSPENDED** | `AGENT_STATE_SUSPENDED` | Token 预算耗尽或收到外部信号暂停 | resume (预算恢复), stop |
-| **PAUSING** | `AGENT_STATE_PAUSING` | 正在保存当前状态（记忆快照、上下文序列化） | (不可操作，等待完成) |
-| **PAUSED** | `AGENT_STATE_PAUSED` | 已保存完整状态，可恢复或迁移 | resume, migrate, stop |
-| **TERMINATING** | `AGENT_STATE_TERMINATING` | 正在清理资源（释放 capability、回收记忆） | (不可操作，等待完成) |
-| **TERMINATED** | `AGENT_STATE_TERMINATED` | 完全终止，所有资源已释放 | (终态) |
+| 状态 | 枚举值 | Linux 进程态映射 | 描述 | sched_tac 行为 |
+|------|--------|-----------------|------|----------------|
+| **INACTIVE** | `AIRY_AGENT_INACTIVE = 0` | 进程不存在 | 等待 fork，Agent 槽位空闲 | 不参与调度 |
+| **SPAWNING** | `AIRY_AGENT_SPAWNING = 1` | fork/exec 中 | Agent 正在创建，TCB 初始化、CSpace 分配、capability 注入进行中 | 不参与调度 |
+| **READY** | `AIRY_AGENT_READY = 2` | `TASK_RUNNING`（在运行队列） | 初始化完成，在运行队列等待 CPU，EEVDF 虚拟时间衰减中 | vtime 衰减，等待预算分配 |
+| **RUNNING** | `AIRY_AGENT_RUNNING = 3` | `TASK_RUNNING`（正在 CPU 执行） | 正在 CPU 上执行，消耗 sched_tac 预算 | 消耗 runtime_ns 预算 |
+| **BLOCKED** | `AIRY_AGENT_BLOCKED = 4` | `TASK_INTERRUPTIBLE` | 等待 IPC 消息、IO 完成、信号量 | 预算暂停消耗 |
+| **STOPPING** | `AIRY_AGENT_STOPPING = 5` | SIGSTOP 发送中 | 过渡态：正在冻结 IPC 队列，由 Micro-Supervisor 检测异常或 Macro-Supervisor 主动触发 | 快速过渡 |
+| **STOPPED** | `AIRY_AGENT_STOPPED = 6` | `TASK_STOPPED` | 已冻结，等待 Macro-Supervisor 裁决（恢复或终止） | 不参与调度 |
+| **DEAD** | `AIRY_AGENT_DEAD = 7` | `EXIT_ZOMBIE` | 进程已退出，等待 waitpid 回收 Agent ID 和 capability 资源 | 不参与调度 |
+
+### 1.3 状态迁移驱动方
+
+| 迁移 | 驱动方 | 触发条件 |
+|------|--------|---------|
+| INACTIVE → SPAWNING | 用户态 | `airy_agent_spawn()` 调用，fork+exec 启动 |
+| SPAWNING → READY | 内核 | TCB 初始化完成，capability 注入完成，加入运行队列 |
+| READY ↔ RUNNING | Linux 调度器 | CFS/EEVDF 正常调度，sched_tac 预算分配 |
+| RUNNING → BLOCKED | 内核 | IPC 等待、IO 等待、信号量等待 |
+| BLOCKED → READY | 内核 | 等待条件满足（IPC 消息到达、IO 完成） |
+| * → STOPPING | Micro-Supervisor | 检测到异常（心跳超时、capability 伪造等） |
+| * → STOPPING | Macro-Supervisor | 主动暂停（资源调整、迁移准备） |
+| STOPPING → STOPPED | 内核 | IPC 队列冻结完成 |
+| STOPPED → READY | Macro-Supervisor | 裁决恢复，SIGCONT |
+| STOPPED → DEAD | Macro-Supervisor | 裁决终止，SIGKILL |
+| RUNNING → DEAD | 内核 | fatal fault（`AIRY_FAULT_ABNORMAL_CAP` 等） |
+
+> **注**：sched_tac 核心成果是 8 态与 Linux 进程状态天然映射，无需新增内核调度器状态，仅复用 SCHED_DEADLINE/SCHED_FIFO/EEVDF。状态迁移由 Macro-Supervisor 驱动，Micro-Supervisor 仅在检测到异常时触发 RUNNING → STOPPING 的强制迁移。
 
 ---
 
 ## 2. Agent 注册与配置
 
-### 2.1 Agent 注册（REGISTERED）
+### 2.1 Agent 注册（INACTIVE → SPAWNING）
 
 Agent 通过 `airy_agent_register()` 系统调用向内核注册。注册过程分配 Agent ID、创建 Capability 空间（CSpace）并初始化 TCB（Thread Control Block）。
 
@@ -60,7 +86,7 @@ Agent 通过 `airy_agent_register()` 系统调用向内核注册。注册过程�
  *
  * 返回: 0 成功，-EINVAL 参数无效，-ENOMEM 内存不足，-ENOSPC Agent 槽位已满
  *
- * 注册完成后 Agent 进入 REGISTERED 状态。
+ * 注册完成后 Agent 进入 SPAWNING 状态（等待初始化完成后转为 READY）。
  * Agent ID 在系统生命周期内唯一，不会复用。
  */
 int airy_agent_register(const struct airy_agent_config *config,
@@ -79,7 +105,7 @@ struct airy_agent_config {
 
 **借鉴 Linux 设计**：Agent 类型（AGENT_TYPE_*）枚举类似于 Linux 的 `task_struct->comm` 和调度类的组合，用于调度器优先级判定。
 
-### 2.2 Agent 配置（CONFIGURED）
+### 2.2 Agent 配置（SPAWNING → READY）
 
 ```c
 /**
@@ -122,7 +148,7 @@ struct airy_agent_params {
 
 ## 3. Agent 启动与运行
 
-### 3.1 启动（RUNNING）
+### 3.1 启动（READY → RUNNING）
 
 ```c
 /**
@@ -426,7 +452,7 @@ struct airy_exit_info {
 | 规范项 | 规则 | 示例 |
 |--------|------|------|
 | 函数前缀 | `airy_agent_*` 用于 Agent 生命周期 API | `airy_agent_register()` |
-| 枚举前缀 | `AGENT_STATE_*` 用于状态枚举 | `AGENT_STATE_RUNNING` |
+| 枚举前缀 | `AIRY_AGENT_*` 用于状态枚举（对齐 [SC] `sched.h`） | `AIRY_AGENT_RUNNING` |
 | 宏前缀 | `AIRY_EXIT_*` 用于退出码 | `AIRY_EXIT_NORMAL` |
 | 结构体命名 | `airy_*_t` 或 `struct airy_*` | `struct airy_token_budget` |
 

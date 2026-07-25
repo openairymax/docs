@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 共享程度 | 系统子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
-| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value；sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 41 ID 枚举（安全配置工具引用）；v1.0.1 `agent_caps[1024]` 静态数组（128KB）+ 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用）；v1.0.1 Syscall 24 槽位（4 核心 + 20 预留） | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/memory/cognition 共享），清单见 §6.1 |
+| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value；sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举（安全配置工具引用）；v1.0.1 `agent_caps[1024]` 静态数组（128KB）+ 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用）；v1.0.1 Syscall 24 槽位（4 核心 + 20 预留） | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/memory/cognition 共享），清单见 §6.1 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | commons 公共工具语义（agentrt commons → system 工具）、监控 API（agentrt monitoring → top/htop/perf/airymaxmon）、配置管理语义（agentrt config → config_d/sysctl/systemd-config）、AI 助手语义（agentrt assistant → DevStation）、日志语义（agentrt log_write → journald/syslog）等 8+ 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | RPM + dnf 包管理实现、glibc + musl 基础库实现、bash/fish/zsh shell 实现、sysctl/systemd-config 实现细节、top/htop/perf/bpftrace/sysstat 工具实现、DevStation OS 级实现（auto-fix/code-gen/knowledge-base）、config_d 实现细节（YAML/TOML 解析、热重载） | 各自独立仓库 |
 | **[DSL] 降级生存层** | 降级模式下最小可用 | config_d 配置源不可达时降级为内置默认配置 + 只读运行；airymaxmon 在 struct_ops 状态不可读时降级为 Prometheus 拉取模式；DevStation 在 LLM 通道断开时降级为规则引擎模式（仅本地知识库匹配） | 各自独立实现，但共享降级触发语义 |
@@ -163,7 +163,7 @@ config_d 是 agentrt-linux 12 daemon 之一，负责统一配置管理：
   - struct_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING）[SC]
   - sched_tac 统计（task_desc magic 0x41475453 + vtime）[SC]
   - MemoryRovol L1-L4 指标（GFP 掩码语义）[SC]
-  - capability 41 ID 状态（安全监控）[SC]
+  - capability 44 ID（41 POSIX + 3 Airymax 扩展） 状态（安全监控）[SC]
 
 ### 3.6 devstation/（DevStation，AI 智能助手）[SS]
 
@@ -265,7 +265,7 @@ net.ipv4.tcp_max_syn_backlog = 65535
 - struct_ops 状态机监控（INIT/REGISTERED/ACTIVE/DRAINING 四态）[SC]。
 - sched_tac 调度统计（task_desc magic 0x41475453 + vtime 衰减）[SC]。
 - MemoryRovol L1-L4 分级内存指标（GFP 掩码语义）[SC]。
-- capability 41 ID 安全状态监控 [SC]。
+- capability 44 ID（41 POSIX + 3 Airymax 扩展） 安全状态监控 [SC]。
 - CoreLoopThree 认知循环阶段监控（PERCEPTION/THINKING/ACTION）[SC]。
 - 与 `cloudnative/observability` 集成 [IND]。
 
@@ -391,7 +391,7 @@ airymaxmon 通过 [SC] 共享契约层读取内核子系统状态，确保监控
 | `include/uapi/linux/airymax/error.h` | 扩展错误码（`AIRY_ESEC_D_THROTTLED = -83`、`AIRY_ECAP_FROZEN = -82`、`AIRY_FAULT_URING_MALFORMED = 0x100A`、`AIRY_FAULT_AUDIT_TAMPER = 0x100B`） | airymaxmon 错误码映射 + DevStation 诊断建议 |
 | `include/uapi/linux/airymax/log_types.h` | trace_id + 结构化日志类型枚举 | journald + airymaxmon 日志聚合 |
 | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | airymaxmon 监控分级内存 |
-| `include/uapi/linux/airymax/security_types.h` | capability 41 ID 枚举 + LSM 钩子 250 ID + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局 | airymaxmon 安全监控 + config_d 推送 capability 配置 + 安全配置工具 |
+| `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + LSM 钩子 250 ID + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局 | airymaxmon 安全监控 + config_d 推送 capability 配置 + 安全配置工具 |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 | DevStation 调用 LLM + airymaxmon 认知监控 |
 | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 | airymaxmon 监控调度统计 |
 | `include/uapi/linux/airymax/ipc.h` | IPC magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr` + SQE/CQE 操作码 | DevStation io_uring IPC 通信 |
@@ -413,7 +413,7 @@ airymaxmon 通过 [SC] 共享契约层读取内核子系统状态，确保监控
 | 4 | AI 助手 | 自研助手 | DevStation（OS 级） |
 | 5 | 日志语义 | log_write | journald + syslog |
 | 6 | trace_id 贯穿 | user_data 字段 | io_uring user_data + journald |
-| 7 | capability 状态查询 | 用户态 capability | airymaxmon capability 41 ID [SC] |
+| 7 | capability 状态查询 | 用户态 capability | airymaxmon capability 44 ID（41 POSIX + 3 Airymax 扩展） [SC] |
 | 8 | MemoryRovol 监控 | heapstore 监控 | airymaxmon L1-L4 指标 [SC] |
 
 ### 6.3 [IND] 完全独立层——12 项独立实现
@@ -513,7 +513,7 @@ graph TD
         LOG_HDR[log_types.h<br/>trace_id + 日志类型]
         SCHED_HDR[sched.h<br/>sched_tac + task_desc]
         MEM_HDR[memory_types.h<br/>MemoryRovol L1-L4]
-        SEC_HDR[security_types.h<br/>capability 41 ID + agent_caps + Badge 64-bit]
+        SEC_HDR[security_types.h<br/>capability 44 ID（41 POSIX + 3 Airymax 扩展） + agent_caps + Badge 64-bit]
         COG_HDR[cognition_types.h<br/>CoreLoopThree 阶段]
         IPC_HDR[ipc.h<br/>128B msg_hdr + magic ARE1]
         SYS_HDR[syscalls.h<br/>v1.0.1 24 槽位 syscall]
@@ -607,7 +607,7 @@ graph TD
 |---------|---------|----------|
 | `kernel` | 提供内核配置工具所需接口 | [IND] |
 | `services` | 提供 systemd unit 管理 | [SS] |
-| `security` | 提供安全配置工具（capability 41 ID） | [SC] |
+| `security` | 提供安全配置工具（capability 44 ID（41 POSIX + 3 Airymax 扩展）） | [SC] |
 | `memory` | 提供内存监控工具（MemoryRovol L1-L4） | [SC] |
 | `cognition` | DevStation 调用 LLM 能力（CoreLoopThree 阶段） | [SC] |
 | `cloudnative` | 提供云原生监控集成 | [IND] |

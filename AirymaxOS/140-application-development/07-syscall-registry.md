@@ -547,7 +547,7 @@ agentrt-linux 与 agentrt 在以下 10 个头文件中实现代码字面共享�
 |--------|---------|------------------|
 | `syscalls.h` | v1.0.1: 4 核心 syscall 编号 + 20 预留槽位 + op 码定义 | 系统调用（SYS） |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码 | `airy_sys_rovol_ctl` |
-| `security_types.h` | capability 41 ID 枚举 + LSM 250 钩子 + 派生模型 + Badge 位布局 | `airy_sys_call` |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展）枚举 + LSM 250 钩子 + 派生模型 + Badge 位布局 | `airy_sys_call` |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式 | `airy_sys_clt_notify` |
 | `sched.h` | 任务描述符（magic 0x41475453）+ vtime 衰减 | `airy_sys_sched_ctl` |
 | `ipc.h` | IPC magic（0x41524531）+ 128B 消息头 + capability_badge 字段 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
@@ -673,7 +673,7 @@ int send_cognition_result(uint32_t agent_id, const void *payload, size_t len)
         .src     = agent_id,
         .dst     = AIRY_DST_BROADCAST,
         .opcode  = AIRY_IPC_OP_SEND,
-        .flags   = AIRY_IPC_F_ZEROCOPY,
+        .flags   = AIRY_IPC_FLAG_ZEROCOPY,
         .payload_len = len,
     };
 

@@ -554,7 +554,7 @@ enum airy_action {
 
 #### 11.3.2 完整测试矩阵表
 
-4 角色 × 8 行为 = 32 个测试用例。`AGENT_STATE_*` 状态名对齐 `include/uapi/linux/airymax/cognition_types.h` 中的 `enum airy_action`：
+4 角色 × 8 行为 = 32 个测试用例。`AGENT_STATE_*` 状态名是**测试框架内部的行为状态枚举**（IDLE/BOUND/RUNNING/SUSPENDED/TERMINATED/ERROR），描述 Agent 角色在测试用例中的行为阶段，**不是** [SC] `sched.h` 中定义的内核 Agent 8 态生命周期（`enum airy_agent_state`：INACTIVE/SPAWNING/READY/RUNNING/BLOCKED/STOPPING/STOPPED/DEAD）。两者语义不同：测试框架状态描述 Agent 角色的测试行为阶段，内核 8 态描述进程的调度生命周期。
 
 | Agent 角色 | 测试行为 | 预期返回值 | 预期状态变更 | 预期副作用 |
 |-----------|---------|-----------|-------------|-----------|
