@@ -198,7 +198,7 @@ struct airy_token_budget_config {
  * @task_id:      任务 ID
  * @tokens_used:  本次消费 Token 数
  * @timestamp:    消费时间戳（ns）
- * @phase:        CoreLoopThree 阶段（PERCEPTION/THINKING/ACTION）
+ * @phase:        CoreLoopThree 阶段（PERCEPT/THINK/ACT）
  * @model:        LLM 模型标识
  * @latency_ns:   本次推理延迟（ns）
  *

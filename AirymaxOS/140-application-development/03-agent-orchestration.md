@@ -52,7 +52,7 @@ agentrt 用户态运行时的 MAC 框架与 TaskFlow 引擎与本设计遵循 IR
 ### 2.1 协作模式定义
 
 ```c
-/* include/uapi/agentrt/mac.h（IRON-9 v3 [SC] 共享契约层） */
+/* include/uapi/linux/airymax/mac.h（IRON-9 v3 [SC] 共享契约层，v1.1 计划实现，当前未创建） */
 enum airy_mac_mode {
 	AIRY_MAC_MODE_INDEPENDENT = 0,  /* 独立：各 Agent 独立执行 */
 	AIRY_MAC_MODE_COLLABORATIVE = 1, /* 协作：分工合作 */
@@ -99,7 +99,7 @@ stateDiagram-v2
 TaskFlow 引擎基于 Pregel BSP 模型，将任务表达为 DAG：
 
 ```c
-/* include/uapi/agentrt/taskflow.h（[SC] 共享契约层） */
+/* include/uapi/linux/airymax/taskflow.h（[SC] 共享契约层，v1.1 计划实现，当前未创建） */
 struct airy_task_node {
 	uint32_t node_id;            /* 节点 ID */
 	uint32_t agent_id;          /* 执行 Agent */

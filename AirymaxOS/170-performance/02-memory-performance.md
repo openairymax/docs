@@ -2,8 +2,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）内存性能工程设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）内存子系统性能工程详细设计\
-> **文档版本**：0.1.1\
-> **最后更新**： 2026-07-21\
+> **文档版本**：1.0.1-fix\
+> **最后更新**： 2026-07-26\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0
@@ -66,49 +66,67 @@ agentrt-linux（AirymaxOS）内存性能工程为 MemoryRovol（记忆卷载）�
 
 ### 2.2 分级内存数据结构
 
+> **[SC] SSoT 实际定义**：以下代码原样引自 `include/uapi/linux/airymax/memory_types.h`，为 MemoryRoVol 内存类型共享契约层。请勿在本文档中修改其字段名/类型/布局；如需变更，先修改 SSoT 头文件。
+
 ```c
-/* include/uapi/linux/airymax/memory_types.h —— MemoryRovol 内存类型（[SC] 共享契约层） */
-#ifndef AIRY_MEMORY_TYPES_H
-#define AIRY_MEMORY_TYPES_H
+/* include/uapi/linux/airymax/memory_types.h —— MemoryRoVol types ([SC] shared contract header) */
+#ifndef _UAPI_AIRYMAX_MEMORY_TYPES_H
+#define _UAPI_AIRYMAX_MEMORY_TYPES_H
 
-#include <linux/types.h>
-#include <airymax/airy_q16.h>
+#include <linux/airymax/uapi_compat.h>
 
-/* GFP 掩码语义（与 agentrt 共享） */
-#define AIRY_GFP_L1_RAW    (__GFP_HIGH | __GFP_MOVABLE)     /* DRAM 优先 */
-#define AIRY_GFP_L2_FEAT   (__GFP_HIGHMEM | __GFP_MOVABLE) /* DRAM/CXL */
-#define AIRY_GFP_L3_STR    (__GFP_KERNEL)                  /* DRAM 内核 */
-#define AIRY_GFP_L4_PAT    (GFP_KERNEL | __GFP_HIGHMEM)  /* PMEM/CXL 通过 mempolicy 指定 NUMA 节点 */
-
-/* 记忆层级枚举 */
-enum airy_mr_layer {
-	AIRY_MEMORYROV_L1_RAW = 0,
-	AIRY_MEMORYROV_L2_FEAT,
-	AIRY_MEMORYROV_L3_STR,
-	AIRY_MEMORYROV_L4_PAT,
-	AIRY_MEMORYROV_LAYER_MAX,
+/* ─── Memory Tier Levels ─────────────────────────────────────────────── */
+enum airy_mem_level {
+	AIRY_MEM_HOT    = 0,   /* L1: HBM/DDR hot tier */
+	AIRY_MEM_WARM   = 1,   /* L2: DDR warm tier */
+	AIRY_MEM_COLD   = 2,   /* L3: CXL/NVMe cold tier */
+	AIRY_MEM_PMEM   = 3,   /* L4: PMEM persistent tier */
+	AIRY_MEM_LEVEL_MAX
 };
 
-/* 分级内存节点描述 */
-struct airy_mr_node {
-	enum airy_mr_layer layer;
-	int numa_node;              /* 0=DRAM local, 1=CXL, 2=PMEM */
-	__u32 capacity_mb;
-	__u32 used_mb;
-	airy_q16_t hit_rate;     /* Q16.16 表示的命中率 */
-	airy_q16_t evict_rate;
-};
+/* ─── GFP Mask Semantics for MemoryRoVol ──────────────────────────────── */
+#define AIRY_GFP_HOT    0x01   /* Allocate from hot tier */
+#define AIRY_GFP_WARM   0x02   /* Allocate from warm tier */
+#define AIRY_GFP_COLD   0x04   /* Allocate from cold tier */
+#define AIRY_GFP_PMEM   0x08   /* Allocate from PMEM tier */
 
-/* 分级内存管理器 */
-struct airy_mr_mgr {
-	struct airy_mr_node nodes[AIRY_MEMORYROV_LAYER_MAX];
-	struct kfifo *migrate_fifo;   /* 批量迁移队列 */
-	wait_queue_head_t *migrate_wq;
-	airy_q16_t global_hit_rate;
-};
+/* ─── Memory Page Classification ──────────────────────────────────────── */
+#define AIRY_PAGE_CLASS_ANON     0x01  /* Anonymous page */
+#define AIRY_PAGE_CLASS_FILE     0x02  /* File-backed page */
+#define AIRY_PAGE_CLASS_SHMEM    0x04  /* Shared memory page */
+#define AIRY_PAGE_CLASS_AGENT    0x08  /* Agent-private page */
 
-#endif /* AIRY_MEMORY_TYPES_H */
+/* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
+ * When AIRY_SC_FALLBACK is defined, MemoryRoVol L2-L4 tiering is
+ * unavailable; only L1 (hot tier, anonymous pages) is accessible. All
+ * GFP flags collapse to AIRY_GFP_HOT and all page classes collapse to
+ * AIRY_PAGE_CLASS_ANON. alloc_pages + mmap remain functional.
+ * See [DSL] §2.2 and §4.1.
+ */
+#ifdef AIRY_SC_FALLBACK
+	#define AIRY_DSL_MEM_LEVEL   AIRY_MEM_HOT
+	#define AIRY_DSL_MEM_TIERS   1  /* Only L1 retained */
+
+	#define AIRY_DSL_GFP_HOT     AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_WARM    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_COLD    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_PMEM    AIRY_GFP_HOT
+
+	#define AIRY_DSL_PAGE_CLASS_ANON   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_FILE   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_SHMEM  AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_AGENT  AIRY_PAGE_CLASS_ANON
+
+	#warning "AIRY_SC_FALLBACK active: memory_types.h degraded to L1 hot tier only"
+#endif /* AIRY_SC_FALLBACK */
+
+#endif /* _UAPI_AIRYMAX_MEMORY_TYPES_H */
 ```
+
+> **SSoT 对齐说明**：
+> - MemoryRoVol 四层分级（L1 HOT / L2 WARM / L3 COLD / L4 PMEM）由 `enum airy_mem_level` 唯一界定；本文档 2.1 节的 L1_raw/L2_feat/L3_str/L4_pat 命名仅作为业务语义映射，**不**作为内核枚举名。
+> - GFP 掩码仅有 4 个：`AIRY_GFP_HOT/WARM/COLD/PMEM`；SSoT 中**不存在** `AIRY_GFP_L1_RAW`/`AIRY_GFP_L2_FEAT`/`AIRY_GFP_L3_STR`/`AIRY_GFP_L4_PAT` 等历史虚构宏。
+> - SSoT 中**不存在** `airy_mr_node`/`airy_mr_mgr` 结构体定义，也**不包含** `<airymax/airy_q16.h>` 头文件；Q16.16 定点数定义位于 `include/uapi/linux/airymax/cognition_types.h`，本文档后续章节如需使用 `airy_q16_t` 将显式标注其来源。
 
 ### 2.3 CXL 内存池化配置
 
@@ -223,13 +241,18 @@ Forgetting Engine 衰减公式 `R(t) = e^(-t/τ)`（τ 默认 7 天）与 MGLRU 
 | LINEAR（线性） | 最冷 2 代 | 均匀淘汰冷数据 |
 | ACCESS_BASED（访问驱动） | 仅最冷 1 代 | 按访问频率淘汰 |
 
+> **说明性示例，非 SSoT 定义**：以下 `airy_mglru_forgetting_map` 结构体与 `airy_mglru_apply_forgetting` 函数为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `airy_q16_t` 类型来自 `include/uapi/linux/airymax/cognition_types.h`（Q16.16 定点数）；`enum airy_forgetting_strategy` 与 `AIRY_FORGET_EBBINGHAUS` 来自遗忘机制子系统头文件。SSoT `memory_types.h` 仅提供 `enum airy_mem_level` 与 GFP/页面分类宏。
+
 ```c
-/* MGLRU 代数与 Forgetting Engine 衰减映射 */
+/* 说明性示例：MGLRU 代数与 Forgetting Engine 衰减映射（非 SSoT 定义） */
+#include <linux/airymax/memory_types.h>      /* SSoT: enum airy_mem_level */
+#include <linux/airymax/cognition_types.h>   /* airy_q16_t (Q16.16 定点数) */
+
 struct airy_mglru_forgetting_map {
-	enum airy_forgetting_strategy strategy;
+	enum airy_forgetting_strategy strategy;  /* 来自遗忘机制子系统 */
 	u8 min_gen;       /* 最冷代数 */
 	u8 max_gen;       /* 最热代数 */
-	airy_q16_t retention_rate;  /* Q16.16 保留率 */
+	airy_q16_t retention_rate;  /* Q16.16 保留率，类型见 cognition_types.h */
 };
 
 /* 艾宾浩斯衰减映射表（基于 R(t) = e^(-t/τ)，τ = 7 天） */
@@ -241,8 +264,8 @@ static const struct airy_mglru_forgetting_map ebbinghaus_map[] = {
 	{AIRY_FORGET_EBBINGHAUS, 12, 12, 0x0000},  /* 回收代：0 */
 };
 
-/* 应用衰减映射到 MGLRU */
-static int airy_mglru_apply_forgetting(struct airy_mr_mgr *mgr,
+/* 应用衰减映射到 MGLRU（参数 ctx 为运行时上下文指针，非 SSoT 类型） */
+static int airy_mglru_apply_forgetting(void *ctx,
 					  const struct airy_mglru_forgetting_map *m)
 {
 	u8 gen;
@@ -264,10 +287,14 @@ out_err:
 
 ### 3.3 MemoryRovol L1-L4 与 MGLRU 代绑定
 
+> **说明性示例，非 SSoT 定义**：以下 `airy_mr_mglru_bind` 结构体为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `enum airy_mem_level` 与 `AIRY_MEM_HOT/WARM/COLD/PMEM` 枚举值为 SSoT 实际定义（见 §2.2）；L1_raw/L2_feat/L3_str/L4_pat 仅作业务语义注释。
+
 ```c
-/* MemoryRovol 层级与 MGLRU 代绑定 */
+/* 说明性示例：MemoryRoVol 层级与 MGLRU 代绑定（非 SSoT 定义） */
+#include <linux/airymax/memory_types.h>  /* SSoT: enum airy_mem_level */
+
 struct airy_mr_mglru_bind {
-	enum airy_mr_layer layer;
+	enum airy_mem_level layer;  /* SSoT 枚举 */
 	u8 hot_gen_lo;     /* 热代下界 */
 	u8 hot_gen_hi;     /* 热代上界 */
 	u8 cold_gen_lo;    /* 冷代下界 */
@@ -275,14 +302,14 @@ struct airy_mr_mglru_bind {
 };
 
 static const struct airy_mr_mglru_bind mglru_binds[] = {
-	/* L1_raw：热代 0-2，冷代 10-11（PMEM 持久化） */
-	{AIRY_MEMORYROV_L1_RAW,  0,  2, 10, 11},
-	/* L2_feat：热代 0-3，冷代 9-11（CXL 迁移） */
-	{AIRY_MEMORYROV_L2_FEAT, 0,  3,  9, 11},
-	/* L3_str：热代 0-4，冷代 8-11（DRAM 驻留） */
-	{AIRY_MEMORYROV_L3_STR,  0,  4,  8, 11},
-	/* L4_pat：热代 0-5，冷代 11-11（PMEM 持久） */
-	{AIRY_MEMORYROV_L4_PAT,  0,  5, 11, 11},
+	/* L1_raw（AIRY_MEM_HOT）：热代 0-2，冷代 10-11（PMEM 持久化） */
+	{AIRY_MEM_HOT,  0,  2, 10, 11},
+	/* L2_feat（AIRY_MEM_WARM）：热代 0-3，冷代 9-11（CXL 迁移） */
+	{AIRY_MEM_WARM, 0,  3,  9, 11},
+	/* L3_str（AIRY_MEM_COLD）：热代 0-4，冷代 8-11（DRAM 驻留） */
+	{AIRY_MEM_COLD, 0,  4,  8, 11},
+	/* L4_pat（AIRY_MEM_PMEM）：热代 0-5，冷代 11-11（PMEM 持久） */
+	{AIRY_MEM_PMEM, 0,  5, 11, 11},
 };
 ```
 
@@ -303,18 +330,20 @@ agentrt-linux 内存层级带宽与延迟模型：
 
 ### 4.2 内存 tiering 自动迁移策略
 
+> **说明性示例，非 SSoT 定义**：以下 `airy_migrate_entry`/`airy_migrate_mgr` 结构体与迁移 kthread 实现为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `enum airy_mem_level` 与 `AIRY_MEM_*` 枚举值为 SSoT 实际定义（见 §2.2）；SSoT 头文件 include 路径为 `<linux/airymax/memory_types.h>`。
+
 ```c
-/* memory/airy_memory_tiering.c */
+/* 说明性示例：memory/airy_memory_tiering.c（非 SSoT 定义） */
 #include <linux/kfifo.h>
 #include <linux/wait.h>
-#include <airymax/memory_types.h>
+#include <linux/airymax/memory_types.h>  /* SSoT: enum airy_mem_level */
 
 #define MIGRATE_FIFO_SIZE 4096
 
-/* 迁移请求条目 */
+/* 迁移请求条目（说明性示例） */
 struct airy_migrate_entry {
-	enum airy_mr_layer from;
-	enum airy_mr_layer to;
+	enum airy_mem_level from;  /* SSoT 枚举 */
+	enum airy_mem_level to;    /* SSoT 枚举 */
 	__u64 page_addr;
 	__u32 size_kb;
 	__u8  reason;   /* 0=热升迁, 1=冷降级, 2=容量压力 */
@@ -439,15 +468,17 @@ migrate_prio = "agent_low"
 
 ### 4.4 kfifo 批量迁移完整示例
 
+> **说明性示例，非 SSoT 定义**：以下 `airy_tiering_ctx` 结构体与 producer/consumer kthread 实现为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `AIRY_MEM_HOT`/`AIRY_MEM_WARM` 为 SSoT 实际枚举值（见 §2.2）；SSoT 头文件 include 路径为 `<linux/airymax/memory_types.h>`。
+
 ```c
-/* 完整示例：MemoryRovol 跨层批量迁移 */
+/* 说明性示例：MemoryRoVol 跨层批量迁移（非 SSoT 定义） */
 #include <linux/module.h>
 #include <linux/kfifo.h>
 #include <linux/wait.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
-#include <airymax/memory_types.h>
-#include <airymax/error.h>
+#include <linux/airymax/memory_types.h>  /* SSoT: enum airy_mem_level */
+#include <linux/airymax/error.h>
 
 struct airy_tiering_ctx {
 	DECLARE_KFIFO(fifo, struct airy_migrate_entry, 4096);
@@ -470,8 +501,8 @@ static int producer_fn(void *data)
 						     msecs_to_jiffies(50)) <= 0)
 			continue;
 
-		e.from = AIRY_MEMORYROV_L1_RAW;
-		e.to = AIRY_MEMORYROV_L2_FEAT;
+		e.from = AIRY_MEM_HOT;   /* L1_raw 业务语义 */
+		e.to = AIRY_MEM_WARM;    /* L2_feat 业务语义 */
 		e.reason = 1;  /* 冷降级 */
 
 		spin_lock(&ctx->lock);
@@ -596,16 +627,17 @@ echo "[完成] 报告保存于 $RESULT_DIR"
 | AIRY_E_MEMORY_KFIFO_FULL | -605 | 迁移 kfifo 队列满 |
 | AIRY_E_MEMORY_HASH_MISMATCH | -606 | SHA-256 哈希校验失败 |
 
-集中错误处理示例：
+> **说明性示例，非 SSoT 定义**：以下 `airy_memory_do_migrate` 函数为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `AIRY_MEM_LEVEL_MAX`/`AIRY_MEM_PMEM`/`AIRY_MEM_HOT` 为 SSoT 实际枚举值（见 §2.2）。
 
 ```c
+/* 说明性示例：集中错误处理（非 SSoT 定义） */
 int airy_memory_do_migrate(const struct airy_migrate_entry *e)
 {
 	void *src, *dst;
 	int ret;
 
-	if (e->from >= AIRY_MEMORYROV_LAYER_MAX ||
-	    e->to >= AIRY_MEMORYROV_LAYER_MAX) {
+	if (e->from >= AIRY_MEM_LEVEL_MAX ||
+	    e->to >= AIRY_MEM_LEVEL_MAX) {
 		ret = -AIRY_EINVAL;
 		goto out_err;
 	}
@@ -628,8 +660,8 @@ int airy_memory_do_migrate(const struct airy_migrate_entry *e)
 		goto out_free_dst;
 	}
 
-	if (e->to == AIRY_MEMORYROV_L4_PAT ||
-	    e->to == AIRY_MEMORYROV_L1_RAW) {
+	if (e->to == AIRY_MEM_PMEM ||    /* L4_pat 业务语义 */
+	    e->to == AIRY_MEM_HOT) {     /* L1_raw 业务语义 */
 		ret = airy_memory_persist(dst, e->size_kb);
 		if (ret < 0) {
 			ret = -AIRY_E_MEMORY_PMEM_FAIL;
@@ -669,10 +701,12 @@ out_err:
 
 | 组件 | agentrt-linux（[SS]） | agentrt（[SS]） | 共享（[SC]） |
 |------|------------------------|------------------|--------------|
-| 记忆模型 | CXL + MGLRU 内核态 | HeapStore 用户态 | L1-L4 数据结构 |
-| GFP 掩码 | AIRY_GFP_L1_L4 | AIRY_GFP_L1_L4 | `memory_types.h` |
+| 记忆模型 | CXL + MGLRU 内核态 | HeapStore 用户态 | `enum airy_mem_level` |
+| GFP 掩码 | `AIRY_GFP_HOT/WARM/COLD/PMEM` | `AIRY_GFP_HOT/WARM/COLD/PMEM` | `memory_types.h` |
 | PMEM 持久化 | fsdax + DAX 挂载 | 用户态 mmap | PMEM 持久化接口 |
 | 遗忘公式 | R(t) = e^(-t/τ) Q16.16 | R(t) = e^(-t/τ) Q16.16 | Forgetting Engine 枚举 |
+
+> **SSoT 对齐说明**：上表中 `AIRY_GFP_HOT/WARM/COLD/PMEM` 与 `enum airy_mem_level` 均为 `include/uapi/linux/airymax/memory_types.h` 实际定义；历史版本中虚构的 `AIRY_GFP_L1_L4` 宏在 SSoT 中**不存在**，已移除。Q16.16 定点数 `airy_q16_t` 定义位于 `include/uapi/linux/airymax/cognition_types.h`，非 `memory_types.h`。
 
 ---
 
@@ -695,6 +729,15 @@ out_err:
 - `Documentation/admin-guide/mm/multigeneration_lru.rst`
 - `Documentation/driver-api/cxl/`
 - agentrt HeapStore 用户态记忆实现规范
+
+---
+
+## 11. 变更历史
+
+| 版本 | 日期 | 变更内容 |
+|------|------|----------|
+| v1.0.1-fix | 2026-07-26 | SSoT 对齐修复：以 `include/uapi/linux/airymax/memory_types.h` 为唯一真源，移除文档中的虚构内容。具体：(1) §2.2 移除虚构的 `airy_mr_layer` 枚举、`AIRY_MEMORYROV_L1_RAW/L2_FEAT/L3_STR/L4_PAT/LAYER_MAX` 枚举值、`AIRY_GFP_L1_RAW/L2_FEAT/L3_STR/L4_PAT` GFP 宏、`airy_mr_node`/`airy_mr_mgr` 结构体、虚构 include `<airymax/airy_q16.h>` 与 `<linux/types.h>`、虚构头文件保护宏 `AIRY_MEMORY_TYPES_H`，替换为 SSoT 实际定义（`enum airy_mem_level`、`AIRY_MEM_HOT/WARM/COLD/PMEM/LEVEL_MAX`、`AIRY_GFP_HOT/WARM/COLD/PMEM`、`AIRY_PAGE_CLASS_*`、`AIRY_SC_FALLBACK` DSL 降级块、`_UAPI_AIRYMAX_MEMORY_TYPES_H` 保护宏、`<linux/airymax/uapi_compat.h>` include）；(2) §3.2/§3.3/§4.2/§4.4/§6 所有说明性示例添加"非 SSoT 定义"标注，将虚构的 `airy_mr_layer`/`AIRY_MEMORYROV_*` 引用替换为 SSoT 实际枚举 `airy_mem_level`/`AIRY_MEM_*`，将虚构的 `airy_mr_mgr` 参数替换为通用 `void *ctx`，标注 `airy_q16_t` 来源为 `cognition_types.h`，修复 include 路径 `<airymax/memory_types.h>` → `<linux/airymax/memory_types.h>`；(3) §8 IRON-9 同源映射表移除虚构宏 `AIRY_GFP_L1_L4`，替换为 SSoT 实际宏 `AIRY_GFP_HOT/WARM/COLD/PMEM` 与 `enum airy_mem_level`。 |
+| v0.1.1 | 2026-07-21 | 初始版本。 |
 
 ---
 

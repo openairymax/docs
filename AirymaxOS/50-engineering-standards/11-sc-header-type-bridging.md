@@ -1,7 +1,7 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-# [SC] 三路类型桥接规范
-> **文档定位**：[SC] 共享契约头文件在内核态、用户态、第三方三环境编译兼容的唯一权威规范\
+# [SC] 类型桥接规范
+> **文档定位**：[SC] 共享契约头文件在 Linux 平台（内核态 + 用户态）与第三方平台（macOS/Windows）编译兼容的唯一权威规范\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §4 + [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)\
@@ -11,9 +11,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **[SC] 三路类型桥接规范** 的唯一权威源。三路类型桥接模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）、`uapi_compat.h` 设计、物理宿主 `kernel/include/uapi/linux/airymax/uapi_compat.h`、CI 三路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
+> **单一权威源声明**：本文件是 **[SC] 类型桥接规范** 的唯一权威源。类型桥接模型（`#ifdef __linux__` / `#else` 二路判定）、`uapi_compat.h` 设计、物理宿主 `kernel/include/uapi/linux/airymax/uapi_compat.h`、CI 二路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
 >
 > 技术选型声明：整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
+>
+> **关键设计决策**：[SC] 头文件统一使用 `__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64` 等 Linux UAPI 风格类型名称，**不引入 `airy_u32` 等自定义别名**。`uapi_compat.h` 在 Linux 平台 `#include <linux/types.h>` 复用系统定义，在第三方平台通过 `typedef` 将 `stdint.h` 类型映射为 UAPI 名称。
 
 ---
 
@@ -22,220 +24,226 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **目标读者**：内核开发者、用户态开发者、跨平台集成工程师、CI 维护者
 - **前置知识**：理解 [10-unify-design.md](../10-architecture/10-unify-design.md) [SC] 共享契约层、[06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) IRON-9 v3 [SC]/[SS]/[IND] 三层模型、C 预处理器条件编译
 - **预计阅读时间**：25 分钟
-- **核心概念**：三路类型桥接、`#ifdef __KERNEL__`、`uapi_compat.h`、编译兼容、CI 三路编译
+- **核心概念**：类型桥接、`#ifdef __linux__`、`uapi_compat.h`、编译兼容、CI 二路编译
 - **复杂度标识**：中级
 
 ---
 
-## §1 设计目标：[SC] 头文件在内核态、用户态、第三方三环境编译兼容
+## §1 设计目标：[SC] 头文件在内核态、用户态 Linux、第三方平台编译兼容
 
 ### 1.1 问题背景
 
-[SC] 共享契约头文件（物理宿主 `kernel/include/uapi/linux/airymax/`，共 10 个）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
+[SC] 共享契约头文件（物理宿主 `kernel/include/uapi/linux/airymax/`，共 12 个）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
 
 | 环境 | 编译器 | 类型系统 | 头文件依赖 |
 |------|--------|---------|-----------|
-| 内核态 | GCC（内核构建） | 内核类型（`struct task_struct`、`__u32`） | `<linux/types.h>` |
-| 用户态 Linux | GCC/Clang | 用户态类型（`uint32_t`） | `<stdint.h>`、`<linux/types.h>` |
-| 第三方平台 | 任意 C 编译器 | 标准类型（`uint32_t`） | 仅 `<stdint.h>` |
+| 内核态（Linux） | GCC（内核构建） | 内核 UAPI 类型（`__u32`、`__u64`） | `<linux/types.h>` |
+| 用户态 Linux | GCC/Clang | 用户态类型 + 内核 UAPI 类型 | `<stdint.h>` + `<linux/types.h>` |
+| 第三方平台（macOS/Windows） | 任意 C 编译器 | 标准类型（`uint32_t`） | 仅 `<stdint.h>` |
 
-若 [SC] 头文件直接使用某一环境的类型，在其他环境会编译失败。例如直接使用 `struct task_struct` 会导致用户态编译失败。
+若 [SC] 头文件直接使用某一环境的类型，在其他环境会编译失败。例如直接使用 `struct task_struct` 会导致用户态编译失败；直接在 Linux 平台 `typedef uint64_t __u64` 会与 `<linux/types.h>` 的系统定义冲突（`conflicting types for '__u64'; have 'uint64_t' {aka 'long unsigned int'} vs 'unsigned long long'`）。
 
 ### 1.2 设计目标
 
-三路类型桥接规范的核心目标是：**一份 [SC] 头文件，三环境编译兼容**：
+类型桥接规范的核心目标是：**一份 [SC] 头文件，多环境编译兼容**：
 
-1. **内核态兼容**：使用内核类型（`__u32`、`struct task_struct` 等）
-2. **用户态 Linux 兼容**：使用用户态类型（`uint32_t`）
-3. **第三方平台兼容**：仅依赖标准 C 类型（`stdint.h`）
+1. **内核态兼容**：使用 Linux 内核 UAPI 类型（`__u32`、`__u64` 等），由 `<linux/types.h>` 提供
+2. **用户态 Linux 兼容**：复用同一份 `<linux/types.h>` 提供的 UAPI 类型
+3. **第三方平台兼容**：通过 `typedef` 将 `<stdint.h>` 的 `uint8_t/uint16_t/uint32_t/uint64_t` 映射为 `__u8/__u16/__u32/__u64`，保持源码层面的类型名称一致
+
+**核心设计原则**：[SC] 头文件统一使用 `__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64` 这些 Linux UAPI 风格的类型名称（而非自定义 `airy_*` 别名）。`uapi_compat.h` 的职责是在第三方平台上提供这些类型的定义，使源码无需条件编译即可在多环境编译。
 
 ### 1.3 与 IRON-9 v3 的关系
 
-三路类型桥接对应 IRON-9 v3 的 [SC] 共享契约层——物理宿主唯一，两端逐字节相同（详见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §1）。类型桥接是 [SC] 层的核心工程挑战，确保"一份头文件多环境编译"可行。
+类型桥接对应 IRON-9 v3 的 [SC] 共享契约层——物理宿主唯一，两端逐字节相同（详见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §1）。类型桥接是 [SC] 层的核心工程挑战，确保"一份头文件多环境编译"可行。
 
 ---
 
-## §2 三路类型桥接模型
+## §2 类型桥接模型
 
-### 2.1 三路条件编译模型
+### 2.1 二路条件编译模型
 
-[SC] 头文件使用三层条件编译，根据编译环境选择对应类型：
+`uapi_compat.h` 使用**二路条件编译**（基于 `__linux__` 宏），根据编译平台选择对应类型来源。**不使用 `__KERNEL__` 宏**——因为 Linux 平台无论内核态还是用户态，`<linux/types.h>` 都提供 `__u8/__u16/__u32/__u64` 定义：
 
 ```c
-/* 三路类型桥接模型 */
-#ifdef __KERNEL__
-    /* 路径一：内核态 —— 使用内核类型 */
+/* uapi_compat.h 二路类型桥接模型 */
+#ifdef __linux__
+    /* 路径一：Linux 平台（内核态 + 用户态）
+     * <linux/types.h> 由内核 UAPI 提供，定义 __u8/__u16/__u32/__u64 等 */
     #include <linux/types.h>
-    /* 如 __u32, __u64, struct task_struct 等 */
-#elif defined(__linux__)
-    /* 路径二：用户态 Linux —— 使用 Linux 用户态类型 */
-    #include <stdint.h>
-    #include <linux/types.h>
-    /* 如 uint32_t, uint64_t 等 */
+    /* 直接使用系统定义，无需 typedef */
 #else
-    /* 路径三：第三方平台 —— 仅使用标准 C 类型 */
+    /* 路径二：第三方平台（macOS/Windows 等）
+     * 通过 typedef 将 stdint.h 类型映射为 __u8/__u16/__u32/__u64 */
     #include <stdint.h>
-    /* 如 uint32_t, uint64_t 等 */
+    typedef uint8_t  __u8;
+    typedef uint16_t __u16;
+    typedef uint32_t __u32;
+    typedef uint64_t __u64;
+    typedef int8_t   __s8;
+    typedef int16_t  __s16;
+    typedef int32_t  __s32;
+    typedef int64_t  __s64;
 #endif
 ```
 
-### 2.2 三路映射表
+### 2.2 类型映射表
 
-| 类型语义 | 路径一（`__KERNEL__`） | 路径二（`__linux__`） | 路径三（`#else`） |
-|---------|---------------------|---------------------|------------------|
-| 32位无符号 | `__u32` | `uint32_t` | `uint32_t` |
-| 64位无符号 | `__u64` | `uint64_t` | `uint64_t` |
-| 16位无符号 | `__u16` | `uint16_t` | `uint16_t` |
-| 8位无符号 | `__u8` | `uint8_t` | `uint8_t` |
-| 进程标识 | `struct task_struct *` | `pid_t` | `int32_t` |
-| 布尔 | `bool`（`<linux/types.h>`） | `bool`（`<stdbool.h>`） | `int` |
+| 类型语义 | Linux 平台（`__linux__`） | 第三方平台（`#else`） |
+|---------|--------------------------|---------------------|
+| 8位无符号 | `__u8`（`<linux/types.h>` 提供） | `typedef uint8_t __u8` |
+| 16位无符号 | `__u16`（`<linux/types.h>` 提供） | `typedef uint16_t __u16` |
+| 32位无符号 | `__u32`（`<linux/types.h>` 提供） | `typedef uint32_t __u32` |
+| 64位无符号 | `__u64`（`<linux/types.h>` 提供） | `typedef uint64_t __u64` |
+| 8位有符号 | `__s8`（`<linux/types.h>` 提供） | `typedef int8_t __s8` |
+| 16位有符号 | `__s16`（`<linux/types.h>` 提供） | `typedef int16_t __s16` |
+| 32位有符号 | `__s32`（`<linux/types.h>` 提供） | `typedef int32_t __s32` |
+| 64位有符号 | `__s64`（`<linux/types.h>` 提供） | `typedef int64_t __s64` |
 
 ### 2.3 预处理器宏判定逻辑
 
-条件编译的判定基于编译器预定义宏：
+条件编译的判定基于编译器预定义宏 `__linux__`：
 
 | 宏 | 定义者 | 含义 | 示例环境 |
 |----|--------|------|---------|
-| `__KERNEL__` | 内核构建系统 | 内核态编译 | `make` 内核构建 |
-| `__linux__` | GCC/Clang 预定义 | Linux 平台（用户态） | 用户态 GCC 编译 |
-| （无以上宏） | — | 第三方平台 | 非 Linux 的 C 编译器 |
+| `__linux__` | GCC/Clang 预定义 | Linux 平台（内核态 + 用户态） | 内核构建 / 用户态 GCC |
+| （无 `__linux__`） | — | 第三方平台 | macOS / Windows 等 |
 
-判定优先级：`__KERNEL__` > `__linux__` > `#else`。这确保内核态优先识别，即使内核态也会定义 `__linux__`。
+**为何不使用 `__KERNEL__` 宏？** Linux 平台上，`<linux/types.h>` 在内核态和用户态都提供 `__u8/__u16/__u32/__u64` 定义（通过 `<asm/types.h>`）。因此无需区分内核态与用户态——只要 `__linux__` 定义，统一 `#include <linux/types.h>` 即可。这避免了三路条件编译的复杂度，也避免了在 Linux 平台上 `typedef` 与系统定义冲突的问题。
 
-### 2.4 类型桥接示例
+### 2.4 类型使用示例
 
-以 `struct airy_log_record` 为例，展示三路桥接：
+以 `struct airy_log_record` 为例，展示 [SC] 头文件中的实际类型使用方式（**直接使用 `__u32` 等内核 UAPI 类型名称，不使用 `airy_*` 别名**）：
 
 ```c
-/* kernel/include/uapi/linux/airymax/log_types.h —— 三路类型桥接示例 */
-#ifndef _AIRYM_LOG_TYPES_H
-#define _AIRYM_LOG_TYPES_H
+/* kernel/include/uapi/linux/airymax/log_types.h —— 类型使用示例 */
+#ifndef _UAPI_AIRYMAX_LOG_TYPES_H
+#define _UAPI_AIRYMAX_LOG_TYPES_H
 
-#include "uapi_compat.h"  /* 三路类型桥接头文件 */
+#include <linux/airymax/uapi_compat.h>  /* 类型桥接头文件 */
 
 struct airy_log_record {
-    airy_u32  magic;          /* 路径一: __u32, 路径二/三: uint32_t */
-    airy_u16  level;
-    airy_u16  facility;
-    airy_u64  timestamp_ns;
-    airy_u32  caller_id;
-    airy_u32  payload_len;
-    char      payload[96];
-    airy_u64  reserved;
+    __u32   magic;              /* offset 0:  AIRY_LOG_MAGIC */
+    __u16   level;              /* offset 4:  airy_log_level enum */
+    __u16   facility;           /* offset 6:  facility code */
+    __u64   timestamp_ns;       /* offset 8:  monotonic ns timestamp */
+    __u32   caller_id;          /* offset 16: caller identifier */
+    __u32   payload_len;        /* offset 20: actual payload length */
+    __u8    payload[96];        /* offset 24: log message payload */
+    __u8    reserved[8];        /* offset 120: reserved */
 } __attribute__((aligned(64)));
 
-#endif /* _AIRYM_LOG_TYPES_H */
+_Static_assert(sizeof(struct airy_log_record) == 128,
+	       "airy_log_record must be exactly 128 bytes");
+
+#endif /* _UAPI_AIRYMAX_LOG_TYPES_H */
 ```
+
+> **关键说明**：[SC] 头文件**统一使用 `__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64` 类型名称**，不引入 `airy_u32` 等自定义别名。这是因为：
+> 1. Linux 内核 UAPI 惯例就是使用 `__u32` 等（参见 `include/uapi/linux/types.h`）
+> 2. 减少类型别名层级，降低认知负担
+> 3. 与内核原生代码风格一致，便于内核子树采纳
 
 ---
 
-## §3 uapi_compat.h 设计：三路类型桥接的实现头文件
+## §3 uapi_compat.h 设计：类型桥接的实现头文件
 
-### 3.1 uapi_compat.h 完整设计
+### 3.1 uapi_compat.h 完整实现
 
-`uapi_compat.h` 是三路类型桥接的实现头文件，定义统一的类型别名：
+`uapi_compat.h` 是类型桥接的实现头文件，物理宿主为 `kernel/include/uapi/linux/airymax/uapi_compat.h`。实际代码内容如下（与 SSoT 源文件逐字节一致）：
 
 ```c
-/* kernel/include/uapi/linux/airymax/uapi_compat.h —— 三路类型桥接 */
-#ifndef _AIRYM_UAPI_COMPAT_H
-#define _AIRYM_UAPI_COMPAT_H
-
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+/* SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
 /*
- * 三路类型桥接：内核态 / 用户态 Linux / 第三方平台
+ * uapi_compat.h — [SC] Shared Contract Layer: UAPI type compatibility
  *
- * 判定优先级：__KERNEL__ > __linux__ > else
- * 确保内核态优先识别（内核态也会定义 __linux__）。
+ * Provides Linux kernel-style fixed-width types (__u8/__u16/__u32/__u64/__s32)
+ * for cross-platform compatibility between agentrt (user-space) and
+ * agentrt-linux (kernel) code.
+ *
+ * IRON-9 v2 [SC] layer — shared between agentrt and agentrt-linux.
  */
 
-/* ───────── 路径一：内核态 ───────── */
-#ifdef __KERNEL__
-#include <linux/types.h>
-#include <linux/compiler.h>
+#ifndef _AIRY_UAPI_COMPAT_H
+#define _AIRY_UAPI_COMPAT_H
 
-/* 内核态：直接使用内核类型 */
-typedef __u32   airy_u32;
-typedef __u64   airy_u64;
-typedef __u16   airy_u16;
-typedef __u8    airy_u8;
-typedef __s32   airy_s32;
-typedef __s64   airy_s64;
-typedef bool    airy_bool;
-
-/* 内核态独有类型（用户态不需要） */
-struct task_struct;  /* 前向声明 */
-
-/* ───────── 路径二：用户态 Linux ───────── */
-#elif defined(__linux__)
 #include <stdint.h>
-#include <stdbool.h>
-#include <linux/types.h>  /* 用户态也可访问 <linux/types.h> */
 
-/* 用户态 Linux：使用 stdint + linux/types 双重保障 */
-typedef uint32_t  airy_u32;
-typedef uint64_t  airy_u64;
-typedef uint16_t  airy_u16;
-typedef uint8_t   airy_u8;
-typedef int32_t   airy_s32;
-typedef int64_t   airy_s64;
-typedef bool      airy_bool;
-
-/* ───────── 路径三：第三方平台 ───────── */
-#else
-#include <stdint.h>
-#include <stdbool.h>
-
-/* 第三方平台：仅依赖标准 C（stdint.h） */
-typedef uint32_t  airy_u32;
-typedef uint64_t  airy_u64;
-typedef uint16_t  airy_u16;
-typedef uint8_t   airy_u8;
-typedef int32_t   airy_s32;
-typedef int64_t   airy_s64;
-typedef bool      airy_bool;
-
-#endif /* __KERNEL__ / __linux__ / else */
-
-/* ───────── 通用定义（三路共享） ───────── */
-
-/* 结构体对齐宏：确保三环境二进制布局一致 */
-#ifdef __KERNEL__
-#define AIRY_PACKED  /* D-9: 禁用 __attribute__((packed))，改用自然对齐 */
-#define AIRY_ALIGNED(x) __attribute__((aligned(x)))
-#else
-#define AIRY_PACKED  /* D-9: 禁用 __attribute__((packed))，改用自然对齐 */
-#define AIRY_ALIGNED(x) __attribute__((aligned(x)))
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/* 常量宏：三路通用 */
-#define AIRY_PACKED_STRUCT struct AIRY_PACKED
+/* Linux kernel-style fixed-width types.
+ *
+ * d9 修复（预先存在问题）：在 Linux 平台上，__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64
+ * 由 <asm/types.h> 通过 <linux/types.h> 定义。直接 typedef 会与系统头文件冲突
+ *（conflicting types for '__u64'; have 'uint64_t' {aka 'long unsigned int'} vs
+ * 'unsigned long long'）。
+ *
+ * 修复策略：Linux 平台包含 <linux/types.h> 获取系统定义；非 Linux 平台自定义。
+ */
+#ifdef __linux__
+#include <linux/types.h>
+/* Linux: __u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64 由 <linux/types.h> 提供 */
+#else
+/* 非 Linux 平台（macOS/Windows 等）：自定义 kernel-style 类型 */
+typedef uint8_t  __u8;
+typedef uint16_t __u16;
+typedef uint32_t __u32;
+typedef uint64_t __u64;
 
-#endif /* _AIRYM_UAPI_COMPAT_H */
+typedef int8_t   __s8;
+typedef int16_t  __s16;
+typedef int32_t  __s32;
+typedef int64_t  __s64;
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _AIRY_UAPI_COMPAT_H */
 ```
 
-### 3.2 类型别名设计原则
+### 3.2 设计原则：直接使用 UAPI 类型名称
 
-`uapi_compat.h` 定义统一的 `airy_*` 类型别名，[SC] 头文件统一使用别名而非原始类型：
+`uapi_compat.h` **不定义 `airy_u32` 等自定义别名**，而是确保 `__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64` 这些 Linux UAPI 风格类型在所有平台可用。[SC] 头文件直接使用 `__u32` 等类型名称：
 
-| 别名 | 路径一（内核） | 路径二（用户 Linux） | 路径三（第三方） |
-|------|--------------|---------------------|-----------------|
-| `airy_u32` | `__u32` | `uint32_t` | `uint32_t` |
-| `airy_u64` | `__u64` | `uint64_t` | `uint64_t` |
-| `airy_u16` | `__u16` | `uint16_t` | `uint16_t` |
-| `airy_u8` | `__u8` | `uint8_t` | `uint8_t` |
-| `airy_bool` | `bool` | `bool` | `bool` |
+| 设计选择 | 采用 | 原因 |
+|---------|------|------|
+| 类型名称 | `__u32` 等 Linux UAPI 风格 | 与内核 UAPI 惯例一致（`include/uapi/linux/types.h`） |
+| 别名层级 | 无（不引入 `airy_u32`） | 减少认知负担，避免别名与原始类型混用 |
+| Linux 平台策略 | `#include <linux/types.h>` | 复用系统定义，避免 typedef 冲突 |
+| 第三方平台策略 | `typedef uint8_t __u8` 等 | 将 stdint 类型映射为 UAPI 名称，源码无需条件编译 |
+| 条件编译宏 | `#ifdef __linux__` | 二路判定，覆盖 Linux 内核态 + 用户态 |
 
 ### 3.3 二进制布局一致性
 
-三路桥接的核心保证是**二进制布局一致**——同一结构体在三环境的字节大小、字段偏移完全相同：
+类型桥接的核心保证是**二进制布局一致**——同一结构体在多环境的字节大小、字段偏移完全相同。`__u32` 在 Linux 平台由 `<linux/types.h>` 定义为 `unsigned int`（4 字节），在第三方平台由 `typedef uint32_t __u32` 定义为 `uint32_t`（4 字节），二者大小一致：
 
 ```c
-/* 验证：三环境 sizeof 与 offsetof 一致 */
+/* 验证：多环境 sizeof 与 offsetof 一致 */
 struct airy_log_record rec;
 _Static_assert(sizeof(rec) == 128, "airy_log_record must be 128B");
 _Static_assert(offsetof(struct airy_log_record, magic) == 0, "magic offset");
 _Static_assert(offsetof(struct airy_log_record, level) == 4, "level offset");
 _Static_assert(offsetof(struct airy_log_record, timestamp_ns) == 8, "ts offset");
 ```
+
+### 3.4 历史教训：typedef 冲突问题
+
+早期版本曾尝试在 Linux 平台上 `typedef uint64_t __u64`，导致与 `<linux/types.h>` 系统定义冲突：
+
+```
+error: conflicting types for '__u64'
+  have 'uint64_t' {aka 'long unsigned int'}
+  previously declared as 'unsigned long long'
+```
+
+**根因**：Linux 平台上 `<asm/types.h>` 已将 `__u64` 定义为 `unsigned long long`（在 64 位平台上），而 `uint64_t` 是 `unsigned long`。虽然二者大小都是 8 字节，但 C 类型系统视为不同类型，触发冲突。
+
+**修复**：Linux 平台直接 `#include <linux/types.h>` 复用系统定义，不进行 `typedef`。这是当前 `uapi_compat.h` 采用二路条件编译（而非三路）的根本原因。
 
 ---
 
@@ -245,91 +253,88 @@ _Static_assert(offsetof(struct airy_log_record, timestamp_ns) == 8, "ts offset")
 
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| uapi_compat.h | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接实现 |
-| [SC] 头文件 | `kernel/include/uapi/linux/airymax/*.h` | 10 个 [SC] 头文件，均 #include uapi_compat.h |
+| uapi_compat.h | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 类型桥接实现（SSoT） |
+| [SC] 核心头文件 | `kernel/include/uapi/linux/airymax/*.h` | 10 个 [SC] 核心头文件（OS-IRON-014），均 #include uapi_compat.h |
+| 补充共享文件 | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | 1 个补充共享文件（非 [SC] 核心，文件头自声明） |
+| codegen 产物 | `kernel/include/uapi/linux/airymax/syscall.h` | codegen 生成产物（非 [SC] 头文件，由 syscall_gen.py 产出） |
 
-### 4.2 与 10 个 [SC] 头文件的关系
+### 4.2 与 [SC] 头文件的关系
 
-所有 10 个 [SC] 头文件都必须在首行 `#include "uapi_compat.h"`，确保类型桥接：
+所有 10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件都在首行 `#include <linux/airymax/uapi_compat.h>`，确保类型桥接。**所有 [SC] 头文件统一使用 `__u32` 等 UAPI 类型名称**（非 `airy_u32` 别名）：
 
-| [SC] 头文件 | 用途 | 使用类型 |
-|------------|------|---------|
-| `error.h` | A-UEF 错误码 | `airy_s32`（返回码） |
-| `log_types.h` | A-ULP 日志类型 | `airy_u32/u16/u64`（记录字段） |
-| `ipc.h` | A-IPC IPC 协议 | `airy_u32/u64`（消息头） |
-| `sched.h` | A-ULS 调度扩展 | `airy_u32/u64`（调度参数） |
-| `config.h` | A-UCS 配置 | `airy_u32`（配置常量） |
-| `superv.h` | A-ULS 监管 | `airy_u32`（Fault 码） |
-| `cap.h` | Capability | `airy_u32/u64`（cap_id/badge） |
-| `ring.h` | Ring Buffer | `airy_u64`（head/tail 索引） |
-| `uapi_compat.h` | 类型桥接 | （本文件） |
-| `version.h` | 版本号 | `airy_u32` |
+| 头文件 | 类别 | 用途 | 使用类型 |
+|--------|------|------|---------|
+| `error.h` | [SC] 核心 | A-UEF 错误码 | `__s32`（返回码，如 `-AIRY_EINVAL`） |
+| `log_types.h` | [SC] 核心 | A-ULP 日志类型 | `__u32/__u16/__u64/__u8`（记录字段） |
+| `ipc.h` | [SC] 核心 | A-IPC IPC 协议 | `__u32/__u64`（消息头） |
+| `sched.h` | [SC] 核心 | A-ULS 调度扩展 | `__u32/__u64`（调度参数） |
+| `memory_types.h` | [SC] 核心 | A-UMS 内存类型 | `__u32/__u64`（内存层级、GFP 标志） |
+| `security_types.h` | [SC] 核心 | A-USA 安全类型 | `__u64`（cap_t badge）、`__u32`（cap_id） |
+| `cognition_types.h` | [SC] 核心 | A-UCG 认知类型 | `__u32/__s32`（Q16.16 定点数） |
+| `syscalls.h` | [SC] 核心 | syscall 编号 | `__u32`（编号常量） |
+| `uapi_compat.h` | [SC] 核心 | 类型桥接 | （本文件，定义 `__u8` 等） |
+| `lsm_types.h` | [SC] 核心 | LSM blob 类型 | `__u32/__u64`（capability slots） |
+| `bpf_struct_ops.h` | 补充共享 | eBPF struct_ops | `__u32`（state、refcount） |
+| `syscall.h` | codegen 产物 | syscall 入口 | `__u32/__u64`（参数类型） |
+
+> **v4.0 修复说明**：02-P0-17 SSoT 冲突——原表（v1.0.1-fix）将 12 个文件统称为 "[SC] 头文件"，但 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014）明确为 "10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件"。`bpf_struct_ops.h` 文件头 L5-8 自声明 "NOT a [SC] core header"；`syscall.h` 是 codegen 产物（`@generated` 标记），非 [SC] 共享契约。已修正分类，恢复 SSoT 一致性。
 
 ### 4.3 双端共享机制
 
-`uapi_compat.h` 与其他 [SC] 头文件一样，由 agentrt 与 agentrt-linux 双端逐字节共享。CI 通过 `sc-dual-ci.yml` 验证两端一致性：
+`uapi_compat.h` 与其他 [SC] 头文件一样，由 agentrt（用户态 SDK）与 agentrt-linux（内核态）双端逐字节共享。CI 通过 `sc-dual-ci.yml` 验证两端一致性：
 
 | 校验项 | CI 脚本 | 频率 |
 |--------|---------|------|
-| 逐字节对比 | `sc-dual-ci.yml` | 每次 PR |
-| 类型大小校验 | `type-size-check.c` | 每次 PR |
-| 字段偏移校验 | `offsetof-check.c` | 每次 PR |
-| 三路编译 | `tri-compile-ci.yml` | 每次 PR |
+| 10+1 头文件存在性 | `sc-dual-ci.yml`（sc-validate job） | 每次 PR |
+| 无物理副本 | `sc-dual-ci.yml`（sc-validate job） | 每次 PR |
+| 触发 agentrt 镜像 PR | `sc-dual-ci.yml`（sc-trigger-and-await job） | 每次 PR |
+| 治理文件完整性 | `mgmt-orchestrator.yml`（file-integrity job） | 每次 PR |
 
 ---
 
-## §5 CI 校验：三路编译测试
+## §5 CI 校验：二路编译测试
 
-### 5.1 三路编译测试矩阵
+### 5.1 二路编译测试矩阵
 
-CI 对每个 [SC] 头文件执行三路编译测试，确保三环境均编译通过：
+CI 对每个 [SC] 头文件执行二路编译测试，确保 Linux 平台与第三方平台均编译通过。由于 `uapi_compat.h` 使用 `#ifdef __linux__` 二路判定，CI 无需区分内核态与用户态：
 
-| 编译路径 | 编译环境 | 编译器 | 包含宏 |
-|---------|---------|--------|--------|
-| 路径一（内核） | 内核构建 | GCC（内核配置） | `__KERNEL__` |
-| 路径二（用户 Linux） | 用户态构建 | GCC/Clang | `__linux__`（预定义） |
-| 路径三（第三方） | 纯标准 C | 任意 C99 编译器 | （无特殊宏） |
+| 编译路径 | 编译环境 | 编译器 | 包含宏 | 验证目标 |
+|---------|---------|--------|--------|---------|
+| 路径一（Linux 平台） | 用户态 Linux 构建 | GCC/Clang | `__linux__`（预定义） | `<linux/types.h>` 提供 `__u32` 等定义 |
+| 路径二（第三方平台） | 模拟非 Linux 环境 | GCC（`-U__linux__`） | （无 `__linux__`） | `typedef uint32_t __u32` 等映射生效 |
+
+> **内核态编译说明**：内核构建由 `kernel` 子仓的 Kbuild 系统处理，不在 [SC] 双端 CI 范围内。由于 Linux 平台无论内核态还是用户态都 `#include <linux/types.h>`，用户态 Linux 编译通过即代表内核态编译通过（类型定义路径相同）。
 
 ### 5.2 CI 脚本示例
 
 ```yaml
-# .github/workflows/sc-tri-compile-ci.yml —— 三路编译 CI
-name: [SC] Tri-Compile CI
+# .github/workflows/sc-tri-compile-ci.yml —— 二路编译 CI
+name: [SC] Dual-Compile CI
 on: [pull_request]
 
 jobs:
-  kernel-compile:
-    name: Kernel path (__KERNEL__)
+  linux-compile:
+    name: Linux path (__linux__)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile as kernel
+      - name: Compile as Linux (userspace)
         run: |
-          # 内核态编译：定义 __KERNEL__
-          gcc -D__KERNEL__ -Ikernel/include -c \
-              kernel/include/uapi/linux/airymax/*.h -o /dev/null
-
-  userspace-linux-compile:
-    name: Userspace Linux path (__linux__)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compile as userspace Linux
-        run: |
-          # 用户态 Linux 编译：__linux__ 由 GCC 预定义
+          # Linux 平台编译：__linux__ 由 GCC 预定义
+          # 验证 <linux/types.h> 提供 __u32 等定义，无需 typedef
           gcc -Ikernel/include -c \
               kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
   third-party-compile:
-    name: Third-party path (no macros)
+    name: Third-party path (no __linux__)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile as third-party
+      - name: Compile as third-party (macOS/Windows simulation)
         run: |
-          # 第三方编译：不定义任何特殊宏
-          # 仅依赖 stdint.h，模拟非 Linux 环境
-          gcc -U__linux__ -U__KERNEL__ -std=c99 \
+          # 第三方编译：取消 __linux__ 宏定义，模拟非 Linux 环境
+          # 验证 typedef uint32_t __u32 等映射生效
+          gcc -U__linux__ -std=c99 \
               -Ikernel/include -c \
               kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
@@ -340,32 +345,33 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify type sizes
         run: |
-          # 验证 airy_u32 在三环境都是 4 字节
+          # 验证 __u32 在二路环境都是 4 字节
           cat > /tmp/check.c << 'EOF'
           #include "airymax/uapi_compat.h"
           #include <assert.h>
           int main() {
-              assert(sizeof(airy_u32) == 4);
-              assert(sizeof(airy_u64) == 8);
-              assert(sizeof(airy_u16) == 2);
-              assert(sizeof(airy_u8) == 1);
+              assert(sizeof(__u32) == 4);
+              assert(sizeof(__u64) == 8);
+              assert(sizeof(__u16) == 2);
+              assert(sizeof(__u8) == 1);
+              assert(sizeof(__s32) == 4);
+              assert(sizeof(__s64) == 8);
               return 0;
           }
           EOF
-          # 三路编译并运行
-          gcc -D__KERNEL__ -Ikernel/include /tmp/check.c -o /tmp/check_kern
+          # 二路编译并运行
           gcc -Ikernel/include /tmp/check.c -o /tmp/check_linux
           gcc -U__linux__ -std=c99 -Ikernel/include /tmp/check.c -o /tmp/check_3rd
-          /tmp/check_kern && /tmp/check_linux && /tmp/check_3rd
+          /tmp/check_linux && /tmp/check_3rd
 ```
 
 ### 5.3 CI 校验清单
 
 | 校验项 | 校验内容 | 失败处理 |
 |--------|---------|---------|
-| 三路编译通过 | 三环境均无编译错误 | 阻止 PR 合并 |
-| 类型大小一致 | `airy_u32/u64` 三环境大小相同 | 阻止 PR 合并 |
-| 字段偏移一致 | 结构体字段偏移三环境相同 | 阻止 PR 合并 |
+| 二路编译通过 | Linux + 第三方均无编译错误 | 阻止 PR 合并 |
+| 类型大小一致 | `__u32/__u64` 二路环境大小相同 | 阻止 PR 合并 |
+| 字段偏移一致 | 结构体字段偏移二路环境相同 | 阻止 PR 合并 |
 | 逐字节对比 | agentrt 与 agentrt-linux 一致 | 阻止 PR 合并 |
 
 ---
@@ -385,9 +391,11 @@ jobs:
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
-| v1.0 | 2026-07-17 | 初始版本：[SC] 三路类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（统一 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0 | 2026-07-17 | 初始版本：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1 |
+| v1.0.1-fix | 2026-07-26 | **文档-代码策略对立修复**（v3.5 审查 P0）：重写为反映 uapi_compat.h 实际策略——二路条件编译（`#ifdef __linux__` / `#else`，非三路 `__KERNEL__`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 改为二路编译（Linux + 第三方） |
+| v1.0.2 | 2026-07-26 | **02-P0-17 SSoT 冲突修复**（v4.0 审查）：§4.1/§4.2 头文件分类修正——原表将 12 个文件统称 "[SC] 头文件" 与 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014 "10 个核心 + bpf_struct_ops.h 补充"）冲突。已修正为三类分类：10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件（文件头自声明非核心）+ syscall.h codegen 产物（@generated 标记，非 [SC] 契约）。§4.3 CI 校验项 "12 头文件" → "10+1 头文件"。 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] 三路类型桥接规范 | v1.0.1 | 2026-07-21
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] 类型桥接规范 | v1.0.1 | 2026-07-26

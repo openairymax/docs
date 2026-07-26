@@ -22,7 +22,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 接口设计文档 | [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) | 设计意图来源，其编号定义以本注册表为准 |
 | API 契约文档 | [50-engineering-standards/20-contracts/contracts.md](../50-engineering-standards/20-contracts/contracts.md) | 契约定义来源，其编号段以本注册表为准 |
 | Agent 生命周期 | [01-agent-lifecycle.md](01-agent-lifecycle.md) | 应用层 API（`airy_agent_*`）通过 op-dispatch 映射到本注册表的 4 核心 syscall |
-| UAPI 头文件 | `kernel/include/uapi/agentrt/syscalls.h` | 由本注册表派生（1.0.1 阶段可由代码生成器自动生成） |
+| UAPI 头文件 | `kernel/include/uapi/linux/airymax/syscalls.h` | 由本注册表派生（1.0.1 阶段可由代码生成器自动生成） |
 | 内核入口表 | `kernel/arch/x86/entry/syscalls/syscall_64.tbl` | 由本注册表派生 |
 
 ### 1.2 冲突解决规则
@@ -285,7 +285,7 @@ int airy_agent_register(const struct airy_agent_config *config,
 
 ### 6.1 头文件位置
 
-系统调用 UAPI 头文件位于 `kernel/include/uapi/agentrt/syscalls.h`，由本注册表派生。1.0.1 阶段可通过代码生成器从本注册表自动生成（R-01 增强，借鉴 seL4 `syscall.xml` + `syscall_generator.py`）。
+系统调用 UAPI 头文件位于 `kernel/include/uapi/linux/airymax/syscalls.h`，由本注册表派生。1.0.1 阶段可通过代码生成器从本注册表自动生成（R-01 增强，借鉴 seL4 `syscall.xml` + `syscall_generator.py`）。
 
 ### 6.2 完整 UAPI 头文件模板
 

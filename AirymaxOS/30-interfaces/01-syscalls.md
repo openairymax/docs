@@ -3,7 +3,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # 系统调用接口
 > **文档定位**：agentrt-linux（AirymaxOS） 内核系统调用的分类、编号、C 接口、清单、性能约束与错误码\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-26\
+> **v3.5 修复说明**：P0-I6/I9~I11——日志级别前缀 `LOG_*` → `AIRY_LOG_*`（对齐 SSoT `log_types.h` L37-44）；UAPI 头文件路径 `kernel/include/uapi/airy_syscalls.h` → `kernel/include/uapi/linux/airymax/syscalls.h`（对齐 SSoT 物理宿主）；`AIRY_ETIMEDOUT`（不在 SSoT）→ `AIRY_ESCHED_DEADLINE`（-123，对齐 SSoT `error.h:101` A-ULS 子空间）\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **SSoT**：[120-cross-project-code-sharing.md §2.8](../50-engineering-standards/120-cross-project-code-sharing.md)（syscall 编号权威来源）
 
@@ -139,52 +140,52 @@ static int airy_decode_and_invoke(cap_t cap,
 
         /* 校验 2：消息头 magic 验证 */
         if (msg->magic != AIRY_IPC_MAGIC) {
-                log_write(LOG_ERROR, "airy_decode_invoke: bad magic 0x%08x", msg->magic);
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: bad magic 0x%08x", msg->magic);
                 return -EINVAL;
         }
 
         /* 校验 3：cap 类型必须在合法范围 */
         obj_type = cap_get_type(cap);
         if (obj_type >= AIRY_CAP_TYPE_COUNT) {
-                log_write(LOG_ERROR, "airy_decode_invoke: invalid cap type %u", obj_type);
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: invalid cap type %u", obj_type);
                 return -EINVAL;
         }
 
         /* 校验 4：cap 必须处于有效状态（未被撤销） */
         if (!cap_is_valid(cap)) {
-                log_write(LOG_ERROR, "airy_decode_invoke: cap revoked");
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: cap revoked");
                 return -EACCES;
         }
 
         /* 校验 5：消息长度 >= 128B 最小头 */
         if (msg->hdr_len < AIRY_IPC_HDR_SIZE || msg->hdr_len > AIRY_IPC_HDR_SIZE) {
-                log_write(LOG_ERROR, "airy_decode_invoke: bad hdr_len %u", msg->hdr_len);
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: bad hdr_len %u", msg->hdr_len);
                 return -EMSGSIZE;
         }
 
         /* 校验 6：opcode 范围检查（仅管理 opcode，排除 IPC 数据面 opcode） */
         op_type = msg->opcode;
         if (!airy_sys_call_op_valid(op_type)) {
-                log_write(LOG_ERROR, "airy_decode_invoke: invalid opcode %u", op_type);
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: invalid opcode %u", op_type);
                 return -EINVAL;
         }
 
         /* 校验 7：权限检查——调用者是否有权操作此 cap */
         if (!cap_has_rights(cap, op_type_to_rights(op_type))) {
-                log_write(LOG_ERROR, "airy_decode_invoke: insufficient rights");
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: insufficient rights");
                 return -EPERM;
         }
 
         /* 校验 8：CNode 操作的特殊约束——不允许在自身子能力上进行危险操作 */
         if (obj_type == AIRY_CAP_CNODE &&
             !cnode_op_is_allowed(cap, op_type)) {
-                log_write(LOG_ERROR, "airy_decode_invoke: CNode op not allowed");
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: CNode op not allowed");
                 return -ENOTSUP;
         }
 
         /* 校验 9：对象类型-操作兼容性检查 */
         if (!cap_op_compatible(obj_type, op_type)) {
-                log_write(LOG_ERROR, "airy_decode_invoke: type %u op %u incompatible",
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: type %u op %u incompatible",
                           obj_type, op_type);
                 return -EINVAL;
         }
@@ -194,7 +195,7 @@ static int airy_decode_and_invoke(cap_t cap,
                 u32 free_bytes = cap_untyped_get_free_bytes(cap);
                 u32 need_bytes = msg->obj_count * (1u << msg->obj_size_bits);
                 if (need_bytes > free_bytes) {
-                        log_write(LOG_ERROR,
+                        log_write(AIRY_LOG_ERROR,
                                   "airy_decode_invoke: untyped retype needs %u, has %u",
                                   need_bytes, free_bytes);
                         return -ENOMEM;
@@ -206,7 +207,7 @@ static int airy_decode_and_invoke(cap_t cap,
                 u32 sec_ret;
                 sec_ret = security_cap_invoke_check(cap, op_type, msg);
                 if (sec_ret) {
-                        log_write(LOG_ERROR, "airy_decode_invoke: LSM denied (ret=%d)",
+                        log_write(AIRY_LOG_ERROR, "airy_decode_invoke: LSM denied (ret=%d)",
                                   sec_ret);
                         return -EACCES;
                 }
@@ -233,7 +234,7 @@ static int airy_decode_and_invoke(cap_t cap,
         /* 调用类型分派表执行实际操作 */
         ret = cap_op_dispatch[obj_type][op_type](ctx);
         if (ret)
-                log_write(LOG_ERROR, "airy_decode_invoke: dispatch failed, ret=%d", ret);
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: dispatch failed, ret=%d", ret);
 
         return ret;
         /* ctx 在 return 时通过 __free(kfree) 自动释放 —— OS-KER-224 */
@@ -342,7 +343,7 @@ Capability Folding 决策将 0.1.1 的 12 核心 syscall 精简为 v1.0.1 的 4 
 
 ## 3. C 接口定义
 
-所有系统调用通过 `AIRY_API` 宏导出，遵循 Linux 内核编码规范（Tab=8, snake_case, kernel-doc 注释）。头文件位置：`kernel/include/uapi/airy_syscalls.h`。
+所有系统调用通过 `AIRY_API` 宏导出，遵循 Linux 内核编码规范（Tab=8, snake_case, kernel-doc 注释）。头文件位置：`kernel/include/uapi/linux/airymax/syscalls.h`（[SC] 共享契约层 SSoT 物理宿主，对齐 [09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md) §2 R-01）。
 
 ### 3.1 导出宏
 
@@ -506,7 +507,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | Agent 认知 | `agent.slice` | 100-119 | < 100 ms | CoreLoopThree 思考 |
 | 批处理推理 | `batch.slice` | 120-139 | < 1 s | LLM 批量推理 |
 
-超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ETIMEDOUT` 错误码，由 SDK 层按重试策略处理（详见 [03-sdk-api.md](03-sdk-api.md) 第 7 章）。
+超出延迟预算的任务由 sub-scheduler 触发 `AIRY_ESCHED_DEADLINE`（-123）错误码（A-ULS 子空间，对齐 SSoT `error.h:101`，语义为调度截止时间超时），由 SDK 层按重试策略处理（详见 [03-sdk-api.md](03-sdk-api.md) 第 7 章）。
 
 ---
 
@@ -514,29 +515,35 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 
 错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] 补充共享头文件，SSoT 权威定义见 `30-interfaces/08-sc-error-contract.md` §2.4），与 agentrt 同源且部分代码共享（IRON-9 v3）。错误码统一使用 `AIRY_E*` 前缀，负值返回。以下为 SSoT 引用，权威定义见 `include/uapi/linux/airymax/error.h` 与 [08-sc-error-contract.md §2](08-sc-error-contract.md)，不得另起定义。
 
-### 6.1 POSIX 码空间 [-1, -40]
+> **⚠️ P0-I1 修复说明**（v1.0.1-fix）：原 §6.1 表格列举的错误码值（`AIRY_EINVAL=-1 / AIRY_ENOMEM=-2 / AIRY_ENOSYS=-3` 等）与 SSoT `error.h` L28-43 严重不符。SSoT 实际定义：`AIRY_EACCES=-1 / AIRY_EEXIST=-2 / AIRY_EFAULT=-3 / AIRY_EINTR=-4 / AIRY_EINVAL=-5 / AIRY_EIO=-6` 等。修复后所有错误码值严格对齐 SSoT。
+
+### 6.1 POSIX 码空间 `[-1, -40]`（对齐 SSoT error.h L28-43）
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
-| `AIRY_EINVAL` | -1 | 无效参数 | 参数为 NULL 或非法值 |
-| `AIRY_ENOMEM` | -2 | 内存不足 | 内核分配失败 |
-| `AIRY_ENOSYS` | -3 | 未实现 | 编号未实现或已废弃（v1.0.1 废弃 syscall 返回此码） |
-| `AIRY_EPERM` | -4 | 权限不足 | capability 令牌缺失 |
-| `AIRY_ENOENT` | -5 | 资源不存在 | 任务 ID / 快照 ID 不存在 |
-| `AIRY_EAGAIN` | -6 | 重试 | io_uring 队列满，需重试或走 io-wq |
-| `AIRY_EMSGSIZE` | -7 | 消息过大 | payload 超过最大长度 |
-| `AIRY_EBADF` | -8 | 描述符错误 | ring fd / capability 句柄无效 |
-| `AIRY_EBUSY` | -9 | 资源繁忙 | 任务正在迁移，无法快照 |
-| `AIRY_ENOTSUP` | -10 | 不支持 | 硬件不支持（如无 CXL 设备） |
-| `AIRY_ETIMEDOUT` | -11 | 超时 | 调度等待超时 |
-| `AIRY_ECONFLICT` | -12 | 状态冲突 | 任务状态不允许当前操作 |
-| `AIRY_ECANCELED` | -13 | 已取消 | fastpath CANCEL 状态（详见 [07-ipc-fastpath.md §2.3](07-ipc-fastpath.md)） |
-| `AIRY_EALREADY` | -14 | 已完成 | CANCEL 时资源已被对端取走 |
-| `AIRY_EPROTO` | -15 | 协议错误 | magic 校验失败 |
-| `AIRY_EINTR` | -16 | 信号中断 | slowpath wait_event_interruptible 被信号打断 |
-| `AIRY_EFAULT` | -17 | 地址错误 | 接收缓冲区被 munmap |
+| `AIRY_EACCES` | -1 | 拒绝访问 | capability 令牌缺失 |
+| `AIRY_EEXIST` | -2 | 已存在 | 资源已存在（如重复注册） |
+| `AIRY_EFAULT` | -3 | 地址错误 | 接收缓冲区被 munmap |
+| `AIRY_EINTR` | -4 | 信号中断 | slowpath wait_event_interruptible 被信号打断 |
+| `AIRY_EINVAL` | -5 | 无效参数 | 参数为 NULL 或非法值 |
+| `AIRY_EIO` | -6 | I/O 错误 | 底层 I/O 失败 |
+| `AIRY_EISDIR` | -7 | 是目录 | 期望文件但传入目录 |
+| `AIRY_ENOENT` | -8 | 资源不存在 | 任务 ID / 快照 ID 不存在 |
+| `AIRY_ENOMEM` | -9 | 内存不足 | 内核分配失败 |
+| `AIRY_ENOSPC` | -10 | 空间不足 | 磁盘/ quota 满 |
+| `AIRY_ENOTSUP` | -11 | 不支持 | 硬件不支持（如无 CXL 设备） |
+| `AIRY_EPERM` | -12 | 权限不足 | 操作不允许 |
+| `AIRY_ERANGE` | -13 | 范围错误 | 数值越界 |
+| `AIRY_EBUSY` | -16 | 资源繁忙 | 任务正在迁移，无法快照 |
+| `AIRY_ECANCELED` | -19 | 已取消 | fastpath CANCEL 状态（详见 [07-ipc-fastpath.md §2.3](07-ipc-fastpath.md)） |
+| `AIRY_EAGAIN` | -35 | 重试 | io_uring 队列满，需重试或走 io-wq |
 
-### 6.2 IPC 码空间 [-41, -70]（v1.0.1 Capability Folding）
+> **注**：原虚构错误码 `AIRY_ENOSYS`/`AIRY_EMSGSIZE`/`AIRY_EBADF`/`AIRY_ETIMEDOUT`/`AIRY_ECONFLICT`/`AIRY_EALREADY`/`AIRY_EPROTO` 不在 SSoT `error.h` POSIX 子空间定义。其中：
+> - `AIRY_ENOSYS` 在 Linux 内核侧使用 `-ENOSYS`（标准 errno），agentrt 错误码体系不重复定义
+> - `AIRY_ETIMEDOUT` 在 A-ULS 子空间定义为 `AIRY_ESCHED_DEADLINE=-123`（语义对齐调度截止时间超时）
+> - 其余虚构码移除，相关场景使用 SSoT 已定义的等价码
+
+### 6.2 IPC 码空间 `[-41, -70]`（v1.0.1 Capability Folding，对齐 SSoT error.h L45-62）
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
@@ -546,6 +553,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_EIPC_HDRSIZE` | -44 | 消息头大小错误 | C-S4 校验失败（hdr_size != 128） |
 | `AIRY_EIPC_RESERVED` | -45 | reserved 非零 | C-S4 校验失败（reserved[72] 含非零字节） |
 | `AIRY_EIPC_FLAGS` | -46 | flags 非法 | C-S10 校验失败（含 ENCRYPT/COMPRESS 或 RESERVED 位） |
+| `AIRY_EIPC_FROZEN` | -53 | Ring 已冻结 | C-S0 fastpath freeze 检查（A-ULS 控制的独立错误码，非 alias） |
 | `AIRY_EIPC_NOTSUPP` | -47 | 不支持的操作 | C-S10 校验失败（flags 含未实现特性） |
 | `AIRY_EIPC_KFIFO` | -48 | kfifo 满 | C-S6 校验失败（kfifo_avail 不足） |
 | `AIRY_EIPC_RECLAIM` | -49 | reclaim flag 错误 | C-S7 校验失败 |
@@ -553,7 +561,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_EIPC_CRC32` | -51 | CRC32 校验失败 | C-S12 校验失败（header[0:52) + payload 校验不过） |
 | `AIRY_EIPC_TIMEOUT` | -52 | IPC 超时 | slowpath 等待超时 |
 
-### 6.3 Capability 码空间 [-71, -100]（v1.0.1 Capability Folding）
+### 6.3 Capability 码空间 `[-71, -100]`（v1.0.1 Capability Folding，对齐 SSoT error.h L64-82）
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
@@ -569,22 +577,36 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_ECAP_FORGED` | -80 | Badge 伪造 | C-S9 校验失败（badge_randtag != agent_caps[randtag]），触发 `AIRY_FAULT_CAP_FORGED` |
 | `AIRY_ECAP_PERM` | -81 | 权限不足 | C-S9 校验失败（badge_perms 不含 opcode 对应权限位） |
 | `AIRY_ECAP_FROZEN` | -82 | ring 已冻结 | C-S0 校验失败（ring->frozen == true） |
+| `AIRY_ESEC_D_THROTTLED` | -83 | sec_d 限流拒绝 | sec_d 限流器队列已满 |
 
-### 6.4 [SC] 码空间 [-101, -200]
+### 6.4 其他子空间 `[-101, -240]`（对齐 SSoT error.h L84-156）
 
-[SC] 共享契约层错误码，agentrt 与 agentrt-linux 同源。详见 [08-sc-error-contract.md §2.5](08-sc-error-contract.md)。
+SSoT `error.h` 在 `[-101, -240]` 范围内还定义了 7 个子空间，详见 [08-sc-error-contract.md §2.5-§2.11](08-sc-error-contract.md)：
 
-### 6.5 [DSL] 码空间 [-201, -300]（v1.0.1 新增）
+| 子空间 | 值域 | 已定义数 | 关键错误码 |
+|--------|------|---------|----------|
+| Config | `[-101, -120]` | 5 | `AIRY_ECFGVERSION=-101` ~ `AIRY_ECFGIO=-105` |
+| A-ULS | `[-121, -140]` | 10 | `AIRY_ESCHED_POLICY=-121` ~ `AIRY_ELIFECYCLE_ZOMBIE=-130` |
+| MemoryRoVol | `[-141, -160]` | 8 | `AIRY_EMEM_TIER=-141` ~ `AIRY_EMEM_OOM=-148` |
+| Cognition | `[-161, -180]` | 6 | `AIRY_ECOG_PHASE=-161` ~ `AIRY_ECOG_CONFIDENCE=-166` |
+| Log | `[-181, -200]` | 6 | `AIRY_ELOG_RING=-181` ~ `AIRY_ELOG_MAGIC=-186` |
+| Object | `[-201, -220]` | 4 | `AIRY_EOBJ_HANDLE=-201` ~ `AIRY_EOBJ_GONE=-204` |
+| Syscall | `[-221, -240]` | 4 | `AIRY_ESYS_NUMBER=-221` ~ `AIRY_ESYS_ABI=-224` |
 
-[DSL] 降级生存层错误码。详见 [08-sc-error-contract.md §2.6](08-sc-error-contract.md) 与 [10-architecture/11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md)。
+> **⚠️ P0-I2 修复说明**（v1.0.1-fix）：原 §6.4 仅引用虚构的 `[SC] 码空间 [-101, -200]` 与 §6.5 `[DSL] 码空间 [-201, -300]`，与 SSoT `error.h` 实际 10 子空间划分严重不符。修复后对齐 SSoT 实际定义的 7 个非 POSIX/IPC/Capability 子空间。
 
-### 6.6 Fault 码空间 [0x1000, 0x1FFF]（v1.0.1 新增）
+### 6.5 Fault 码空间 `[0x1000, 0x1FFF]`（对齐 SSoT error.h L163-169，6 个 Fault 码）
+
+> **⚠️ P0-I3 修复说明**（v1.0.1-fix）：原 §6.6 仅列出 3 个 Fault 码（`AIRY_FAULT_CAP_FORGED/CAP_LEAK/RING_CORRUPT`），与 SSoT `error.h` L163-169 实际定义的 6 个 Fault 码不符。修复后对齐 SSoT 全部 6 个 Fault 码定义。
 
 | 错误码 | 值 | 含义 | 触发场景 |
 |--------|-----|------|---------|
 | `AIRY_FAULT_CAP_FORGED` | 0x1001 | Badge 伪造攻击 | C-S9 Random Tag 失配，触发安全告警 |
 | `AIRY_FAULT_CAP_LEAK` | 0x1002 | Badge 泄漏 | Badge 出现在非预期 src_task |
 | `AIRY_FAULT_RING_CORRUPT` | 0x1003 | Ring 数据损坏 | C-S12 CRC32 校验失败 |
+| `AIRY_FAULT_TIMEOUT` | 0x1004 | Agent 心跳超时 | A-ULS 检测到 Agent 心跳超时且未响应冻结 |
+| `AIRY_FAULT_ABNORMAL_CAP` | 0x1005 | Capability 异常使用 | Capability 树完整性校验失败 |
+| `AIRY_FAULT_VM_FAULT` | 0x1006 | VM 页错误 | 共享页映射损坏（MemoryRovol 检测） |
 
 ### 6.7 错误码使用规范
 
@@ -592,7 +614,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 /* 正确：检查返回值并传递错误码 */
 int ret = airy_sys_call(cap, &msg);
 if (ret < 0) {
-    log_write(LOG_ERROR, "call failed: errno=%d (%s)",
+    log_write(AIRY_LOG_ERROR, "call failed: errno=%d (%s)",
               ret, airy_strerror(ret));
     return ret;
 }
@@ -652,7 +674,7 @@ if (ret < 0) {
 | `ipc.h` | `struct airy_ipc_msg_hdr` Layout C v4 128B 消息头（magic 0x41524531 'ARE1' + `capability_badge` offset 40 + `crc32` offset 52）+ 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
 | `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
-| `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPTION/THINKING/ACTION） | `airy_sys_clt_notify` |
+| `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPT/THINK/ACT） | `airy_sys_clt_notify` |
 | `error.h` | POSIX [-1,-40] + IPC [-41,-70] + Capability [-71,-100] + [SC] [-101,-200] + [DSL] [-201,-300] + Fault [0x1000,0x1FFF] | 全部 4 个 syscall + fastpath C-S0~C-S12 |
 
 ### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux 系统调用映射
@@ -673,7 +695,7 @@ if (ret < 0) {
 | syscall 表注册 | 无（用户态直接 libc syscall() 或 io_uring） | `syscall_64.tbl` 新增段（4 个注册号 548-551） | 跨平台约束 |
 | ABI 稳定性 | 编译期符号绑定 | 内核 syscall 号绑定（MAJOR 锁定） | 工具链差异 |
 | 错误码返回 | `AIRY_E*` 负值（用户态 errno 互转） | `AIRY_E*` 负值（内核 IS_ERR_VALUE） | errno 语义差异 |
-| 调用入口 | `airy_syscalls.h`（CMake 安装） | `uapi/airy_syscalls.h`（Kbuild 导出） | 构建系统差异 |
+| 调用入口 | `airy_syscalls.h`（CMake 安装，用户态 libc 包装） | `uapi/linux/airymax/syscalls.h`（Kbuild 导出，[SC] SSoT 物理宿主） | 构建系统差异 |
 | Badge 编译 | 不存在（agentrt 用户态 `capability_badge=0`，H3） | sec_d 通过 `airy_sys_call + COMPILE_BADGE` 编译（H4） | 安全模型差异 |
 | fastpath C-S9 | 不存在（agentrt 用户态不感知 Badge） | 内联 `airy_cap_badge_ok()` ~10ns（[SS] 语义同源层） | 实现语义差异 |
 

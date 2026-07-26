@@ -124,7 +124,7 @@ C 代码风格遵循 `C_Cpp_coding_style.md Part I`，agentrt-linux 补充约定
 ```c
 /* 正确：4 空格 + 1TBS */
 if (ret < 0) {
-    log_write(LOG_ERROR, "ipc_send failed: errno=%d", ret);
+    log_write(AIRY_LOG_ERROR, "ipc_send failed: errno=%d", ret);
     return ret;
 }
 ```
@@ -203,25 +203,28 @@ pub async fn submit_task(&self, desc: TaskDesc) -> Result<i32, Error> {
 
 ### 5.2 时间戳
 
-- 使用 `CLOCK_REALTIME` 纳秒时间戳，与 IPC 消息头 `timestamp_ns` 对齐。
+- 使用 `CLOCK_MONOTONIC` 纳秒时间戳，与 IPC 消息头 `timestamp_ns`（[SC] `ipc.h:80`）和日志记录 `timestamp_ns`（[SC] `log_types.h:26`）对齐。
+- 禁用 `CLOCK_REALTIME`（避免 NTP 跳变导致日志乱序与 IPC 时序错位）。
 - 日志显示对齐北京时间（UTC+8）。
 - 格式: `YYYY-MM-DD HH:MM:SS.nnnnnnnnn`。
 
 ### 5.3 日志 API
 
-必须使用 `log_write()` 或 `log_write_va()`，禁止 `fprintf` / `printf` 直接输出：
+必须使用 `log_write()` 或 `log_write_va()`，禁止 `fprintf` / `printf` 直接输出。日志级别使用 `AIRY_LOG_*` 前缀（对齐 [SC] `log_types.h:37-44`，详见 [09-sc-log-types-contract.md](09-sc-log-types-contract.md) §3.1）：
 
 ```c
-/* 日志 API（airy_log.h） */
-#define LOG_DEBUG 0
-#define LOG_INFO  1
-#define LOG_WARN  2
-#define LOG_ERROR 3
-#define LOG_FATAL 4
+/* 日志级别（对齐 SSoT kernel/include/uapi/linux/airymax/log_types.h L37-44） */
+#define AIRY_LOG_DEBUG   0   /* 调试信息（最详细，生产关闭） */
+#define AIRY_LOG_INFO    1   /* 常规信息 */
+#define AIRY_LOG_WARN    2   /* 警告（可恢复异常） */
+#define AIRY_LOG_ERROR   3   /* 错误（可恢复但需关注） */
+#define AIRY_LOG_FATAL   4   /* 致命（不可恢复，触发 Panic/Fault） */
 
 AIRY_API void log_write(int level, const char *fmt, ...);
 AIRY_API void log_write_va(int level, const char *fmt, va_list ap);
 ```
+
+> **SSoT 对齐说明（v3.5 修复 P0-I6）**：旧文档使用 `LOG_DEBUG`/`LOG_INFO` 等无前缀宏名，与 SSoT `log_types.h` 实际定义 `AIRY_LOG_DEBUG`/`AIRY_LOG_INFO` 等带前缀宏名不一致，已统一为 `AIRY_LOG_*` 前缀。
 
 ### 5.4 日志格式
 
@@ -386,7 +389,7 @@ io_uring_submit(IORING_OP_URING_CMD, hdr, payload);
 /* 正确：检查返回值并记录日志 */
 int ret = io_uring_submit(IORING_OP_URING_CMD, hdr, payload);
 if (ret < 0) {
-    log_write(LOG_ERROR, "io_uring submit failed: errno=%d (%s)",
+    log_write(AIRY_LOG_ERROR, "io_uring submit failed: errno=%d (%s)",
               ret, airy_strerror(ret));
     return ret;
 }
@@ -410,7 +413,7 @@ dst[dst_size - 1] = '\0';
 fprintf(stderr, "ipc_send failed\n");
 
 /* 正确：使用 log_write 并携带结构化字段 */
-log_write(LOG_ERROR, "ipc_send failed: trace_id=0x%lx errno=%d",
+log_write(AIRY_LOG_ERROR, "ipc_send failed: trace_id=0x%lx errno=%d",
           hdr->trace_id, ret);
 ```
 
@@ -425,7 +428,7 @@ free(buf);
 /* 正确：检查返回值 + goto cleanup */
 void *buf = malloc(SIZE);
 if (buf == NULL) {
-    log_write(LOG_ERROR, "malloc failed: size=%zu", (size_t)SIZE);
+    log_write(AIRY_LOG_ERROR, "malloc failed: size=%zu", (size_t)SIZE);
     return -AIRY_ENOMEM;
 }
 process(buf);

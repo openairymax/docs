@@ -607,7 +607,7 @@ Airymax 将乔布斯与艾夫的设计哲学确立为 A-1 简约至上原则的�
 | `sched.h` | S 系统观 | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED_AGENT 宏）+ AIRY_CAP_MAX_AGENTS=1024 | kernel / cognition |
 | `memory_types.h` | E 工程观 | MemoryRovol L1-L4 + GFP 掩码语义 + PMEM 接口 | kernel / memory |
 | `security_types.h` | E 工程观 | 41 capability + 250 LSM 钩子 + Cupolas blob 布局 | kernel / security |
-| `cognition_types.h` | C 认知观 | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 | kernel / cognition |
+| `cognition_types.h` | C 认知观 | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式 | kernel / cognition |
 | `syscalls.h` | K 接口契约 | 4 核心 + 20 预留 = 24 槽位（1 Capability Invocation + 3 控制原语，v1.0.1 Capability Folding 后） | kernel / cognition |
 | `uapi_compat.h` | E 工程观 | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）支持 E-4 跨平台一致性 | IRON-9 跨端 |
 | `lsm_types.h` | E 工程观 | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构（E-1 安全内生） | kernel / security |

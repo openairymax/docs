@@ -67,22 +67,62 @@ Logger Daemon 是 A-ULP 模块的用户态消费者，承担所有耗时操作�
 
 ## §2 mmap 读取：从 Ring Buffer 共享内存读取 128B raw binary 记录
 
-### 2.1 mmap 映射建立
+### 2.1 mmap 映射建立（P0-D3 + P0-D8 修复：3 区域分页映射）
 
-Logger Daemon 启动时通过 `/dev/airy_log` 字符设备的 mmap 建立共享映射。内核侧使用 `alloc_pages(GFP_KERNEL)` 分配连续物理页（**不使用 DMA 一致性内存**），通过 `remap_pfn_range` 映射到用户态：
+Logger Daemon 启动时通过 `/dev/airy_log` 字符设备的 mmap 建立 3 个独立共享映射。内核侧使用 `alloc_pages(GFP_KERNEL)` 分配连续物理页（**不使用 DMA 一致性内存**），通过 `remap_pfn_range` 按 offset 映射不同区域到用户态：
 
 ```c
-/* services/daemons/logger_d/main.c —— mmap 映射建立 */
-static void *logger_ring_mmap(int fd, size_t size)
+/* services/daemons/logger_d/main.c —— mmap 映射建立（P0-D3 + P0-D8 修复） */
+
+/* mmap 偏移（与内核侧 AIRY_LOG_MMAP_OFF_* 对齐，单位：页） */
+#define LOGGER_MMAP_OFF_RO_HEADER  0  /* Page 0: 只读 header */
+#define LOGGER_MMAP_OFF_RW_TAIL    1  /* Page 1: 可写 tail */
+#define LOGGER_MMAP_OFF_RO_DATA    2  /* Page 2+: 只读 data */
+
+struct logger_ring_map {
+    struct airy_log_ring_ro_header *ro_hdr;   /* 只读 header 映射 */
+    struct airy_log_ring_rw_tail   *rw_tail;  /* 可写 tail 映射 */
+    void                           *ro_data;  /* 只读 data 映射 */
+    size_t                          data_size;
+};
+
+static int logger_ring_mmap(int fd, size_t data_size, struct logger_ring_map *map)
 {
-    void *addr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-    if (addr == MAP_FAILED) {
-        syslog(LOG_ERR, "airy: logger mmap failed: %m");
-        return NULL;
-    }
-    /* madvise 提示：顺序读取，内核可预读 */
-    madvise(addr, size, MADV_SEQUENTIAL);
-    return addr;
+    /* P0-D8 修复：3 区域分页映射
+     * - header 页：PROT_READ（禁止用户态篡改 head/commit/frozen）
+     * - tail 页：PROT_READ|PROT_WRITE（Logger Daemon 写 tail 索引，P0-D3 修复）
+     * - data 页：PROT_READ（禁止用户态篡改日志记录） */
+
+    /* 1. 映射只读 header（Page 0） */
+    map->ro_hdr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED,
+                       fd, LOGGER_MMAP_OFF_RO_HEADER * PAGE_SIZE);
+    if (map->ro_hdr == MAP_FAILED)
+        goto fail_hdr;
+
+    /* 2. 映射可写 tail（Page 1）—— P0-D3 修复：必须可写 */
+    map->rw_tail = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                        fd, LOGGER_MMAP_OFF_RW_TAIL * PAGE_SIZE);
+    if (map->rw_tail == MAP_FAILED)
+        goto fail_tail;
+
+    /* 3. 映射只读 data（Page 2+） */
+    map->data_size = data_size;
+    map->ro_data = mmap(NULL, data_size, PROT_READ, MAP_SHARED,
+                        fd, LOGGER_MMAP_OFF_RO_DATA * PAGE_SIZE);
+    if (map->ro_data == MAP_FAILED)
+        goto fail_data;
+
+    /* madvise 提示：data 区域顺序读取，内核可预读 */
+    madvise(map->ro_data, data_size, MADV_SEQUENTIAL);
+    return 0;
+
+fail_data:
+    munmap(map->rw_tail, PAGE_SIZE);
+fail_tail:
+    munmap(map->ro_hdr, PAGE_SIZE);
+fail_hdr:
+    syslog(LOG_ERR, "airy: logger mmap failed: %m");
+    return -1;
 }
 ```
 
@@ -94,6 +134,7 @@ mmap 映射首部是 Ring Buffer 元数据头（`struct airy_log_ring_header`）
 /* services/daemons/logger_d/ring.h —— Ring Buffer 用户态视图 */
 struct airy_log_ring_header {
     __u64 head;           /* 生产者 reserve 位置（原子，仅读） */
+    __u64 commit;         /* 生产者 commit 位置（原子，仅读）—— P0-D1 修复 */
     __u64 tail;           /* 消费者 read 位置（Logger Daemon 写） */
     __u32 capacity;       /* Ring 容量（记录数） */
     __u32 record_size;    /* 单条记录大小（128B） */
@@ -121,15 +162,17 @@ Logger Daemon 通过 io_uring 注册 eventfd 读事件，被唤醒后批量消�
 /* services/daemons/logger_d/main.c —— 批量消费 */
 static void logger_consume(struct airy_log_ring_header *hdr)
 {
-    __u64 head, tail;
-    /* do-while 防止生产者在消费期间新增记录导致漏消费 */
+    __u64 commit, tail;
+    /* P0-D1 修复：消费者读取 commit 索引（而非 head），只消费已提交的记录。
+     * commit 仅在 128B 数据完全写入后推进，确保不会读到半成品数据。
+     * do-while 防止生产者在消费期间新增提交导致漏消费 */
     do {
-        /* smp_load_acquire 确保读到最新 head（对应内核 smp_store_release） */
-        head = __atomic_load_n(&hdr->head, __ATOMIC_ACQUIRE);
+        /* smp_load_acquire 确保读到最新 commit（对应内核 smp_store_release） */
+        commit = __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE);
         tail = hdr->tail;
-        while (tail < head) {
+        while (tail < commit) {
             struct airy_log_record *rec = record_at(hdr, tail % hdr->capacity);
-            /* magic 校验：防止读到未完全写入的记录 */
+            /* P0-D1 修复后 commit 已保证数据完整，magic 校验保留为防御性检查 */
             if (likely(rec->magic == AIRY_LOG_MAGIC)) {
                 logger_format_and_write(rec);
             }
@@ -137,16 +180,16 @@ static void logger_consume(struct airy_log_ring_header *hdr)
         }
         /* 更新 tail 索引，通知生产者可覆盖旧记录 */
         __atomic_store_n(&hdr->tail, tail, __ATOMIC_RELEASE);
-    } while (head != __atomic_load_n(&hdr->head, __ATOMIC_ACQUIRE));
+    } while (commit != __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE));
 }
 ```
 
 ### 2.4 缓存一致性
 
-x86_64 架构下 CPU 默认缓存一致，Logger Daemon 通过 `mmap(PROT_READ, MAP_SHARED)` 读取到的数据即为内核写入的最新数据。可见性由以下保证：
+x86_64 架构下 CPU 默认缓存一致，Logger Daemon 通过 `mmap(PROT_READ | PROT_WRITE, MAP_SHARED)`（P0-D3 修复：原 PROT_READ 导致写 tail 时 SIGSEGV）读取到的数据即为内核写入的最新数据。可见性由以下保证：
 
-- **内核侧**：commit 时 `smp_store_release(&hdr->head)` 确保 128B 写入在 head 更新前完成
-- **用户态侧**：读取 head 使用 `__ATOMIC_ACQUIRE` 确保读到 head 后的记录数据已可见
+- **内核侧**：commit 时 `smp_store_release(&hdr->commit)` 确保 128B 写入在 commit 更新前完成（P0-D1 修复：原写 head，现写 commit）
+- **用户态侧**：读取 commit 使用 `__ATOMIC_ACQUIRE` 确保读到 commit 后的记录数据已可见
 - **无需 cache flush**：缓存一致架构无需 `flush_cache_range` 等昂贵操作
 
 ---
@@ -578,9 +621,9 @@ Logger Daemon 是用户态进程，可能因 OOM、段错误、信号等原因�
 | 环节 | 设计 | 效果 |
 |------|------|------|
 | Ring Buffer 在内核态 | 内核 alloc_pages 分配，独立于用户态进程 | Logger Daemon 崩溃不影响生产者写入 |
-| 覆盖写策略 | Ring Buffer 满时覆盖最旧记录（可配置阻塞写） | 崩溃期间生产者不阻塞 |
+| 丢弃写策略（P0-D2 修复） | Ring Buffer 满时生产者返回 NULL，走 printk_safe 回退（原覆盖写需生产者越权写 tail，违反 SPSC） | 崩溃期间生产者不阻塞 |
 | systemd 自动重启 | `Restart=always` + `RestartSec=1s` | 1 秒内自动重启 |
-| 重启后继续消费 | 从 `tail` 索引继续消费 | 仅丢失崩溃期间被覆盖的记录 |
+| 重启后继续消费 | 从 `tail` 索引继续消费（P0-D1 修复：基于 commit 判断可消费范围） | 仅丢失崩溃期间因 Ring 满被丢弃的记录 |
 | eventfd 状态恢复 | 重启后重新注册 eventfd | 恢复通知通道 |
 
 ### 6.2 systemd unit 配置
@@ -620,16 +663,17 @@ Logger Daemon 重启后通过以下步骤恢复消费状态：
 /* services/daemons/logger_d/main.c —— 重启后恢复 */
 static int logger_recover_state(struct airy_log_ring_header *hdr)
 {
-    /* 1. 读取当前 head/tail 索引 */
-    __u64 head = __atomic_load_n(&hdr->head, __ATOMIC_ACQUIRE);
+    /* P0-D1 修复：使用 commit 索引判断可消费范围（而非 head）
+     * 1. 读取当前 commit/tail 索引 */
+    __u64 commit = __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE);
     __u64 tail = hdr->tail;
 
-    /* 2. 若 head - tail > capacity，说明崩溃期间数据已被覆盖，
-     *    将 tail 对齐到 head - capacity，跳过已丢失记录 */
-    if (head - tail > hdr->capacity) {
-        tail = head - hdr->capacity;
+    /* 2. 若 commit - tail > capacity，说明崩溃期间数据已被覆盖，
+     *    将 tail 对齐到 commit - capacity，跳过已丢失记录 */
+    if (commit - tail > hdr->capacity) {
+        tail = commit - hdr->capacity;
         syslog(LOG_WARNING, "airy: logger recovered, skipped %llu lost records",
-               (unsigned long long)(head - tail - hdr->capacity));
+               (unsigned long long)(commit - tail - hdr->capacity));
     }
 
     /* 3. 从 tail 开始消费，记录消费位置 */
@@ -690,6 +734,7 @@ static int logger_recover_state(struct airy_log_ring_header *hdr)
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Logger Daemon 详细设计；mmap 读取 Ring Buffer 128B raw binary 记录；sprintf 格式化引擎；level/facility/caller_id 三级过滤；按大小+时间轮转、gzip 压缩归档；systemd 自动重启崩溃恢复，Ring Buffer 不丢失；双 Daemon 主备冗余可选 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1-fix | 2026-07-26 | P0-D1/D3 修复：mmap 改为 PROT_READ\|PROT_WRITE（原 PROT_READ 写 tail 时 SIGSEGV）；Ring Buffer header 添加 commit 索引字段；批量消费读取 commit 而非 head（避免读到未提交数据）；重启恢复基于 commit 判断丢失范围 |
 
 ---
 

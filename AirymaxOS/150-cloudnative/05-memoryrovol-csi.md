@@ -203,7 +203,7 @@ parameters:
 
 1. 解析 `layers` 参数，确定 L1-L4 启用层级
 2. 分配各层存储（L1/L4 → CXL/PMEM，L2/L3 → 本地 DRAM）
-3. 初始化 L1-L4 数据结构（[SC] `airy_l1_record_t` 等）
+3. 初始化 L1-L4 数据结构（层级枚举对齐 [SC] `enum airy_mem_level` / `AIRY_MEM_HOT/WARM/COLD/PMEM`，L1-L4 专属数据结构为 API 层说明性示例，非 SSoT 定义）
 4. 返回 `volume_id`
 
 ### 4.2 DeleteVolume

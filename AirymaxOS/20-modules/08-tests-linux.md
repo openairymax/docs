@@ -434,7 +434,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 | 调度器框架         | 公平性、有界延迟  | Isabelle/HOL | task\_desc magic 0x41475453 + vtime \[SC] |
 | MemoryRovol   | 快照一致性     | Coq          | MemoryRovol L1-L4 \[SC]                   |
 | struct\_ops   | 状态机正确性    | Isabelle/HOL | INIT/REGISTERED/ACTIVE/DRAINING \[SC]     |
-| CoreLoopThree | 阶段转换正确性   | Coq          | PERCEPTION/THINKING/ACTION \[SC]          |
+| CoreLoopThree | 阶段转换正确性   | Coq          | PERCEPT/THINK/ACT \[SC]          |
 | fastpath C-S9 | 11 属性（含 CWE 映射） | CBMC | security_types.h Badge 布局 \[SC] |
 
 ### 4.4 Soak Test（72 小时持续运行）\[IND]

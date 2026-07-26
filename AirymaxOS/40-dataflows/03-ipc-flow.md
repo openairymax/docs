@@ -16,13 +16,13 @@ IPC 消息流是 agentrt-linux 进程间通信的核心数据流，落地于 `ke
 **核心特征**：
 
 1. **io_uring 零拷贝**（FR-003, FR-009）：通过共享环形缓冲区（SQ ring + CQ ring）避免用户态 ↔ 内核态数据拷贝与 syscall 开销，I/O 延迟降低 > 30%（NFR-P-002）。
-2. **128B 定长消息头**（[SC] 共享契约层）：同源 agentrt AgentsIPC，定长 128 字节，packed 紧凑布局（Layout C v4 SSoT），128 字节 = 2 cache lines，跨系统互通无适配层。**v1.1: offset 40-47 为 `capability_badge` 字段（64-bit Native Word）**。
+2. **128B 定长消息头**（[SC] 共享契约层）：同源 agentrt AgentsIPC，定长 128 字节，packed 紧凑布局（Layout C v4 SSoT），128 字节 = 2 cache lines，跨系统互通无适配层。**v1.0.1: offset 40-47 为 `capability_badge` 字段（64-bit Native Word），由内核在 SQE 入队时注入（P0-D4 安全修复）**。
 3. **5 种 payload 协议**：REQUEST / RESPONSE / EVENT / STREAM / CONTROL，覆盖请求-响应、事件订阅、流式传输、控制指令 4 类通信模式。
 4. **trace_id 贯穿**：每条消息携带 `trace_id`，通过 OpenTelemetry 全链路追踪（NFR-O-002），语义同源 io_uring `user_data` 字段。
 5. **跨节点扩展**：基于 CXL 3.0 / RDMA / NVLink 实现超节点 OS 跨节点 IPC（FR-048）。
 6. **零 syscall 提交**：SQPOLL 内核轮询线程 + DEFER_TASKRUN 模式实现零 syscall 高频 IPC。
 7. **（v1.0.1 新增）Capability Folding 单平面架构**：IPC 数据传递即能力校验，fastpath C-S9 内联 Badge 校验（~10ns），无独立控制面 syscall。详见 [10-unify-design.md §8](../10-architecture/10-unify-design.md)。
-8. **（v1.0.1 新增）6 条硬约束 H1-H6**：Layout C v4 总长 128B / magic 0x41524531 / capability_badge offset 40-47 / agentrt 用户态 badge=0 / sec_d 编译 + fastpath C-S9 校验 / [DSL] 降级 badge=0 跳过。详见 [10-unify-design.md §8.2](../10-architecture/10-unify-design.md)。
+8. **（v1.0.1 新增）6 条硬约束 H1-H6**：Layout C v4 总长 128B / magic 0x41524531 / capability_badge offset 40-47 / **H3: agentrt 用户态 badge=0 表示"待内核注入"，内核在 SQE 入队时覆写为发送进程有效 Badge（P0-D4 安全修复：禁止用户态跳过 C-S9）** / sec_d 编译 + fastpath C-S9 强制校验 / [DSL] 降级 badge=0 触发 `-AIRY_EIPC_CAP` 拒绝。详见 [10-unify-design.md §8.2](../10-architecture/10-unify-design.md)。
 
 **性能目标**（NFR-P-002）：
 
@@ -878,13 +878,15 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 | 13 | [IND] REGISTER_RESTRICTIONS | 不涉及（用户态用 capability） | Cupolas capability 替代 SQE 白名单 | PASS 独立正确 |
 | 14 | [IND] cgroup 集成 | 不涉及 | cgroup v2 + agentrt-linux 扩展独立 | PASS 独立正确 |
 | 15 | 跨平台兼容性 | 跨 Linux/macOS/Windows | 仅 Linux（agentrt-linux 专属） | PASS agentrt 保持跨平台，agentrt-linux 仅 Linux |
-| **16** | **[SC] capability_badge 字段**（v1.0.1 新增） | **`capability_badge=0`（H3 硬约束，跳过 C-S9）** | **`capability_badge` = 64-bit Native Word（Epoch + RandomTag + Perms），fastpath C-S9 校验** | **PASS [SC] 数据结构共享，[SS] 校验机制同源** |
+| **16** | **[SC] capability_badge 字段**（v1.0.1 新增） | **`capability_badge=0`（H3 硬约束：表示"待内核注入"，用户态不能填充有效 Badge）** | **`capability_badge` = 64-bit Native Word（Epoch + RandomTag + Perms），由内核在 SQE 入队时覆写注入，fastpath C-S9 强制校验** | **PASS [SC] 数据结构共享，[SS] 校验机制同源（P0-D4 安全修复：消除 badge=0 跳过漏洞）** |
 | **17** | **[SC] crc32 字段**（v1.0.1 新增） | **同源 crc32（覆盖 header[0:52) + payload）** | **同源 crc32** | **PASS 完全共享** |
-| **18** | **[SS] fastpath C-S9 Badge 校验**（v1.0.1 新增） | **不涉及（badge=0 跳过 C-S9）** | **`airy_cap_badge_ok()` ~10ns（3 个 READ_ONCE + 位运算）** | **PASS [IND] 独立正确（agentrt 用户态无 Badge 校验）** |
+| **18** | **[SS] fastpath C-S9 Badge 校验**（v1.0.1 新增） | **不涉及（agentrt 用户态 badge=0 表示"待内核注入"，跨平台无内核加速路径）** | **`airy_cap_badge_ok()` ~10ns（3 个 READ_ONCE + 位运算），内核在 SQE 入队时覆写注入发送进程有效 Badge 后强制校验** | **PASS [IND] 独立正确（agentrt 用户态无 Badge 校验；agentrt-linux 内核强制 C-S9，消除 P0-D4 badge=0 绕过漏洞）** |
 | **19** | **[SC] opcode 表**（v1.0.1 新增） | **同源 7 opcode（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE）** | **同源 7 opcode** | **PASS 完全共享** |
 | **20** | **[IND] syscall 数量**（v1.0.1 新增） | **0 个（用户态无 syscall，走 mmap）** | **4 个核心 syscall（548-551，原 12 syscall 精简）** | **PASS [IND] 独立正确** |
 
-**结论**：20 项检查全部 PASS。IPC 数据流与 agentrt AgentsIPC 在 [SC] 共享契约层完全一致（消息头/magic/结构/5 协议/trace_id/entries/capability_badge/crc32/opcode 9 项），[SS] 语义同源层 API 语义等价 + Badge 校验机制同源，[IND] 独立层正确分离（io-wq/NO_MMAP/RESTRICTIONS/cgroup/syscall 数量 内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态（capability_badge=0 跳过 C-S9，H3 硬约束）；agentrt-linux 在 [IND] 独立层正确引入 io_uring 内核加速路径 + Capability Folding fastpath C-S9 Badge 校验，遵循 IRON-9 v3 同源且部分代码共享原则。
+**结论**：20 项检查全部 PASS。IPC 数据流与 agentrt AgentsIPC 在 [SC] 共享契约层完全一致（消息头/magic/结构/5 协议/trace_id/entries/capability_badge/crc32/opcode 9 项），[SS] 语义同源层 API 语义等价 + Badge 校验机制同源，[IND] 独立层正确分离（io-wq/NO_MMAP/RESTRICTIONS/cgroup/syscall 数量 内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态（capability_badge=0 表示"待内核注入"，H3 硬约束）；agentrt-linux 在 [IND] 独立层正确引入 io_uring 内核加速路径 + Capability Folding fastpath C-S9 Badge 强制校验（**内核在 SQE 入队时覆写注入发送进程有效 Badge，消除 P0-D4 badge=0 绕过漏洞**），遵循 IRON-9 v3 同源且部分代码共享原则。
+
+> **⚠️ P0-D4 安全修复说明**（v1.0.1-fix）：原设计允许 `badge=0` 跳过 C-S9 校验，存在安全漏洞——恶意进程可构造 `badge=0` 消息绕过 capability 校验。修复方案：（1）`badge=0` 语义改为"待内核注入"，不再表示"跳过校验"；（2）agentrt-linux 内核在 `io_uring_submit()` fastpath 中覆写 SQE 的 `capability_badge` 字段为发送进程的有效 Badge；（3）C-S9 校验对所有消息强制执行，`badge=0` 在 agentrt-linux 内核态触发 `-AIRY_EIPC_CAP` 拒绝；（4）agentrt 用户态跨平台路径无内核加速，`badge=0` 由 agentrt 运行时在用户态 cupolas 层校验（非跳过）。
 
 ---
 

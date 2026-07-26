@@ -162,7 +162,7 @@ cat /sys/kernel/tracing/trace
 agentrt-linux 提供封装 API `airy_user_event_register()`，供 12 daemon 与 Agent 运行时使用：
 
 ```c
-/* include/uapi/agentrt/user_events.h */
+/* include/uapi/linux/airymax/user_events.h（v1.1 计划实现，当前未创建） */
 
 struct airy_user_event {
     int fd;

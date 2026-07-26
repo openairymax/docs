@@ -181,7 +181,7 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 |--------|---------|---------------|
 | `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位） | [SC] |
 | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | [SC] |
-| `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决结果 4 值枚举 | [SC] |
+| `include/uapi/linux/airymax/security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决结果 4 值枚举 | [SC] |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + CoreLoopThree 上下文结构 + Token 能效指标结构 + GPU/NPU 能力描述符 | [SC] |
 | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 0-139 + AIRY_SLICE_DFL（20ms） | [SC] |
 | `include/uapi/linux/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位 | [SC] |

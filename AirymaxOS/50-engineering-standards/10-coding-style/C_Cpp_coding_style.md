@@ -1480,7 +1480,7 @@ kfree(old);
 [SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/uapi/linux/airymax/` 下的 10 个头文件：
 - `syscalls.h`：v1.0.1 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位
 - `memory_types.h`：MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口
-- `security_types.h`：Cupolas capability 令牌结构、POSIX capability 41 ID（0-40）枚举、LSM 钩子 250 ID 枚举、capability 派生模型、Vault backend 抽象、策略裁决 4 值枚举
+- `security_types.h`：Cupolas capability 令牌结构、capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）、LSM 钩子 250 ID 枚举、capability 派生模型、Vault backend 抽象、策略裁决 4 值枚举
 - `cognition_types.h`：CoreLoopThree 阶段枚举、Thinkdual 模式枚举、LLM 推理阶段枚举、Token 能效指标、GPU/NPU 能力描述符
 - `sched.h`：sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）、任务描述符（magic 0x41475453 'AGTS'）、vtime 衰减公式、优先级 0-139、AIRY_SLICE_DFL（20ms）
 - `ipc.h`：IPC magic（0x41524531 'ARE1'）、128B 消息头结构（struct airy_ipc_msg_hdr）、SQE/CQE 操作码与标志位

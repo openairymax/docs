@@ -97,7 +97,7 @@ v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **10 个**，新增 `error.
 | 3 | `ipc.h` | `include/uapi/linux/airymax/ipc.h` | IPC magic + 128B 消息头 + SQE/CQE 操作码 | A-IPC | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) |
 | 4 | `sched.h` | `include/uapi/linux/airymax/sched.h` | Agent 8 态生命周期 + sched_tac 调度参数 + `AIRY_CAP_MAX_AGENTS` | A-ULS | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) |
 | 5 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 接口 | 记忆 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
-| 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | POSIX capability 41 ID（0-40） + LSM 钩子 250 ID + Cupolas blob 布局 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
+| 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID + Cupolas blob 布局 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
 | 7 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 三阶段 + Thinkdual 模式 | 认知 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
 | 8 | `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位） | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
 | 9 | `uapi_compat.h` | `include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 | [11-sc-header-type-bridging.md](../50-engineering-standards/11-sc-header-type-bridging.md) |

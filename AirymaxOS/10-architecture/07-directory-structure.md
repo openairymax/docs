@@ -951,7 +951,7 @@ cognition/
 │
 ├── thinkdual/                        # Thinkdual 双模式
 │   ├── Kbuild
-│   ├── td_mode.c                    # SYSTEM1_FAST / SYSTEM2_SLOW
+│   ├── td_mode.c                    # AIRY_THINK_FAST / AIRY_THINK_SLOW
 │   ├── td_switch.c                  # 模式切换
 │   └── td.h
 │

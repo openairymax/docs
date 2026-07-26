@@ -200,7 +200,7 @@ v1.0.1 起，fastpath 校验链为 **C-S0~C-S12 共 13 项**（含 Capability Fo
 
 | # | 条件 | 检查方式 | 失败后果 | 错误码 |
 |---|------|---------|---------|--------|
-| C-S0 | `ring->frozen == false`（ring 未冻结） | 内联 `READ_ONCE` | → ERROR | `AIRY_ECAP_FROZEN`(-82) |
+| C-S0 | `ring->frozen == false`（ring 未冻结） | 内联 `READ_ONCE` | → ERROR | `AIRY_EIPC_FROZEN`(-53) |
 | C-S1 | `magic == 0x41524531`（'ARE1'） | 内联比较 | → ERROR | `AIRY_EIPC_MAGIC`(-41) |
 | C-S2 | `opcode` 合法（见 §1.3 7 种 opcode） | 内联 `airy_ipc_opcode_valid()` | → ERROR | `AIRY_EIPC_OPCODE`(-42) |
 | C-S3 | `payload_len <= AIRY_IPC_MAX_PAYLOAD` | 内联比较 | → ERROR | `AIRY_EIPC_PAYLOAD`(-43) |
@@ -460,7 +460,7 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
 
     /* C-S0: ring 冻结检查（A-ULS 通过 FREEZE opcode 设置） */
     if (unlikely(cmd->ring->frozen))
-        return -AIRY_ECAP_FROZEN;  /* -82 */
+        return -AIRY_EIPC_FROZEN;  /* -53 */
 
     /* C-S1: magic 检查 */
     if (unlikely(hdr->magic != AIRY_IPC_MAGIC))
@@ -1176,7 +1176,7 @@ int airy_ipc_validate(struct airy_ipc_cmd *cmd)
     /* CBMC 不变量: 所有错误码来自预定义集合（无未定义错误码） */
     int allowed_ret[] = {
         0,
-        -AIRY_ECAP_FROZEN, -AIRY_EIPC_MAGIC, -AIRY_EIPC_OPCODE,
+        -AIRY_EIPC_FROZEN, -AIRY_EIPC_MAGIC, -AIRY_EIPC_OPCODE,
         -AIRY_EIPC_PAYLOAD, -AIRY_EIPC_HDRSIZE, -AIRY_EIPC_RESERVED,
         -AIRY_EIPC_RECLAIM, -AIRY_EIPC_CONTEXT,
         -AIRY_ECAP_BADGE, -AIRY_ECAP_EPOCH, -AIRY_ECAP_FORGED, -AIRY_ECAP_PERM,

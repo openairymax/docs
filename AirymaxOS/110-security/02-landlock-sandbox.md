@@ -495,23 +495,52 @@ IRON-9 v3 将 agentrt Cupolas Workbench 与 agentrt-linux Landlock 沙箱的协�
 
 #### [SC] 共享契约层
 
-`include/uapi/linux/airymax/security_types.h` 定义 Cupolas blob 布局与策略裁决 4 值枚举，agentrt 用户态 Workbench 通过此头读取 task blob 偏移以定位沙箱域指针，无需访问内核私有结构：
+`include/uapi/linux/airymax/security_types.h` 与 `include/uapi/linux/airymax/lsm_types.h` 定义 Cupolas blob 布局与策略裁决 4 值枚举，agentrt 用户态 Workbench 通过此头读取 task blob 偏移以定位沙箱域指针，无需访问内核私有结构：
 
 ```c
-/* include/uapi/linux/airymax/security_types.h —— IRON-9 v3 [SC] 共享契约层（节选，Landlock 相关） */
-struct airy_lsm_blob_offsets {
-    uint16_t cred_offset;    /* Cupolas blob 在 cred 中的偏移（Landlock 域指针） */
-    uint16_t inode_offset;   /* Cupolas blob 在 inode 中的偏移（inode 访问规则） */
-    uint16_t file_offset;    /* Cupolas blob 在 file 中的偏移（file 访问规则） */
-    uint16_t task_offset;    /* Cupolas blob 在 task_struct 中的偏移（Workbench 沙箱域） */
+/* include/uapi/linux/airymax/lsm_types.h —— IRON-9 v3 [SC] 共享契约层（节选，Landlock 相关） */
+/* task 安全上下文（Workbench 沙箱域挂载点） */
+struct airy_task_sec {
+    __u32   agent_id;         /* Agent 标识 */
+    __u32   cap_space_root;   /* capability space 根 */
+    __u32   agent_state;      /* Agent 生命周期状态 */
+    __u32   fault_count;      /* 累计故障计数 */
+    __u64   sched_budget_ns;  /* 调度预算（纳秒） */
+    __u64   last_heartbeat;   /* 最近心跳时间戳 */
+    __u32   frozen_reason;    /* 冻结原因码 */
+    __u32   _reserved;        /* 对齐 */
+    void   *ipc_ring;         /* IPC ring 冻结状态 */
 };
 
-enum airy_security_verdict {
+/* inode 安全上下文（inode 访问规则） */
+struct airy_inode_sec {
+    __u32   cap_required;     /* 访问所需 capability */
+    __u32   owner_agent;      /* 拥有者 Agent ID */
+};
+
+/* capability slot（64 字节缓存行对齐） */
+struct airy_cap_slot {
+    __u64   badge;            /* 64-bit Capability Folding badge */
+    __u32   agent_id;
+    __u32   flags;
+    __u32   randtag;
+    __u16   perms;
+    __u16   _pad;
+    __u8    _reserved[56];
+} __attribute__((aligned(64)));
+
+#define AIRY_CAP_MAX_AGENTS     1024
+```
+
+```c
+/* include/uapi/linux/airymax/security_types.h —— IRON-9 v3 [SC] 共享契约层（节选） */
+enum airy_verdict {
     AIRY_VERDICT_ALLOW    = 0,   /* 允许操作（沙箱放行） */
     AIRY_VERDICT_DENY     = 1,   /* 拒绝操作（沙箱阻断，返回 -EACCES） */
     AIRY_VERDICT_AUDIT    = 2,   /* 允许但审计（沙箱放行并记录） */
     AIRY_VERDICT_COMPLAIN = 3,   /* 拒绝但记录（学习模式，Landlock COMPLAIN 语义） */
 };
+```
 ```
 
 **OS-IRON-005 约束**: agentrt-linux Landlock 与 agentrt Cupolas Workbench 共享 `include/uapi/linux/airymax/security_types.h`，task blob 偏移语义两端必须一致（沙箱域指针挂载点）；策略裁决 4 值枚举在两端语义完全相同，COMPLAIN 学习模式两端行为一致。

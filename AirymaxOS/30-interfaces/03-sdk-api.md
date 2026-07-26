@@ -2,8 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # SDK API
 > **文档定位**：agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
-> **文档版本**：0.1.1\
-> **最后更新**： 2026-07-21\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-26\
+> **v3.5 修复说明**：P0-I12~I13——(1) 文档版本 `0.1.1` → `v1.0.1`（对齐 IRON-8）；(2) 错误码值修正：`AIRY_EPERM` -4 → -12、`AIRY_EAGAIN` -6 → -35（对齐 SSoT `error.h` L39/L43）；(3) `AIRY_ETIMEDOUT` → `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间）；(4) "250 LSM 钩子" → "5 LSM 钩子"（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`）；(5) 移除对不存在文件 `00-requirements/03-non-functional-requirements.md` 的引用\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -306,7 +307,7 @@ module github.com/openairymax/agentrt-example
 
 go 1.22
 
-require github.com/openairymax/agentrt-go v0.1.1
+require github.com/openairymax/agentrt-go v1.0.1
 ```
 
 ---
@@ -383,7 +384,7 @@ for await (const chunk of stream) {
 ```json
 {
   "dependencies": {
-    "@openairymax/agentrt": "^0.1.1"
+    "@openairymax/agentrt": "^1.0.1"
   }
 }
 ```
@@ -398,10 +399,10 @@ for await (const chunk of stream) {
 
 | 语言 | 错误机制 | 示例 |
 |------|---------|------|
-| Python | `agentrt.AgentrtError` 异常 | `raise AgentrtError(code=-4, message="EPERM")` |
+| Python | `agentrt.AgentrtError` 异常 | `raise AgentrtError(code=-12, message="AIRY_EPERM")` |
 | Rust | `Result<T, agentrt::Error>` | `Err(agentrt::Error::Eperm)` |
 | Go | `error`（实现 `Unwrap()` / `Code()`） | `return agentrt.ErrEperm` |
-| TypeScript | `AgentrtError` 类（`code` / `message`） | `throw new AgentrtError(-4, "EPERM")` |
+| TypeScript | `AgentrtError` 类（`code` / `message`） | `throw new AgentrtError(-12, "AIRY_EPERM")` |
 
 ### 7.2 Python 错误处理示例
 
@@ -416,9 +417,9 @@ try:
         resource="/etc/agentrt/config.yaml"
     )
 except AgentrtError as e:
-    if e.code == -4:  # AIRY_EPERM
+    if e.code == -12:  # AIRY_EPERM
         print("权限不足，请先申请 capability")
-    elif e.code == -6:  # AIRY_EAGAIN
+    elif e.code == -35:  # AIRY_EAGAIN
         print("资源繁忙，请重试")
     else:
         raise
@@ -455,14 +456,14 @@ async fn run() -> Result<(), Error> {
 
 SDK 内置指数退避重试机制，默认对以下错误码自动重试：
 
-| 错误码 | 是否重试 | 默认重试次数 | 退避策略 |
-|--------|---------|-------------|---------|
-| `AIRY_EAGAIN` | 是 | 3 | 指数退避（10ms / 20ms / 40ms） |
-| `AIRY_ETIMEDOUT` | 是 | 2 | 指数退避（100ms / 200ms） |
-| `AIRY_EBUSY` | 是 | 3 | 固定退避（50ms） |
-| `AIRY_EPERM` | 否 | - | 立即返回，需申请 capability |
-| `AIRY_EINVAL` | 否 | - | 立即返回，参数错误 |
-| `AIRY_ENOENT` | 否 | - | 立即返回，资源不存在 |
+| 错误码 | 值 | 是否重试 | 默认重试次数 | 退避策略 |
+|--------|-----|---------|-------------|---------|
+| `AIRY_EAGAIN` | -35 | 是 | 3 | 指数退避（10ms / 20ms / 40ms） |
+| `AIRY_ESCHED_DEADLINE` | -123 | 是 | 2 | 指数退避（100ms / 200ms） |
+| `AIRY_EBUSY` | -16 | 是 | 3 | 固定退避（50ms） |
+| `AIRY_EPERM` | -12 | 否 | - | 立即返回，需申请 capability |
+| `AIRY_EINVAL` | -5 | 否 | - | 立即返回，参数错误 |
+| `AIRY_ENOENT` | -8 | 否 | - | 立即返回，资源不存在 |
 
 ### 7.5 重试配置
 
@@ -475,7 +476,7 @@ client = AirymaxClient(
         max_attempts=5,
         initial_backoff_ms=10,
         max_backoff_ms=1000,
-        retry_on=(-6, -11),  # AIRY_EAGAIN, AIRY_ETIMEDOUT
+        retry_on=(-35, -123),  # AIRY_EAGAIN, AIRY_ESCHED_DEADLINE
     ),
 )
 ```
@@ -484,7 +485,7 @@ client = AirymaxClient(
 
 - 所有 SDK 调用支持超时配置（默认 30 秒）。
 - Python / Rust / Go 支持取消（`context` / `CancellationToken`）。
-- 超时返回 `AIRY_ETIMEDOUT`，已提交的任务不会被自动取消（需显式调用 `task_cancel`）。
+- 超时返回 `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间，对齐 SSoT `error.h:101`），已提交的任务不会被自动取消（需显式调用 `task_cancel`）。
 
 ### 7.7 可观测性
 
@@ -502,7 +503,7 @@ client = AirymaxClient(
 - [编码规范](04-coding-standard.md)
 - [认知设计](../20-modules/05-cognition.md)
 - [云原生设计](../20-modules/06-cloudnative.md)
-- [非功能性需求](../00-requirements/03-non-functional-requirements.md)
+- [非功能性需求](../00-requirements/03-non-functional-requirements.md)（NFR-P-001 调度延迟基线）
 
 ---
 
@@ -525,7 +526,7 @@ client = AirymaxClient(
 | `syscalls.h` | 4 核心（v1.0.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
 | `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | CognitionClient.submit_task |
 | `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
-| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + mint/revoke/derive 签名 + 250 LSM 钩子 | SafetyClient.check_capability |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + mint/revoke/derive 签名 + 5 LSM 钩子（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`） | SafetyClient.check_capability |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + Token 能效 | CognitionClient / ChatClient |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 | ToolClient（记忆上下文） |
 

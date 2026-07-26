@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 记忆设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）记忆设计文档（memory，极境记忆&存储）\
-> **文档版本**：v1.0.1\
+> **文档版本**：v1.0.1-fix（SSoT 对齐修复）\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 memoryrovol 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 CXL/PMEM/VFS 持久化实现独立\
 > **子仓编号**：04\
@@ -33,6 +33,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [11. agentrt 一致性检查](#11-agentrt-一致性检查)
 - [12. 相关文档](#12-相关文档)
 - [13. 参考](#13-参考)
+- [14. 变更历史](#14-变更历史)
 
 ***
 
@@ -40,10 +41,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 `memory` 是 agentrt-linux（AirymaxOS）的记忆与存储子仓，承担以下核心职责：
 
-1. **MemoryRovol 内核态实现 \[SS]**：将 agentrt 的 MemoryRovol（记忆卷载）升级为内核态实现，提供 Agent 记忆的持久化与卷载能力。L1-L4 数据结构 \[SC] 与 agentrt 共享。
+1. **MemoryRovol 内核态实现 \[SS]**：将 agentrt 的 MemoryRovol（记忆卷载）升级为内核态实现，提供 Agent 记忆的持久化与卷载能力。L1-L4 层级枚举 `airy_mem_level` \[SC] 与 agentrt 共享。
 2. **CXL 内存分层与池化 \[IND]**：利用 2026 年 CXL 3.0 硬件普及，实现内存分层与池化。
-3. **持久化内存（PMEM）\[IND]**：基于 PMEM 提供非易失性内存支持。PMEM 持久化接口 \[SC] 与 agentrt 共享。
-4. **MGLRU \[SS]**：利用 Linux 6.6 多代 LRU 改进，优化内存回收策略。GFP 掩码语义 \[SC] 与 agentrt 共享。
+3. **持久化内存（PMEM）\[IND]**：基于 PMEM 提供非易失性内存支持。PMEM 设备驱动与持久化接口实现属 \[IND] 独立层（SSoT 头文件中仅以 `AIRY_MEM_PMEM` 枚举值与 `AIRY_GFP_PMEM` 标志形式出现，详见 §4.3）。
+4. **MGLRU \[SS]**：利用 Linux 6.6 多代 LRU 改进，优化内存回收策略。`AIRY_GFP_*` tier 标志与 `AIRY_PAGE_CLASS_*` 页面分类 \[SC] 与 agentrt 共享。
 5. **VFS 持久化层 \[IND]**：为 `services/vfs` 提供持久化后端。
 6. **userfaultfd 用户态缺页处理 \[SS]**：支持用户态缺页处理，用于记忆迁移与快照。
 7. **透明巨页（THP）优化 \[IND]**：利用 Linux 6.6 THP 改进提升大页性能。
@@ -67,10 +68,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度          | 记忆子系统内容                                                                                                                  | 组织方式                             |
 | ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码        | MemoryRovol L1-L4 数据结构、GFP 掩码语义、PMEM 持久化接口                                                                               | `include/uapi/linux/airymax/memory_types.h`（10 个 [SC] 头文件之一） |
+| **\[SC] 共享契约层**  | 完全共享代码        | `airy_mem_level` L1-L4 层级枚举、`AIRY_GFP_*` 4 个 tier 标志、`AIRY_PAGE_CLASS_*` 4 个页面分类标志、`#ifdef AIRY_SC_FALLBACK` 降级块 | `include/uapi/linux/airymax/memory_types.h`（10 个 [SC] 头文件之一） |
 | **\[SS] 语义同源层**  | 操作模式同源，函数签名独立 | `rovol_snapshot()`、`rovol_restore()`、`rovol_migrate()`、`rovol_compress()`、MGLRU aging/eviction 语义、userfaultfd 处理接口 等 6 项 | 各自独立实现                           |
 | **\[IND] 完全独立层** | 完全独立          | CXL 设备驱动、PMEM 设备驱动、VFS 持久化层实现、THP 优化实现、zswap/zram 集成                                                                     | 各自独立仓库                           |
-| **\[DSL] 降级生存层** | 降级模式生存        | `#ifdef AIRY_SC_FALLBACK` 降级块位于 `memory_types.h` 底部——MemoryRovol L1-L4 降级为用户态 heapstore 实现、PMEM 持久化降级为文件 fsync、CXL tier 降级为 DRAM 单层、GFP 掩码降级为应用层标志 | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 块 |
+| **\[DSL] 降级生存层** | 降级模式生存        | `#ifdef AIRY_SC_FALLBACK` 降级块位于 `memory_types.h` 底部——L1-L4 tier 折叠为 L1 hot 单层、`AIRY_GFP_*` 折叠为 `AIRY_GFP_HOT`、`AIRY_PAGE_CLASS_*` 折叠为 `AIRY_PAGE_CLASS_ANON`（详见 §6.4 SSoT 实际 DSL 块） | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 块 |
 
 ### 2.1 维度对比
 
@@ -80,17 +81,18 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 记忆卷载     | MemoryRovol（用户态）                 | MemoryRovol 内核态实现               | \[SS]  |
 | 持久化      | 文件系统                             | PMEM + CXL + VFS 持久化层           | \[IND] |
 | 分层       | 用户态分层                            | CXL 内存分层 + MGLRU                | \[IND] |
-| L1-L4 结构 | 用户态数据结构                          | 内核态数据结构                         | \[SC]  |
-| GFP 掩码   | 应用层标志                            | 内核分配标志                          | \[SC]  |
-| PMEM 接口  | 应用层抽象                            | 内核持久化接口                         | \[SC]  |
+| L1-L4 层级枚举 | 用户态枚举（直接 include SSoT）            | 内核态枚举（直接 include SSoT）         | \[SC]  |
+| `AIRY_GFP_*` tier 标志 | 应用层标志                            | 内核分配标志                          | \[SC]  |
+| `AIRY_PAGE_CLASS_*` 页面分类 | 应用层标志                            | 内核页面分类标志                        | \[SC]  |
+| PMEM 设备驱动 | 不实现                              | 内核 nvdimm 驱动                    | \[IND] |
 
 ### 2.2 同源传承要点
 
 - 保留 agentrt MemoryRovol 的"记忆卷载"语义（snapshot + restore）\[SS]。
 - 保留 heapstore 的"记忆存储"抽象 \[SS]。
-- L1-L4 数据结构 \[SC] 共享，确保两端记忆层级语义一致。
-- GFP 掩码语义 \[SC] 共享，便于用户态代码移植到内核态。
-- PMEM 持久化接口 \[SC] 共享，统一持久化抽象。
+- `airy_mem_level` L1-L4 层级枚举 \[SC] 共享，确保两端记忆层级语义一致。
+- `AIRY_GFP_*` tier 标志与 `AIRY_PAGE_CLASS_*` 页面分类 \[SC] 共享，便于用户态代码移植到内核态。
+- PMEM 设备驱动与持久化接口实现属 \[IND] 独立层（SSoT 中无对应共享结构）。
 - 升级为内核态实现，利用 CXL/PMEM 硬件加速 \[IND]。
 
 ***
@@ -111,7 +113,7 @@ memory/
 
 ### 3.1 memoryrovol/（MemoryRovol 内核态实现）\[SS]
 
-参考 agentrt MemoryRovol 设计，L1-L4 数据结构 \[SC] 共享：
+参考 agentrt MemoryRovol 设计，L1-L4 层级枚举 `airy_mem_level` \[SC] 共享：
 
 - `rovol-kmod`：内核模块，提供记忆卷载系统调用 \[SS]。
 - `snapshot`：记忆快照（基于 fork + COW）\[SS]。
@@ -132,7 +134,7 @@ memory/
 
 ### 3.3 pmem/（持久化内存）\[IND]
 
-PMEM 持久化接口 \[SC] 与 agentrt 共享：
+PMEM 设备驱动与持久化接口实现属 \[IND] 独立层（SSoT 头文件中仅以 `AIRY_MEM_PMEM` 枚举值与 `AIRY_GFP_PMEM` 标志形式出现，无共享 PMEM 接口结构）：
 
 - `pmem-driver`：PMEM 设备驱动（nvdimm）。
 - `dax`：DAX（Direct Access）模式，绕过 page cache。
@@ -141,7 +143,7 @@ PMEM 持久化接口 \[SC] 与 agentrt 共享：
 
 ### 3.4 mglru/（MGLRU）\[SS]
 
-利用 **Linux 6.6** MGLRU 改进，GFP 掩码语义 \[SC] 共享：
+利用 **Linux 6.6** MGLRU 改进，`AIRY_GFP_*` tier 标志与 `AIRY_PAGE_CLASS_*` 页面分类 \[SC] 共享：
 
 - `multi-gen-lru`：多代 LRU 回收策略 \[SS]。
 - `aging`：老化策略（按代标记页面）\[SS]。
@@ -179,12 +181,10 @@ PMEM 持久化接口 \[SC] 与 agentrt 共享：
 ```mermaid
 graph TD
     subgraph SC["[SC] 共享契约层 include/uapi/linux/airymax/memory_types.h"]
-        L1[L1 Record 数据结构]
-        L2[L2 Record 数据结构]
-        L3[L3 Record 数据结构]
-        L4[L4 Record 数据结构]
-        GFP[GFP 掩码语义]
-        PMEMIF[PMEM 持久化接口]
+        MEMLEVEL[airy_mem_level 枚举<br/>HOT/WARM/COLD/PMEM]
+        GFP[AIRY_GFP_* 4 个 tier 标志<br/>HOT/WARM/COLD/PMEM]
+        PAGECLASS[AIRY_PAGE_CLASS_* 4 个页面分类<br/>ANON/FILE/SHMEM/AGENT]
+        DSL[AIRY_SC_FALLBACK 降级块]
     end
     subgraph SS["[SS] 语义同源层"]
         MEMROVOL[MemoryRovol 内核态实现]
@@ -198,12 +198,12 @@ graph TD
         VFSPERSIST[VFS 持久化层]
         THP[透明巨页优化]
     end
-    L1 --> MEMROVOL
-    L2 --> MEMROVOL
-    L3 --> CXL
-    L4 --> PMEM
+    MEMLEVEL --> MEMROVOL
+    MEMLEVEL --> CXL
+    MEMLEVEL --> PMEM
     GFP --> MGLRU
-    PMEMIF --> VFSPERSIST
+    PAGECLASS --> MGLRU
+    DSL --> MEMROVOL
     MEMROVOL --> RECLAIM
     MEMROVOL --> UFFD
     CXL --> THP
@@ -222,43 +222,36 @@ graph TD
 - `rovol_migrate(pid, target_node)`：迁移进程记忆至目标节点 \[SS]。
 - `rovol_compress(snapshot_id)`：压缩快照 \[SS]。
 
-**MemoryRovol L1-L4 数据结构** \[SC]（`include/uapi/linux/airymax/memory_types.h`）：
+**MemoryRovol L1-L4 层级定义** \[SC]（`include/uapi/linux/airymax/memory_types.h`）：
+
+> **SSoT 声明**：以下为 `include/uapi/linux/airymax/memory_types.h` 中实际定义的内容，agentrt 用户态与 agentrt-linux 内核态两端直接 include 共享。SSoT 头文件**仅定义 L1-L4 层级枚举 `airy_mem_level`，不定义任何 L1-L4 Record/Block/Entry/Persistent 结构体**——具体记忆记录的数据结构由各端在 \[SS]/\[IND] 层独立定义。
 
 ```c
-/* L1: 实时记忆层——高频读写，DRAM 存储 */
-typedef struct airy_mr_l1_record {
-    uint64_t trace_id;          /* 追踪 ID */
-    uint64_t timestamp;         /* 时间戳 */
-    uint32_t priority;          /* 优先级 */
-    uint32_t data_len;          /* 数据长度 */
-    uint8_t  data[];            /* 柔性数组 */
-} airy_mr_l1_record_t;          /* 走 io_uring registered buffer，无需 __aligned(64) */
+/* 来源：include/uapi/linux/airymax/memory_types.h */
+/* MemoryRoVol types — [SC] shared contract header.
+ * L1-L4 memory tiering definitions and GFP mask semantics.
+ */
 
-/* L2: 短期记忆层——中频读写，MGLRU aging 管理 */
-typedef struct airy_mr_l2_block {
-    uint64_t block_id;
-    uint64_t generation;        /* MGLRU 代序号 [SS] */
-    uint32_t ref_count;
-    uint32_t compressed_size;
-} airy_mr_l2_block_t __aligned(64);  /* cache line 对齐，避免 false sharing */
-
-/* L3: 长期记忆层——低频读写，CXL tier 存储 */
-typedef struct airy_mr_l3_entry {
-    uint64_t entry_id;
-    uint64_t last_access;       /* 最后访问时间 */
-    uint32_t access_count;      /* 访问计数 */
-    uint8_t  tier;              /* 存储层级（CXL/PMEM/SSD）*/
-} airy_mr_l3_entry_t __aligned(64);  /* cache line 对齐 */
-
-/* L4: 持久记忆层——PMEM 持久化 */
-typedef struct airy_mr_l4_persistent {
-    uint64_t persistent_id;
-    uint64_t checksum;          /* 完整性校验 */
-    uint32_t flags;              /* GFP 掩码 [SC] */
-} airy_mr_l4_persistent_t __aligned(64);  /* PMEM cache line 对齐，保证原子持久化 */
+/* ─── Memory Tier Levels ─────────────────────────────────────────────── */
+enum airy_mem_level {
+	AIRY_MEM_HOT    = 0,   /* L1: HBM/DDR hot tier */
+	AIRY_MEM_WARM   = 1,   /* L2: DDR warm tier */
+	AIRY_MEM_COLD   = 2,   /* L3: CXL/NVMe cold tier */
+	AIRY_MEM_PMEM   = 3,   /* L4: PMEM persistent tier */
+	AIRY_MEM_LEVEL_MAX
+};
 ```
 
-> **对齐规范**：L2/L3/L4 结构体使用 `__aligned(64)`（OLK 6.6 工程规范——禁止使用 packed 属性或旧式 aligned 属性，统一使用 `__aligned(64)` 语法）。L1 走 io_uring registered buffer 路径，柔性数组按字节流传递，不强制对齐。
+> **层级语义映射**：SSoT 中 L1-L4 仅作为 `airy_mem_level` 枚举的层级标识符，对应 MemoryRovol 的四层记忆语义：
+>
+> | 枚举值 | 层级 | MemoryRovol 语义 | 物理后端 |
+> | --- | --- | --- | --- |
+> | `AIRY_MEM_HOT` | L1 | 实时记忆层（高频读写） | DRAM / HBM |
+> | `AIRY_MEM_WARM` | L2 | 短期记忆层（MGLRU aging） | DDR |
+> | `AIRY_MEM_COLD` | L3 | 长期记忆层（低频读写） | CXL / NVMe |
+> | `AIRY_MEM_PMEM` | L4 | 持久记忆层（持久化） | PMEM |
+>
+> **说明性示例，非 SSoT 定义**：L1-L4 各层级具体记忆记录的数据结构（含 trace_id / generation / access_count / checksum 等字段）由 agentrt 与 agentrt-linux 在 \[SS]/\[IND] 层各自独立定义，**不在 `memory_types.h` 中共享**。本节早期版本曾虚构 `airy_mr_l1_record_t` / `airy_mr_l2_block_t` / `airy_mr_l3_entry_t` / `airy_mr_l4_persistent_t` 四个结构体并误标为 \[SC] 共享，已在 v1.0.1-fix 移除——SSoT 头文件中并不存在这些类型。
 
 **实现机制** \[IND]：
 
@@ -291,16 +284,21 @@ typedef struct airy_mr_l4_persistent {
 
 ### 4.3 PMEM 持久化内存 \[IND]
 
-**PMEM 持久化接口** \[SC]（`include/uapi/linux/airymax/memory_types.h`）：
+> **SSoT 声明**：`include/uapi/linux/airymax/memory_types.h` 中**并未定义** `airy_pmem_ops_t` 结构体或任何 PMEM 操作回调接口。本节早期版本曾虚构 `airy_pmem_ops_t`（含 persist/flush/map/unmap 四函数指针）并误标为 \[SC] 共享，已在 v1.0.1-fix 移除——SSoT 中 PMEM 仅以 `AIRY_MEM_PMEM` 枚举值（L4 持久层级）与 `AIRY_GFP_PMEM` 分配标志（0x08）形式出现。PMEM 设备驱动与持久化接口实现属 \[IND] 独立层，由 agentrt-linux 内核态 `pmem/` 目录独立实现（详见 §3.3）。
+
+**SSoT 中与 PMEM 相关的实际定义** \[SC]（`include/uapi/linux/airymax/memory_types.h`）：
 
 ```c
-/* PMEM 持久化接口 [SC]——agentrt 与 agentrt-linux 共享 */
-typedef struct airy_pmem_ops {
-    int (*persist)(const void *addr, size_t len);    /* 持久化（clwb + sfence）*/
-    int (*flush)(const void *addr, size_t len);       /* 刷新缓存行 */
-    void *(*map)(uint64_t offset, size_t len);        /* 映射 PMEM 区域 */
-    int (*unmap)(void *addr, size_t len);             /* 解除映射 */
-} airy_pmem_ops_t;
+/* 来源：include/uapi/linux/airymax/memory_types.h */
+/* L4 持久层级枚举值 */
+enum airy_mem_level {
+	/* ... */
+	AIRY_MEM_PMEM   = 3,   /* L4: PMEM persistent tier */
+	/* ... */
+};
+
+/* L4 PMEM tier 分配标志 */
+#define AIRY_GFP_PMEM   0x08   /* Allocate from PMEM tier */
 ```
 
 **特性** \[IND]：
@@ -319,16 +317,29 @@ typedef struct airy_pmem_ops {
 
 **GFP 掩码语义** \[SC]（`include/uapi/linux/airymax/memory_types.h`）：
 
+> **SSoT 声明**：以下为 `include/uapi/linux/airymax/memory_types.h` 中实际定义的 GFP 掩码宏，agentrt 用户态与 agentrt-linux 内核态两端直接 include 共享。SSoT 中**仅定义 4 个 tier 选择标志**（HOT/WARM/COLD/PMEM），用于在 MemoryRovol L1-L4 层级间选择分配目标。本节早期版本曾虚构 `AIRY_GFP_IO` / `AIRY_GFP_FS` / `AIRY_GFP_RECLAIM` / `AIRY_GFP_KSWAPD` / `AIRY_GFP_HIGH` / `AIRY_GFP_NOWARN` / `AIRY_GFP_ZERO` 等 7 个仿 Linux 内核 GFP 标志并误标为 \[SC] 共享，已在 v1.0.1-fix 移除——这些标志属 Linux 内核原生 GFP 体系，不在 `memory_types.h` 共享契约层中重复定义。
+
 ```c
-/* GFP 掩码 [SC]——agentrt 与 agentrt-linux 共享分配语义 */
-#define AIRY_GFP_IO         0x40    /* 允许 I/O（写回脏页）*/
-#define AIRY_GFP_FS         0x80    /* 允许文件系统操作 */
-#define AIRY_GFP_RECLAIM    0x400   /* 允许直接回收（阻塞）*/
-#define AIRY_GFP_KSWAPD     0x800   /* 唤醒 kswapd 异步回收 */
-#define AIRY_GFP_HIGH       0x20    /* 高优先级 */
-#define AIRY_GFP_NOWARN     0x200   /* 抑制分配失败警告 */
-#define AIRY_GFP_ZERO        0x100   /* 返回清零页 */
+/* 来源：include/uapi/linux/airymax/memory_types.h */
+/* ─── GFP Mask Semantics for MemoryRoVol ──────────────────────────────── */
+#define AIRY_GFP_HOT    0x01   /* Allocate from hot tier   (L1: HBM/DDR) */
+#define AIRY_GFP_WARM   0x02   /* Allocate from warm tier  (L2: DDR)      */
+#define AIRY_GFP_COLD   0x04   /* Allocate from cold tier  (L3: CXL/NVMe) */
+#define AIRY_GFP_PMEM   0x08   /* Allocate from PMEM tier  (L4: PMEM)     */
 ```
+
+> **SSoT 中另定义的页面分类宏**（`include/uapi/linux/airymax/memory_types.h` 同文件）：
+>
+> ```c
+> /* 来源：include/uapi/linux/airymax/memory_types.h */
+> /* ─── Memory Page Classification ──────────────────────────────────────── */
+> #define AIRY_PAGE_CLASS_ANON     0x01  /* Anonymous page */
+> #define AIRY_PAGE_CLASS_FILE     0x02  /* File-backed page */
+> #define AIRY_PAGE_CLASS_SHMEM    0x04  /* Shared memory page */
+> #define AIRY_PAGE_CLASS_AGENT    0x08  /* Agent-private page */
+> ```
+>
+> **说明性示例，非 SSoT 定义**：Linux 原生 GFP 体系（`GFP_KERNEL` / `GFP_ATOMIC` / `__GFP_IO` / `__GFP_FS` / `__GFP_RECLAIM` / `__GFP_KSWAPD` 等）由 `include/linux/gfp.h` 提供，agentrt-linux 内核态实现直接复用，**不在 `memory_types.h` 中重复定义**。`AIRY_GFP_*` 仅作为 MemoryRovol 跨端共享的 tier 选择语义，与 Linux GFP 体系正交。
 
 **改进** \[SS]：
 
@@ -594,16 +605,16 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 
 ### 6.1 \[SC] 共享契约层——`include/uapi/linux/airymax/memory_types.h`
 
-本头文件完全共享代码，agentrt 用户态与 agentrt-linux 内核态两端直接 include。内容清单：
+本头文件完全共享代码，agentrt 用户态与 agentrt-linux 内核态两端直接 include。内容清单（**以 SSoT 头文件实际定义为唯一依据**）：
 
-| 内容                           | 说明                                                         |
-| ---------------------------- | ---------------------------------------------------------- |
-| `airy_mr_l1_record_t` 结构     | L1 实时记忆层（trace\_id/timestamp/priority/data\_len/data）      |
-| `airy_mr_l2_block_t` 结构      | L2 短期记忆层（block\_id/generation/ref\_count/compressed\_size） |
-| `airy_mr_l3_entry_t` 结构      | L3 长期记忆层（entry\_id/last\_access/access\_count/tier）        |
-| `airy_mr_l4_persistent_t` 结构 | L4 持久记忆层（persistent\_id/checksum/flags）                    |
-| `AIRY_GFP_*` 宏               | GFP 掩码语义（IO/FS/RECLAIM/KSWAPD/HIGH/NOWARN/ZERO）            |
-| `airy_pmem_ops_t` 结构         | PMEM 持久化接口（persist/flush/map/unmap）                        |
+| 内容 | 类别 | 说明 |
+| --- | --- | --- |
+| `enum airy_mem_level` | 枚举 | L1-L4 层级定义：`AIRY_MEM_HOT=0` / `AIRY_MEM_WARM=1` / `AIRY_MEM_COLD=2` / `AIRY_MEM_PMEM=3` / `AIRY_MEM_LEVEL_MAX` |
+| `AIRY_GFP_HOT` / `AIRY_GFP_WARM` / `AIRY_GFP_COLD` / `AIRY_GFP_PMEM` | 宏 | 4 个 tier 分配标志（0x01/0x02/0x04/0x08） |
+| `AIRY_PAGE_CLASS_ANON` / `AIRY_PAGE_CLASS_FILE` / `AIRY_PAGE_CLASS_SHMEM` / `AIRY_PAGE_CLASS_AGENT` | 宏 | 4 个页面分类标志（0x01/0x02/0x04/0x08） |
+| `#ifdef AIRY_SC_FALLBACK` 降级块 | DSL 块 | L1-L4 降级为 L1 hot 单层 + GFP/page class 折叠（详见 §6.4） |
+
+> **本节早期版本虚构内容已移除**（v1.0.1-fix）：原表曾列出 `airy_mr_l1_record_t` / `airy_mr_l2_block_t` / `airy_mr_l3_entry_t` / `airy_mr_l4_persistent_t` 四个结构体、`AIRY_GFP_*` 7 个仿 Linux 内核 GFP 标志、`airy_pmem_ops_t` 持久化接口结构，**这些均不在 SSoT 头文件中实际定义**，已全部移除。
 
 ### 6.2 \[SS] 语义同源层——6 项 API 映射
 
@@ -630,18 +641,43 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 
 ### 6.4 \[DSL] 降级生存层——`#ifdef AIRY_SC_FALLBACK` 降级块
 
-依据 IRON-9 v3 决策，`memory_types.h` 底部必须存在 `#ifdef AIRY_SC_FALLBACK` 降级块，保证 \[SC] 共享契约在内核态 \[SC] 头文件不可用或被裁剪时仍能维持降级生存模式。记忆子仓的 \[DSL] 降级策略：
+依据 IRON-9 v3 决策，`memory_types.h` 底部存在 `#ifdef AIRY_SC_FALLBACK` 降级块，保证 \[SC] 共享契约在内核态 \[SC] 头文件不可用或被裁剪时仍能维持降级生存模式。降级块内容**以 SSoT 头文件实际定义为唯一依据**：
 
-| 序号 | 降级项 | 正常模式 | \[DSL] 降级模式 |
+```c
+/* 来源：include/uapi/linux/airymax/memory_types.h */
+#ifdef AIRY_SC_FALLBACK
+	/* All tiers collapse to L1 hot. */
+	#define AIRY_DSL_MEM_LEVEL   AIRY_MEM_HOT
+	#define AIRY_DSL_MEM_TIERS   1  /* Only L1 retained */
+
+	/* All GFP flags collapse to HOT. */
+	#define AIRY_DSL_GFP_HOT     AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_WARM    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_COLD    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_PMEM    AIRY_GFP_HOT
+
+	/* All page classes collapse to ANON. */
+	#define AIRY_DSL_PAGE_CLASS_ANON   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_FILE   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_SHMEM  AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_AGENT  AIRY_PAGE_CLASS_ANON
+
+	#warning "AIRY_SC_FALLBACK active: memory_types.h degraded to L1 hot tier only, MemoryRoVol L2-L4 unavailable"
+#endif /* AIRY_SC_FALLBACK */
+```
+
+依据 SSoT 实际 DSL 块，记忆子仓的 \[DSL] 降级策略：
+
+| 序号 | 降级项 | 正常模式（SSoT 定义） | \[DSL] 降级模式（SSoT `AIRY_SC_FALLBACK` 块） |
 | -- | ---- | ------ | ------------- |
-| 1  | MemoryRovol L1-L4 数据结构 | 内核态实现 + CXL/PMEM tier 分层 | 降级为 agentrt 用户态 heapstore 实现（仅 DRAM 单层） |
-| 2  | PMEM 持久化接口 | `airy_pmem_ops_t`（clwb + sfence + DAX） | 降级为文件 `fsync()` 持久化 |
-| 3  | MGLRU aging/eviction | 内核 `lru_gen_folio` 代际回收 | 降级为应用层 LRU 模拟 |
-| 4  | userfaultfd 缺页处理 | 内核 uffd 框架 | 降级为 `mmap()` + `madvise()` 用户态模拟 |
-| 5  | GFP 掩码语义 | 内核分配标志 | 降级为应用层 malloc 标志（语义保留，无内核效果） |
-| 6  | io_uring registered buffer | 内核 registered buffer + 零拷贝 | 降级为 `read()`/`write()` 拷贝模式 |
+| 1 | L1-L4 tier 枚举 | `airy_mem_level` 完整枚举（HOT/WARM/COLD/PMEM） | `AIRY_DSL_MEM_LEVEL = AIRY_MEM_HOT`，`AIRY_DSL_MEM_TIERS = 1`（仅 L1 保留） |
+| 2 | GFP tier 选择标志 | `AIRY_GFP_HOT/WARM/COLD/PMEM` 4 标志 | `AIRY_DSL_GFP_*` 全部折叠为 `AIRY_GFP_HOT`（仅热层级分配） |
+| 3 | 页面分类标志 | `AIRY_PAGE_CLASS_ANON/FILE/SHMEM/AGENT` 4 标志 | `AIRY_DSL_PAGE_CLASS_*` 全部折叠为 `AIRY_PAGE_CLASS_ANON`（仅匿名页） |
+| 4 | 编译期告警 | 无 | `#warning` 提示 `MemoryRoVol L2-L4 unavailable` |
+| 5 | MemoryRovol 实现 | 内核态实现 + CXL/PMEM tier 分层 | 降级为 agentrt 用户态 heapstore 实现（仅 DRAM 单层）——属 \[IND] 层降级，不在 SSoT 中 |
+| 6 | `alloc_pages` + `mmap` | 内核 registered buffer + 零拷贝 | 仍可使用，仅 tier 标志退化为 HOT——属 \[IND] 层降级 |
 
-> **\[DSL] 设计原则**：降级生存不等于功能完整——降级模式下性能显著下降（CXL/PMEM tier 退化为 DRAM 单层、零拷贝退化为拷贝），但保证 agentrt 用户态代码可在不支持 agentrt-linux 内核的平台上运行（兼容性优先）。
+> **\[DSL] 设计原则**：降级生存不等于功能完整——SSoT DSL 块仅折叠 \[SC] 共享契约层的 tier/GFP/page class 标志至 L1 hot 单层；CXL/PMEM tier 退化、零拷贝退化为拷贝等 \[IND] 层降级由各端独立处理。降级模式下性能显著下降，但保证 agentrt 用户态代码可在不支持 agentrt-linux 内核的平台上运行（兼容性优先）。详见 [DSL] §2.2 和 §4.1（SSoT 头文件注释引用）。
 
 ### 6.5 跨态协作流
 
@@ -749,7 +785,7 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 | -- | -------------------------------------------- | ------- | ------ |
 | M0 | 文档体系完成（本模块设计文档）                              | 2026-07 | —      |
 | M1 | \[SC] `include/uapi/linux/airymax/memory_types.h` 共享契约层 | 2026 Q3 | \[SC]  |
-| M2 | MemoryRovol 内核态实现 + L1-L4 数据结构               | 2026 Q3 | \[SS]  |
+| M2 | MemoryRovol 内核态实现 + L1-L4 层级枚举（基于 `airy_mem_level`）| 2026 Q3 | \[SS]  |
 | M3 | MGLRU 集成 + aging/eviction 策略                 | 2026 Q4 | \[SS]  |
 | M4 | userfaultfd 缺页处理框架 + 迁移                      | 2026 Q4 | \[SS]  |
 | M5 | PMEM 持久化内存支持 + DAX                           | 2027 Q1 | \[IND] |
@@ -769,27 +805,28 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 
 ## 11. agentrt 一致性检查
 
-对 agentrt heapstore + memoryrovol 设计进行一致性检查，确认两端在 IRON-9 v3 四层共享模型下无冲突：
+对 agentrt heapstore + memoryrovol 设计进行一致性检查，确认两端在 IRON-9 v3 四层共享模型下无冲突（**以 SSoT 头文件 `include/uapi/linux/airymax/memory_types.h` 实际定义为唯一依据**）：
 
-| 序号 | 检查项                        | agentrt 状态                    | agentrt-linux 状态         | 结论          |
-| -- | -------------------------- | ----------------------------- | ------------------------ | ----------- |
-| 1  | L1 实时记忆数据结构一致性             | l1\_record\_t                 | l1\_record\_t（同）         | PASS \[SC]  |
-| 2  | L2 短期记忆数据结构一致性             | l2\_block\_t（含 generation）    | l2\_block\_t（同）          | PASS \[SC]  |
-| 3  | L3 长期记忆数据结构一致性             | l3\_entry\_t（含 tier）          | l3\_entry\_t（同）          | PASS \[SC]  |
-| 4  | L4 持久记忆数据结构一致性             | l4\_persistent\_t（含 checksum） | l4\_persistent\_t（同）     | PASS \[SC]  |
-| 5  | GFP 掩码语义一致性                | 7 个 AIRY\_GFP\_\* 宏           | 7 个（同）                   | PASS \[SC]  |
-| 6  | PMEM 持久化接口一致性              | 4 函数（persist/flush/map/unmap） | 4 函数（同）                  | PASS \[SC]  |
-| 7  | `rovol_snapshot()` 语义等价性   | 用户态 fork+COW                  | 内核 fork+userfaultfd      | PASS \[SS]  |
-| 8  | `rovol_restore()` 语义等价性    | 用户态 mmap                      | 内核 mmap+userfaultfd      | PASS \[SS]  |
-| 9  | `rovol_migrate()` 语义等价性    | 用户态迁移                         | 内核 userfaultfd post-copy | PASS \[SS]  |
-| 10 | `rovol_compress()` 语义等价性   | 用户态 zstd                      | 内核 zswap/zram            | PASS \[SS]  |
-| 11 | MGLRU aging/eviction 语义一致性 | 用户态模拟                         | 内核 `lru_gen_folio`       | PASS \[SS]  |
-| 12 | userfaultfd 处理语义等价性        | 用户态 handler                   | 内核 uffd 框架               | PASS \[SS]  |
-| 13 | CXL/PMEM/VFS 独立性           | 不实现                           | 内核态实现                    | PASS \[IND] |
-| 14 | THP/zswap 独立性              | 不实现                           | 内核态实现                    | PASS \[IND] |
-| 15 | MGLRU Bloom 过滤器独立性         | 不使用                           | 内核态使用（可选优化）              | PASS \[IND] |
+| 序号 | 检查项 | agentrt 状态 | agentrt-linux 状态 | 结论 |
+| -- | --- | --- | --- | --- |
+| 1  | `airy_mem_level` 枚举一致性 | `AIRY_MEM_HOT/WARM/COLD/PMEM/LEVEL_MAX` | 同（直接 include SSoT） | PASS \[SC] |
+| 2  | L1-L4 层级语义一致性 | HOT=L1 / WARM=L2 / COLD=L3 / PMEM=L4 | 同 | PASS \[SC] |
+| 3  | `AIRY_GFP_HOT/WARM/COLD/PMEM` 4 标志一致性 | 0x01/0x02/0x04/0x08 | 同（直接 include SSoT） | PASS \[SC] |
+| 4  | `AIRY_PAGE_CLASS_ANON/FILE/SHMEM/AGENT` 4 标志一致性 | 0x01/0x02/0x04/0x08 | 同（直接 include SSoT） | PASS \[SC] |
+| 5  | `AIRY_SC_FALLBACK` DSL 块一致性 | tier 折叠至 HOT / page class 折叠至 ANON | 同 | PASS \[DSL] |
+| 6  | `rovol_snapshot()` 语义等价性 | 用户态 fork+COW | 内核 fork+userfaultfd | PASS \[SS] |
+| 7  | `rovol_restore()` 语义等价性 | 用户态 mmap | 内核 mmap+userfaultfd | PASS \[SS] |
+| 8  | `rovol_migrate()` 语义等价性 | 用户态迁移 | 内核 userfaultfd post-copy | PASS \[SS] |
+| 9  | `rovol_compress()` 语义等价性 | 用户态 zstd | 内核 zswap/zram | PASS \[SS] |
+| 10 | MGLRU aging/eviction 语义一致性 | 用户态模拟 | 内核 `lru_gen_folio` | PASS \[SS] |
+| 11 | userfaultfd 处理语义等价性 | 用户态 handler | 内核 uffd 框架 | PASS \[SS] |
+| 12 | CXL/PMEM/VFS 独立性 | 不实现 | 内核态实现 | PASS \[IND] |
+| 13 | THP/zswap 独立性 | 不实现 | 内核态实现 | PASS \[IND] |
+| 14 | MGLRU Bloom 过滤器独立性 | 不使用 | 内核态使用（可选优化） | PASS \[IND] |
 
-**结论**：agentrt heapstore + memoryrovol 设计无需修改。15 项检查全部 PASS，两端在 \[SC]/\[SS]/\[IND]/\[DSL] v3 四层共享模型下完全一致。
+> **本节早期版本虚构检查项已移除**（v1.0.1-fix）：原表曾列出对 `airy_mr_l1_record_t` / `airy_mr_l2_block_t` / `airy_mr_l3_entry_t` / `airy_mr_l4_persistent_t` 四个虚构结构体的一致性检查（条目 1-4）、对 7 个虚构 `AIRY_GFP_*` 标志的检查（条目 5）、对虚构 `airy_pmem_ops_t` 接口的检查（条目 6）——这些类型**均不在 SSoT 头文件中实际定义**，相关检查项已全部移除并替换为对 SSoT 实际定义内容的检查。
+
+**结论**：agentrt heapstore + memoryrovol 设计无需修改。14 项检查全部 PASS，两端在 \[SC]/\[SS]/\[IND]/\[DSL] v3 四层共享模型下完全一致。
 
 ***
 
@@ -830,5 +867,49 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 
 ***
 
-> **文档结束** | v1.1 | IRON-9 v3 同源且部分代码共享 | 记忆卷载贯穿 4 大数据流 | 0.1.1 = 文档体系完成
+## 14. 变更历史
+
+| 版本 | 日期 | 变更内容 |
+| --- | --- | --- |
+| v1.0.1 | 2026-07 | 初始版本——MemoryRovol 内核态设计、IRON-9 v3 四层共享模型落地、12 daemon 协作 |
+| v1.0.1-fix | 2026-07-26 | **SSoT 对齐修复**——对照 `include/uapi/linux/airymax/memory_types.h` 实际定义，移除文档中所有虚构内容，恢复 SSoT 单一真相源地位。具体修复如下： |
+
+### 14.1 v1.0.1-fix (2026-07-26) 修复详情
+
+**SSoT 头文件实际定义清单**（`include/uapi/linux/airymax/memory_types.h`）：
+
+- `enum airy_mem_level`：L1-L4 层级枚举（`AIRY_MEM_HOT/WARM/COLD/PMEM/LEVEL_MAX`）
+- `AIRY_GFP_HOT/WARM/COLD/PMEM` 4 个 tier 分配标志宏（0x01/0x02/0x04/0x08）
+- `AIRY_PAGE_CLASS_ANON/FILE/SHMEM/AGENT` 4 个页面分类标志宏（0x01/0x02/0x04/0x08）
+- `#ifdef AIRY_SC_FALLBACK` 降级块（tier 折叠至 HOT、page class 折叠至 ANON、`#warning` 告警）
+
+**移除的虚构内容**：
+
+1. **虚构 L1-L4 Record 结构体**（原 §4.1，行 225-261）：移除虚构的 `airy_mr_l1_record_t` / `airy_mr_l2_block_t` / `airy_mr_l3_entry_t` / `airy_mr_l4_persistent_t` 四个结构体——SSoT 头文件中并不存在这些类型，L1-L4 仅作为 `airy_mem_level` 枚举的层级标识符存在。替换为 SSoT 实际定义的 `airy_mem_level` 枚举与层级语义映射表，并明确标注 L1-L4 各层级具体记忆记录的数据结构属 \[SS]/\[IND] 层独立定义。
+
+2. **虚构 `airy_pmem_ops_t` 持久化接口**（原 §4.3，行 296-304）：移除虚构的 `airy_pmem_ops_t` 结构体（含 persist/flush/map/unmap 四函数指针）——SSoT 头文件中并无任何 PMEM 操作回调接口。替换为 SSoT 中 PMEM 相关的实际定义（`AIRY_MEM_PMEM` 枚举值 + `AIRY_GFP_PMEM` 分配标志），并明确标注 PMEM 设备驱动与持久化接口实现属 \[IND] 独立层。
+
+3. **虚构 7 个仿 Linux GFP 标志**（原 §4.4，行 322-331）：移除虚构的 `AIRY_GFP_IO` / `AIRY_GFP_FS` / `AIRY_GFP_RECLAIM` / `AIRY_GFP_KSWAPD` / `AIRY_GFP_HIGH` / `AIRY_GFP_NOWARN` / `AIRY_GFP_ZERO` 等 7 个仿 Linux 内核 GFP 标志——这些标志属 Linux 内核原生 GFP 体系（`include/linux/gfp.h`），不在 `memory_types.h` 共享契约层中重复定义。替换为 SSoT 实际定义的 4 个 tier 选择标志，并补充 SSoT 中另定义的 4 个 `AIRY_PAGE_CLASS_*` 页面分类宏。
+
+4. **虚构 §6.1 内容清单**：原表曾列出虚构结构体与接口条目，已全部移除并替换为 SSoT 头文件实际定义的 4 类内容清单。
+
+5. **虚构 §6.4 DSL 降级表**：原表描述的"MemoryRovol L1-L4 数据结构降级为 heapstore"、"PMEM 持久化接口降级为 fsync"、"MGLRU/userfaultfd/io_uring 降级" 等均不属 SSoT DSL 块内容——SSoT DSL 块仅折叠 \[SC] 共享契约层的 tier/GFP/page class 标志至 L1 hot 单层。替换为 SSoT 实际 DSL 块代码与降级策略表。
+
+6. **虚构 §11 一致性检查**：原表条目 1-6 全部基于虚构结构/接口，已移除并替换为对 SSoT 实际定义内容（`airy_mem_level` 枚举、`AIRY_GFP_*` 标志、`AIRY_PAGE_CLASS_*` 标志、`AIRY_SC_FALLBACK` DSL 块）的检查。
+
+7. **虚构 §3.8 mermaid 图节点**：原图节点 `L1/L2/L3/L4 Record 数据结构` 与 `PMEM 持久化接口` 已移除，替换为 SSoT 实际节点（`airy_mem_level` 枚举 / `AIRY_GFP_*` 标志 / `AIRY_PAGE_CLASS_*` 标志 / `AIRY_SC_FALLBACK` 降级块）。
+
+8. **散落虚构引用**：修正 §1 子仓职责、§2 维度对比表、§2.2 同源传承要点、§3.1/§3.3/§3.4 节描述、§10 里程碑 M2 等位置对 "L1-L4 数据结构" / "PMEM 持久化接口 [SC]" / "GFP 掩码语义" 等虚构表述。
+
+**修复原则**：
+
+- 所有 SSoT 实际定义的代码示例均明确标注来源 `/* 来源：include/uapi/linux/airymax/memory_types.h */`
+- 每处修复位置添加 `> **SSoT 声明**` 引用块，明确标注 SSoT 头文件路径
+- 说明性示例（非 SSoT 定义）明确标注 "**说明性示例，非 SSoT 定义**"
+- 虚构类型完全移除，不在文档中保留为"示例"
+- 保留文档教学性质，但所有 SSoT 引用必须与头文件实际定义一致
+
+***
+
+> **文档结束** | v1.0.1-fix | IRON-9 v3 同源且部分代码共享 | 记忆卷载贯穿 4 大数据流 | 0.1.1 = 文档体系完成 | SSoT 对齐修复对照 `include/uapi/linux/airymax/memory_types.h`
 

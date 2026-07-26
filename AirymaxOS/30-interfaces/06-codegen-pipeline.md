@@ -3,7 +3,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 代码生成管道设计
 > **文档定位**：agentrt-linux（AirymaxOS）代码生成管道设计——以契约源（XML/.bf/.def）为唯一输入，自动生成 C / Rust / Python / Go / TypeScript 多语言绑定，消除手工样板代码并保证 [SC] 共享契约层头文件与生成代码的一致性\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-22\
+> **最后更新**： 2026-07-26\
+> **v3.5 修复说明**：P0-P1~P2/I9~I11——(1) `airy_sys_sched_ctl` 签名 `uint32_t op, uint32_t agent_id, uint64_t arg` → `uint32_t op, const char *cgroup_path, const char *policy`（对齐 [01-syscalls.md](01-syscalls.md) §3.3 SSoT）；(2) `airy_sys_clt_notify` 签名 `int task_id, uint32_t op` → `int task_id, uint32_t phase`（对齐 SSoT）；(3) 移除 §1.3/§5/§6.1/§7.2 中虚构的 `airy_lsm_hooks.def` 输入与 `lsm_hook_ids.h` 输出（LSM 钩子通过 `LSM_HOOK_INIT` 宏名静态注册，非 codegen 生成，对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`）；(4) §10 capability 计数 "41 ID" → "44 ID = 41 POSIX + 3 Airymax 专属"\
+> **v3.5 修复说明（续）**：P0-E2/P0-19——(5) §5.1 `airy_cap_ids.def` 描述 "41 个 POSIX capability ID 定义" → "44 个 capability ID 定义（41 POSIX + 3 Airymax 专属）"；(6) §5.1 Airymax 专属名称修正：`AIRY_CAP_INVOKE=42` → `AIRY_CAP_GPU_SCHED=42`、`AIRY_CAP_NOTIFICATION=43` → `AIRY_CAP_NPU_ACCESS=43`（对齐 SSoT `security_types.h` L69-70）；(7) §5.1/§5.2 移除虚构 `#define AIRY_CAP_AGENT_MAX 44` 宏（SSoT 用 `AIRY_CAP_ID_MAX` enum 上界，非独立 #define 宏）；(8) §5.2 生成 enum 示例对齐 SSoT：POSIX 段添加 `AIRY_` 前缀（`CAP_CHOWN` → `AIRY_CAP_CHOWN` 等）、`AIRY_CAP_CHECKPOINT_RESTORE=40` → `AIRY_CAP_CHECKPOINT=40`、`AIRY_CAP_AGENT_MAX=44,` → `AIRY_CAP_ID_MAX`（无显式数值）；(9) §2.1 syscall.xml 移除 `airy_sys_call` 的 `<capability_required>AIRY_CAP_INVOKE</capability_required>`（虚构 capability，cap 作为参数传入而非前置条件）\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **SSoT 依赖**：[09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)（规则编号与契约物理宿主权威来源）
 
@@ -41,7 +43,7 @@ agentrt-linux 在 1.0.1 开发阶段引入代码生成管道（codegen pipeline�
 | 系统调用契约（R-01） | `syscall_gen.py` | `include/uapi/linux/airymax/syscall.xml` | C syscall 头文件 + x86 syscall 表 + Rust/Python 绑定 |
 | 位域契约（R-02） | `bitfield_gen.py` | `include/uapi/linux/airymax/structures_32.bf` / `structures_64.bf` | C 位域结构头文件 |
 | IPC 消息头契约 | `ipc_gen.py` | `50-engineering-standards/20-contracts/contracts.md` §2 SSoT 定义 | C/Rust/Python IPC 消息头绑定 |
-| Capability ID 契约 | `cap_gen.py` | `security/include/airy_cap_ids.def` | C capability ID 枚举 + LSM 钩子 ID + Rust/Python 绑定 |
+| Capability ID 契约 | `cap_gen.py` | `security/include/airy_cap_ids.def` | C capability ID 枚举 + Rust/Python 绑定（**不生成 LSM 钩子 ID**——LSM 钩子通过 `LSM_HOOK_INIT` 宏名静态注册，详见 §5.3） |
 
 ---
 
@@ -93,7 +95,7 @@ agentrt-linux 在 1.0.1 开发阶段引入代码生成管道（codegen pipeline�
     <name>airy_sys_call</name>
     <number>0</number>
     <signature>cap_t cap, const struct airy_ipc_msg_hdr *msg</signature>
-    <capability_required>AIRY_CAP_INVOKE</capability_required>
+    <!-- 无 capability_required：cap 作为参数传入，而非调用前置条件；sec_d 专属由调用方上下文保证 -->
     <flags>blocking</flags>
     <category>ipc_primitive</category>
     <since>1.0.1</since>
@@ -115,7 +117,7 @@ agentrt-linux 在 1.0.1 开发阶段引入代码生成管道（codegen pipeline�
   <syscall>
     <name>airy_sys_sched_ctl</name>
     <number>2</number>
-    <signature>uint32_t op, uint32_t agent_id, uint64_t arg</signature>
+    <signature>uint32_t op, const char *cgroup_path, const char *policy</signature>
     <flags>control</flags>
     <category>control_primitive</category>
     <since>1.0.1</since>
@@ -126,7 +128,7 @@ agentrt-linux 在 1.0.1 开发阶段引入代码生成管道（codegen pipeline�
   <syscall>
     <name>airy_sys_clt_notify</name>
     <number>3</number>
-    <signature>int task_id, uint32_t op</signature>
+    <signature>int task_id, uint32_t phase</signature>
     <flags>control</flags>
     <category>control_primitive</category>
     <since>1.0.1</since>
@@ -167,12 +169,14 @@ agentrt-linux 在 1.0.1 开发阶段引入代码生成管道（codegen pipeline�
 
 | 语言 | 生成目标 | 内容 |
 |------|---------|------|
-| C | `include/uapi/linux/airymax/syscall.h` | 系统调用号宏（`#define AIRY_SYS_CALL 0`）+ `__NR_*` Linux 注册号宏 + 函数原型声明 |
+| C | `include/uapi/linux/airymax/syscall.h` | 内部索引宏（`#define AIRY_SYS_IDX_CALL 0`）+ `__NR_*` Linux 注册号宏（`__NR_airy_sys_call 548`）+ 函数原型声明 |
 | C | `arch/x86/entry/syscalls/syscall_64.tbl`（Airymax 段） | x86 syscall 表条目（`548 common airy_sys_call sys_airy_sys_call`） |
-| Rust | `kernel/src/syscall.rs` | Rust syscall 绑定（`pub const AIRY_SYS_CALL: u32 = 0;` + `extern "C"` 原型） |
-| Python | `sdk/python/airyx/syscalls.py` | Python 绑定（`AIRY_SYS_CALL = 0` + ctypes 封装） |
-| Go | `sdk/go/airyx/syscalls.go` | Go 绑定（`const AirySysCall = 0` + `syscall.Syscall` 封装） |
-| TypeScript | `sdk/ts/airyx/syscalls.ts` | TypeScript 绑定（`export const AIRY_SYS_CALL = 0` + 常量表） |
+| Rust | `kernel/src/syscall.rs` | Rust syscall 绑定（`pub const AIRY_SYS_IDX_CALL: u32 = 0;` + `pub const __NR_AIRY_SYS_CALL: u32 = 548;` + `extern "C"` 原型） |
+| Python | `sdk/python/airyx/syscalls.py` | Python 绑定（`AIRY_SYS_IDX_CALL = 0` + `__NR_AIRY_SYS_CALL = 548` + ctypes 封装） |
+| Go | `sdk/go/airyx/syscalls.go` | Go 绑定（`const AirySysIdxCall = 0` + `const NrAirySysCall = 548` + `syscall.Syscall` 封装） |
+| TypeScript | `sdk/ts/airyx/syscalls.ts` | TypeScript 绑定（`export const AIRY_SYS_IDX_CALL = 0` + `export const __NR_AIRY_SYS_CALL = 548` + 常量表） |
+
+> **v4.0 修复说明**：P0-21/03-P0-22——原表使用 `AIRY_SYS_CALL = 0`，与 SSoT 命名空间冲突（`AIRY_SYS_CALL = 548` 定义在 [SC] `syscalls.h` 中，是实际 syscall 号；codegen 产物 `syscall.h` 使用 `AIRY_SYS_IDX_*` 前缀表示内部索引 0-3）。已修正为 `AIRY_SYS_IDX_CALL = 0` + `__NR_airy_sys_call 548`，对齐 SSoT `syscall.h` L27-35（内部索引命名空间分离）。
 
 生成产物头部统一注入标记：
 
@@ -453,11 +457,11 @@ assert ctypes.sizeof(AiryIpcMsgHdr) == 128, "AiryIpcMsgHdr must be 128 bytes"
 
 ## 5. Capability ID 生成
 
-Capability ID 生成器 `cap_gen.py` 以 `security/include/airy_cap_ids.def` 为唯一输入，产出 capability ID 枚举与 LSM 钩子 ID。
+Capability ID 生成器 `cap_gen.py` 以 `security/include/airy_cap_ids.def` 为唯一输入，产出 capability ID 枚举。**LSM 钩子不通过 codegen 生成**——详见 §5.3。
 
 ### 5.1 输入：airy_cap_ids.def
 
-`airy_cap_ids.def` 采用 `X-macro` 风格定义，每个条目声明一个 capability ID 符号、值与描述。文件包含 41 个 POSIX capability ID 定义（编号 0-40，对齐 Linux 6.6 `CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40`，详见 [110-security/03-capability-model.md](../110-security/03-capability-model.md) §4.1）：
+`airy_cap_ids.def` 采用 `X-macro` 风格定义，每个条目声明一个 capability ID 符号、值与描述。文件包含 44 个 capability ID 定义（41 个 POSIX 编号 0-40，对齐 Linux 6.6 `CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40` + 3 个 Airymax 专属编号 41-43，详见 [110-security/03-capability-model.md](../110-security/03-capability-model.md) §4.1）：
 
 ```c
 /* airy_cap_ids.def — Capability ID 契约源
@@ -487,24 +491,24 @@ AIRY_CAP_ID(CAP_CHECKPOINT_RESTORE, 40, "checkpoint/restore")
 
 /* Airymax 专属 capability（41-43，从 41 开始避免与 Linux 0-40 冲突） */
 AIRY_CAP_ID(AIRY_CAP_AGENT_SPAWN,   41, "Agent 生成")
-AIRY_CAP_ID(AIRY_CAP_INVOKE,        42, "统一 capability invocation 入口")
-AIRY_CAP_ID(AIRY_CAP_NOTIFICATION,   43, "异步通知信号")
-
-#define AIRY_CAP_AGENT_MAX  44  /* agentrt-linux 专属上限 */
+AIRY_CAP_ID(AIRY_CAP_GPU_SCHED,     42, "GPU 调度访问")
+AIRY_CAP_ID(AIRY_CAP_NPU_ACCESS,    43, "NPU 计算访问")
+/* enum 上界 AIRY_CAP_ID_MAX 由 cap_gen.py 自动追加（不通过 X-macro 定义） */
 ```
 
 ### 5.2 生成目标
 
 | 语言 | 生成目标 | 内容 |
 |------|---------|------|
-| C | `include/uapi/linux/airymax/security_types.h` | capability ID 枚举（`enum airy_cap_id`）+ `AIRY_CAP_AGENT_MAX` 上限宏 |
-| C | `security/include/airy_lsm_hook_ids.h` | LSM 钩子 ID 枚举（250 ID） |
+| C | `include/uapi/linux/airymax/security_types.h` | capability ID 枚举（`enum airy_cap_id`，含 `AIRY_CAP_ID_MAX` 上界）|
 | Rust | `sdk/rust/airyx/cap_ids.rs` | capability ID 常量 + 枚举 |
 | Python | `sdk/python/airyx/cap_ids.py` | capability ID 常量字典 |
 
-### 5.3 LSM 钩子 ID 生成
+> **SSoT 声明**：LSM 钩子**不通过数字 ID 枚举注册**。Airy 实际注册 5 个 LSM 钩子（对齐 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED = 5`），通过 Linux 6.6 LSM 框架原生的 `LSM_HOOK_INIT` 宏名注册（`uring_cmd/task_alloc/task_free/task_kill/file_open`），不存在虚构的 `airy_lsm_hook_id` 250 ID 枚举。详见 [110-security/01-lsm-framework.md](../110-security/01-lsm-framework.md) §11.2.1。
 
-LSM 钩子 ID（250 个，对齐 Linux 6.6 `security_hook_heads` 钩子数量，详见 [10-architecture/07-directory-structure.md](../10-architecture/07-directory-structure.md) §include/uapi/linux/airymax/security_types.h）由 `cap_gen.py` 的第二阶段生成。输入为 `security/include/airy_lsm_hooks.def`（X-macro 风格，每个条目声明一个 LSM 钩子），生成 `enum airy_lsm_hook_id`（0-249）与钩子分派表索引。
+### 5.3 LSM 钩子注册（非 codegen 生成）
+
+LSM 钩子注册由 `kernel/security/airy/airy_lsm.c` 通过 `LSM_HOOK_INIT` 宏静态注册，**不经过 codegen 管道**。`DEFINE_LSM(airy)` 通过 `security_add_hooks()` 将 5 个钩子挂接到 Linux 6.6 LSM 框架的 `security_hook_heads` 链表。钩子标识通过钩子名（字符串）在内核内部传递，不通过数字 ID。
 
 ```c
 /* @generated by cap_gen.py v1.0.1 from airy_cap_ids.def — DO NOT EDIT */
@@ -518,25 +522,25 @@ LSM 钩子 ID（250 个，对齐 Linux 6.6 `security_hook_heads` 钩子数量，
  * @generated — 禁止手工修改
  */
 enum airy_cap_id {
-	CAP_CHOWN              = 0,
-	CAP_DAC_OVERRIDE       = 1,
-	CAP_DAC_READ_SEARCH    = 2,
-	CAP_FOWNER             = 3,
-	CAP_FSETID             = 4,
-	CAP_KILL               = 5,
-	CAP_SETGID             = 6,
-	CAP_SETUID             = 7,
-	CAP_SETPCAP            = 8,
-	CAP_LINUX_IMMUTABLE    = 9,
-	CAP_NET_BIND_SERVICE   = 10,
-	/* ... 完整 41 个 POSIX capability ... */
-	CAP_PERFMON            = 38,
-	CAP_BPF                = 39,
-	CAP_CHECKPOINT_RESTORE = 40,
-	AIRY_CAP_AGENT_SPAWN   = 41,
-	AIRY_CAP_INVOKE        = 42,
-	AIRY_CAP_NOTIFICATION  = 43,
-	AIRY_CAP_AGENT_MAX     = 44,
+	AIRY_CAP_CHOWN            = 0,
+	AIRY_CAP_DAC_OVERRIDE     = 1,
+	AIRY_CAP_DAC_READ_SEARCH  = 2,
+	AIRY_CAP_FOWNER           = 3,
+	AIRY_CAP_FSETID           = 4,
+	AIRY_CAP_KILL             = 5,
+	AIRY_CAP_SETGID           = 6,
+	AIRY_CAP_SETUID           = 7,
+	AIRY_CAP_SETPCAP          = 8,
+	AIRY_CAP_LINUX_IMMUTABLE  = 9,
+	AIRY_CAP_NET_BIND_SERVICE = 10,
+	/* ... 完整 41 个 POSIX capability（对齐 SSoT security_types.h） ... */
+	AIRY_CAP_PERFMON          = 38,
+	AIRY_CAP_BPF              = 39,
+	AIRY_CAP_CHECKPOINT       = 40,
+	AIRY_CAP_AGENT_SPAWN      = 41,
+	AIRY_CAP_GPU_SCHED        = 42,
+	AIRY_CAP_NPU_ACCESS       = 43,
+	AIRY_CAP_ID_MAX
 };
 
 #endif /* AIRY_SECURITY_TYPES_H */
@@ -559,7 +563,7 @@ enum airy_cap_id {
 | `syscall_gen.py` | `tools/codegen/syscall_gen.py` | `syscall.xml` | C syscall.h + syscall_64.tbl + Rust/Python/Go/TS 绑定 | syscall XML → 多语言生成 |
 | `bitfield_gen.py` | `tools/codegen/bitfield_gen.py` | `structures_32.bf` / `structures_64.bf` | C structures_*_gen.h | .bf → C 头文件生成（参考 seL4） |
 | `ipc_gen.py` | `tools/codegen/ipc_gen.py` | `contracts.md` §2 | C/Rust/Python/Go/TS IPC 消息头绑定 | IPC 消息头生成 |
-| `cap_gen.py` | `tools/codegen/cap_gen.py` | `airy_cap_ids.def` + `airy_lsm_hooks.def` | C security_types.h + lsm_hook_ids.h + Rust/Python 绑定 | Capability ID + LSM 钩子生成 |
+| `cap_gen.py` | `tools/codegen/cap_gen.py` | `airy_cap_ids.def` | C security_types.h + Rust/Python 绑定 | Capability ID 生成（**不生成 LSM 钩子**——LSM 钩子通过 `LSM_HOOK_INIT` 宏名静态注册，详见 §5.3） |
 
 ### 6.2 运行时依赖
 
@@ -684,7 +688,6 @@ on:
       - 'include/uapi/linux/airymax/structures_*.bf'
       - '50-engineering-standards/20-contracts/contracts.md'
       - 'security/include/airy_cap_ids.def'
-      - 'security/include/airy_lsm_hooks.def'
       - 'tools/codegen/**'
       - 'include/uapi/linux/airymax/syscall.h'
       - 'arch/x86/entry/syscalls/syscall_64.tbl'
@@ -943,7 +946,7 @@ enum airy_cap_id {
 - [SSoT 注册表](../50-engineering-standards/09-ssot-registry.md)（规则编号与契约物理宿主权威来源）
 - [共享契约层](../50-engineering-standards/120-cross-project-code-sharing.md)（[SC] 头文件物理宿主）
 - [契约总览](../50-engineering-standards/20-contracts/contracts.md)（IPC 消息头 SSoT 定义）
-- [Capability 模型](../110-security/03-capability-model.md)（41 ID + 3 Airymax 专属 capability）
+- [Capability 模型](../110-security/03-capability-model.md)（44 ID = 41 POSIX + 3 Airymax 专属 capability）
 
 ---
 

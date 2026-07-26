@@ -84,7 +84,7 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 ### 3.3 系统调用编号分布（SSoT 见 07-syscall-registry.md）
 
 ```c
-/* kernel/include/uapi/agentrt/syscalls.h —— 完整注册表见 07-syscall-registry.md */
+/* kernel/include/uapi/linux/airymax/syscalls.h —— 完整注册表见 07-syscall-registry.md */
 /* v1.0.1 Capability Folding: 4 核心 syscall + op-dispatch + io_uring 数据面 */
 #define AIRY_SYS_CALL          548  /* Capability Invocation（sec_d 专属管理入口） */
 #define AIRY_SYS_ROVOL_CTL     549  /* MemoryRovol 记忆卷载控制（op-dispatch） */

@@ -76,7 +76,7 @@ seL4 的核心设计决策是 **capability 单一安全模型**（ES-SEL4-05 至
 | cap 身份  | 64 bit Badge 标识来源                                            | `src/object/cnode.c:798-819`                    |
 | cap 即内存 | CTE 直接内嵌在 TCB 中，cap 本身就是内存                                   | `include/object/structures.h`                   |
 
-**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + capability 派生模型（mint / mintcopy / derive / revoke）。
+**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + capability 派生模型（mint / mintcopy / derive / revoke）。
 
 ### 1.3 形式化可验证性预留
 
@@ -331,7 +331,7 @@ seL4 MCS（Mixed-Criticality Systems）模式引入 SchedContext 捐赠机制（
 | 非 MCS | Reply cap 自动生成（call 时）                   | 无带宽保证 |
 | MCS   | SchedContext 捐赠（server 用 client 的调度预算执行） | 带宽保证  |
 
-**agentrt-linux 适配**：通过 sched\_ext 的 SCHED\_AGENT 策略实现等效的调度优先级传递。当 Agent A 调用 Agent B 的服务时，Agent B 获得 Agent A 的调度优先级提升（优先级继承）。
+**agentrt-linux 适配**：通过 sched\_tac 的优先级继承机制实现等效的调度优先级传递。当 Agent A 调用 Agent B 的服务时，Agent B 获得 Agent A 的调度优先级提升（优先级继承）。sched\_tac 基于 Linux 6.6 原生 SCHED\_DEADLINE / SCHED\_FIFO / EEVDF 调度类组合，零内核调度器修改，非 sched\_ext BPF 框架。
 
 ***
 
@@ -607,7 +607,7 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 | `sched.h`           | TCB 调度               | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED\_AGENT 宏）+ MAC\_MAX\_AGENTS=1024 | kernel / cognition |
 | `memory_types.h`    | Untyped / Frame      | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
 | `security_types.h`  | CNode / Capability   | 41 cap + 250 LSM + Cupolas blob 布局 + capability 派生                               | kernel / security  |
-| `cognition_types.h` | —                    | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式                                  | kernel / cognition |
+| `cognition_types.h` | —                    | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式                                  | kernel / cognition |
 | `syscalls.h`        | seL4 7-11 syscall 模型 | v1.0.1: 4 核心 + 20 预留 = 24 槽位（1 Capability Invocation + 3 控制原语）                                | kernel / cognition |
 | `uapi_compat.h`     | 用户态 ABI 桥接        | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                                       | IRON-9 跨端 |
 | `lsm_types.h`       | 安全钩子契约            | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构                          | kernel / security  |

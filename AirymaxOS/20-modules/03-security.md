@@ -67,7 +67,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度                               | 安全子系统内容                                                                                                                                                           | 组织方式                               |
 | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | POSIX capability 41 个 ID 枚举、LSM 钩子 250 个 ID 枚举、Cupolas blob 结构布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 | `include/uapi/linux/airymax/security_types.h`（10 个 [SC] 头文件之一） |
+| **\[SC] 共享契约层**  | 完全共享代码                             | capability 44 个 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）、LSM 钩子 250 个 ID 枚举、Cupolas blob 结构布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 | `include/uapi/linux/airymax/security_types.h`（10 个 [SC] 头文件之一） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | `security_add_hooks()`、`call_int_hook` 短路、`DEFINE_LSM(airy)`、Landlock 三系统调用、`cap_capable()`、`security_file_open()` 等 17 项                                      | 各自独立实现                             |
 | **\[IND] 完全独立层** | 完全独立                               | SELinux 完整实现、AppArmor 完整实现、Smack、TOMOYO、IMA digest list、IMA VirtCCA、IMA 策略 DB、EVM xattr 签名、内核 ABI 预留机制                                                            | 各自独立仓库                             |
 | **\[DSL] 降级生存层** | 降级模式生存                             | `#ifdef AIRY_SC_FALLBACK` 降级块位于每个 \[SC] 头文件底部——`capability_badge=0` 跳过 fastpath C-S9 Badge 校验（H6 约束）、IPC 数据面 fastpath 仍可用、控制面 `airy_sys_call` 降级为传统 cap_t 引用模式、Vault backend 降级为应用层加密 | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 块 |
@@ -258,7 +258,7 @@ typedef uint64_t cap_t;
  * Capability Folding 改用 agent_caps[1024] 静态数组 + Badge 64-bit Native
  * Word（详见 §4.1 v1.1 表格与下方代码）。
  */
-/* typedef uint32_t airy_cap_id_t;        -- 41 个 POSIX cap ID 枚举 */
+/* typedef uint32_t airy_cap_id_t;        -- 44 个 cap ID 枚举（41 POSIX 0-40 + 3 Airymax 41-43） */
 /* typedef enum { CAP_OP_COPY, CAP_OP_MINT, CAP_OP_MOVE, CAP_OP_MUTATE,
  *                CAP_OP_REVOKE, CAP_OP_DELETE, CAP_OP_ROTATE } airy_cap_op_t; */
 ```
@@ -694,11 +694,12 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | 内容                                 | 说明                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------ |
 | `airy_cap_id_t` 枚举                 | POSIX capability 41 个 ID（CAP\_CHOWN=0 ... CAP\_CHECKPOINT\_RESTORE=40）               |
-| `airy_lsm_hook_id_t` 枚举            | LSM 钩子 250 个 ID（binder\_set\_context\_mgr=0 ... MAX）                                 |
-| `airy_cupolas_cred_security_t` 结构  | Cupolas cred blob 布局（agent\_id/domain\_id/capability\_set/sandbox\_level/audit\_seq） |
-| `airy_cupolas_inode_security_t` 结构 | Cupolas inode blob 布局                                                                |
-| `airy_cupolas_file_security_t` 结构  | Cupolas file blob 布局                                                                 |
-| `airy_cupolas_task_security_t` 结构  | Cupolas task blob 布局                                                                 |
+| `AIRY_LSM_HOOK_IMPLEMENTED` 常量     | Airy 实际注册的 LSM 钩子数（=5：uring_cmd/task_alloc/task_free/task_kill/file_open）        |
+| `AIRY_LSM_KERNEL_HOOK_TOTAL` 常量    | Linux 6.6 LSM 框架可用钩子总数（=250，仅文档用途，非数组尺寸）                          |
+| `airy_task_sec` 结构                | task blob 布局（agent_id/cap_space_root/agent_state/fault_count/sched_budget_ns/last_heartbeat/frozen_reason/ipc_ring） |
+| `airy_inode_sec` 结构               | inode blob 布局（cap_required/owner_agent）                                            |
+| `airy_cap_slot` 结构                | capability slot（64 字节缓存行对齐，badge/agent_id/flags/randtag/perms）                 |
+| `airy_capability_check_fn` 回调签名  | capability 检查函数指针类型（badge, required_perm, agent_id → __s32）                    |
 | v1.0 capability 元数据语义模型（v1.0 元数据已废弃） | capability 派生模型语义契约（cap\_id/cap\_type/rights/parent\_cap\_id/mint\_depth/mint\_quota + 7 操作 Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）；v1.1 物理存储改用 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（详见 §4.1） |
 | `airy_vault_backend_t` 结构          | Vault backend 抽象（init/seal/unseal/attest）                                            |
 | `airy_verdict_t` 枚举               | 策略裁决结果 4 值（ALLOW/DENY/AUDIT/COMPLAIN）                                                     |

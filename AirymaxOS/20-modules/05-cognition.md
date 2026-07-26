@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 认知设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）认知设计文档（cognition，极境认知）\
-> **文档版本**：v1.0.1\
+> **文档版本**：v1.0.1-fix\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 coreloopthree 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 kthread 加速、Wasm runtime、GPU/NPU 驱动实现独立\
 > **子仓编号**：05\
@@ -29,6 +29,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [11. agentrt 一致性检查](#11-agentrt-一致性检查)
 - [12. 相关文档](#12-相关文档)
 - [13. 参考](#13-参考)
+- [14. 变更历史](#14-变更历史)
 
 ***
 
@@ -36,12 +37,12 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 `cognition` 是 agentrt-linux（AirymaxOS）的认知与 AI 推理子仓，承担以下核心职责：
 
-1. **CoreLoopThree kthread 实现 \[SS]**：将 agentrt 的 CoreLoopThree（三阶段认知循环）升级为 OS 级 kthread 实现，提供 Agent 认知循环的内核态加速。阶段枚举与上下文结构 \[SC] 与 agentrt 共享。
+1. **CoreLoopThree kthread 实现 \[SS]**：将 agentrt 的 CoreLoopThree（三阶段认知循环）升级为 OS 级 kthread 实现，提供 Agent 认知循环的内核态加速。阶段枚举与配置结构 \[SC] 与 agentrt 共享。
 2. **Thinkdual 双思考系统内核态加速 \[SS]**：将 agentrt 的 Thinkdual（双思考系统）通过内核态加速提升响应速度。模式枚举 \[SC] 与 agentrt 共享。
 3. **Wasm runtime 3.0 \[IND]**：集成 Wasm 3.0 runtime，提供安全沙箱执行环境。
-4. **LLM 推理感知调度 \[SS]**：基于 agentrt-linux 认知循环，实现 LLM 推理任务的感知调度。推理阶段枚举 \[SC] 与 agentrt 共享。
+4. **LLM 推理感知调度 \[SS]**：基于 agentrt-linux 认知循环，实现 LLM 推理任务的感知调度。
 5. **GPU/NPU 调度与池化 \[IND]**：统一调度 GPU/NPU 异构算力，基于 Linux 6.6 加速器框架（`drivers/accel/`）与 DRM 调度器（`drivers/gpu/drm/scheduler/`）。
-6. **Token 能效优化 \[IND]**：参考 KVC-Gateway + LMCache + Bifrost 优化 Token 能效。能效指标结构 \[SC] 与 agentrt 共享。
+6. **Token 能效优化 \[IND]**：参考 KVC-Gateway + LMCache + Bifrost 优化 Token 能效。
 7. **超节点沙箱 \[IND]**：基于 agentrt-linux 超节点 OS，实现软硬协同优化镜像快照。
 8. **具身智能支持 \[IND]**：基于 agentrt-linux Claw 提供具身智能运行时支持。
 
@@ -64,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次               | 共享程度                               | 认知子系统内容                                                                                                                                                                                                              | 组织方式                                |
 | ---------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | CoreLoopThree 阶段枚举 `airy_cog_phase`（PERCEPT=0/THINK=1/ACT=2）、Thinkdual 模式枚举 `airy_think_mode`（FAST=0/SLOW=1）、LLM 推理阶段枚举（PREFILL/DECODE/SPECULATIVE）、CoreLoopThree 上下文结构、Token 能效指标结构、GPU/NPU 能力描述符                                     | `include/uapi/linux/airymax/cognition_types.h` |
+| **\[SC] 共享契约层**  | 完全共享代码                             | Q16.16 定点类型 `airy_q16_t` 与 `AIRY_Q16_*` 辅助宏、CoreLoopThree 阶段枚举 `enum airy_cog_phase`（PERCEPT=0/THINK=1/ACT=2）、Thinkdual 模式枚举 `enum airy_think_mode`（FAST=0/SLOW=1）、CoreLoopThree 配置结构 `struct airy_cog_config`、`AIRY_SC_FALLBACK` 降级块（DSL 层）                                     | `include/uapi/linux/airymax/cognition_types.h` |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | `coreloopthree_run()`、`coreloopthree_notify_phase()`、`thinkdual_switch()`、`llm_scheduler_submit()`、`llm_scheduler_query_phase()`、`wasm_runtime_instantiate()`、`gpu_npu_schedule()`、`token_efficiency_record()` 等 8 项；v1.0.1 Capability Folding Badge 校验语义 | 各自独立实现                              |
 | **\[IND] 完全独立层** | 完全独立                               | Wasm runtime 完整实现（wasmtime/WAMR）、GPU/NPU 驱动、超节点沙箱实现、具身智能框架（Claw）、KVC-Gateway/LMCache/Bifrost 集成、CoreLoopThree kthread 内核态实现                                                                                          | 各自独立仓库                              |
 | **\[DSL] 降级生存层** | 最小生存子集                             | `#ifdef AIRY_SC_FALLBACK` 降级块：cognition 子仓仅保留 `airy_cog_phase` 三阶段枚举最小骨架，`capability_badge=0` 跳过 fastpath C-S9，CoreLoopThree kthread 退化为用户态轮询 | 各自独立仓库（受 [SC] 头文件 `AIRY_SC_FALLBACK` 宏驱动） |
@@ -120,8 +121,8 @@ cognition/
 
 参考 agentrt Thinkdual 设计，模式枚举 \[SC] 共享：
 
-- `system1`：快思考（直觉式，低延迟路径）——模式 \[SC] SYSTEM1\_FAST。
-- `system2`：慢思考（推理式，高准确度路径）——模式 \[SC] SYSTEM2\_SLOW。
+- `system1`：快思考（直觉式，低延迟路径）——模式 \[SC] `AIRY_THINK_FAST`。
+- `system2`：慢思考（推理式，高准确度路径）——模式 \[SC] `AIRY_THINK_SLOW`。
 - `switcher`：快慢思考切换器（基于任务复杂度）\[SS]。
 - `kernel-accel`：内核态加速（共享内存、零拷贝数据传递）\[IND]。
 
@@ -141,11 +142,11 @@ cognition/
 
 基于 **agentrt-linux 认知循环**，推理阶段枚举 \[SC] 共享：
 
-- `inference-aware`：推理感知调度器（识别 LLM 推理阶段）\[SC] PREFILL/DECODE/SPECULATIVE。
+- `inference-aware`：推理感知调度器（识别 LLM 推理阶段）——说明性示例，非 \[SC] SSoT 定义（`cognition_types.h` 不含 LLM 推理阶段枚举）。
 - `kv-cache-aware`：KV Cache 感知调度。
 - `batch-scheduler`：动态 batching 调度。
-- `prefill-decode`：prefill 与 decode 阶段分离调度 \[SC]。
-- `speculative-decoding`：投机解码调度支持 \[SC]。
+- `prefill-decode`：prefill 与 decode 阶段分离调度——说明性示例，非 \[SC] SSoT 定义。
+- `speculative-decoding`：投机解码调度支持——说明性示例，非 \[SC] SSoT 定义。
 
 ### 3.5 gpu-npu/（GPU/NPU 调度与池化）\[IND]
 
@@ -194,12 +195,11 @@ cognition/
 ```mermaid
 graph TD
     subgraph SC["[SC] 共享契约层 include/uapi/linux/airymax/cognition_types.h"]
-        CLT[CoreLoopThree 阶段枚举<br/>PERCEPTION / THINKING / ACTION]
-        TD2[Thinkdual 模式枚举<br/>SYSTEM1_FAST / SYSTEM2_SLOW]
-        LLM[LLM 推理阶段枚举<br/>PREFILL / DECODE / SPECULATIVE]
-        CTX[CoreLoopThree 上下文结构]
-        ENERGY[Token 能效指标结构]
-        GPUDESC[GPU/NPU 能力描述符]
+        Q16[airy_q16_t Q16.16 定点类型<br/>AIRY_Q16_ONE / AIRY_Q16_HALF]
+        CLT[CoreLoopThree 阶段枚举 enum airy_cog_phase<br/>AIRY_COG_PERCEPT / AIRY_COG_THINK / AIRY_COG_ACT]
+        TD2[Thinkdual 模式枚举 enum airy_think_mode<br/>AIRY_THINK_FAST / AIRY_THINK_SLOW]
+        CFG[CoreLoopThree 配置结构 struct airy_cog_config]
+        DSL[AIRY_SC_FALLBACK 降级块<br/>CoreLoop→ACT-only / Thinkdual→FAST-only]
     end
     subgraph SS["[SS] 语义同源层"]
         KTHREAD[CoreLoopThree kthread 内核态]
@@ -215,13 +215,10 @@ graph TD
     end
     CLT --> KTHREAD
     TD2 --> THINKACC
-    LLM --> SCHED
-    CTX --> KTHREAD
+    CFG --> KTHREAD
     KTHREAD --> WASM
     KTHREAD --> HYPER
     SCHED --> GPUPOOL
-    ENERGY --> TOKENEFF
-    GPUDESC --> GPUPOOL
     KTHREAD --> CLAW
 ```
 
@@ -231,14 +228,16 @@ graph TD
 
 ### 4.1 CoreLoopThree kthread 实现（三阶段认知循环 OS 化）\[SS]
 
-**三阶段循环** \[SC] 阶段枚举共享：
+**三阶段循环** \[SC] 阶段枚举共享（SSoT 源文件：`include/uapi/linux/airymax/cognition_types.h`）：
 
 ```c
-typedef enum {
-    AIRY_COG_PHASE_PERCEPT = 0,  /* 感知循环：采集多模态输入 */
-    AIRY_COG_PHASE_THINK   = 1,  /* 思考循环：LLM 推理，决策制定 */
-    AIRY_COG_PHASE_ACT     = 2,  /* 行动循环：执行决策，输出结果 */
-} airy_cog_phase_t;
+/* SSoT 源文件：include/uapi/linux/airymax/cognition_types.h */
+enum airy_cog_phase {
+    AIRY_COG_PERCEPT  = 0,   /* Perception: observe environment */
+    AIRY_COG_THINK    = 1,   /* Think: reason and plan */
+    AIRY_COG_ACT      = 2,   /* Act: execute actions */
+    AIRY_COG_PHASE_MAX
+};
 ```
 
 1. **Perception Loop（感知循环）**：采集多模态输入（文本、图像、音频、传感器）。
@@ -251,28 +250,50 @@ typedef enum {
 - 阶段通知通过 sched\_tac 接口传递给 sub-scheduler \[SS]。
 - sub-scheduler 根据阶段动态调整调度策略（思考阶段优先级高）。
 
-**CoreLoopThree 上下文** \[SC]（`include/uapi/linux/airymax/cognition_types.h`）：
+**CoreLoopThree 配置结构** \[SC]（SSoT 源文件：`include/uapi/linux/airymax/cognition_types.h`）：
 
 ```c
-typedef struct airy_cog_context {
-    airy_cog_phase_t           current_phase;       /* 当前阶段 */
-    airy_think_mode_t          think_mode;          /* 双思考模式 */
-    airy_llm_inference_phase_t inference_phase;     /* LLM 推理阶段 */
-    uint32_t                      priority;             /* 调度优先级 */
-    uint64_t                      timestamp;           /* 阶段时间戳 */
-    uint64_t                      cycle_count;         /* 循环计数 */
-} airy_cog_context_t;
+/* SSoT 源文件：include/uapi/linux/airymax/cognition_types.h */
+struct airy_cog_config {
+    airy_q16_t   confidence_threshold;  /* Minimum confidence to act */
+    airy_q16_t   interrupt_priority;    /* Priority for cognitive interrupts */
+    __u32        loop_timeout_ms;       /* Max loop cycle duration */
+    __u32        max_think_iterations;  /* Max reasoning iterations */
+    __u8         think_mode;            /* Default: FAST or SLOW */
+    __u8         _pad[7];              /* Alignment */
+};
 ```
+
+> **说明**：`cognition_types.h` 中 \[SC] 共享的 CoreLoopThree 相关结构为**配置结构** `airy_cog_config`（静态配置，非运行时上下文）。运行时阶段切换状态由 kthread 内部维护（实现私有，非 \[SC] 共享）。`confidence_threshold` 与 `interrupt_priority` 使用 Q16.16 定点类型 `airy_q16_t`（见下方 Q16.16 说明）。
+
+**Q16.16 定点类型** \[SC]（SSoT 源文件：`include/uapi/linux/airymax/cognition_types.h`）：
+
+```c
+/* SSoT 源文件：include/uapi/linux/airymax/cognition_types.h */
+typedef __s32 airy_q16_t;
+
+#define AIRY_Q16_ONE            (1 << 16)  /* 1.0 in Q16.16 */
+#define AIRY_Q16_HALF           (1 << 15)  /* 0.5 in Q16.16 */
+
+#ifndef __KERNEL__
+#define AIRY_Q16_TO_FLOAT(x)    ((float)(x) / (float)(1 << 16))
+#define AIRY_Q16_FROM_FLOAT(f)  ((airy_q16_t)((f) * (float)(1 << 16)))
+#endif /* __KERNEL__ */
+```
+
+> **说明**：Q16.16 定点类型用于 `airy_cog_config` 的 `confidence_threshold` 与 `interrupt_priority` 字段。Float 转换辅助宏仅 userspace 可用（`#ifndef __KERNEL__` 保护），内核态禁用浮点（IRON-9 §2.1）。
 
 ### 4.2 Thinkdual 双思考系统内核态加速 \[SS]
 
-**双思考架构**（参考 Daniel Kahneman "Thinking, Fast and Slow"）——模式枚举 \[SC] 共享：
+**双思考架构**（参考 Daniel Kahneman "Thinking, Fast and Slow"）——模式枚举 \[SC] 共享（SSoT 源文件：`include/uapi/linux/airymax/cognition_types.h`）：
 
 ```c
-typedef enum {
-    AIRY_THINK_MODE_FAST = 0,  /* 快思考：直觉式、低延迟、低能耗 */
-    AIRY_THINK_MODE_SLOW = 1,  /* 慢思考：推理式、高延迟、高准确度 */
-} airy_think_mode_t;
+/* SSoT 源文件：include/uapi/linux/airymax/cognition_types.h */
+enum airy_think_mode {
+    AIRY_THINK_FAST   = 0,   /* Fast: pattern recognition, low latency */
+    AIRY_THINK_SLOW   = 1,   /* Slow: deliberate reasoning, high quality */
+    AIRY_THINK_MODE_MAX
+};
 ```
 
 - **System 1（快思考）**：直觉式、低延迟、低能耗。适用于简单决策。
@@ -304,15 +325,7 @@ typedef enum {
 
 ### 4.4 LLM 推理感知调度（基于 agentrt-linux 认知循环）\[SS]
 
-**推理阶段枚举** \[SC] 共享：
-
-```c
-typedef enum {
-    AIRY_LLM_PHASE_PREFILL      = 0,  /* prefill 阶段：首 token 生成 */
-    AIRY_LLM_PHASE_DECODE       = 1,  /* decode 阶段：后续 token 生成 */
-    AIRY_LLM_PHASE_SPECULATIVE  = 2,  /* 投机解码阶段 */
-} airy_llm_inference_phase_t;
-```
+> **说明**：`cognition_types.h` 中**不包含** LLM 推理阶段枚举。PREFILL/DECODE/SPECULATIVE 等推理阶段概念在 cogn\_d 与 sched\_d 之间通过实现私有协议传递，非 \[SC] 共享契约。如需 \[SC] 化，需另立头文件（如 `llm_types.h`）并经 IRON-9 v3 评审。
 
 **调度策略** \[SS]：
 
@@ -356,19 +369,7 @@ OLK 6.6 提供 XSched（`kernel/xsched/`）异构计算单元（XPU）调度框�
 - **cgroup 集成**：XPU 预算通过 cgroup 控制
 - **优先级**：`XSE_PRIO_HIGH/LOW` 两级优先级
 
-**GPU/NPU 能力描述符** \[SC]（`include/uapi/linux/airymax/cognition_types.h`）：
-
-```c
-typedef struct airy_gpu_npu_descriptor {
-    uint32_t device_id;        /* 设备 ID */
-    uint32_t device_type;      /* GPU/NPU/加速器 */
-    uint64_t memory_bytes;     /* 设备内存 */
-    uint32_t compute_units;    /* 计算单元数 */
-    uint32_t tflops;           /* 算力（TFLOPS） */
-    uint8_t  supports_mig;     /* 是否支持 MIG */
-    uint8_t  supports_mps;     /* 是否支持 MPS */
-} airy_gpu_npu_descriptor_t;
-```
+> **说明**：`cognition_types.h` 中**不包含** GPU/NPU 能力描述符结构。GPU/NPU 能力查询通过 `drivers/accel/` 与 DRM 调度器框架（`drivers/gpu/drm/scheduler/`）的标准接口实现，非 \[SC] 共享契约。
 
 ### 4.6 Token 能效优化（KVC-Gateway + LMCache + Bifrost）\[IND]
 
@@ -376,18 +377,7 @@ typedef struct airy_gpu_npu_descriptor {
 **LMCache**：KV Cache 跨节点缓存，减少重复计算。
 **Bifrost**：推测解码加速，减少 decode 阶段延迟。
 
-**Token 能效指标** \[SC]（`include/uapi/linux/airymax/cognition_types.h`）：
-
-```c
-typedef struct airy_token_efficiency_metric {
-    uint64_t total_tokens;          /* 总 token 数 */
-    uint64_t cached_tokens;         /* 缓存命中 token 数 */
-    uint64_t speculative_tokens;    /* 投机解码 token 数 */
-    uint64_t discarded_tokens;      /* 丢弃 token 数 */
-    double   cache_hit_rate;        /* 缓存命中率 */
-    double   speculative_accept_rate; /* 投机接受率 */
-} airy_token_efficiency_metric_t;
-```
+> **说明**：`cognition_types.h` 中**不包含** Token 能效指标结构。能效统计由 `token-efficiency/` 子模块通过 ftrace 实现，指标定义在实现内部，非 \[SC] 共享契约。
 
 **优化效果**：
 
@@ -427,7 +417,7 @@ v1.0.1 Capability Folding 将 capability check 从独立控制面操作"折叠"�
 | 1  | CoreLoopThree 阶段通知发起                 | 通过 `airy_sys_clt_notify`（编号 3）向内核 kthread 推送阶段切换，携带 Badge            |
 | 2  | LLM 推理请求投递                           | 推理请求经 `IORING_OP_URING_CMD`（cmd_op=IPC_SEND）提交，`capability_badge` 承载 Badge |
 | 3  | Thinkdual 快慢思考切换                     | 切换决策通过 io\_uring IPC 传递至内核态 kthread，C-S9 校验后生效                       |
-| 4  | 推理阶段（PREFILL/DECODE/SPECULATIVE）感知   | cogn_d 标记推理阶段至 `airy_cog_context_t.inference_phase`，调度器感知             |
+| 4  | 推理阶段（PREFILL/DECODE/SPECULATIVE）感知   | cogn_d 标记推理阶段至 kthread 内部运行时状态（实现私有，非 \[SC]），调度器感知             |
 | 5  | Badge 携带者                            | 所有 cognition 相关 IPC 消息均携带 sec_d 编译的 Badge，fastpath C-S9 校验              |
 
 **4.9.2 `airy_sys_clt_notify`（编号 3）的使用** \[SS]
@@ -449,7 +439,7 @@ int airy_sys_clt_notify(unsigned int op, unsigned long arg);
 - **kthread 注册**：cogn_d 启动时通过 `AIRY_CLT_NOTIFY_OP_REGISTER_KTHREAD` 注册 CoreLoopThree kthread，内核态 `kthread_run()` 创建 kthread 执行循环 \[IND]。
 - **阶段切换通知**：cogn_d 在每阶段切换时通过 `AIRY_CLT_NOTIFY_OP_PHASE_SWITCH` 通知内核 kthread，同时通过 io\_uring IPC 携带 Badge 至 sched_d 协同调度策略 \[SS]。
 - **Thinkdual 切换**：cogn_d 根据任务复杂度决策快慢思考切换，通过 `AIRY_CLT_NOTIFY_OP_THINK_MODE_SWITCH` 通知内核 kthread 切换执行路径 \[SS]。
-- **推理阶段标记**：cogn_d 标记推理阶段（PREFILL/DECODE/SPECULATIVE）至 `airy_cog_context_t.inference_phase`，sched_d 通过 sched_tac 感知调度 \[SS]。
+- **推理阶段标记**：cogn_d 标记推理阶段（PREFILL/DECODE/SPECULATIVE）至 kthread 内部运行时状态（实现私有，非 \[SC]），sched_d 通过 sched_tac 感知调度 \[SS]。
 - **不承载 Badge 编译**：`airy_sys_clt_notify` 仅承载通知原语，Badge 编译/撤销由 sec_d 通过 `airy_sys_call`（编号 0）独占管理 \[SS]。
 
 **4.9.3 CoreLoopThree kthread 与 fastpath C-S9 Badge 校验的协作** \[SS]
@@ -473,7 +463,7 @@ sequenceDiagram
 
     loop 认知循环 PERCEPT → THINK → ACT
         COGN->>SYSCALL: AIRY_CLT_NOTIFY_OP_PHASE_SWITCH 阶段切换通知 [SS]
-        SYSCALL->>KTHREAD: 更新 airy_cog_context_t.current_phase [SC]
+        SYSCALL->>KTHREAD: 更新 kthread 内部运行时阶段状态（实现私有，非 [SC]）
 
         COGN->>IPC: IORING_OP_URING_CMD 提交推理请求（capability_badge=Badge）[SS]
         IPC->>CS9: fastpath C-S9 内联校验（~10ns, 3 个 READ_ONCE）[SS]
@@ -520,7 +510,7 @@ cognition 子仓的 CoreLoopThree kthread + io\_uring IPC 实现严格遵循 OLK
 - **`airy_lsm` 模块**：物理宿主 `security/airy/`（非 `security/airymax/`），`CONFIG_SECURITY_AIRY` default 'n'
 - **UAPI 标准路径**：`include/uapi/linux/airymax/`（10 个 \[SC] 共享契约头文件物理宿主，`cognition_types.h` 为其中之一）
 - **CoreLoopThree kthread 实现**：基于 Linux 6.6 `kernel/kthread.c`（1562 行）的 `kthread_run()` / `kthread_should_stop()` / `kthread_bind()` API，禁止使用已废弃的 `kthread_create()` 直接调用模式
-- **结构体对齐**：`airy_cog_context_t` 等 \[SC] 共享结构使用 `__aligned(64)` 对齐（参考 OLK 6.6 `struct ethhdr` / `struct iphdr` 手动安排字段自然对齐的做法），D-9 修复后移除 packed 属性（破坏自然对齐，影响 fastpath 性能）
+- **结构体对齐**：`struct airy_cog_config` 等 \[SC] 共享结构使用 `__aligned(64)` 对齐（参考 OLK 6.6 `struct ethhdr` / `struct iphdr` 手动安排字段自然对齐的做法），D-9 修复后移除 packed 属性（破坏自然对齐，影响 fastpath 性能）
 
 ***
 
@@ -562,12 +552,11 @@ cognition 子仓的 CoreLoopThree kthread + io\_uring IPC 实现严格遵循 OLK
 
 | 内容                                  | 说明                                                                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `airy_cog_phase_t` 枚举               | CoreLoopThree 3 阶段（PERCEPT=0/THINK=1/ACT=2）                                                                            |
-| `airy_think_mode_t` 枚举          | Thinkdual 2 模式（FAST=0/SLOW=1）                                                                               |
-| `airy_llm_inference_phase_t` 枚举     | LLM 推理 3 阶段（PREFILL/DECODE/SPECULATIVE）                                                                                   |
-| `airy_cog_context_t` 结构             | CoreLoopThree 上下文（current\_phase/think\_mode/inference\_phase/priority/timestamp/cycle\_count）                        |
-| `airy_token_efficiency_metric_t` 结构 | Token 能效指标（total\_tokens/cached\_tokens/speculative\_tokens/discarded\_tokens/cache\_hit\_rate/speculative\_accept\_rate） |
-| `airy_gpu_npu_descriptor_t` 结构      | GPU/NPU 能力描述符（device\_id/device\_type/memory\_bytes/compute\_units/tflops/supports\_mig/supports\_mps）                    |
+| `airy_q16_t` 类型 + `AIRY_Q16_*` 宏  | Q16.16 定点类型与转换辅助宏（`AIRY_Q16_ONE`/`AIRY_Q16_HALF`/`AIRY_Q16_TO_FLOAT`/`AIRY_Q16_FROM_FLOAT`，float 转换仅 userspace）         |
+| `enum airy_cog_phase` 枚举           | CoreLoopThree 3 阶段（`AIRY_COG_PERCEPT=0`/`AIRY_COG_THINK=1`/`AIRY_COG_ACT=2`，含 `AIRY_COG_PHASE_MAX`）                          |
+| `enum airy_think_mode` 枚举          | Thinkdual 2 模式（`AIRY_THINK_FAST=0`/`AIRY_THINK_SLOW=1`，含 `AIRY_THINK_MODE_MAX`）                                  |
+| `struct airy_cog_config` 结构        | CoreLoopThree 配置（confidence\_threshold/interrupt\_priority/loop\_timeout\_ms/max\_think\_iterations/think\_mode/\_pad[7]）        |
+| `AIRY_SC_FALLBACK` 降级块（DSL 层）   | CoreLoopThree 退化为 ACT-only（`AIRY_DSL_COG_*`），Thinkdual 退化为 FAST-only（`AIRY_DSL_THINK_*`），Q16.16 仍可用（无 float）         |
 
 ### 6.2 \[SS] 语义同源层——8 项 API 映射
 
@@ -607,7 +596,7 @@ sequenceDiagram
     participant GPU as GPU/NPU 设备
 
     AGENT->>CLT_U: 发起认知循环
-    CLT_U->>CLT_U: 用户态阶段裁决 [SC] cog_context_t
+    CLT_U->>CLT_U: 用户态阶段裁决（实现私有状态，非 [SC]）
     CLT_U->>IPC: 提交推理请求 [SS] llm_scheduler_submit()
     IPC->>CLT_K: io_uring 提交
     CLT_K->>CLT_K: 内核态 kthread 执行 [IND]
@@ -730,21 +719,20 @@ cogn_d 作为 12 daemon 之一，与其他 11 daemon 形成"通知原语 + 数�
 | -- | ------------------------------------ | --------------------------------- | --------------------------- | ----------- |
 | 1  | CoreLoopThree 阶段枚举一致性                | 3 阶段（PERCEPT/THINK/ACT）           | 3 阶段（同）                     | PASS \[SC]  |
 | 2  | Thinkdual 模式枚举一致性                    | 2 模式（FAST/SLOW）                   | 2 模式（同）                     | PASS \[SC]  |
-| 3  | LLM 推理阶段枚举一致性                        | 3 阶段（PREFILL/DECODE/SPECULATIVE）  | 3 阶段（同）                     | PASS \[SC]  |
-| 4  | CoreLoopThree 上下文结构一致性               | 6 字段                              | 6 字段（同）                     | PASS \[SC]  |
-| 5  | Token 能效指标结构一致性                      | 6 字段                              | 6 字段（同）                     | PASS \[SC]  |
-| 6  | GPU/NPU 能力描述符一致性                     | 7 字段                              | 7 字段（同）                     | PASS \[SC]  |
-| 7  | `coreloopthree_run()` 语义等价性          | 用户态循环                             | 内核 kthread 循环               | PASS \[SS]  |
-| 8  | `coreloopthree_notify_phase()` 语义等价性 | 用户态回调                             | sched\_tac 接口               | PASS \[SS]  |
-| 9  | `thinkdual_switch()` 语义等价性           | 用户态切换                             | 内核态切换                       | PASS \[SS]  |
-| 10 | `llm_scheduler_submit()` 语义等价性       | 用户态队列                             | io\_uring 提交                | PASS \[SS]  |
-| 11 | `llm_scheduler_query_phase()` 语义等价性  | 用户态查询                             | 内核 BPF tracing              | PASS \[SS]  |
-| 12 | `wasm_runtime_instantiate()` 语义等价性   | 用户态 wasmtime                      | 内核态 WAMR                    | PASS \[SS]  |
-| 13 | `gpu_npu_schedule()` 语义等价性           | 用户态 API                           | drm\_sched + drivers/accel/ | PASS \[SS]  |
-| 14 | `token_efficiency_record()` 语义等价性    | 用户态记录                             | 内核 ftrace                   | PASS \[SS]  |
-| 15 | Wasm runtime/GPU 驱动/超节点沙箱独立性         | 用户态实现                             | 内核态实现                       | PASS \[IND] |
+| 3  | CoreLoopThree 配置结构一致性                | `struct airy_cog_config`（7 字段含 \_pad[7]）| 同（SSoT 共享）                  | PASS \[SC]  |
+| 4  | Q16.16 定点类型一致性                       | `airy_q16_t` + `AIRY_Q16_*` 宏      | 同（SSoT 共享）                  | PASS \[SC]  |
+| 5  | `AIRY_SC_FALLBACK` DSL 降级块一致性         | ACT-only CoreLoop + FAST-only Thinkdual | 同（SSoT 共享）                  | PASS \[SC]  |
+| 6  | `coreloopthree_run()` 语义等价性          | 用户态循环                             | 内核 kthread 循环               | PASS \[SS]  |
+| 7  | `coreloopthree_notify_phase()` 语义等价性 | 用户态回调                             | sched\_tac 接口               | PASS \[SS]  |
+| 8  | `thinkdual_switch()` 语义等价性           | 用户态切换                             | 内核态切换                       | PASS \[SS]  |
+| 9  | `llm_scheduler_submit()` 语义等价性       | 用户态队列                             | io\_uring 提交                | PASS \[SS]  |
+| 10 | `llm_scheduler_query_phase()` 语义等价性  | 用户态查询                             | 内核 BPF tracing              | PASS \[SS]  |
+| 11 | `wasm_runtime_instantiate()` 语义等价性   | 用户态 wasmtime                      | 内核态 WAMR                    | PASS \[SS]  |
+| 12 | `gpu_npu_schedule()` 语义等价性           | 用户态 API                           | drm\_sched + drivers/accel/ | PASS \[SS]  |
+| 13 | `token_efficiency_record()` 语义等价性    | 用户态记录                             | 内核 ftrace                   | PASS \[SS]  |
+| 14 | Wasm runtime/GPU 驱动/超节点沙箱独立性         | 用户态实现                             | 内核态实现                       | PASS \[IND] |
 
-**结论**：agentrt coreloopthree + frameworks 设计无需修改。15 项检查全部 PASS，两端在 \[SC]/\[SS]/\[IND]/\[DSL] 四层共享模型下完全一致。
+**结论**：agentrt coreloopthree + frameworks 设计无需修改。14 项检查全部 PASS，两端在 \[SC]/\[SS]/\[IND]/\[DSL] 四层共享模型下完全一致。
 
 ***
 
@@ -777,5 +765,14 @@ cogn_d 作为 12 daemon 之一，与其他 11 daemon 形成"通知原语 + 数�
 
 ***
 
-> **文档结束** | v1.0.1 | IRON-9 v3 同源且部分代码共享 | 认知循环贯穿 4 大数据流 | 0.1.1 = 文档体系完成
+## 14. 变更历史
+
+| 版本          | 日期         | 变更内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1.0.1      | 2026-07-25 | 初始版本：完整 cognition 子仓设计文档（M0-M8 里程碑、IRON-9 v3 四层共享模型落地、v1.0.1 Capability Folding 在 cognition 层的落地）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| v1.0.1-fix  | 2026-07-26 | SSoT 对齐修复：对照 `include/uapi/linux/airymax/cognition_types.h` 移除虚构内容并补全实际定义。具体变更：（1）移除虚构的 `airy_llm_inference_phase_t` 枚举（LLM 推理阶段枚举 PREFILL/DECODE/SPECULATIVE）、`airy_gpu_npu_descriptor_t` 结构、`airy_token_efficiency_metric_t` 结构——以上类型在 SSoT 中均不存在；（2）将虚构的 `airy_cog_context_t` 运行时上下文结构替换为 SSoT 实际定义的 `struct airy_cog_config` 配置结构（含 confidence\_threshold/interrupt\_priority/loop\_timeout\_ms/max\_think\_iterations/think\_mode/\_pad[7] 字段）；（3）修正 `enum airy_cog_phase` 枚举值命名（`AIRY_COG_PHASE_*` → `AIRY_COG_*`，补全 `AIRY_COG_PHASE_MAX`）与 `enum airy_think_mode` 枚举值命名（`AIRY_THINK_MODE_*` → `AIRY_THINK_*`，补全 `AIRY_THINK_MODE_MAX`）；（4）补全 SSoT 中存在但文档遗漏的 Q16.16 定点类型 `airy_q16_t` 与 `AIRY_Q16_*` 辅助宏、`AIRY_SC_FALLBACK` DSL 降级块说明；（5）修正组件架构图、跨态协作时序图、§6.1 SSoT 内容清单表、§11 一致性检查表中所有引用虚构类型的位置；（6）所有保留的 prefill/decode/speculative 概念性描述明确标注"说明性示例，非 SSoT 定义"。 |
+
+***
+
+> **文档结束** | v1.0.1-fix | IRON-9 v3 同源且部分代码共享 | 认知循环贯穿 4 大数据流 | 0.1.1 = 文档体系完成
 

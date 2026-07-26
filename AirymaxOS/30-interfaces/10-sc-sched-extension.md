@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # [SC] sched.h 扩展契约 — sched_tac
 > **文档定位**：A-ULS（统一生命周期管理）模块的调度扩展 [SC] 共享契约，定义 Agent 8 态生命周期与sched_tac 调度接口的唯一权威契约\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-26\
 > **上级文档**：[Airymax Unify Design 总纲](../10-architecture/10-unify-design.md) §7\
 > **设计依据**：综合修正方案 §1（sched_tac）+ §4.2.4（A-ULS 设计）
 
@@ -59,10 +59,11 @@ sched_tac 是本 [SC] 契约的调度机制选型依据（详见 综合修正方
 
 ```c
 /* kernel/include/uapi/linux/airymax/sched.h —— Agent 8 态生命周期枚举 */
-#ifndef _AIRYM_SCHED_H
-#define _AIRYM_SCHED_H
+#ifndef _UAPI_AIRYMAX_SCHED_H
+#define _UAPI_AIRYMAX_SCHED_H
 
-#include "uapi_compat.h"
+#include <linux/airymax/uapi_compat.h>
+#include <linux/airymax/lsm_types.h>
 
 /**
  * enum airy_agent_state - Agent 8 态生命周期
@@ -82,6 +83,7 @@ enum airy_agent_state {
     AIRY_AGENT_STOPPING = 5,   /* SIGSTOP 发送中，正在冻结 IPC */
     AIRY_AGENT_STOPPED  = 6,   /* TASK_STOPPED，已冻结，待裁决 */
     AIRY_AGENT_DEAD     = 7,   /* EXIT_ZOMBIE，等待 waitpid 回收 */
+    AIRY_AGENT_STATE_MAX
 };
 ```
 
@@ -132,13 +134,19 @@ enum airy_agent_state {
 当 [DSL] 降级生存层激活（`AIRY_SC_FALLBACK` 定义）或 Macro-Supervisor 故障时，A-ULS 将 8 态降级为 3 态，仅保留最小可运行子集：
 
 ```c
-/* kernel/include/uapi/linux/airymax/sched.h —— [DSL] 3 态降级 */
+/* kernel/include/uapi/linux/airymax/sched.h —— [DSL] 降级块 */
 #ifdef AIRY_SC_FALLBACK
-/* 降级块：仅保留 3 态，对齐 EEVDF 默认调度 */
-#define AIRY_AGENT_RUNNING   3   /* 运行中 */
-#define AIRY_AGENT_STOPPED   6   /* 已停止 */
-#define AIRY_AGENT_DEAD      7   /* 已终止 */
-#warning "AIRY_SC_FALLBACK active: only 3-state lifecycle available"
+    /* All sched_tac policies collapse to EEVDF default. */
+    #define AIRY_DSL_SCHED_POLICY_DEADLINE   AIRY_SCHED_POLICY_EEVDF
+    #define AIRY_DSL_SCHED_POLICY_FIFO       AIRY_SCHED_POLICY_EEVDF
+    #define AIRY_DSL_SCHED_POLICY_EEVDF      AIRY_SCHED_POLICY_EEVDF
+    #define AIRY_DSL_SCHED_POLICY_BESTEFFORT AIRY_SCHED_POLICY_EEVDF
+    #define AIRY_DSL_SCHED_POLICIES          1  /* Only EEVDF retained */
+
+    /* vtime decay collapses to identity (no weighted decay in fallback). */
+    #define AIRY_DSL_VTIME_DECAY(vtime, weight)  (vtime)
+
+    #warning "AIRY_SC_FALLBACK active: sched.h degraded to EEVDF default only, sched_tac three-tier unavailable"
 #endif /* AIRY_SC_FALLBACK */
 ```
 
@@ -164,54 +172,86 @@ enum airy_agent_state {
 
 ## §4 sched_tac 接口：sched_setattr / sched_setscheduler
 
-### 4.1 调度参数结构
+### 4.1 任务描述符与调度策略标识符
 
 ```c
-/* kernel/include/uapi/linux/airymax/sched.h —— sched_tac 调度参数 */
-/**
- * struct airy_sched_attr - Agent 调度参数（sched_tac）
- *
- * @sched_policy:   调度策略（SCHED_DEADLINE / SCHED_FIFO / SCHED_NORMAL）
- * @sched_runtime:  CPU 预算（纳秒），对齐 seL4 scBudget
- * @sched_deadline: 相对截止时间（纳秒），对齐 seL4 scPeriod
- * @sched_period:   周期（纳秒），对齐 seL4 scPeriod
- * @sched_priority: 静态优先级（仅 SCHED_FIFO 使用，1-99）
- * @sched_flags:    标志位（AIRY_SCHED_FLAG_*）
- *
- * 二进制布局由 [SC] 共享，两端逐字节相同。
- * 调度策略选择逻辑由 Macro-Supervisor [SS] 层实现。
- */
-struct airy_sched_attr {
-    __u32 sched_policy;
-    __u64 sched_runtime;
-    __u64 sched_deadline;
-    __u64 sched_period;
-    __u32 sched_priority;
-    __u32 sched_flags;
-};
-/* D-9 修复：移除 __attribute__((packed))，所有 __u64 字段自然 8 字节对齐 */
+/* kernel/include/uapi/linux/airymax/sched.h —— 任务描述符 + 调度策略 */
+#define AIRY_TASK_MAGIC         0x41475453u /* 'AGTS' */
 
-/* 调度策略选择（sched_tac 三层） */
-#define AIRY_SCHED_DEADLINE   0   /* 实时 Agent：SCHED_DEADLINE */
-#define AIRY_SCHED_FIFO      1   /* 中断/IPC Agent：SCHED_FIFO */
-#define AIRY_SCHED_EEVDF     2   /* 普通 Agent：SCHED_NORMAL(EEVDF) */
+/* ─── Task Priority Range ────────────────────────────────────────────── */
+#define AIRY_PRIO_MIN           0
+#define AIRY_PRIO_MAX           139
+
+/* ─── Default Scheduling Parameters ──────────────────────────────────── */
+#define AIRY_SLICE_DFL          20      /* Default timeslice (ms) */
+#define AIRY_WEIGHT_MIN         1
+#define AIRY_WEIGHT_MAX         10000
+
+/* ─── vtime: Q16.16 fixed-point for EEVDF virtual time ────────────────── */
+typedef __s32 airy_vtime_t;
+#define AIRY_VTIME_ONE          (1 << 16)  /* 1.0 in Q16.16 */
+
+static inline airy_vtime_t airy_vtime_decay(airy_vtime_t vtime, __u32 weight)
+{
+    /*
+     * EEVDF virtual time decay: vtime += slice / weight.
+     * For precomputed tables, approximate as integer math.
+     */
+    return vtime + (AIRY_SLICE_DFL * AIRY_VTIME_ONE) /
+           (weight ? weight : 1);
+}
+
+/* ─── Task Descriptor（64 字节，自然 8 字节对齐） ───────────────────── */
+/*
+ * Field ordering: 64-bit fields are grouped after the header word to
+ * guarantee natural 8-byte alignment without padding. 32-bit fields
+ * occupy the tail. Total size = 64 bytes (verified by _Static_assert).
+ */
+struct airy_task_desc {
+    __u32       magic;          /* offset 0:  AIRY_TASK_MAGIC */
+    __u16       prio;           /* offset 4:  priority [0,139] */
+    __u16       _pad;           /* offset 6:  alignment padding */
+    __u64       runtime_ns;     /* offset 8:  runtime budget (ns) */
+    __u64       deadline_ns;    /* offset 16: deadline (ns) */
+    __u64       period_ns;      /* offset 24: period (ns) */
+    airy_vtime_t vtime;         /* offset 32: virtual time Q16.16 */
+    __u32       agent_id;       /* offset 36: agent identifier [0,1023] */
+    __u32       sched_policy;   /* offset 40: SCHED_DEADLINE/FIFO/OTHER */
+    __u32       weight;         /* offset 44: EEVDF weight */
+    __u32       state;          /* offset 48: agent lifecycle state */
+    __u8        reserved[12];   /* offset 52: reserved */
+} __attribute__((aligned(64)));
+
+_Static_assert(sizeof(struct airy_task_desc) == 64,
+               "airy_task_desc must be exactly 64 bytes");
+
+/* ─── sched_tac Policy Identifiers（对齐 SSoT sched.h L97-100） ─────── */
+#define AIRY_SCHED_POLICY_DEADLINE   1   /* 实时 Agent：SCHED_DEADLINE */
+#define AIRY_SCHED_POLICY_FIFO       2   /* 中断/IPC Agent：SCHED_FIFO */
+#define AIRY_SCHED_POLICY_EEVDF      3   /* 普通 Agent：SCHED_NORMAL(EEVDF) */
+#define AIRY_SCHED_POLICY_BESTEFFORT 4   /* 后台 Agent：SCHED_IDLE/BESTEFFORT */
 ```
+
+> **SSoT 对齐说明（v3.5 修复 P0-I4/I5）**：
+>
+> 1. **`struct airy_sched_attr` 已废弃**——SSoT `sched.h` 仅定义 `struct airy_task_desc`（64 字节），不存在的 `airy_sched_attr` 已从本契约移除。sched_tac 调度参数通过 `struct airy_task_desc` 的 `runtime_ns`/`deadline_ns`/`period_ns`/`prio`/`sched_policy` 字段承载，由 Macro-Supervisor 转换为 Linux `struct sched_attr` 后通过 `sched_setattr()` 注入。
+> 2. **策略标识符前缀统一为 `AIRY_SCHED_POLICY_*`**（非 `AIRY_SCHED_*`），值域 1-4（非 0-2），对齐 SSoT `sched.h:97-100`。
 
 ### 4.2 sched_setattr 设置 SCHED_DEADLINE
 
-实时 Agent（如认知推理 Agent）使用 `sched_setattr()` 设置 SCHED_DEADLINE 参数：
+实时 Agent（如认知推理 Agent）使用 `sched_setattr()` 设置 SCHED_DEADLINE 参数。Macro-Supervisor 从 `struct airy_task_desc` 提取 `runtime_ns`/`deadline_ns`/`period_ns` 字段，转换为 Linux `struct sched_attr` 后注入：
 
 ```c
 /* services/daemons/macro_d/sched.c —— 设置 SCHED_DEADLINE */
-static int airy_agent_set_deadline(pid_t pid, struct airy_sched_attr *attr)
+static int airy_agent_set_deadline(pid_t pid, const struct airy_task_desc *td)
 {
     struct sched_attr sa = {
-        .size         = sizeof(sa),
-        .sched_policy = SCHED_DEADLINE,
-        .sched_flags  = attr->sched_flags,
-        .sched_runtime  = attr->sched_runtime,   /* CPU 预算 */
-        .sched_deadline = attr->sched_deadline,  /* 截止时间 */
-        .sched_period   = attr->sched_period,    /* 周期 */
+        .size           = sizeof(sa),
+        .sched_policy   = SCHED_DEADLINE,
+        .sched_flags    = 0,
+        .sched_runtime  = td->runtime_ns,    /* CPU 预算（对齐 seL4 scBudget） */
+        .sched_deadline = td->deadline_ns,   /* 截止时间（对齐 seL4 scRefill） */
+        .sched_period   = td->period_ns,     /* 周期（对齐 seL4 scPeriod） */
     };
     /* sched_setattr：Linux 6.6 原生接口，零内核修改 */
     return syscall(__NR_sched_setattr, pid, &sa, 0);
@@ -220,14 +260,14 @@ static int airy_agent_set_deadline(pid_t pid, struct airy_sched_attr *attr)
 
 ### 4.3 sched_setscheduler 设置 SCHED_FIFO
 
-中断/IPC Agent 使用 `sched_setscheduler()` 设置 SCHED_FIFO：
+中断/IPC Agent 使用 `sched_setscheduler()` 设置 SCHED_FIFO。Macro-Supervisor 从 `struct airy_task_desc.prio` 提取静态优先级（1-99）：
 
 ```c
 /* services/daemons/macro_d/sched.c —— 设置 SCHED_FIFO */
-static int airy_agent_set_fifo(pid_t pid, struct airy_sched_attr *attr)
+static int airy_agent_set_fifo(pid_t pid, const struct airy_task_desc *td)
 {
     struct sched_param sp = {
-        .sched_priority = attr->sched_priority,  /* 1-99 */
+        .sched_priority = td->prio,  /* 1-99（对齐 SCHED_FIFO 优先级区间） */
     };
     /* sched_setscheduler：Linux 6.6 原生接口 */
     return sched_setscheduler(pid, SCHED_FIFO, &sp);
@@ -236,12 +276,12 @@ static int airy_agent_set_fifo(pid_t pid, struct airy_sched_attr *attr)
 
 ### 4.4 三层调度策略选择
 
-| Agent 类型 | 调度策略 | 接口 | 典型参数 |
-|-----------|---------|------|---------|
-| 实时推理 Agent | SCHED_DEADLINE | `sched_setattr()` | runtime=10ms, deadline=50ms, period=50ms |
-| IPC/中断 Agent | SCHED_FIFO | `sched_setscheduler()` | priority=50 |
-| 普通 Agent | SCHED_NORMAL(EEVDF) | `sched_setscheduler()` | nice=0 |
-| 后台 Daemon | SCHED_IDLE | `sched_setscheduler()` | — |
+| Agent 类型 | 策略标识符（SSoT） | Linux 调度策略 | 接口 | 典型参数 |
+|-----------|------------------|---------------|------|---------|
+| 实时推理 Agent | `AIRY_SCHED_POLICY_DEADLINE` (=1) | SCHED_DEADLINE | `sched_setattr()` | runtime=10ms, deadline=50ms, period=50ms |
+| IPC/中断 Agent | `AIRY_SCHED_POLICY_FIFO` (=2) | SCHED_FIFO | `sched_setscheduler()` | priority=50 |
+| 普通 Agent | `AIRY_SCHED_POLICY_EEVDF` (=3) | SCHED_NORMAL(EEVDF) | `sched_setscheduler()` | nice=0 |
+| 后台 Daemon | `AIRY_SCHED_POLICY_BESTEFFORT` (=4) | SCHED_IDLE | `sched_setscheduler()` | — |
 
 ---
 
@@ -260,22 +300,24 @@ sched_tac 借鉴 seL4 MCS（Mixed-Criticality Scheduling）模型，将 seL4 的
 
 ### 5.2 映射宏定义
 
+> **SSoT 对齐说明（v3.5 修复）**：以下 `AIRY_MCS_MAP_*` 与 `AIRY_MCS_CHECK` 宏为**文档说明性示例**，**不属于 SSoT `sched.h` 物理头文件定义**。SSoT `sched.h` 不包含 seL4 MCS 映射宏——映射关系通过 `struct airy_task_desc` 字段名（`runtime_ns`/`deadline_ns`/`period_ns`）与 Linux `struct sched_attr` 字段名（`sched_runtime`/`sched_deadline`/`sched_period`）的命名同构性体现，由 Macro-Supervisor 在用户态完成转换（见 §4.2/§4.3）。
+
 ```c
-/* kernel/include/uapi/linux/airymax/sched.h —— seL4 MCS 映射宏 */
+/* 文档说明性示例（非 SSoT 定义，不写入 sched.h 物理头文件） */
 /**
- * seL4 MCS 字段映射宏
- * 将 seL4 sched_context_t 语义映射到 Linux sched_attr 字段
- * 映射关系仅用于文档与校验，不引入 seL4 依赖
+ * seL4 MCS 字段映射宏（文档级）
+ * 将 seL4 sched_context_t 语义映射到 struct airy_task_desc 字段
+ * 映射关系仅用于文档与校验，不引入 seL4 依赖，不写入 SSoT 头文件
  */
-#define AIRY_MCS_MAP_BUDGET(sc_budget)    (sc_budget)        /* scBudget → sched_runtime */
-#define AIRY_MCS_MAP_PERIOD(sc_period)    (sc_period)       /* scPeriod → sched_period */
-#define AIRY_MCS_MAP_DEADLINE(sc_refill)  (sc_refill)       /* scRefill → sched_deadline */
+#define AIRY_MCS_MAP_BUDGET(sc_budget)    (sc_budget)        /* scBudget → runtime_ns */
+#define AIRY_MCS_MAP_PERIOD(sc_period)    (sc_period)        /* scPeriod → period_ns */
+#define AIRY_MCS_MAP_DEADLINE(sc_refill)  (sc_refill)        /* scRefill → deadline_ns */
 #define AIRY_MCS_MAP_CORE(sc_core)        ((unsigned long)(sc_core)) /* scCore → cpu_set */
 
-/* MCS 校验：budget <= deadline <= period（对齐 seL4 MCS 约束） */
-#define AIRY_MCS_CHECK(attr) \
-    (((attr)->sched_runtime <= (attr)->sched_deadline) && \
-     ((attr)->sched_deadline <= (attr)->sched_period))
+/* MCS 校验（文档级）：budget <= deadline <= period（对齐 seL4 MCS 约束） */
+#define AIRY_MCS_CHECK(td) \
+    (((td)->runtime_ns <= (td)->deadline_ns) && \
+     ((td)->deadline_ns <= (td)->period_ns))
 ```
 
 **seL4 MCS Refill 循环缓冲**（`src/object/schedcontext.c`）：
@@ -324,13 +366,11 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 
 ### 6.2 版本号
 
-```c
-/* kernel/include/uapi/linux/airymax/sched.h —— 版本号 */
-#define AIRY_SCHED_VERSION  1   /* 契约版本号，不匹配时拒绝加载 */
+> **SSoT 对齐说明（v3.5 修复）**：SSoT `sched.h` **不定义** `AIRY_SCHED_VERSION` 与 `AIRY_SCHED_VERSION_CHECK` 宏。版本一致性通过 [SC] 共享契约层双端 CI（`sc-dual-ci.yml`）逐字节校验保证，无需在头文件内嵌版本号宏。旧文档中引用的 `AIRY_SCHED_VERSION`/`AIRY_SCHED_VERSION_CHECK` 为虚构定义，已移除。
 
-/* 加载时校验 */
-#define AIRY_SCHED_VERSION_CHECK(ver) \
-    ((ver) == AIRY_SCHED_VERSION ? 0 : -AIRY_ECFGVERSION)
+```c
+/* SSoT sched.h 不含版本号宏 —— 一致性由 sc-dual-ci.yml 逐字节校验保证 */
+/* 旧文档引用的 AIRY_SCHED_VERSION / AIRY_SCHED_VERSION_CHECK 已废弃 */
 ```
 
 ### 6.3 CI 双端校验
@@ -338,9 +378,10 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 `sc-dual-ci.yml` 对 `sched.h` 执行以下校验：
 
 1. **逐字节对比**：agentrt 与 agentrt-linux 的 `sched.h` 必须逐字节相同
-2. **枚举值校验**：8 态枚举值必须在 `[0, 7]` 范围内且不重复
-3. **结构体偏移校验**：`struct airy_sched_attr` 字段偏移在两端一致
-4. **MCS 映射校验**：`AIRY_MCS_MAP_*` 宏定义两端一致
+2. **枚举值校验**：8 态枚举值必须在 `[0, 7]` 范围内且不重复（含 `AIRY_AGENT_STATE_MAX` 上界哨兵）
+3. **结构体偏移校验**：`struct airy_task_desc`（64 字节）字段偏移在两端一致，`_Static_assert` 保证 `sizeof == 64`
+4. **策略标识符校验**：`AIRY_SCHED_POLICY_DEADLINE=1` / `_FIFO=2` / `_EEVDF=3` / `_BESTEFFORT=4` 双端一致
+5. **[DSL] 块校验**：`AIRY_DSL_SCHED_POLICY_*` 与 `AIRY_DSL_VTIME_DECAY` 宏双端一致
 
 ---
 
@@ -361,7 +402,8 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Agent 8 态生命周期枚举；3 态降级（RUNNING/STOPPED/DEAD）；sched_tac 接口（sched_setattr/sched_setscheduler）；seL4 MCS 映射（scBudget→sched_runtime, scPeriod→sched_deadline）；物理宿主 kernel/include/uapi/linux/airymax/sched.h |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-26 | **v3.5 审查修复 P0-I4/I5**：(1) 移除虚构 `struct airy_sched_attr`，对齐 SSoT `struct airy_task_desc`（64 字节，11 字段，含 magic/prio/runtime_ns/deadline_ns/period_ns/vtime/agent_id/sched_policy/weight/state/reserved）；(2) 调度策略标识符从 `AIRY_SCHED_*`（值 0-2）修正为 `AIRY_SCHED_POLICY_*`（值 1-4，对齐 sched.h L97-100）；(3) include guard `_AIRYM_SCHED_H` → `_UAPI_AIRYMAX_SCHED_H`；(4) 8 态枚举补充 `AIRY_AGENT_STATE_MAX`；(5) [DSL] 块对齐 SSoT（`AIRY_DSL_SCHED_POLICY_*` + `AIRY_DSL_VTIME_DECAY`）；(6) 补充 `AIRY_TASK_MAGIC`/`AIRY_PRIO_MIN/MAX`/`AIRY_SLICE_DFL`/`AIRY_WEIGHT_MIN/MAX`/`airy_vtime_t`/`AIRY_VTIME_ONE`/`airy_vtime_decay()`；(7) `AIRY_MCS_MAP_*`/`AIRY_MCS_CHECK` 标注为文档说明性示例（非 SSoT 定义）；(8) 移除虚构 `AIRY_SCHED_VERSION`/`AIRY_SCHED_VERSION_CHECK` |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] sched.h 扩展契约 — sched_tac | v1.0.1 | 2026-07-21
+© 2025-2026 SPHARX Ltd. All Rights Reserved. | [SC] sched.h 扩展契约 — sched_tac | v1.0.1 | 2026-07-26

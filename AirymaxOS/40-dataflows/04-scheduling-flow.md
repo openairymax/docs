@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）调度数据流
 > **文档定位**：agentrt-linux（AirymaxOS）调度数据流的详细设计，刻画 EEVDF + sched_tac 三位一体调度体系\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——共享契约文件 sched.h（用户态调度器策略契约 + `airy_task_desc` + `airy_sched_ops` 回调表）落地于 include/uapi/linux/airymax/，[SS] EEVDF + sched_tac 调度策略语义同源，[IND] 用户态调度器 daemon 实现 + cgroup cpuset 隔离配置独立
@@ -305,12 +305,15 @@ sched_tac 用户态调度器实现 `struct airy_sched_ops` 的关键回调（非
  * @see sched_tac 用户态调度器
  * @note IRON-9 v3 [SS] 语义同源层：语义同源 airy_sched_ops，实现独立
  * @note 通过 sched_setscheduler() + cgroup v2 cpuset 实现原生调度类切换
+ * @note P0-D5 修复：用户态调度器使用 airy_task_shadow 影子结构，禁止解引用内核 task_struct
+ * @note P0-D6 修复：task_hash 使用链地址法哈希表，避免 pid % MAX_AGENTS 碰撞
  */
 
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <airymax/sched.h>  /* [SC] 共享契约层 */
 #include <airymax/airy_q16.h>
 
@@ -318,21 +321,79 @@ sched_tac 用户态调度器实现 `struct airy_sched_ops` 的关键回调（非
 
 static u64 vtime_now;
 
-/* 任务状态表（用户态维护，替代 BPF task_storage） */
+/* ─── P0-D5 修复：用户态影子结构 ──────────────────────────────────────
+ * 用户态调度器不能直接解引用内核 struct task_struct（内核地址空间不可访问）。
+ * 通过 airy_sys_sched_ctl(SCHED_CTL_GET_SHADOW, pid, &shadow) 获取任务影子快照。
+ * 影子结构仅包含调度器所需字段，由内核从 task_struct 提取填充。
+ */
+struct airy_task_shadow {
+    pid_t    pid;         /* 任务 PID */
+    u32      weight;      /* 权重 [1..10000] */
+    u64      slice;       /* 剩余时间片（ns） */
+    u16      prio;        /* 优先级 0-139 */
+    u64      vtime;       /* 虚拟运行时间 */
+};
+
+/* ─── P0-D6 修复：链地址法哈希表 ──────────────────────────────────────
+ * 原 task_table[pid % MAX_AGENTS] 取模哈希在 pid > MAX_AGENTS 时必然碰撞，
+ * 导致任务状态被覆盖。链地址法每个桶维护链表，碰撞时遍历链表查找正确 pid。
+ */
+#define TASK_HASH_BITS  10
+#define TASK_HASH_SIZE  (1 << TASK_HASH_BITS)  /* 1024 个桶 */
+#define TASK_HASH_MASK  (TASK_HASH_SIZE - 1)
+
 struct airy_task_state {
     pid_t pid;
     airy_q16_t vtime;
     int sched_policy;   /* SCHED_FIFO / SCHED_DEADLINE / SCHED_NORMAL */
     int sched_prio;     /* 0-99（FIFO/RR）或 DEADLINE 参数 */
+    struct airy_task_state *next;  /* 链地址法：同桶下一个节点 */
 };
 
-#define MAX_AGENTS 1024
-static struct airy_task_state task_table[MAX_AGENTS];
+static struct airy_task_state *task_hash[TASK_HASH_SIZE];
+
+/* 哈希函数：Knuth 乘法哈希，优于直接取模 */
+static inline unsigned int task_hash_fn(pid_t pid)
+{
+    return (unsigned int)(pid * 2654435761U) >> (32 - TASK_HASH_BITS);
+}
+
+/* 查找或创建任务状态（P0-D6 修复：链地址法） */
+static struct airy_task_state *task_state_get_or_create(pid_t pid)
+{
+    unsigned int bucket = task_hash_fn(pid);
+    struct airy_task_state *st;
+
+    for (st = task_hash[bucket]; st; st = st->next) {
+        if (st->pid == pid)
+            return st;
+    }
+
+    st = calloc(1, sizeof(*st));
+    if (!st)
+        return NULL;
+    st->pid = pid;
+    st->next = task_hash[bucket];
+    task_hash[bucket] = st;
+    return st;
+}
+
+/* 查找任务状态（不创建） */
+static struct airy_task_state *task_state_lookup(pid_t pid)
+{
+    unsigned int bucket = task_hash_fn(pid);
+    for (struct airy_task_state *st = task_hash[bucket]; st; st = st->next) {
+        if (st->pid == pid)
+            return st;
+    }
+    return NULL;
+}
 
 /**
  * @brief select_cpu: NUMA 亲和 + idle CPU 直接入队
+ * @note P0-D5 修复：参数为 airy_task_shadow 影子结构，非内核 task_struct
  */
-s32 agent_select_cpu(struct task_struct *p, s32 prev_cpu, u64 wake_flags) {
+s32 agent_select_cpu(struct airy_task_shadow *p, s32 prev_cpu, u64 wake_flags) {
     bool is_idle = false;
     s32 cpu = airy_select_cpu_dfl(p, prev_cpu, wake_flags, &is_idle);
     if (is_idle)
@@ -342,9 +403,13 @@ s32 agent_select_cpu(struct task_struct *p, s32 prev_cpu, u64 wake_flags) {
 
 /**
  * @brief enqueue: vtime 入队到 SHARED_Q
+ * @note P0-D5 修复：参数为 airy_task_shadow 影子结构
+ * @note P0-D6 修复：task_state_get_or_create 使用链地址法哈希表
  */
-void agent_enqueue(struct task_struct *p, u64 enq_flags) {
-    struct airy_task_state *st = &task_table[p->pid % MAX_AGENTS];
+void agent_enqueue(struct airy_task_shadow *p, u64 enq_flags) {
+    struct airy_task_state *st = task_state_get_or_create(p->pid);
+    if (!st)
+        return;  /* OOM，走 fallback */
     u64 vtime = st->vtime;
     /* 限制 idle 任务累积 vtime 到一个 slice */
     if (time_before(vtime, vtime_now - AIRY_SLICE_DFL))
@@ -355,32 +420,36 @@ void agent_enqueue(struct task_struct *p, u64 enq_flags) {
 /**
  * @brief dispatch: SHARED_Q → local cpuset
  */
-void agent_dispatch(s32 cpu, struct task_struct *prev) {
+void agent_dispatch(s32 cpu, struct airy_task_shadow *prev) {
     airy_q_move_to_local(SHARED_Q);
 }
 
 /**
  * @brief running: 推进全局 vtime_now
  */
-void agent_running(struct task_struct *p) {
-    struct airy_task_state *st = &task_table[p->pid % MAX_AGENTS];
-    if (time_before(vtime_now, st->vtime))
+void agent_running(struct airy_task_shadow *p) {
+    struct airy_task_state *st = task_state_lookup(p->pid);
+    if (st && time_before(vtime_now, st->vtime))
         vtime_now = st->vtime;
 }
 
 /**
  * @brief stopping: 按权重逆比例衰减 vtime（同源公式 airy_vtime_decay）
  */
-void agent_stopping(struct task_struct *p, bool runnable) {
-    struct airy_task_state *st = &task_table[p->pid % MAX_AGENTS];
+void agent_stopping(struct airy_task_shadow *p, bool runnable) {
+    struct airy_task_state *st = task_state_lookup(p->pid);
+    if (!st)
+        return;
     st->vtime += (AIRY_SLICE_DFL - p->slice) * 100 / p->weight;
 }
 
 /**
  * @brief enable: 任务进入 sched_tac 调度时初始化 vtime
  */
-void agent_enable(struct task_struct *p) {
-    struct airy_task_state *st = &task_table[p->pid % MAX_AGENTS];
+void agent_enable(struct airy_task_shadow *p) {
+    struct airy_task_state *st = task_state_get_or_create(p->pid);
+    if (!st)
+        return;
     st->vtime = vtime_now;
     /* sched_tac：通过 sched_setscheduler 设置原生调度类 */
     struct sched_param sp = { .sched_priority = st->sched_prio };
@@ -930,6 +999,7 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 | 0.1.1 | 2026-07-07 | 增强：补充 cgroup cpuset 队列模型、状态机、fallback、kf_mask、IRON-9 v3 四层共享模型落地；修复 agentos→agentrt 命名 | 工程规范委员会 |
 | 0.1.1 | 2026-07-07 | 新增 Copyright 头 + §16 agentrt 一致性检查（15 项全 PASS） | 工程规范委员会 |
 | 0.1.1 | 2026-07-17 | 修正：基于 Linux 6.6 内核基线采用sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）替代 sched_ext，SCHED_AGENT → stc_* 策略枚举，BPF 代码重写为用户态 C 代码，DSQ → cgroup cpuset 队列模型 | 工程规范委员会 |
+| v1.0.1 | 2026-07-26 | P0-D5/D6 修复：用户态调度器引入 airy_task_shadow 影子结构替代内核 task_struct 直接解引用（P0-D5）；task_table 改为链地址法哈希表 task_hash[TASK_HASH_SIZE]，使用 Knuth 乘法哈希避免 pid % MAX_AGENTS 碰撞（P0-D6）；文档版本号统一为 v1.0.1（IRON-8） | 工程规范委员会 |
 
 ---
 

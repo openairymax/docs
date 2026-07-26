@@ -351,8 +351,8 @@ agentrt 与 agentrt-linux 完全共享的契约定义：
 
 | 契约 | 内容 | 落地位置 |
 |------|------|---------|
-| CoreLoopThree 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION`（3 项） | `include/uapi/linux/airymax/cognition_types.h` |
-| Thinkdual 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW`（2 项） | `include/uapi/linux/airymax/cognition_types.h` |
+| CoreLoopThree 阶段枚举 | `AIRY_COG_PERCEPT/THINK/ACT`（3 项） | `include/uapi/linux/airymax/cognition_types.h` |
+| Thinkdual 模式枚举 | `AIRY_THINK_FAST/AIRY_THINK_SLOW`（2 项） | `include/uapi/linux/airymax/cognition_types.h` |
 | LLM 推理阶段枚举 | `LLM_STAGE_PREFILL/DECODE/SPECULATIVE`（3 项） | `include/uapi/linux/airymax/cognition_types.h` |
 | CoreLoopThree 上下文结构 | `airy_clt_ctx_t`（per-cpu 上下文） | `include/uapi/linux/airymax/cognition_types.h` |
 | Token 能效指标结构 | `airy_token_efficiency_t`（tokens/J、tokens/s） | `include/uapi/linux/airymax/cognition_types.h` |
@@ -386,8 +386,8 @@ agentrt 与 agentrt-linux 完全共享的契约定义：
 
 ```
 agentrt CoreLoopThree（用户态，跨平台）
-   ├── 阶段枚举: CLT_PHASE_PERCEPTION/THINKING/ACTION（同源 [SC]）
-   ├── 模式枚举: THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW（同源 [SC]）
+   ├── 阶段枚举: AIRY_COG_PERCEPT/THINK/ACT（同源 [SC]）
+   ├── 模式枚举: AIRY_THINK_FAST/AIRY_THINK_SLOW（同源 [SC]）
    ├── 上下文: airy_clt_ctx_t（同源 [SC]）
    └── API: airy_clt_run / notify_phase / thinkdual_switch（同源 [SS]）
        │
@@ -409,8 +409,8 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 
 | # | 检查项 | agentrt（用户态） | agentrt-linux（内核态） | 一致性结论 |
 |---|--------|------------------|---------------------|-----------|
-| 1 | [SC] 阶段枚举 | `CLT_PHASE_PERCEPTION/THINKING/ACTION` | 同源 `CLT_PHASE_*` | PASS 完全共享 |
-| 2 | [SC] 模式枚举 | `THINKDUAL_SYSTEM1_FAST/SYSTEM2_SLOW` | 同源 `THINKDUAL_*` | PASS 完全共享 |
+| 1 | [SC] 阶段枚举 | `AIRY_COG_PERCEPT/THINK/ACT` | 同源 `CLT_PHASE_*` | PASS 完全共享 |
+| 2 | [SC] 模式枚举 | `AIRY_THINK_FAST/AIRY_THINK_SLOW` | 同源 `THINKDUAL_*` | PASS 完全共享 |
 | 3 | [SC] 上下文结构 | `airy_clt_ctx_t` | 同源 `airy_clt_ctx_t` | PASS 完全共享 |
 | 4 | [SC] 能效指标结构 | `airy_token_efficiency_t` | 同源结构 | PASS 完全共享 |
 | 5 | [SC] GPU/NPU 描述符 | `airy_accel_capabilities_t` | 同源结构 | PASS 完全共享 |

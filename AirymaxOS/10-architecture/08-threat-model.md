@@ -200,7 +200,7 @@ capability 使用 `LSM_ORDER_FIRST`（OLK 6.6 硬编码，仅用于 capabilities
 
 - **POSIX 41 ID**（编号 0-40）：完整对齐 Linux 6.6 标准 41 个 POSIX capability（含 `CAP_PERFMON=38`、`CAP_BPF=39`、`CAP_CHECKPOINT_RESTORE=40`，无废弃）
 - **Airymax 专属**（编号 41-43）：`AIRY_CAP_AGENT_SPAWN=41`（Agent 生成）等 3 个专属 capability，从 41 开始避免与 Linux 0-40 冲突
-- **总数**：41 Linux + 3 Airymax = 44（`AIRY_CAP_AGENT_MAX=44`）
+- **总数**：41 Linux + 3 Airymax = 44（`AIRY_CAP_ID_MAX` 为 `enum airy_cap_id` 上界，对齐 SSoT `security_types.h`）
 
 seL4 风格 capability 类型（`airy_cap_type`）：ENDPOINT/TASK/MEMORY/ROVOL/SCHED/FILE/NETWORK/WASM/CAP\_MGMT 共 9 类，覆盖 IPC 端点、任务、内存、记忆卷载、调度、文件、网络、Wasm 模块、capability 管理。
 

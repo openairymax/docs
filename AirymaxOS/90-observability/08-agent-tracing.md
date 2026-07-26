@@ -230,7 +230,7 @@ int trace_airy_sched_switch(struct trace_event_raw_airy_sched_switch *ctx)
 agentrt-linux 提供 `airy_trace_agent_call_graph()` API，用于构建 Agent 间的调用关系图：
 
 ```c
-/* include/uapi/agentrt/trace.h */
+/* include/uapi/linux/airymax/trace.h（v1.1 计划实现，当前未创建） */
 
 struct airy_call_graph_node {
     u32 agent_id;

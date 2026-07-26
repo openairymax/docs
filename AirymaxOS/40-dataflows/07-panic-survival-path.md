@@ -219,8 +219,35 @@ static int airy_panic_ring_write_best_effort(const char *fmt, ...)
     rec->payload_len = vsnprintf(rec->payload, 96, fmt, args);
     va_end(args);
 
-    /* 5. 更新 head（best-effort，可能与其他 CPU 竞争，但 Panic 下可接受） */
-    hdr->head = head + 1;
+    /* 5. 更新 head —— P0-D7 修复：使用 cmpxchg 原子操作
+     * 原设计直接写 hdr->head = head + 1，多 CPU 并发 Panic 时会导致数据覆盖。
+     * 修复后使用 cmpxchg + 有界重试（3 次），失败则回退 printk_safe。
+     * 注意：Panic 下 smp_send_stop 可能尚未完成，多 CPU 并发写入是可能的。 */
+    {
+        int retry;
+        for (retry = 0; retry < 3; retry++) {
+            __u64 old = smp_load_acquire(&hdr->head);
+            if (old != head) {
+                /* head 已被其他 CPU 推进，重新计算 idx 并重写记录 */
+                head = old;
+                idx = head % hdr->capacity;
+                rec = (struct airy_log_record *)((char *)hdr + sizeof(*hdr)
+                        + idx * hdr->record_size);
+                rec->magic = AIRY_LOG_MAGIC;
+                rec->level = LOG_FATAL;
+                rec->facility = AIRY_FAC_KERNEL;
+                rec->timestamp_ns = ktime_get_real_ns();
+                rec->caller_id = 0;
+                va_start(args, fmt);
+                rec->payload_len = vsnprintf(rec->payload, 96, fmt, args);
+                va_end(args);
+            }
+            if (cmpxchg(&hdr->head, head, head + 1) == head)
+                break;  /* 成功 */
+        }
+        if (retry >= 3)
+            return -EBUSY;  /* 回退 printk_safe */
+    }
 
     return 0;
 }
@@ -232,10 +259,12 @@ Panic 路径的 Ring Buffer 写入是 **best-effort**——不保证一致性，
 
 | 维度 | 正常路径 | Panic best-effort |
 |------|---------|-------------------|
-| 索引更新 | `cmpxchg` 原子 | 直接写（非原子） |
+| 索引更新 | `cmpxchg` 原子 | `cmpxchg` 原子 + 有界重试 3 次（P0-D7 修复，原为非原子直接写） |
 | 锁等待 | 无（原子操作） | trylock，失败立即回退 |
-| 一致性保证 | 强一致 | 弱一致（可能丢/覆盖） |
+| 一致性保证 | 强一致 | 弱一致（可能丢/覆盖，但 head 索引原子推进） |
 | 失败处理 | 返回错误码 | 回退 printk_safe |
+
+> **⚠️ P0-D7 修复说明**（v1.0.1-fix）：原 Panic 路径使用 `hdr->head = head + 1` 非原子直接写。当 `smp_send_stop()` 尚未完成时，多 CPU 可能并发进入 Panic 路径，非原子写导致 head 索引丢失推进（数据覆盖）。修复后使用 `cmpxchg(&hdr->head, head, head + 1)` 原子操作 + 3 次有界重试，失败则回退 printk_safe。
 
 ### 4.4 回退决策树
 
@@ -447,6 +476,7 @@ Panic 发生
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Panic 生存路径设计；printk_safe 模型对齐 Linux 6.6 NMI-safe buffer；NMI-safe buffer 中断上下文安全写入；Ring Buffer 锁规避（trylock + 直接写入）；Panic handler 流程（dump 寄存器 → 写入 Ring Buffer → 同步持久存储）；与 [DSL] 降级模式关系；双通道持久化（console + pstore） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1-fix | 2026-07-26 | P0-D7 修复：Panic 路径 head 索引推进改为 cmpxchg 原子操作 + 3 次有界重试（原为非原子直接写 hdr->head = head + 1，多 CPU 并发 Panic 时数据覆盖） |
 
 ---
 

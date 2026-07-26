@@ -721,11 +721,11 @@ int airy_cap_revoke(uint32_t src_cap);
 #define AIRY_CAP_NET_ADMIN         12  /* 网络管理 */
 #define AIRY_CAP_NET_RAW           13  /* 原始 socket */
 /* ... 完整 41 个枚举对齐 security_types.h（含 CAP_PERFMON=38/CAP_BPF=39/CAP_CHECKPOINT_RESTORE=40）... */
-#define AIRY_CAP_LAST_CAP          40  /* 最后一个 Linux 标准 cap（CAP_CHECKPOINT_RESTORE）*/
+/* AIRY_CAP_CHECKPOINT = 40  -- 最后一个 POSIX 标准 cap（CAP_CHECKPOINT_RESTORE，enum 内直接定义，无独立 #define 宏）*/
 #define AIRY_CAP_AGENT_SPAWN       41  /* Agent 生成（Airymax 专属，从 41 开始避免与 Linux 0-40 冲突）*/
 #define AIRY_CAP_GPU_SCHED         42  /* GPU 调度 */
 #define AIRY_CAP_NPU_ACCESS        43  /* NPU 访问 */
-#define AIRY_CAP_AGENT_MAX         44  /* agentrt-linux 专属上限（41 Linux + 3 Airymax）*/
+/* AIRY_CAP_ID_MAX 为 enum airy_cap_id 的上界（无显式数值，由编译器自动推导），非独立 #define 宏 */
 ```
 
 ### 4.2 与传统 POSIX cap 的映射
@@ -1451,7 +1451,7 @@ io_uring_wait_cqe(ring, &cqe);
 
 | 共享内容 | 影响 |
 |---------|------|
-| POSIX capability 41 ID（0-40） 枚举 | 编号一致 |
+| capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43） | 编号一致 |
 | LSM 钩子 250 ID 枚举 | 钩子编号一致 |
 | Cupolas blob 布局（cred/inode/file/task） | 结构体一致 |
 | capability 派生模型（mint/mintcopy/derive/revoke） | 算法语义一致 |

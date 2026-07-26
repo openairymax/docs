@@ -227,7 +227,7 @@ typedef struct {
 |------|------|
 | 文件名 | `include/uapi/linux/airymax/security_types.h` |
 | 维护方 | agentrt |
-| 共享内容 | POSIX capability 41 ID（0-40）枚举、LSM 钩子 250 ID 枚举、Cupolas blob 布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 |
+| 共享内容 | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）、LSM 钩子 250 ID 枚举、Cupolas blob 布局（cred/inode/file/task）、capability 派生模型（mint/mintcopy/derive/revoke）、Vault backend 抽象、策略裁决结果 4 值枚举 |
 | agentrt-linux 使用方式 | 内核态 capability 系统使用相同的令牌格式与安全类型 |
 
 ```c
@@ -272,20 +272,20 @@ typedef enum {
 |------|------|
 | 文件名 | `include/uapi/linux/airymax/cognition_types.h` |
 | 维护方 | agentrt |
-| 共享内容 | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）、Thinkdual 模式枚举（SYSTEM1_FAST/SYSTEM2_SLOW）、LLM 推理阶段枚举（PREFILL/DECODE/SPECULATIVE）、CoreLoopThree 上下文结构、Token 能效指标结构、GPU/NPU 能力描述符 |
+| 共享内容 | CoreLoopThree 阶段枚举（PERCEPT/THINK/ACT）、Thinkdual 模式枚举（AIRY_THINK_FAST/AIRY_THINK_SLOW）、LLM 推理阶段枚举（PREFILL/DECODE/SPECULATIVE）、CoreLoopThree 上下文结构、Token 能效指标结构、GPU/NPU 能力描述符 |
 | agentrt-linux 使用方式 | 内核态 CoreLoopThree kthread 使用相同的阶段枚举与上下文结构 |
 
 ```c
 /* cognition_types.h — 共享契约（简化示意） */
 typedef enum {
-    AIRY_CLT_PERCEPTION    = 0,   /* 感知阶段 */
-    AIRY_CLT_THINKING      = 1,   /* 思考阶段 */
-    AIRY_CLT_ACTION        = 2,   /* 行动阶段 */
+    AIRY_COG_PERCEPT       = 0,   /* 感知阶段 */
+    AIRY_COG_THINK         = 1,   /* 思考阶段 */
+    AIRY_COG_ACT           = 2,   /* 行动阶段 */
 } airy_clt_phase_t;
 
 typedef enum {
-    AIRY_THINK_SYSTEM1_FAST = 0,  /* System 1 快速直觉 */
-    AIRY_THINK_SYSTEM2_SLOW = 1,  /* System 2 慢速深思 */
+    AIRY_THINK_FAST = 0,          /* System 1 快速直觉 */
+    AIRY_THINK_SLOW = 1,          /* System 2 慢速深思 */
 } airy_thinkdual_mode_t;
 
 typedef enum {

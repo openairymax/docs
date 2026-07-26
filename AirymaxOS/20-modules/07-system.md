@@ -266,7 +266,7 @@ net.ipv4.tcp_max_syn_backlog = 65535
 - sched_tac 调度统计（task_desc magic 0x41475453 + vtime 衰减）[SC]。
 - MemoryRovol L1-L4 分级内存指标（GFP 掩码语义）[SC]。
 - capability 44 ID（41 POSIX + 3 Airymax 扩展） 安全状态监控 [SC]。
-- CoreLoopThree 认知循环阶段监控（PERCEPTION/THINKING/ACTION）[SC]。
+- CoreLoopThree 认知循环阶段监控（PERCEPT/THINK/ACT）[SC]。
 - 与 `cloudnative/observability` 集成 [IND]。
 
 ### 4.6 DevStation（基于 agentrt-linux AI 智能助手）[SS]

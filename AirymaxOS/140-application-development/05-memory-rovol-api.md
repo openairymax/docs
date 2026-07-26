@@ -197,9 +197,17 @@ MemoryRovol API 的所有数据结构定义在 [SC] 共享契约层头文件 `in
 本契约仅引用关键结构，不重复定义：
 
 ```c
-/* include/uapi/linux/airymax/memory_types.h —— IRON-9 v3 [SC] 共享契约层 */
+/* include/uapi/linux/airymax/memory_types.h —— IRON-9 v3 [SC] 共享契约层
+ *
+ * ⚠️ 说明性示例，非 SSoT 定义：以下 L1-L4 数据结构（airy_l1_record_t 等）
+ * 是文档为说明 MemoryRovol 字段布局的说明性示例。SSoT 头文件
+ * memory_types.h 中并未定义 airy_l1_record_t / airy_l2_feature_t /
+ * airy_l3_node_t / airy_l3_edge_t / airy_l4_barcode_t。SSoT 实际定义
+ * 仅包含 enum airy_mem_level、AIRY_GFP_*、AIRY_PAGE_CLASS_*、
+ * AIRY_SC_FALLBACK DSL Fallback 块。L1-L4 专属数据结构由 agentrt
+ * 用户态与 agentrt-linux 内核态各自独立定义（[IND] 层）。 */
 
-/* L1 原始记录条目（仅追加，PMEM 持久，SHA-256 哈希链保护） */
+/* L1 原始记录条目（仅追加，PMEM 持久，SHA-256 哈希链保护）—— 说明性示例 */
 typedef struct __attribute__((aligned(64))) airy_l1_record {
     uint64_t record_id;
     uint64_t timestamp_ns;
@@ -246,10 +254,10 @@ typedef struct airy_l4_barcode {
 
 ### 3.2 快照元数据结构
 
-快照元数据是 API 层新增结构（非 [SC] 共享），定义在 `include/uapi/agentrt/rovol.h`：
+快照元数据是 API 层新增结构（非 [SC] 共享），定义在 `include/uapi/linux/airymax/rovol.h`：
 
 ```c
-/* include/uapi/agentrt/rovol.h —— MemoryRovol API UAPI */
+/* include/uapi/linux/airymax/rovol.h —— MemoryRovol API UAPI */
 
 #pragma once
 
@@ -263,7 +271,7 @@ extern "C" {
 /**
  * @brief 快照层级位掩码
  * @since 1.0.1
- * @location include/uapi/agentrt/rovol.h
+ * @location include/uapi/linux/airymax/rovol.h
  *
  * 用于 snapshot/restore/list 操作指定参与的 MemoryRovol 层级。
  * 默认（值为 0）表示全部 4 层参与。
@@ -1013,13 +1021,13 @@ MemoryRovol API 的数据结构通过 [SC] 共享契约层与 agentrt 用户态*
 
 | [SC] 共享内容 | 头文件位置 | 在本 API 中的作用 |
 |--------------|-----------|------------------|
-| `airy_l1_record_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L1 数据结构 |
-| `airy_l2_feature_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L2 数据结构 |
-| `airy_l3_node_t` / `airy_l3_edge_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L3 数据结构 |
-| `airy_l4_barcode_t` | `include/uapi/linux/airymax/memory_types.h` | snapshot/restore 的 L4 数据结构 |
-| `AIRY_GFP_*` 宏 | `include/uapi/linux/airymax/memory_types.h` | 内核分配标志语义 |
-| `airy_pmem_flush_fn` | `include/uapi/linux/airymax/memory_types.h` | PMEM 持久化接口 |
-| `airy_q16_t` + 转换宏 | `include/uapi/linux/airymax/memory_types.h` | 定点数算术（内核态禁用 float） |
+| `enum airy_mem_level` | `include/uapi/linux/airymax/memory_types.h` | 内存分层级别枚举（`AIRY_MEM_HOT/WARM/COLD/PMEM/LEVEL_MAX`） |
+| `AIRY_GFP_*` 宏 | `include/uapi/linux/airymax/memory_types.h` | 内核分配标志语义（`AIRY_GFP_HOT/WARM/COLD/PMEM`） |
+| `AIRY_PAGE_CLASS_*` 宏 | `include/uapi/linux/airymax/memory_types.h` | 页面分类（`ANON/FILE/SHMEM/AGENT`） |
+| `AIRY_SC_FALLBACK` DSL 块 | `include/uapi/linux/airymax/memory_types.h` | [DSL] 退化生存层 Fallback |
+| `airy_q16_t` + 转换宏 | `include/uapi/linux/airymax/cognition_types.h` | 定点数算术（内核态禁用 float） |
+
+> **⚠️ 说明性示例，非 SSoT 定义**：§3.2 等章节中的 `airy_l1_record_t` / `airy_l2_feature_t` / `airy_l3_node_t` / `airy_l3_edge_t` / `airy_l4_barcode_t` / `airy_pmem_flush_fn` 均为**说明性示例**，SSoT 头文件 `memory_types.h` 中**并未定义**这些类型。L1-L4 专属数据结构由 agentrt 用户态与 agentrt-linux 内核态各自独立定义（[IND] 层），参见 §3.2 的说明性示例代码块。
 
 ### 11.2 [SS] 语义同源层
 
@@ -1099,7 +1107,7 @@ from .bindings import _libagentrt
 from .exceptions import AgentrtError
 from .types import SnapshotInfo, MglruConfig, CxlTierPolicy
 
-# op 码常量（与 include/uapi/agentrt/rovol.h 同源）
+# op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
 AIRY_ROVOL_SNAPSHOT      = 0
 AIRY_ROVOL_RESTORE       = 1
 AIRY_ROVOL_MIGRATE       = 2
@@ -1209,7 +1217,7 @@ use crate::error::{AgentrtError, Result};
 use crate::types::{SnapshotInfo, MglruConfig, CxlTierPolicy};
 use crate::bindings::*;
 
-// op 码常量（与 include/uapi/agentrt/rovol.h 同源）
+// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
 pub const AIRY_ROVOL_SNAPSHOT:     u32 = 0;
 pub const AIRY_ROVOL_RESTORE:      u32 = 1;
 pub const AIRY_ROVOL_MIGRATE:      u32 = 2;
@@ -1291,7 +1299,7 @@ import (
     "unsafe"
 )
 
-// op 码常量（与 include/uapi/agentrt/rovol.h 同源）
+// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
 const (
     OpSnapshot     = 0
     OpRestore      = 1
@@ -1355,7 +1363,7 @@ func (c *MemoryRovolClient) Migrate(agentID, targetNode uint32, policy MigratePo
 import { AgentrtError, SnapshotInfo, MglruConfig, CxlTierPolicy } from './types';
 import { bindings } from './bindings';
 
-// op 码常量（与 include/uapi/agentrt/rovol.h 同源）
+// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
 export const OP_SNAPSHOT     = 0;
 export const OP_RESTORE      = 1;
 export const OP_MIGRATE      = 2;

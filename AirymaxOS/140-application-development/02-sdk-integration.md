@@ -62,7 +62,7 @@ agentrt-linux（AirymaxOS）提供四语言 SDK（Python / Rust / Go / TypeScrip
 AgentsIPC 协议的核心是 128 字节定长消息头，定义于 IRON-9 v3 [SC] 共享契约层：
 
 ```c
-/* include/uapi/agentrt/ipc.h（IRON-9 v3 [SC] 共享契约层）
+/* include/uapi/linux/airymax/ipc.h（IRON-9 v3 [SC] 共享契约层，物理宿主 kernel/include/uapi/linux/airymax/ipc.h）
  * 与 agentrt 用户态运行时完全共享，禁止单端修改 */
 /* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
 #include <airymax/ipc.h>

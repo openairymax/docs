@@ -198,9 +198,9 @@ spec:
   image: airymaxos/my-agent:v1.0
   cognition:
     coreLoopThree:
-      enabled: true      # 引用 PERCEPTION/THINKING/ACTION 阶段枚举 [SC]
+      enabled: true      # 引用 PERCEPT/THINK/ACT 阶段枚举 [SC]
     thinkdual:
-      enabled: true      # 引用 SYSTEM1_FAST/SYSTEM2_SLOW 模式枚举 [SC]
+      enabled: true      # 引用 AIRY_THINK_FAST/AIRY_THINK_SLOW 模式枚举 [SC]
   resources:
     gpu: 1
     npu: 0
@@ -389,7 +389,7 @@ gateway\_d 是 agentrt gateway 在 OS 级的升级形态 \[SS]：
 | `include/uapi/linux/airymax/log_types.h`          | trace\_id + 结构化日志类型枚举                                                                                   | OpenTelemetry trace\_id 贯穿 + journald 聚合 |
 | `include/uapi/linux/airymax/memory_types.h`        | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                            | 容器快照 + 跨节点迁移（与 memory 协作） |
 | `include/uapi/linux/airymax/security_types.h`  | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 容器沙箱 capability 隔离 + CNI 网络策略 + 跨节点 Badge 一致性 |
-| `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式枚举（SYSTEM1\_FAST/SYSTEM2\_SLOW）+ LLM 推理阶段枚举 | Agent CRD cognition 字段 + LLM 调度器 |
+| `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式枚举（AIRY_THINK\_FAST/AIRY_THINK\_SLOW）+ LLM 推理阶段枚举 | Agent CRD cognition 字段 + LLM 调度器 |
 | `include/uapi/linux/airymax/sched.h`              | sched\_tac 调度类约束（禁止 SCHED\_AGENT 宏）+ task\_desc（magic 0x41475453 'AGTS'）+ vtime 衰减公式 | K8s 自定义调度器与 sched\_d 协作时的调度类约束 |
 | `include/uapi/linux/airymax/ipc.h`                | IPC magic 0x41524531 'ARE1' + 128B `struct airy_ipc_msg_hdr` + SQE/CQE 操作码 + io\_uring ring 配置              | gateway\_d io\_uring 零拷贝 IPC 通道  |
 | `include/uapi/linux/airymax/syscalls.h`           | v1.0.1 Syscall 24 槽位（4 核心 + 20 预留）：`airy_sys_call`(0)/`airy_sys_rovol_ctl`(1)/`airy_sys_sched_ctl`(2)/`airy_sys_clt_notify`(3) | agentctl 与 sec\_d/sched\_d/clt\_notify 协作的 ABI 契约 |

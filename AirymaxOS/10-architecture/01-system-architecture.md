@@ -263,8 +263,8 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码 | kernel / services |
 | `sched.h` | 任务描述符 magic（0x41475453 'AGTS'）+ 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF 调度类 + vtime 衰减公式 + 优先级范围 0-139 | kernel / cognition |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | kernel / memory |
-| `security_types.h` | POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
-| `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
+| `security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
+| `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
 | `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.0.1 Capability Folding 后）| kernel / cognition |
 | `uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 跨端 |
 | `lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | kernel / security |

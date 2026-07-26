@@ -294,9 +294,9 @@ agentrt-linux 中存在大量自动生成代码（syscall 表、ioctl 编号、�
 
 | 生成代码 | 契约源 | 生成工具 |
 |---------|--------|---------|
-| `kernel/include/uapi/agentrt/syscall_table.h` | `50-engineering-standards/20-contracts/syscall.xml` | `tools/syscall-gen.py` |
-| `kernel/include/uapi/agentrt/ioctl_numbers.h` | `20-contracts/ioctl.xml` | `tools/ioctl-gen.py` |
-| `kernel/include/uapi/agentrt/error_codes.h` | `20-contracts/errors.xml` | `tools/error-gen.py` |
+| `kernel/include/uapi/linux/airymax/syscall_table.h` | `50-engineering-standards/20-contracts/syscall.xml` | `tools/syscall-gen.py` |
+| `kernel/include/uapi/linux/airymax/ioctl_numbers.h` | `20-contracts/ioctl.xml` | `tools/ioctl-gen.py` |
+| `kernel/include/uapi/linux/airymax/error_codes.h` | `20-contracts/errors.xml` | `tools/error-gen.py` |
 | `services/include/agentrt/capability_bits.h` | `20-contracts/capability.xml` | `tools/cap-gen.py` |
 
 ---
@@ -327,7 +327,7 @@ kernel 子仓是 agentrt-linux 的内核基线，包含以下 4 类组件：
 | Linux 6.6 上游源码 | `kernel/linux-6.6/` | `GPL-2.0-only` | 完整 fork（Model A）保留上游许可证 |
 | Airymax 修改源码 | `kernel/airymax/` | `AGPL-3.0-or-later OR Apache-2.0` | agentrt-linux 专属修改 |
 | corekern 子组件 | `kernel/corekern/` | `AGPL-3.0-or-later OR Apache-2.0` | 微核心架构组件 |
-| [SC] 共享头文件 | `kernel/include/uapi/agentrt/` | `AGPL-3.0-or-later OR Apache-2.0` | IRON-9 v3 [SC] 共享契约层 |
+| [SC] 共享头文件 | `kernel/include/uapi/linux/airymax/` | `AGPL-3.0-or-later OR Apache-2.0` | IRON-9 v3 [SC] 共享契约层 |
 
 #### 3.1.2 services 子仓详细清单
 
@@ -498,13 +498,13 @@ dependencies:
 
 generated_from:
   - source: "50-engineering-standards/20-contracts/syscall.xml"
-    target: "kernel/include/uapi/agentrt/syscall_table.h"
+    target: "kernel/include/uapi/linux/airymax/syscall_table.h"
     tool: "tools/syscall-gen.py"
   - source: "20-contracts/ioctl.xml"
-    target: "kernel/include/uapi/agentrt/ioctl_numbers.h"
+    target: "kernel/include/uapi/linux/airymax/ioctl_numbers.h"
     tool: "tools/ioctl-gen.py"
   - source: "20-contracts/errors.xml"
-    target: "kernel/include/uapi/agentrt/error_codes.h"
+    target: "kernel/include/uapi/linux/airymax/error_codes.h"
     tool: "tools/error-gen.py"
   - source: "20-contracts/capability.xml"
     target: "services/include/agentrt/capability_bits.h"

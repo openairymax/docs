@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # ABI 稳定性设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义 4 层接口稳定性分级、ABI 审查流程与弃用声明机制\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：agentrt ABI 稳定性（IRON-9 v3 [SC] 共享契约层共享 syscall 编号 + [SS] 语义同源层 SDK 层签名同源）\
@@ -63,26 +63,29 @@ agentrt 用户态运行时的 ABI 稳定性与本设计遵循 IRON-9 v3：
 L1 层接口遵循「永不破坏」承诺：
 
 ```c
-/* include/uapi/agentrt/syscall.h（[SC] 共享契约层）
- * 一旦 syscall 编号分配，永久不可复用 */
-#define AIRY_SYS_COGNITION_PROCESS  1001  /* 1.0.1 引入，永久支持 */
-#define AIRY_SYS_MEMORY_ROVOL_GET   1002  /* 1.0.1 引入，永久支持 */
-#define AIRY_SYS_TOKEN_BUDGET_QUERY 1003  /* 1.0.1 引入，永久支持 */
-#define AIRY_SYS_AGENT_REGISTER     1004  /* 1.0.1 引入，永久支持 */
-/* 编号 1005-1099 已弃用，永不复用（保留占位） */
+/* include/uapi/linux/airymax/syscalls.h（[SC] 共享契约层 SSoT）
+ * 一旦 syscall 编号分配，永久不可复用。
+ * 4 核心系统调用 + 20 预留槽位，编号 548-571（避开 x32 历史区域 512-547） */
+#define AIRY_SYS_CALL            548   /* IPC send/recv（永久支持） */
+#define AIRY_SYS_ROVOL_CTL       549   /* MemoryRoVol control（永久支持） */
+#define AIRY_SYS_SCHED_CTL       550   /* Scheduler control（永久支持） */
+#define AIRY_SYS_CLT_NOTIFY      551   /* Cognition lifecycle notify（永久支持） */
+/* 预留槽位 552-571（20 个），用于未来扩展，未分配前不得占用 */
 ```
+
+> **SSoT 声明**：syscall 编号的单一数据源为 `include/uapi/linux/airymax/syscalls.h`，与 `arch/x86/entry/syscalls/syscall_64.tbl`、`asm-generic/unistd.h` 保持三方一致（ABI 铁律）。本节不再就地重定义编号，仅引用 SSoT 源。参见 `140-application-development/07-syscall-registry.md`。
 
 L1 层变更规则：
 - **禁止**：删除已有 syscall 编号、改变参数语义、改变返回值含义
-- **允许**：新增 syscall 编号（追加至末尾）、新增字段（必须可空字段）
-- **弃用**：经 6 个月宽限期后，syscall 仍保留但标记弃用
+- **允许**：新增 syscall 编号（追加至预留槽位 552-571，再向后扩展）、新增字段（必须可空字段）
+- **弃用**：经 6 个月宽限期后，syscall 编号保留占位（永不复用）但实现可移除
 
 ### 2.3 L2 层：中等稳定的 AgentsIPC 协议
 
 L2 层接口允许向后兼容的扩展：
 
 ```c
-/* include/uapi/agentrt/ipc.h（[SC] 共享契约层） */
+/* include/uapi/linux/airymax/ipc.h（[SC] 共享契约层，物理宿主 kernel/include/uapi/linux/airymax/ipc.h） */
 /* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
 #include <airymax/ipc.h>
 /* 结构体名称：struct airy_ipc_msg_hdr（Layout C，物理宿主见
@@ -200,54 +203,56 @@ ABI 变更 RFC 必须包含以下内容：
 
 ### 4.1 弃用声明语法
 
-弃用通过内核注释 + 编译期警告 + 运行时日志三重声明：
+弃用通过内核注释 + 编译期警告 + 运行时日志三重声明。**当前 0.1.1/1.0.1 尚无任何已弃用 syscall**（4 核心 syscall 548-551 自 v1.0.1 引入，永久支持）。以下为假设性示例，展示未来若需弃用某个 syscall 时的声明语法：
 
 ```c
-/* include/uapi/agentrt/syscall.h */
+/* include/uapi/linux/airymax/syscalls.h（[SC] 共享契约层 SSoT）
+ * 弃用声明范例 — 当前 4 核心 syscall 无一进入弃用流程，此为模板 */
 /**
- * AIRY_SYS_LEGACY_MEMORY_GET - 获取记忆（已弃用）
+ * AIRY_SYS_<NAME> - <描述>（假设性弃用范例）
  *
- * @deprecated since 1.0.1, use AIRY_SYS_MEMORY_ROVOL_GET instead
- * @scheduled_removal: 2.0.0（6 个月后）
- * @migration_guide: docs/migration/memory-get.md
+ * @deprecated since <X.Y.Z>, use AIRY_SYS_<REPLACEMENT> instead
+ * @scheduled_removal: <X.Y.Z+1>（6 个月后）
+ * @migration_guide: docs/migration/<name>.md
  *
- * 弃用原因：性能瓶颈，新接口支持 CXL 零拷贝
+ * 弃用原因：<具体原因>
  */
-#define AIRY_SYS_LEGACY_MEMORY_GET  999  /* DEPRECATED, will be removed in 2.0.0 */
+/* 注：syscall 编号一旦分配，永不复用。弃用后实现可移除，但编号
+ * 保留占位（参见 §2.2 L1 层规则）。当前 4 核心 syscall (548-551)
+ * 均处于活跃状态，无弃用计划。 */
 
-/* 内核实现侧的弃用标记 */
-__attribute__((deprecated("use airy_sys_memory_rovol_get instead")))
-int airy_sys_legacy_memory_get(struct airy_legacy_mem_req *req);
+/* 内核实现侧的弃用标记（范例，非实际代码） */
+__attribute__((deprecated("use <replacement> instead")))
+int airy_sys_<name>(struct airy_<name>_req __user *req);
 ```
 
 ### 4.2 运行时弃用警告
 
 ```c
-/* 内核 syscall 入口检测弃用接口调用 */
-SYSCALL_DEFINE1(airy_legacy_memory_get, struct airy_legacy_mem_req __user *, req)
+/* 内核 syscall 入口检测弃用接口调用（范例，当前无弃用 syscall） */
+SYSCALL_DEFINE1(airy_<name>, struct airy_<name>_req __user *, req)
 {
 	static atomic_t warn_count = ATOMIC_INIT(0);
 
 	/* 限频警告（每 Agent 每小时最多 1 次） */
 	if (atomic_inc_return(&warn_count) % 3600 == 0) {
-		pr_warn("agentrt: AIRY_SYS_LEGACY_MEMORY_GET is deprecated "
-			"since 1.0.1, use AIRY_SYS_MEMORY_ROVOL_GET. "
-			"Will be removed in 2.0.0. "
-			"Migration: docs/migration/memory-get.md\n");
+		pr_warn("agentrt: AIRY_SYS_<NAME> is deprecated "
+			"since <X.Y.Z>, use AIRY_SYS_<REPLACEMENT>. "
+			"Will be removed in <X.Y.Z+1>. "
+			"Migration: docs/migration/<name>.md\n");
 	}
 
-	return do_legacy_memory_get(req);
+	return do_<name>(req);
 }
 ```
 
 ### 4.3 弃用登记表
 
-所有弃用接口登记在 `Documentation/ABI/airymaxos-deprecated.md`：
+所有弃用接口登记在 `Documentation/ABI/airymaxos-deprecated.md`。**当前（v1.0.1）无任何已弃用接口**，下表为模板示例：
 
 | 接口 | 弃用版本 | 移除版本 | 替代接口 | 迁移指南 |
 |------|----------|----------|----------|----------|
-| AIRY_SYS_LEGACY_MEMORY_GET | 1.0.1 | 2.0.0 | AIRY_SYS_MEMORY_ROVOL_GET | docs/migration/memory-get.md |
-| airy_ipc_old_send() | 1.0.1 | 2.0.0 | airy_ipc_send() | docs/migration/ipc-send.md |
+| _（暂无已弃用接口，4 核心 syscall 548-551 自 v1.0.1 起永久支持）_ | — | — | — | — |
 
 ---
 
@@ -255,7 +260,7 @@ SYSCALL_DEFINE1(airy_legacy_memory_get, struct airy_legacy_mem_req __user *, req
 
 ### 5.1 完整流程示例
 
-以 `AIRY_SYS_LEGACY_MEMORY_GET` 为例，展示从弃用到移除的完整 6 个月流程：
+**当前 v1.0.1 无任何进入弃用流程的 syscall**（4 核心 syscall 548-551 均为活跃状态）。以下为假设性范例，展示未来若某 syscall 进入弃用流程时的完整 6 个月时间线：
 
 ```
 月份 0：声明弃用
@@ -286,7 +291,7 @@ SYSCALL_DEFINE1(airy_legacy_memory_get, struct airy_legacy_mem_req __user *, req
 
 月份 6：移除
   ├── 内核移除 syscall 实现
-  ├── syscall 编号保留占位（永不复用）
+  ├── syscall 编号保留占位（永不复用，参见 §2.2 L1 规则）
   ├── 文档标记为「已移除」
   ├── 发布移除公告
   └── 提供迁移完成报告
@@ -303,18 +308,19 @@ SYSCALL_DEFINE1(airy_legacy_memory_get, struct airy_legacy_mem_req __user *, req
 ### 5.3 编译期弃用警告
 
 ```c
-/* 用户态头文件中的弃用标记 */
+/* 用户态头文件中的弃用标记（范例，当前无弃用接口） */
 #include <linux/compiler.h>
 
 #define AIRY_DEPRECATED(since, replacement) \
 	__attribute__((deprecated("since " since ", use " replacement " instead")))
 
-AIRY_DEPRECATED("1.0.1", "airy_sys_memory_rovol_get")
-int airy_sys_legacy_memory_get(struct airy_legacy_mem_req *req);
+/* 范例：若 AIRY_SYS_<OLD> 弃用，则其用户态包装函数标记如下 */
+AIRY_DEPRECATED("<X.Y.Z>", "airy_sys_<replacement>")
+int airy_sys_<old>(struct airy_<old>_req *req);
 
 /* 用户编译时若调用此函数，触发警告：
- * warning: 'airy_sys_legacy_memory_get' is deprecated:
- *          since 1.0.1, use airy_sys_memory_rovol_get instead
+ * warning: 'airy_sys_<old>' is deprecated:
+ *          since <X.Y.Z>, use airy_sys_<replacement> instead
  */
 ```
 
@@ -364,27 +370,33 @@ uint16_t airy_ipc_negotiate_version(uint16_t client_version)
 
 ### 6.3 特性探测
 
-客户端可通过 `AIRY_SYS_FEATURE_QUERY` 探测服务端特性：
+**当前 v1.0.1 仅有 4 核心 syscall (548-551)，无独立的特性探测 syscall**（`AIRY_SYS_FEATURE_QUERY` 不存在，syscalls.h SSoT 中未定义）。特性探测通过以下两种合规机制实现：
+
+1. **IPC 版本协商（推荐）**：通过 `AIRY_SYS_CALL` (548) 发送 IPC 探测消息，服务端在响应中返回支持的特性位图与版本。
+2. **/proc/airymax/features 读取**：用户态读取 procfs 节点获取特性列表（参见 `30-interfaces/02-procfs.md`）。
 
 ```c
-/* 特性探测 syscall */
-struct airy_feature_query {
-	uint32_t feature_id;
-	uint32_t feature_version;
+/* 特性探测通过 IPC 协议层完成（非独立 syscall） */
+#include <linux/airymax/syscalls.h>  /* SSoT: AIRY_SYS_CALL = 548 */
+#include <linux/airymax/ipc.h>       /* SSoT: IPC 消息头 */
+
+/* 客户端发送 FEATURE_QUERY IPC 消息（payload type = FEATURE_QUERY） */
+struct airy_ipc_msg_hdr hdr = {
+	.magic    = AIRY_IPC_MAGIC,
+	.version  = AIRY_IPC_VERSION_CURRENT,
+	.opcode   = AIRY_IPC_OP_FEATURE_QUERY,  /* IPC 层 opcode，非 syscall */
+	.payload_len = 0,
 };
 
-#define AIRY_FEATURE_USER_SCHED     1
-#define AIRY_FEATURE_MEMORY_ROVOL   2
-#define AIRY_FEATURE_CXL_POOL       3
-
-int ret = syscall(AIRY_SYS_FEATURE_QUERY,
-	AIRY_FEATURE_USER_SCHED, &version);
+int ret = syscall(AIRY_SYS_CALL, &hdr, NULL, 0);
 if (ret == 0) {
-	/* 支持 sched_tac 用户态调度器，启用该特性 */
+	/* 响应 payload 中包含特性位图与版本，解析后启用对应特性 */
 } else {
-	/* 不支持，降级至普通调度 */
+	/* 降级至 [DSL] 或最小功能集 */
 }
 ```
+
+> **SSoT 声明**：特性探测走 IPC 协议层（`AIRY_IPC_OP_FEATURE_QUERY` opcode），不引入独立 syscall。这避免了 syscall 编号膨胀，与 syscalls.h SSoT（4 核心 + 20 预留）一致。
 
 ---
 
@@ -398,10 +410,10 @@ if (ret == 0) {
 # 生成 ABI 快照
 make CHECK_ABI=1 abidump
 
-# 对比两个版本的 ABI 快照
+# 对比两个版本的 ABI 快照（IRON-8: 0.1.1 后直接过渡到 1.0.1）
 abi-compliance-checker -l agentrt-linux \
-	-old abidump-0.1.1.xml \
-	-new abidump-1.0.1.xml
+	-old abidump-1.0.1.xml \
+	-new abidump-<X.Y.Z>.xml
 
 # 输出兼容性报告
 # - Compatible：向后兼容
@@ -421,10 +433,10 @@ abi-compliance-checker -l agentrt-linux \
 ### 7.3 回归测试套件
 
 ```bash
-# 运行 ABI 兼容性回归测试
-./test_abi_compat --old-version=0.1.1 --new-version=1.0.1
+# 运行 ABI 兼容性回归测试（IRON-8: 0.1.1 → 1.0.1 直跳，无中间版本）
+./test_abi_compat --old-version=1.0.1 --new-version=<X.Y.Z>
 
-# 运行弃用接口回归测试
+# 运行弃用接口回归测试（当前无弃用接口，套件为占位）
 ./test_deprecated --expect-warnings
 ```
 
@@ -477,5 +489,5 @@ make CHECK_KABI=1 modules
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）ABI 稳定性设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）ABI 稳定性设计 v1.0.1
 > 遵循 IRON-9 v3 [SC] 共享契约层 + [SS] 语义同源层与 agentrt ABI 同源

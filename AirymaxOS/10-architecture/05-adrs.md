@@ -1194,7 +1194,7 @@ agentrt-linux 实施版本基线锁定战略：
 | `sched.h`           | ADR-010 | magic 0x41475453 'AGTS' + sched\_tac 调度参数（不使用 SCHED\_EXT / SCHED\_AGENT 宏）+ MAC\_MAX\_AGENTS=1024 | kernel / cognition |
 | `memory_types.h`    | ADR-007 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
 | `security_types.h`  | ADR-004 | 41 cap + 250 LSM + Cupolas blob + capability 派生                                  | kernel / security  |
-| `cognition_types.h` | ADR-006 | 三阶段枚举（PERCEPTION/THINKING/ACTION）+ Thinkdual                                     | kernel / cognition |
+| `cognition_types.h` | ADR-006 | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual                                     | kernel / cognition |
 | `syscalls.h`        | ADR-010 | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位）                                              | kernel / cognition |
 | `uapi_compat.h`     | ADR-010 | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                                       | IRON-9 跨端          |
 | `lsm_types.h`       | ADR-004 | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构                          | kernel / security  |

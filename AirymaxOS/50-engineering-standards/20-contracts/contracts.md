@@ -735,9 +735,9 @@ CoreLoopThree 是 agentrt-linux 的认知运行时，实现"感知-思考-行动
 
 | 阶段 | 枚举值 | 描述 | 调度优先级影响 |
 |------|--------|------|--------------|
-| `CLT_PHASE_PERCEPTION` | 0 | 感知阶段：收集输入、环境感知 | 正常优先级 |
-| `CLT_PHASE_THINKING` | 1 | 思考阶段：主模型推理、规划 | 提升优先级（减少抢占） |
-| `CLT_PHASE_ACTION` | 2 | 行动阶段：执行任务、Wasm 沙箱 | 恢复正常优先级 |
+| `AIRY_COG_PERCEPT` | 0 | 感知阶段：收集输入、环境感知 | 正常优先级 |
+| `AIRY_COG_THINK` | 1 | 思考阶段：主模型推理、规划 | 提升优先级（减少抢占） |
+| `AIRY_COG_ACT` | 2 | 行动阶段：执行任务、Wasm 沙箱 | 恢复正常优先级 |
 
 ---
 
@@ -751,7 +751,7 @@ agentrt-linux 与 agentrt 在以下 10 个头文件中实现代码字面共享�
 |--------|---------|----------------|
 | `syscalls.h` | v1.1: 4 核心 syscall 编号 + 20 预留槽位| 系统调用（SYS） |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | 内存管理（ROVOL） |
-| `security_types.h` | POSIX capability 41 ID（0-40）枚举 + LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP） |
+| `security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP） |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | 认知（CLT） |
 | `sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | 调度（SCHED） |
 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构 + SQE/CQE 操作码与标志位 | IPC |
