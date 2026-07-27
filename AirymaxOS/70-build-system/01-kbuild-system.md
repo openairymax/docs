@@ -676,7 +676,7 @@ agentrt-linux 的 8 子仓跨越 C（kernel/services/security/memory/system 的�
 
 ## 11. 文档版本与维护
 
-- **当前版本**: v0.1.1/ v1.0.1（开发中）
+- **当前版本**: v1.0.1
 - **维护者**: agentrt-linux 构建系统 SIG（待成立，详见 07 卷维护者制度）
 - **变更流程**: 本卷变更必须经过 RFC → 评审 → ACC 验收流程；Kbuild 机制层变更需同步评估对 8 子仓构建链的影响。
 - **回顾周期**: 随 Linux 6.6 内核基线 LTS 更新季度回顾 + agentrt-linux 大版本年度回顾。

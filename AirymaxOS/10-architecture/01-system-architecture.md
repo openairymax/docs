@@ -86,7 +86,7 @@ agentrt-linux 采用三大设计支柱:
 │  └─────────┴──────────┴──────────┴──────────┴─────────────┘   │
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │ cognition (认知运行时)                          │ │
-│  │ CoreLoopThree kthread + Wasm runtime + LLM 调度           │ │
+│  │ CoreLoopThree kthread(仅调度协调) + Wasm/LLM 用户态进程   │ │
 │  └───────────────────────────────────────────────────────────┘ │
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │ cloudnative (云原生)                             │ │
@@ -113,6 +113,13 @@ agentrt-linux 采用三大设计支柱:
 > agentrt-linux 内部 8 子仓的依赖关系采用 **7 层架构模型**（L1-L7），权威定义见 [README.md §3](README.md#3-架构层次模型)。
 > 7 层架构模型**不包含** agentrt（agentrt 是外部组件，运行于 agentrt-linux 之上，见 [ADR-011](05-adrs.md#adr-011-7-层架构模型范围界定与-agentrt-用户态关系论证)）。
 > 完整技术论证见 C-2.3 架构模型论证报告（VP-4 决策确认）。
+
+> **CoreLoopThree kthread 职责边界硬约束（OS-IRON-KTHREAD-BOUNDARY）**：
+> cognition kthread **仅承担调度协调机制**（时间片预算下发、抢占协调、cgroup cpuset 派发、vtime 衰减记录），是机制（mechanism）而非策略（policy）。
+> **LLM 推理、Wasm 3.0 沙箱执行、Token 能效优化、Thinkdual 模式决策等一切 AI 策略必须完全在用户态进程/线程中执行**。
+> cognition kthread **不参与任何 AI 决策**，不调用任何 LLM/Wasm 运行时，不持有任何模型权重或推理上下文。
+> 本约束遵循 Linus "机制不是策略" 哲学与 IRON "内核不应该思考" 原则，确保内核稳定、可预测、可验证。
+> 违反本约束的任何设计/实现均为 Class A 阻塞缺陷。
 
 ### 2.2 微内核化改造策略
 
@@ -227,7 +234,7 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 | ADR-003 | 8 子仓划分（基于微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源） | 2026-07-06 |
 | ADR-004 | capability 安全模型（seL4 风格，security） | 2026-07-06 |
 | ADR-005 | io_uring IPC 子系统（同源 AgentsIPC 128B 消息头） | 2026-07-06 |
-| ADR-006 | CoreLoopThree kthread 认知循环（cognition） | 2026-07-06 |
+| ADR-006 | CoreLoopThree kthread 认知循环（cognition）—— kthread 仅承担调度协调机制，AI 策略（LLM/Wasm/Token 能效）必须在用户态执行（OS-IRON-KTHREAD-BOUNDARY） | 2026-07-06 |
 | ADR-007 | MemoryRovol 内核态实现（memory，L1-L4 四层递进） | 2026-07-06 |
 | ADR-008 | Wasm 3.0 沙箱运行时（cognition frameworks） | 2026-07-06 |
 | ADR-009 | K8s CRD + containerd shim 云原生（cloudnative） | 2026-07-06 |

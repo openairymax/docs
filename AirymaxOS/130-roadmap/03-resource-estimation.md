@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 估算范围与对象
 
-本文档估算 agentrt-linux 1.0.1 版本（M0-M8 全部里程碑）所需的人力资源、工时投入与工期分布。0.1.1 版本（文档体系完成）已在 `README.md` 单独说明，不计入本文档估算。估算对象包括：
+本文档估算 agentrt-linux 1.0.1 版本（M0-M8 全部里程碑）所需的人力资源、工时投入与工期分布。0.1.1 版本（设计基线锁定 + 工程标准就绪 + 内核改造框架就位）已在 `README.md` 单独说明，不计入本文档估算。估算对象包括：
 
 - **文档工时**——19 个文档模块共约 122 篇文档的撰写、审查与定稿工时
 - **实施工时**——8 个子仓（kernel / services / security / memory / cognition / cloudnative / system / tests-linux）的编码、调试与集成工时
@@ -258,7 +258,7 @@ gantt
     title agentrt-linux 1.0.1 关键路径（98 天 = 14 周）
     dateFormat  YYYY-MM-DD
     axisFormat  %m-%d
-    section M0 奠基
+    section M0 设计基线锁定+工程标准就绪+内核改造框架就位
     Part 1 工程标准(240h) :m0, 2026-08-01, 14d
     section M1 架构内核
     Part 2 架构模块(480h)  :crit, m1, 2026-08-15, 28d

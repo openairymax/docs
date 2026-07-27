@@ -708,7 +708,7 @@ Cupolas daemon 创建 ruleset 后按 L0→L1→L2 顺序追加规则并三次调
 | 字段 | 值 |
 |------|------|
 | 文档定位 | Landlock 用户态沙箱 |
-| 当前版本 | 0.1.1 |
+| 当前版本 | v1.0.1 |
 | 最后更新 | 2026-07-06 |
 | 维护者 | agentrt-linux 安全工程组 |
 | 同源映射 | agentrt Cupolas + Linux 6.6 LSM/Landlock/capability |

@@ -142,15 +142,15 @@ agentrt-linux 将以下 Linux 子系统逐步下沉到用户态（ES-SEL4-30）�
 
 | Linux 子系统   | 下沉策略                    | 用户态服务                               | 迁移阶段   |
 | ----------- | ----------------------- | ----------------------------------- | ------ |
-| VFS（具体文件系统） | 保留 VFS 框架在内核，具体 FS 下沉   | services VFS server                 | 1.x.x+ |
-| 网络栈（TCP/IP） | 保留 socket 层在内核，协议栈下沉    | services net server（DPDK / AF\_XDP） | 1.x.x+ |
-| 设备驱动        | 通过 VFIO / libvfio 下沉    | services driver server              | 1.x.x+ |
+| VFS（具体文件系统） | 保留 VFS 框架在内核，具体 FS 下沉   | services VFS server                 | 1.0.1 后续小版本 |
+| 网络栈（TCP/IP） | 保留 socket 层在内核，协议栈下沉    | services net server（DPDK / AF\_XDP） | 1.0.1 后续小版本 |
+| 设备驱动        | 通过 VFIO / libvfio 下沉    | services driver server              | 1.0.1 后续小版本 |
 | POSIX 接口    | 通过用户态 POSIX server 兼容   | services POSIX server               | 2.x.x  |
 | 信号管道        | eventfd / signalfd 等效替代 | services signal server              | 2.x.x  |
 
 > **VFS 用户态化决策（A-ULS 统一）**：内核保留 VFS 框架（路径解析、dentry cache），具体文件系统实现通过 FUSE 模型用户态化。此决策由 Airymax Unify Design 的 A-ULS 模块统一管理。
 
-> **版本范围说明**：迁移阶段与 [§9.1 迁移路径](#91-从-linux-66-单体到微内核化改造)保持一致（1.x.x / 1.x.x+ / 2.x.x），遵循 ADR-016 版本基线锁定战略。
+> **版本范围说明**：迁移阶段与 [§9.1 迁移路径](#91-从-linux-66-单体到微内核化改造)保持一致（1.x.x / 1.0.1 后续小版本 / 2.x.x），遵循 ADR-016 版本基线锁定战略。
 
 **下沉原则**（遵循 Liedtke minimality）：
 
@@ -320,7 +320,7 @@ seL4 的 Notification 对象（ES-SEL4-14）替代 Linux 的 eventfd / signalfd�
 | word 传递 | 64 bit word                                  | 64 bit counter           |
 | TCB 绑定  | Bound notification（一个 TCB 绑定一个 notification） | 无绑定                      |
 
-**agentrt-linux 适配**：io\_uring 的 MSG\_RING 操作码提供等效的跨 ring 异步消息语义。通过 \[SC] `include/uapi/linux/airymax/ipc.h` 定义 `AIRY_IPC_OP_MSG_RING` 操作码与 agentrt 共享。
+**agentrt-linux 适配**：io_uring 的 `IORING_OP_URING_CMD` 子命令提供等效的跨 ring 异步消息语义。[SC] `include/uapi/linux/airymax/ipc.h` 仅定义 7 个 opcode（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE），与 agentrt 共享；MSG_RING 语义由 io_uring 原生 `IORING_OP_MSG_RING` 承载，不在 Airymax IPC opcode 命名空间内重复定义，避免 SSoT 漂移。
 
 ### 4.5 Reply Cap 自动管理
 
@@ -540,7 +540,7 @@ agentrt-linux 不从零开发微内核（ADR-012），而是基于 Linux 6.6 进
 | 阶段   | 版本     | 改造内容                                                             | seL4 借鉴                         |
 | ---- | ------ | ---------------------------------------------------------------- | ------------------------------- |
 | 阶段 1 | 1.x.x  | sched\_tac 调度框架 + io\_uring IPC + 纯 C LSM capability 层引入（H5）  | capability 单一模型（ES-SEL4-05\~09） |
-| 阶段 2 | 1.x.x+ | VFS 部分用户态化 + 网络栈部分用户态化（DPDK / AF\_XDP）+ 驱动框架用户态化（VFIO / libvfio） | 服务用户态化（ES-SEL4-29\~31）          |
+| 阶段 2 | 1.0.1 后续小版本 | VFS 部分用户态化 + 网络栈部分用户态化（DPDK / AF\_XDP）+ 驱动框架用户态化（VFIO / libvfio） | 服务用户态化（ES-SEL4-29\~31）          |
 | 阶段 3 | 2.x.x  | 大部分系统服务用户态化 + 完整 capability 安全模型 + 形式化验证（部分核心模块）+ Linux 7.1 基线升级 | 形式化验证预留（ES-SEL4-16\~20）         |
 
 ### 9.2 与 Linux 兼容性

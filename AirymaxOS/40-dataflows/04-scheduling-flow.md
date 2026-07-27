@@ -106,6 +106,32 @@ flowchart TD
 - 步骤 10-12 在用户态 + 内核态交替完成，ops.stopping 触发 vtime 衰减并决定是否重新入队。
 - 步骤 5-6 的 enqueue/dispatch 通过 cgroup cpuset 队列抽象解耦，用户态调度器与调度核心通过 cgroup cpuset 交互。
 
+### 3.1 CoreLoopThree kthread 职责边界硬约束（OS-IRON-KTHREAD-BOUNDARY）
+
+> **本节为不可妥协的硬约束**，遵循 Linus "机制不是策略" 哲学与 IRON "内核不应该思考" 原则。
+
+**cognition kthread 允许承担的机制（mechanism）职责**：
+
+| 职责 | 说明 | 数据来源 |
+|------|------|---------|
+| 时间片预算下发 | 将 sched_tac 计算的 slice 预算写入 cgroup cpuset | sched.h `airy_task_desc` |
+| 抢占协调 | 在 slice 耗尽 / 高优先级唤醒时触发抢占 | EEVDF eligible 判定 |
+| cgroup cpuset 派发 | 将任务派发到 local cpuset 队列 | ops.dispatch |
+| vtime 衰减记录 | 记录任务执行后的 vtime 更新 | ops.stopping |
+| 调度状态机维护 | 维护 ops_state（NONE→QUEUEING→QUEUED→DISPATCHING） | 软可靠性状态机 |
+
+**cognition kthread 严禁承担的策略（policy）职责**（必须在用户态进程/线程执行）：
+
+| 禁止项 | 原因 | 正确实现位置 |
+|--------|------|-------------|
+| LLM 推理调用 | 内核不可调用外部模型服务 | 用户态 cognition daemon |
+| Wasm 3.0 沙箱执行 | 内核不持有 Wasm 运行时 | 用户态 frameworks 进程 |
+| Token 能效优化决策 | 涉及模型代价评估的策略 | 用户态 cognition daemon |
+| Thinkdual 模式切换 | AI 策略决策 | 用户态 cognition daemon |
+| 模型权重/推理上下文持有 | 内核不应持有 AI 语义数据 | 用户态进程地址空间 |
+
+**违反本约束的任何设计/实现均为 Class A 阻塞缺陷**，需在审查阶段直接否决。
+
 ---
 
 ## 4. EEVDF 调度器核心算法

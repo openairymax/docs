@@ -628,7 +628,7 @@ graph LR
 
 ## 12. 文档版本与维护
 
-- **当前版本**: v0.1.1/ v1.0.1（开发中）
+- **当前版本**: v1.0.1
 - **维护者**: agentrt-linux 构建系统 SIG（待成立，详见 07 卷维护者制度）
 - **变更流程**: 本卷变更必须经过 RFC → 评审 → ACC 验收流程；Kconfig 语法层变更需同步评估对 `airymaxos-base.config` 与各架构 `defconfig` 的影响。
 - **回顾周期**: 随 Linux 6.6 内核基线 LTS 更新季度回顾 + agentrt-linux 大版本年度回顾。

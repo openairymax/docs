@@ -626,7 +626,7 @@ graph LR
 
 ## 第 14 章 文档版本与维护
 
-- **当前版本**: 0.1.1
+- **当前版本**: v1.0.1
 - **最后更新**: 2026-07-06
 - **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何配置规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议参数或 MicroCoreRT 契约的 sysctl 变更需额外经工程规范委员会签字

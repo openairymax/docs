@@ -138,8 +138,12 @@ static bool macro_d_need_reconcile(void)
 
 控制面通过 io_uring_cmd 向内核请求扫描数据面状态：
 
+> **[IND] 层 opcode 声明**：`AIRY_IPC_OP_RECONCILE_SCAN` 是控制面 reconciliation 子系统的 [IND] 层实现 opcode，**不在 [SC] `include/uapi/linux/airymax/ipc.h` 的 7 个核心 opcode 命名空间内**。[SC] ipc.h 仅定义 SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE 7 个核心 opcode；RECONCILE_SCAN 由 `services/daemons/macro_d/` 实现层独立定义，通过 io_uring `IORING_OP_URING_CMD` 子命令承载，避免 SSoT 漂移。
+
 ```c
-/* services/daemons/macro_d/reconcile.c —— 扫描数据面 */
+/* services/daemons/macro_d/reconcile.c —— 扫描数据面
+ * Note: AIRY_IPC_OP_RECONCILE_SCAN is an [IND]-layer opcode defined
+ * in services/daemons/macro_d/, NOT in [SC] ipc.h's 7 core opcodes. */
 static int reconcile_scan(struct airy_reconcile_state *state)
 {
     struct airy_ipc_cmd cmd = {

@@ -831,7 +831,7 @@ agentrt-linux IPC 的 IRON-9 v3 四层共享模型（同源且部分代码共享
 | `io_ring_ctx` | `airy_ipc_ctx` | 环上下文（缓存行布局同源） |
 | `io_kiocb` | `airy_ipc_req` | 请求对象 |
 | `io_mapped_ubuf` | `airy_ipc_mapped_buf` | registered buffer |
-| `IORING_OP_MSG_RING` | `AIRY_IPC_OP_MSG_RING` | 跨 ring 消息 |
+| `IORING_OP_MSG_RING` | （无对应 Airymax opcode） | 跨 ring 消息，由 io_uring 原生承载，不在 Airymax IPC opcode 命名空间内重复定义 |
 | `io_double_lock_ctx()` | `airy_ipc_double_lock()` | trylock 死锁避免 |
 | SQPOLL 状态机 | daemon 轮询线程状态机 | Running/Idle/Wakeup |
 | DEFER_TASKRUN | daemon 延迟 task_work | 单一提交者 + IPI 避免 |

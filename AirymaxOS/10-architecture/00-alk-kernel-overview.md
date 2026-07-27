@@ -486,16 +486,16 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 | 阶段   | 版本     | 改造内容                                                             | seL4 借鉴                         |
 | ---- | ------ | ---------------------------------------------------------------- | ------------------------------- |
 | 阶段 1 | 1.x.x  | sched\_tac 调度框架 + io\_uring IPC + 纯 C LSM capability 层引入（H5）     | capability 单一模型（ES-SEL4-05\~09） |
-| 阶段 2 | 1.x.x+ | VFS 部分用户态化 + 网络栈部分用户态化（DPDK / AF\_XDP）+ 驱动框架用户态化（VFIO / libvfio） | 服务用户态化（ES-SEL4-29\~31）          |
+| 阶段 2 | 1.0.1 后续小版本 | VFS 部分用户态化 + 网络栈部分用户态化（DPDK / AF\_XDP）+ 驱动框架用户态化（VFIO / libvfio） | 服务用户态化（ES-SEL4-29\~31）          |
 | 阶段 3 | 2.x.x  | 大部分系统服务用户态化 + 完整 capability 安全模型 + 形式化验证（部分核心模块）+ Linux 7.1 基线升级 | 形式化验证预留（ES-SEL4-16\~20）         |
 
 ### 12.2 下沉到用户态的 Linux 子系统
 
 | Linux 子系统   | 下沉策略                    | 用户态服务                               | 迁移阶段   |
 | ----------- | ----------------------- | ----------------------------------- | ------ |
-| VFS（具体文件系统） | 保留 VFS 框架在内核，具体 FS 下沉   | services VFS server                 | 1.x.x+ |
-| 网络栈（TCP/IP） | 保留 socket 层在内核，协议栈下沉    | services net server（DPDK / AF\_XDP） | 1.x.x+ |
-| 设备驱动        | 通过 VFIO / libvfio 下沉    | services driver server              | 1.x.x+ |
+| VFS（具体文件系统） | 保留 VFS 框架在内核，具体 FS 下沉   | services VFS server                 | 1.0.1 后续小版本 |
+| 网络栈（TCP/IP） | 保留 socket 层在内核，协议栈下沉    | services net server（DPDK / AF\_XDP） | 1.0.1 后续小版本 |
+| 设备驱动        | 通过 VFIO / libvfio 下沉    | services driver server              | 1.0.1 后续小版本 |
 | POSIX 接口    | 通过用户态 POSIX server 兼容   | services POSIX server               | 2.x.x  |
 | 信号管道        | eventfd / signalfd 等效替代 | services signal server              | 2.x.x  |
 

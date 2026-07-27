@@ -112,7 +112,7 @@ Airymax Unify Design 五模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）在路线图中
 ```mermaid
 timeline
     title Airymax Unify Design 五模块在 M0-M8 里程碑中的交付时序
-    M0 奠基   : A-UCS 工程标准框架 + [SC] 10 头文件骨架
+    M0 设计基线锁定+工程标准就绪+内核改造框架就位   : A-UCS 工程标准 + [SC] 10 头文件 + 内核改造框架
     M1 架构   : A-UEF 认知循环设计 + A-IPC IPC 协议设计
     M2 模块   : A-ULS 监管器设计 + A-ULP 日志数据流
     M3 测试   : A-IPC IPC 零拷贝测试 + A-UEF 行为契约测试

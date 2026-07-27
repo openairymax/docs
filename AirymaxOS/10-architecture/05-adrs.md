@@ -37,7 +37,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ADR-003 | 8 子仓划分（基于微内核设计思想 + agentrt-linux 工程基线 + Airymax 同源）      | Accepted |
 | ADR-004 | capability 安全模型（seL4 风格，security）                        | Accepted |
 | ADR-005 | io\_uring IPC 子系统（同源 AgentsIPC 128B 消息头）                 | Accepted |
-| ADR-006 | CoreLoopThree kthread 认知循环（cognition）                    | Accepted |
+| ADR-006 | CoreLoopThree kthread 认知循环（cognition）—— kthread 仅承担调度协调机制，AI 策略在用户态执行（OS-IRON-KTHREAD-BOUNDARY） | Accepted |
 | ADR-007 | MemoryRovol 内核态实现（memory，L1-L4 四层递进）                     | Accepted |
 | ADR-008 | Wasm 3.0 沙箱运行时（cognition frameworks）                     | Accepted |
 | ADR-009 | K8s CRD + containerd shim 云原生（cloudnative）               | Accepted |
@@ -420,10 +420,10 @@ agentrt-linux 在 kernel + services 实现 **基于 io\_uring 的 IPC 子系统*
 
 ***
 
-## ADR-006: CoreLoopThree kthread 认知循环（cognition）
+## ADR-006: CoreLoopThree kthread 认知循环（cognition）—— 职责边界硬约束
 
 - **状态**: Accepted
-- **日期**: 2026-07-06
+- **日期**: 2026-07-06（2026-07-27 增补职责边界硬约束）
 - **决策者**: 工程规范委员会
 
 ### 背景
@@ -452,6 +452,33 @@ agentrt-linux 在 cognition 子仓实现 **CoreLoopThree kthread 认知循环**�
 | 反馈闭环     | 实时反馈 + 轮次内反馈 + 跨轮次反馈                    |
 | 调度集成     | 通过 sched\_tac 调度框架（SCHED\_DEADLINE / SCHED\_FIFO）获得原生优先级  |
 | 同源       | 与 agentrt coreloopthree + frameworks 同源 |
+
+### 职责边界硬约束（OS-IRON-KTHREAD-BOUNDARY，2026-07-27 增补）
+
+> **本约束为不可妥协的硬约束**，遵循 Linus "机制不是策略" 哲学与 IRON "内核不应该思考" 原则。
+> cognition kthread **仅承担调度协调机制**（mechanism），**不参与任何 AI 策略**（policy）。
+
+**kthread 允许承担的机制职责**：
+
+| 职责 | 说明 |
+|------|------|
+| 时间片预算下发 | 将 sched_tac 计算的 slice 预算写入 cgroup cpuset |
+| 抢占协调 | slice 耗尽 / 高优先级唤醒时触发抢占 |
+| cgroup cpuset 派发 | 将任务派发到 local cpuset 队列 |
+| vtime 衰减记录 | 记录任务执行后的 vtime 更新 |
+| 调度状态机维护 | 维护 ops_state（NONE→QUEUEING→QUEUED→DISPATCHING） |
+
+**kthread 严禁承担的策略职责**（必须在用户态进程/线程执行）：
+
+| 禁止项 | 正确实现位置 |
+|--------|-------------|
+| LLM 推理调用 | 用户态 cognition daemon |
+| Wasm 3.0 沙箱执行 | 用户态 frameworks 进程 |
+| Token 能效优化决策 | 用户态 cognition daemon |
+| Thinkdual 模式切换 | 用户态 cognition daemon |
+| 模型权重/推理上下文持有 | 用户态进程地址空间 |
+
+**违反本约束的任何设计/实现均为 Class A 阻塞缺陷**，需在审查阶段直接否决。
 
 ### 理由
 

@@ -70,7 +70,7 @@ agentrt-linux 采用 RPM 包格式作为唯一二进制交付单元。包命名�
 
 ```specfile
 Name:           airymaxos-services-core
-Version:        0.1.1
+Version:        1.0.1
 Release:        1%{?dist}
 Summary:        agentrt-linux 12 daemons userspace core
 License:        SPDX-License-Identifier-Apache-2.0
@@ -746,7 +746,7 @@ graph TD
 
 ## 第 15 章 文档版本与维护
 
-- **当前版本**: 0.1.1
+- **当前版本**: v1.0.1
 - **最后更新**: 2026-07-06
 - **维护者**: 工程规范委员会（待成立，详见 50-engineering-standards/07-maintainers-and-governance.md）
 - **变更流程**: 任何部署规则变更必须经 RFC → 评审 → ACC 验收流程，涉及 AgentsIPC 协议或 MicroCoreRT 契约的变更需额外经工程规范委员会签字

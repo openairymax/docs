@@ -84,6 +84,8 @@ flowchart LR
 > **内核态禁用 float 约束**：Linux 6.6 内核编译使用 `-mno-80387` 禁用 x87 FPU（见 `arch/x86/Makefile:137`），内核态任何 float/double 算术运算必须包裹在 `kernel_fpu_begin()`/`kernel_fpu_end()` 之间（会禁用抢占，不可在原子/中断/调度器热路径使用）。
 >
 > **⚠️ 说明性示例，非 SSoT 定义**：以下 Q16.16/Q32.32 定点数类型是文档为说明"内核态禁用 float 后如何用定点数替代浮点"的**说明性示例**，**SSoT 头文件 `include/uapi/linux/airymax/memory_types.h` 中并未定义** `airy_q16_t`、`airy_q32_t` 及相关宏。SSoT 实际定义见 §10.2。本节示例仅用于为后续 §3.1-3.4 字段类型（如 L2 weight）提供概念铺垫，**不应被引用为 SSoT 契约**。
+>
+> **物理宿主标注**：§3.0-3.4 中的所有数据结构（`airy_q16_t`/`airy_l1_record_t`/`airy_l2_feature_t`/`airy_l3_node_t`/`airy_l3_edge_t`/`airy_l4_barcode_t`）的**实际实现定义位于 memory 子仓**（`memory/` 目录），非 [SC] 共享契约层内容。agentrt 用户态与 agentrt-linux 内核态各自独立定义这些数据结构。
 
 ```c
 /* ── 说明性示例：非 SSoT 定义，不来自 include/uapi/linux/airymax/memory_types.h ──

@@ -672,7 +672,7 @@ LSM 与 Cupolas 集成的目标是将 Cupolas 7 大子系统映射到 LSM 钩子
 | **Permission 权限裁决** | `security_inode_permission` | ⏳ 未来 | 4 值枚举裁决（M0 未消费 inode blob 之外的钩子） |
 | **IPC fastpath slowpath 接管** | `security_uring_cmd` | ✅ M0 | Badge 异常冷酷执法（C-S9 失败时冻结 Ring） |
 | **Sanitizer 输入净化** | `security_bpf_check` / `security_socket_sendmsg` | ⏳ 未来 | DENY 时丢弃违规 BPF/socket payload |
-| **Audit 审计追踪** | （通过 A-IPC payload 上报） | ✅ M0 | 通过 `AIRY_IPC_OP_AUDIT_EVENT` opcode 上报，不通过独立钩子 |
+| **Audit 审计追踪** | （通过 A-IPC payload 上报） | ✅ M0 | 通过 [IND] 层 `AIRY_IPC_OP_AUDIT_EVENT` opcode 上报（不在 [SC] ipc.h 7 核心 opcode 命名空间内，由 services/daemons/ 实现层独立定义），不通过独立钩子 |
 | **Workbench 虚拟工作台** | `security_task_setrlimit` | ⏳ 未来 | DENY 时拒绝越界资源申请 |
 | **Vault 安全金库** | `security_keyctl` | ⏳ 未来 | DENY 时阻断 keyring 操作 |
 | **Network 网络安全** | `security_socket_accept` / `security_socket_connect` | ⏳ 未来 | DENY 时返回 `-EACCES` 阻断建链 |
@@ -707,11 +707,13 @@ Cupolas daemon 作为用户态策略引擎通过 A-IPC 总线（128B 消息头�
 #include <linux/airymax/ipc.h>
 #include <linux/airymax/security_types.h>  /* airy_verdict 4 值枚举 */
 
-/* 内核态 Cupolas 钩子填充审计事件到 A-IPC 消息 payload */
+/* 内核态 Cupolas 钩子填充审计事件到 A-IPC 消息 payload
+ * Note: AIRY_IPC_OP_AUDIT_EVENT is an [IND]-layer opcode defined
+ * in services/daemons/, NOT in [SC] ipc.h's 7 core opcodes. */
 struct airy_ipc_msg_hdr hdr = {
     .magic    = AIRY_IPC_MAGIC,           /* 0x41524531 'ARE1' */
     .version  = AIRY_IPC_VERSION_CURRENT,
-    .opcode   = AIRY_IPC_OP_AUDIT_EVENT,  /* IPC 层 opcode：审计事件上报 */
+    .opcode   = AIRY_IPC_OP_AUDIT_EVENT,  /* [IND] 层 opcode：审计事件上报 */
     .payload_len = sizeof(struct airy_audit_payload),  /* payload 区大小 */
 };
 

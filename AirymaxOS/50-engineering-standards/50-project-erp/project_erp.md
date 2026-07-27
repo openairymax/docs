@@ -1766,7 +1766,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `vmlinuz-airymaxos`, `airymaxos-kernel-modules.tar.gz` |
 | 运行时资源 | CPU: 1-2 dedicated cores; Memory: 256MB reserved |
 | 维护团队 | Kernel SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | IRON-9 v2 流水线 | `iron9-kernel-build`, `iron9-kernel-test` |
 
 **五维正交分析（D1 子系统维）**：kernel 仅负责内核空间的实时调度、eBPF 运行时和内核安全模块，不涉及用户空间逻辑，与 services 在进程边界上严格正交。
@@ -1782,7 +1782,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-svcmgr`, `airymaxos-*.service` |
 | 运行时资源 | CPU: 0.5 core; Memory: 512MB; Storage: 2GB (state) |
 | 维护团队 | Services SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | IRON-9 v2 流水线 | `iron9-services-build`, `iron9-services-integration` |
 
 #### 2.3 security
@@ -1796,7 +1796,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-secmodule.so`, `airymaxos-tpm-initrd` |
 | 运行时资源 | CPU: 0.3 core; Memory: 128MB; Storage: 1GB (keyring) |
 | 维护团队 | Security SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | 安全审计 | 季度渗透测试 + 年度外部审计 |
 
 #### 2.4 memory
@@ -1810,7 +1810,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-memmgmt.ko`, `libairymem.so` |
 | 运行时资源 | Memory: 64MB overhead; 管理页表占用 |
 | 维护团队 | Memory SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 
 #### 2.5 cognition
 
@@ -1823,7 +1823,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-cogd`, `libairymax-cognition.so` |
 | 运行时资源 | CPU: 2-4 cores (GPU optional); Memory: 4-8GB; Storage: 20GB (model cache) |
 | 维护团队 | Cognition SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | 依赖 | ONNX Runtime, llama.cpp, Qdrant embedded |
 
 #### 2.6 cloudnative
@@ -1837,7 +1837,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-containerd`, `airymaxos-cri-plugin` |
 | 运行时资源 | CPU: 1 core; Memory: 1GB; Storage: 10GB (image cache) |
 | 维护团队 | CloudNative SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | 兼容性 | OCI Runtime Spec v1.1.0, CRI v1.29 |
 
 #### 2.7 system
@@ -1851,7 +1851,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | `airymaxos-diag`, `airymaxos-perf`, `airymaxos-ctl` |
 | 运行时资源 | CPU: 0.2 core; Memory: 256MB; Storage: 5GB (log retention) |
 | 维护团队 | System SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 
 #### 2.8 tests-linux
 
@@ -1864,7 +1864,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 构建产物 | 测试报告、覆盖率报告、基准数据 |
 | 运行时资源 | CPU: 4 cores (CI runner); Memory: 8GB; Storage: 50GB (artifacts) |
 | 维护团队 | QA SIG |
-| 当前版本 | 0.1.1（文档体系） |
+| 当前版本 | v1.0.1（文档体系） |
 | 测试框架 | IRON-9 v2 Test Harness |
 
 ---

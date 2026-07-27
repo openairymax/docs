@@ -16,7 +16,7 @@ agentrt-linux 开发方案拆分为 9 个里程碑（M0-M8），对应 9 个 Par
 
 | 里程碑 | 名称 | 对应 Part | 工期 | 完成标准 |
 |--------|------|-----------|------|---------|
-| M0 | 工程标准框架建立 | Part 1 | 2 周（14 天） | `50-engineering-standards/` 23 文档完成 + OS 规则编号注册表 |
+| M0 | 设计基线锁定 + 工程标准就绪 + 内核改造框架就位 | Part 1 | 2 周（14 天） | `50-engineering-standards/` 23 文档完成 + OS 规则编号注册表 + 内核改造框架（37 .c + Kbuild）+ [SC] 10 头文件 + CI 基础设施 |
 | M1 | 架构与模块设计完善 | Part 2 | 4 周（28 天） | `10-architecture/` + `20-modules/` + `60-driver-model/` + `70-build-system/` 完善 |
 | M2 | 测试体系建立 | Part 3 | 3 周（21 天） | `80-testing/` 10 文档完成 + KUnit/kselftest/fault injection 就位 |
 | M3 | 可观测性与运维体系 | Part 4 | 3 周（21 天） | `90-observability/` + `100-operations/` 完成 + ftrace/eBPF/perf 就位 |
@@ -47,7 +47,7 @@ gantt
     axisFormat %m-%d
 
     section P0 必修阶段
-    M0 工程标准框架        :m0, 2026-07-13, 14d
+    M0 设计基线锁定+工程标准就绪+内核改造框架就位        :m0, 2026-07-13, 14d
     M1 架构与模块设计       :m1, 2026-07-27, 28d
     M2 测试体系             :m2, after m0, 21d
     M3 可观测性与运维        :m3, after m0, 21d
@@ -80,15 +80,15 @@ gantt
 
 P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并行推进。
 
-### 3.1 Day 1-14: M0 工程标准框架
+### 3.1 Day 1-14: M0 设计基线锁定 + 工程标准就绪 + 内核改造框架就位
 
 | 维度 | 内容 |
 |------|------|
-| **范围** | `50-engineering-standards/` 全部 23 文档 |
+| **范围** | `50-engineering-standards/` 全部 23 文档 + 10 架构文档 + 10 接口文档 + 4 数据流文档 + 16 ADR + 内核改造框架（37+ .c + Kbuild/Kconfig + 4 syscall + 10 [SC] 头文件 + codegen + 7 CI workflow） |
 | **依赖** | 无 |
 | **工时** | 240h |
 | **并行** | 与 M1 部分并行（M1 Day 15 起） |
-| **关键产出** | 23 文档 + OS 规则编号注册表 + IRON-9 v3 同源且部分代码共享关系明确 |
+| **关键产出** | 23 文档 + OS 规则编号注册表 + IRON-9 v3 同源且部分代码共享关系明确 + 内核改造框架就位 + [SC] 10 头文件 + CI 基础设施 |
 
 **子任务**:
 - Day 1-3: README + 01 代码规范 + 02 代码格式
