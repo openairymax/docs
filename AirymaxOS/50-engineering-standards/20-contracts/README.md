@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux OS 层契约规范总览
 > **文档定位**：agentrt-linux（AirymaxOS）OS 层契约规范体系的入口与索引\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\

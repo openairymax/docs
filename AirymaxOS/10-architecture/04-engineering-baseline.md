@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 工程基线
 
 > **文档定位**：agentrt-linux（AirymaxOS）工程基线（Engineering Baseline）的完整定义与落地规范\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 

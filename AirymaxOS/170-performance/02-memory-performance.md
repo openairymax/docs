@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）内存性能工程设计
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）内存子系统性能工程详细设计\
-> **文档版本**：1.0.1-fix\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\

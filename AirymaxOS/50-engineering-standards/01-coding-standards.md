@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）代码规范
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）工程标准规范 / 代码规范\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：`50-engineering-standards/README.md` §3；`00-architectural-principles.md` 五维正交 24 原则\

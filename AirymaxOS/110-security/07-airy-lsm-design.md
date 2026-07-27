@@ -344,7 +344,7 @@ struct airy_ring_state {
  * 返回:
  *   0          - Badge 校验通过，io_uring 继续 issue
  *   -AIRY_ECAP_*  - Badge 校验失败（已触发 Fault，冷酷执法完成）
- *   -AIRY_ECAP_FROZEN - Ring 已冻结（不触发 Fault，纯 Error）
+ *   -AIRY_EIPC_FROZEN - Ring 已冻结（不触发 Fault，纯 Error）
  *
  * 设计权衡:
  *   - fastpath 内联 C-S9 在 airy_uring_cmd() 中完成（~10ns）
@@ -374,7 +374,7 @@ static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd)
     if (unlikely(READ_ONCE(ring->frozen))) {
         airy_audit_emit_security(AGENT_RING_FROZEN_BLOCK,
                                   cmd->src_task, 0, 0);
-        return -AIRY_ECAP_FROZEN;  /* -82, Error 不触发 Fault */
+        return -AIRY_EIPC_FROZEN;  /* -53, Error 不触发 Fault */
     }
 
     opcode    = cmd->hdr->opcode;
@@ -436,7 +436,7 @@ static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd)
  *   -AIRY_ECAP_EPOCH  (-79)  → Fault 0x1005（capability 异常，冻结 Ring）
  *   -AIRY_ECAP_PERM   (-81)  → Fault 0x1005（权限不足，冻结 Ring）
  *   -AIRY_ECAP_BADGE  (-78)  → Fault 0x1005（Badge 格式无效，冻结 Ring）
- *   -AIRY_ECAP_FROZEN (-82)  → 无 Fault（Ring 已冻结，纯 Error）
+ *   -AIRY_EIPC_FROZEN (-53)  → 无 Fault（Ring 已冻结，纯 Error）
  */
 static noinline int airy_handle_badge_failure(int ret,
                                                 struct airy_ipc_cmd *cmd,
@@ -463,7 +463,7 @@ static noinline int airy_handle_badge_failure(int ret,
         fault_code = AIRY_FAULT_ABNORMAL_CAP;     /* 0x1005 */
         break;
 
-    case -AIRY_ECAP_FROZEN:     /* -82: Ring 已冻结 */
+    case -AIRY_EIPC_FROZEN:     /* -53: Ring 已冻结 */
         /* 不触发 Fault，纯 Error */
         return ret;
 
@@ -635,7 +635,7 @@ io_uring_cmd 提交（IORING_OP_URING_CMD）
        │
        ▼
 fastpath C-S0: Ring 冻结检查（unlikely(ring->frozen)）
-       ├── 冻结 ────────────────▶ 返回 -AIRY_ECAP_FROZEN (-82, Error)
+       ├── 冻结 ────────────────▶ 返回 -AIRY_EIPC_FROZEN (-53, Error)
        └── 未冻结
        ▼
 fastpath C-S9: Badge 64-bit Native Word 校验（~10ns 内联）
@@ -666,7 +666,7 @@ switch(fastpath_ret):
        ├── -AIRY_ECAP_FORGED   → airy_fault_enforce(AIRY_FAULT_CAP_FORGED)   [0x1001]
        ├── -AIRY_ECAP_EPOCH    → airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP) [0x1005]
        ├── -AIRY_ECAP_PERM     → airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP) [0x1005]
-       ├── -AIRY_ECAP_FROZEN   → 返回 Error（不触发 Fault）
+       ├── -AIRY_EIPC_FROZEN   → 返回 Error（不触发 Fault）
        └── -AIRY_ECAP_BADGE    → airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP) [0x1005]
        ▼
 冷酷执法：冻结 Ring + eventfd 通知 Macro-Supervisor
@@ -1027,7 +1027,7 @@ Airymax LSM 在 `security_capable` 钩子中检查 POSIX capability，在 `secur
 | 伪造 Badge 提交（RandomTag 不匹配） | C-S9.RANDTAG 失败 | `-AIRY_ECAP_FORGED` (-80) → `AIRY_FAULT_CAP_FORGED` (0x1001) |
 | Epoch 不匹配提交（已撤销 Badge） | C-S9.EPOCH 失败 | `-AIRY_ECAP_EPOCH` (-79) → `AIRY_FAULT_ABNORMAL_CAP` (0x1005) |
 | 权限不足提交（Perms 不满足） | C-S9.PERMS 失败 | `-AIRY_ECAP_PERM` (-81) → `AIRY_FAULT_ABNORMAL_CAP` (0x1005) |
-| 已冻结 Ring 提交 | C-S0 失败 | `-AIRY_ECAP_FROZEN` (-82, Error，不触发 Fault） |
+| 已冻结 Ring 提交 | C-S0 失败 | -AIRY_EIPC_FROZEN (-53, Error，不触发 Fault） |
 | Badge 格式无效提交（CAP_CARRY 但 badge=0） | C-S9 失败 | `-AIRY_ECAP_BADGE` (-78) → `AIRY_FAULT_ABNORMAL_CAP` (0x1005) |
 | 非法 opcode 提交 | 白名单外 | -EOPNOTSUPP |
 | 无权限注册 buffer | CAP_REGISTER_BUFFER 缺失 | -AIRY_ECAP_PERM |

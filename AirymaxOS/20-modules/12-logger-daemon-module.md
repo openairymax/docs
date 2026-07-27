@@ -36,7 +36,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - `agent_caps[1024]` 静态数组（128KB，sec_d 唯一写者）为 `logger_d` 提供 O(1) Badge 校验入口
 - fastpath C-S9 内联校验（~10ns）拦截伪造/过期 Badge 的日志写入尝试
 - Badge 64-bit 布局 `Epoch<<48 | RandomTag<<16 | Perms` 在 `logger_d` 侧通过 `agent_caps[src_task]` 反查验证
-- 校验失败时记录 `AIRY_ECAP_FROZEN = -82`、`AIRY_ESEC_D_THROTTLED = -83` 错误码至 Ring Buffer
+- 校验失败时记录 `AIRY_EIPC_FROZEN = -53`、`AIRY_ESEC_D_THROTTLED = -83` 错误码至 Ring Buffer
 
 ---
 
@@ -450,13 +450,13 @@ Capability Folding 校验失败时，`logger_d` 将错误码记录至 Ring Buffe
 
 | 错误码 | 值 | 触发场景 | logger_d 处理 |
 |--------|-----|---------|--------------|
-| `AIRY_ECAP_FROZEN` | -82 | `agent_caps[src_task].frozen == true`（C-S0 检查） | 记录 `LOG_WARN` 级别，标记 Ring 冻结事件 |
+| `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | 记录 `LOG_WARN` 级别，标记 Ring 冻结事件 |
 | `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求 | 记录 `LOG_WARN` 级别，标记 sec_d 限流事件 |
 | `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | 记录 `LOG_FATAL` 级别，触发 `AIRY_FAULT_CAP_FORGED` |
 
 ### 7.5 O(1) 撤销机制
 
-`atomic_inc(&airy_cap_global_epoch)` 触发全局 Epoch 跃迁后，所有旧 Badge 在 `logger_d` 侧 fastpath C-S9 校验时立即失效（Epoch 不匹配），实现 O(1) 撤销。`logger_d` 在 Epoch 跃迁期间记录的日志会标记 `AIRY_ECAP_FROZEN`，但**不丢弃日志**——日志是故障诊断最后防线，即使 Badge 失效也要保留记录用于事后审计。
+`atomic_inc(&airy_cap_global_epoch)` 触发全局 Epoch 跃迁后，所有旧 Badge 在 `logger_d` 侧 fastpath C-S9 校验时立即失效（Epoch 不匹配），实现 O(1) 撤销。`logger_d` 在 Epoch 跃迁期间记录的日志会标记 `AIRY_EIPC_FROZEN`，但**不丢弃日志**——日志是故障诊断最后防线，即使 Badge 失效也要保留记录用于事后审计。
 
 ---
 
@@ -469,7 +469,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 | 层 | 头文件/资源 | logger_d 使用方式 |
 |----|----------|-----------------|
 | [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_FAC_*` facility |
-| [SC] | `error.h` | `AIRY_ECAP_FROZEN`、`AIRY_ESEC_D_THROTTLED`、`AIRY_FAULT_AUDIT_TAMPER` |
+| [SC] | `error.h` | `AIRY_EIPC_FROZEN`、`AIRY_ESEC_D_THROTTLED`、`AIRY_FAULT_AUDIT_TAMPER` |
 | [SS] | 配置语义 | `logger_d.yaml` 与 sysctl 语义同源 |
 | [IND] | systemd unit、zstd 压缩、轮转策略 | `logger_d` 实现细节 |
 | [DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块 | log_types.h 损坏时的最小可运行子集 |
@@ -561,7 +561,7 @@ vfs_d（VFS 用户态化）                  config_d（统一配置管理）
 - [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) —— 零拷贝 Ring Buffer 日志数据流（内核生产侧权威）
 - [06-logger-daemon-design.md](../40-dataflows/06-logger-daemon-design.md) —— `logger_d` 数据流设计（§5.5 审计哈希链 C 实现权威源）
 - [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式与 `LOG_*`/`AIRY_FAC_*` 枚举 [SC] 契约
-- [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_ECAP_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_AUDIT_TAMPER` 错误码注册
+- [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_EIPC_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_AUDIT_TAMPER` 错误码注册
 - [13-printk-bridge.md](13-printk-bridge.md) —— printk 桥接设计（日志链路上游）
 - [11-unified-config.md](11-unified-config.md) —— A-UCS 统一配置管理体系（`logger_d.yaml` YAML 语义）
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) —— [DSL] 降级生存层（log_types.h 降级块）

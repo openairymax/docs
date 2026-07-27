@@ -1,6 +1,14 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 "From data intelligence emerges."
 
+> **⚠️ 弃用声明**（v6.0 修复）：本文档为历史归档版本，已过时且不再维护。权威版本请参考 [docs/AirymaxOS/10-architecture/06-iron9-shared-model.md](../../AirymaxOS/10-architecture/06-iron9-shared-model.md)。本文档中的以下内容已失效：
+> - `kernel/include/airymax/` 路径应为 `kernel/include/uapi/linux/airymax/`
+> - "LSM 钩子 252 ID" 应为 250 ID
+> - "SCHED_EXT 调度类编号" 应为"不使用 sched_ext"
+> - "12 核心 + 12 预留 = 24 槽位" 应为 "4 核心 + 20 预留 = 24 槽位"
+> - `MAC_MAX_AGENTS` 应为 `AIRY_CAP_MAX_AGENTS`
+> - "error.h 尚未创建" 已失效，error.h 已存在
+
 # Airymax IRON-9 v2 跨端共享模型
 > **文档定位**：Airymax IRON-9 v2 跨端共享模型\
 > **文档版本**：0.1.1（文档体系完成）/ 1.0.1（开发）\

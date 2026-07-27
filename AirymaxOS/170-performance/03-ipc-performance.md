@@ -627,7 +627,7 @@ static inline void emit_ipc_metric(const struct airy_ipc_metric *m)
 | AIRY_E_IPC_KFIFO_FULL | -52 | kfifo 队列满 | kfifo 通道 |
 | AIRY_E_IPC_RING_FULL | -53 | io_uring SQ 已满 | io_uring 提交 |
 | AIRY_E_IPC_BATCH_SIZE | -54 | 批量大小非法 | 批量提交路径 |
-| AIRY_E_IPC_FROZEN | -55 | Ring 已冻结（FREEZE opcode） | fastpath C-S0 |
+| AIRY_EIPC_FROZEN | -53 | Ring 已冻结（FREEZE opcode） | fastpath C-S0 |
 
 ### 6.2 Capability 错误码段（-78 ~ -82，Badge 校验，v1.0.1 新增）
 
@@ -637,7 +637,7 @@ static inline void emit_ipc_metric(const struct airy_ipc_metric *m)
 | AIRY_ECAP_EPOCH | -79 | Epoch 不匹配（已撤销/过期） | fastpath C-S9.EPOCH | 0x1005 ABNORMAL_CAP |
 | AIRY_ECAP_FORGED | -80 | Badge 伪造（RandomTag 不匹配） | fastpath C-S9.RANDTAG | **0x1001 CAP_FORGED** |
 | AIRY_ECAP_PERM | -81 | Perms 权限位不满足 | fastpath C-S9.PERMS | 0x1005 ABNORMAL_CAP |
-| AIRY_ECAP_FROZEN | -82 | Ring 已冻结（重复冻结） | fastpath C-S0 | —（Error，不触发 Fault） |
+| AIRY_EIPC_FROZEN | -53 | Ring 已冻结 | fastpath C-S0 | —（Error，不触发 Fault） |
 
 ### 6.3 Fault 码段（0x1001 ~ 0x1006，不可恢复，v1.0.1 重定义）
 

@@ -3,7 +3,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # IPC 协议
 > **文档定位**：agentrt-linux（AirymaxOS） 进程间通信协议的 Layout C v4 128B 消息头、5 种 payload、io_uring 零拷贝与同源映射、Capability Folding Badge 模型\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-22\
+> **最后更新**： 2026-07-26\
+> **v4.3 锁定说明**：IPC 协议锁定 v1.1 为唯一基线（IRON-8），v1.0 从未发布，版本协商机制降级为 v2.0+ 预留。7 opcode 自 v1.1 起稳定。\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -17,7 +18,7 @@ agentrt-linux IPC 协议与 agentrt AgentsIPC 同源，保留 128 字节定长�
 3. **机制与策略分离**: 协议提供消息传递机制，消息语义（RPC / 事件 / 流）由 payload 类型决定。
 4. **零拷贝优先**: 高频路径基于 io_uring + registered buffers + IORING_OP_URING_CMD 语义映射，避免数据复制。
 5. **可观测性**: 消息头携带 `trace_id`（OpenTelemetry）与 `timestamp_ns`，全链路可追踪。
-6. **版本协商**: 版本协商在 L2 服务协议层处理（见 `50-engineering-standards/30-runtime-interfaces/runtime_interfaces.md` Part II），L1 [SC] 基础消息头不含 `version` 字段，通过 `opcode` 区分消息类型、`reserved[72]` 预留扩展空间。
+6. **版本协商（v2.0+ 预留）**: v1.1 是唯一协议基线（v4.3 锁定，IRON-8），M0 阶段不实现版本协商逻辑。128B 定长消息头不含 `version` 字段，通过 `opcode` 区分消息类型、`reserved[72]` 预留扩展空间。未来 v2.0 主版本变更时启用版本协商（见 [04-ipc-versioning.md](../160-compatibility/04-ipc-versioning.md)）。
 7. **Capability Folding**: `capability_badge` 字段（offset 40-47，D-9 修复后 8 字节对齐）承载 64-bit Native Word Badge（Epoch + Random Tag + Perms），fastpath C-S9 内联校验（~10ns），IPC 数据传递即能力校验，无双平面、无独立 capability syscall。
 8. **完整性校验**: `crc32` 字段（offset 52-55）覆盖 `header[0:52) + payload`，C-S12 在投递前校验，防 Ring 数据损坏。
 
@@ -296,7 +297,7 @@ H6: [DSL] 降级模式下 capability_badge 字段存在但被忽略（值=0，�
 | `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与全局 Epoch 不匹配（已撤销或过期） |
 | `AIRY_ECAP_FORGED` | -80 | Badge 伪造尝试（同时触发 `AIRY_FAULT_CAP_FORGED` 0x1001） |
 | `AIRY_ECAP_PERM` | -81 | 权限位不满足 opcode 所需 |
-| `AIRY_ECAP_FROZEN` | -82 | Ring 已冻结（C-S0 检查，A-ULS 通过 `FREEZE` opcode 设置） |
+| `AIRY_EIPC_FROZEN` | -53 | Ring 已冻结（C-S0 检查） |
 
 **详细安全模型**：见 [03-capability-model.md §3](../110-security/03-capability-model.md)。
 

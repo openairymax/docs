@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # MemoryRovol CSI 驱动实现方案
 > **文档定位**：agentrt-linux（AirymaxOS）MemoryRovol CSI（Container Storage Interface）驱动的完整实现方案，定义将记忆卷载 L1-L4 四层作为 CSI 卷挂载到 Agent 容器的协议、接口与生命周期\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：MemoryRovol L1-L4 数据结构 [SC] 共享 + CSI v1.9 规范 [IND] 独立实现\

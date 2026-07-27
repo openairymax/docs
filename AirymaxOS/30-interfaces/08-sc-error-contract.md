@@ -86,7 +86,7 @@ Error 码占据负数空间 `[-300, -1]`，按来源分 **10 个子空间**（�
 | 子空间 | 值域 | 来源 | 已定义数 | 命名风格 |
 |--------|------|------|---------|---------|
 | POSIX 码 | `[-1, -40]` | 对齐 Linux errno | 16 | `AIRY_E*`（对齐 `E*` errno 名） |
-| IPC 码 | `[-41, -70]` | A-IPC 协议层（Capability Folding fastpath C-S0~C-S12） | 12 + 1 alias | `AIRY_EIPC_*` |
+| IPC 码 | `[-41, -70]` | A-IPC 协议层（Capability Folding fastpath C-S0~C-S12） | 13 | `AIRY_EIPC_*` |
 | Capability 码 | `[-71, -100]` | 安全子系统（含 Capability Folding Badge 校验） | 13 | `AIRY_ECAP_*` / `AIRY_ESEC_*` |
 | Config 码 | `[-101, -120]` | A-UCS 配置管理 | 5 | `AIRY_ECFG*` |
 | A-ULS 码 | `[-121, -140]` | A-ULS 调度/生命周期 | 10 | `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*` |
@@ -192,7 +192,7 @@ A-IPC 协议层专用错误码，覆盖 IPC 协议、Ring Buffer、io_uring_cmd�
 | `AIRY_ECAP_EPOCH` | -79 | `badge_epoch != global_epoch`（Badge 已撤销或过期） | 重新向 sec_d 请求 Badge（`CAP_REQUEST` opcode） | 否 |
 | `AIRY_ECAP_FORGED` | -80 | `badge_randtag != agent_caps[src_task].randtag`（Badge 伪造尝试） | 触发 Fault，sec_d 审计，可能终止 Agent | **是**（`AIRY_FAULT_CAP_FORGED` 0x1001） |
 | `AIRY_ECAP_PERM` | -81 | `badge_perms & required != required`（权限位不满足 opcode 所需） | 重新申请更高权限 Badge | 否 |
-| `AIRY_ECAP_FROZEN` | -82 | `ring->frozen == true`（C-S0 检查，A-ULS 通过 `FREEZE` opcode 设置） | 等待解冻或联系管理员 | 否 |
+| `AIRY_ECAP_FROZEN` | -82 | badge 撤销（A-ULS 控制，非 C-S0） | 等待解冻或联系管理员 | 否 |
 
 **sec_d 限流拒绝码**（R1 补强新增，非 C-S9 fastpath 触发）：
 

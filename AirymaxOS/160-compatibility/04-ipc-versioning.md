@@ -2,8 +2,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # AgentsIPC 版本协商实现方案
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 AgentsIPC 协议的版本化演进与运行时协商机制\
-> **文档版本**：0.1.1\
-> **最后更新**： 2026-07-21\
+> **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-26\
+> **v4.3 锁定说明**：IRON-8 要求 0.1.1 → 1.0.1 直接过渡，禁止双轨制。IPC 协议锁定 **v1.1 为唯一基线**，v1.0 从未发布无遗留用户，版本协商机制降级为 v2.0+ 预留（M0 阶段不实现）。7 个 opcode 自 v1.1 起稳定，永不重定义、永不复用。\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 系统调用兼容性（IRON-9 v3 [SC] 共享契约层，IPC 消息头与 agentrt 共享）\
 > **理论根基**：Linux 6.6 UABI 永不破坏哲学 + seL4 接口契约 XML 思想 + Airymax K-2 接口契约化 + C-2 增量演化\
@@ -94,7 +95,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。版本号编解码宏作为协议层语义保留，但消息头权威布局以 SSoT Layout C 为准（`opcode`/`flags`/`trace_id`/`timestamp_ns`/`src_task`/`dst_task`/`payload_len`/`reserved[84]`）。
+> **SSoT 声明**：本节 IPC 128B 消息头不再就地重定义，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`（Layout C）。版本号编解码宏作为协议层语义保留，但消息头权威布局以 SSoT Layout C 为准（`opcode`/`flags`/`trace_id`/`timestamp_ns`/`src_task`/`dst_task`/`capability_badge`/`payload_len`/`crc32`/`reserved[72]`）。
 
 ```c
 /* 版本号编解码宏 */
@@ -113,7 +114,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
 
 ## 3. 128B 消息头版本识别
 
-> **SSoT 对齐说明**：SSoT Layout C（`struct airy_ipc_msg_hdr`，定义于 `include/uapi/linux/airymax/ipc.h`）**不含 `version` 字段**。128B 消息头布局为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/payload_len/reserved[84]，共 9 字段。协议版本识别依赖 `magic` 字段（0x41524531 'ARE1'），版本协商通过 §4 运行时握手协议完成，而非消息头内嵌版本号。
+> **SSoT 对齐说明**：SSoT Layout C（`struct airy_ipc_msg_hdr`，定义于 `include/uapi/linux/airymax/ipc.h`）**不含 `version` 字段**。128B 消息头布局为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]，共 11 字段。协议版本识别依赖 `magic` 字段（0x41524531 'ARE1'），版本协商通过 §4 运行时握手协议完成，而非消息头内嵌版本号。
 
 ### 3.1 magic 字段版本识别
 
@@ -133,7 +134,7 @@ agentrt-linux 各版本通过运行时握手协议（§4）协商支持的特性
 
 ### 3.3 reserved 字段扩展
 
-`reserved[84]` 字段（offset 44, 84 bytes, `__u8[84]`）是保留字段，用于未来版本扩展。版本演进规则：
+`reserved[72]` 字段（offset 56, 72 bytes, `__u8[72]`）是保留字段，用于未来版本扩展。版本演进规则：
 
 - v1.x：reserved 字段必须全零，接收方忽略非零值
 - v2.0：reserved 前 8 字节用于扩展字段（如 `seq_num`、`ack_num`），剩余全零
@@ -261,18 +262,20 @@ stateDiagram-v2
 
 ### 5.1 消息头字段兼容性
 
-| 字段 | v1.0 | v1.1 | v1.2 | v2.0 | 兼容性 |
+> **v4.3 锁定**：v1.1 是唯一基线，v1.0 从未发布。下表保留 v1.0 列供历史参考，v1.2/v2.0 列为未来演进预留。
+
+| 字段 | ~~v1.0~~ | v1.1 | v1.2（预留） | v2.0（预留） | 兼容性 |
 |------|------|------|------|------|--------|
-| magic | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| payload_len | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| flags | ✓ | ✓ | ✓ | ✓ | 新标志位向后兼容 |
-| src_task | ✓ | ✓ | ✓ | ✓ | 永不变更（__u64） |
-| dst_task | ✓ | ✓ | ✓ | ✓ | 永不变更（__u64） |
-| trace_id | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| timestamp_ns | ✓ | ✓ | ✓ | ✓ | 永不变更 |
-| reserved[0..7] | 忽略 | 忽略 | 忽略 | seq_num | v2.0 新增 |
-| reserved[8..15] | 忽略 | 忽略 | 忽略 | ack_num | v2.0 新增 |
-| reserved[16..83] | 忽略 | 忽略 | 忽略 | 忽略 | 保留 |
+| magic | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
+| payload_len | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
+| flags | ~~✓~~ | ✓ | ✓ | ✓ | 新标志位向后兼容 |
+| src_task | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更（__u64） |
+| dst_task | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更（__u64） |
+| trace_id | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
+| timestamp_ns | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
+| reserved[0..7] | ~~忽略~~ | 忽略 | 忽略 | seq_num | v2.0 新增 |
+| reserved[8..15] | ~~忽略~~ | 忽略 | 忽略 | ack_num | v2.0 新增 |
+| reserved[16..71] | ~~忽略~~ | 忽略 | 忽略 | 忽略 | 保留 |
 
 ### 5.2 payload 类型版本化
 
@@ -296,10 +299,12 @@ stateDiagram-v2
 
 | 期望特性 | 降级行为 | 影响版本 |
 |---------|---------|---------|
-| trace_id 贯穿 | 退化为本地日志关联 | v1.0 → 无 trace_id |
-| 批量提交 | 退化为单条提交 | v1.1 以下 |
-| 零拷贝 | 退化为用户态拷贝 | v1.2 以下 |
-| 序列号确认 | 退化为无序可靠传输 | v2.0 以下 |
+| ~~trace_id 贯穿~~ | ~~退化为本地日志关联~~ | ~~v1.0 → 无 trace_id~~（v1.0 未发布，v1.1 基线含 trace_id） |
+| ~~批量提交~~ | ~~退化为单条提交~~ | ~~v1.1 以下~~（v1.1 是最低基线，不降级） |
+| 零拷贝 | 退化为用户态拷贝 | v2.0 以下（v2.0+ 预留） |
+| 序列号确认 | 退化为无序可靠传输 | v2.0 以下（v2.0+ 预留） |
+
+> **v4.3 锁定**：v1.1 是唯一基线，无降级。上表中划线项为历史设计，v1.0 从未发布故不存在降级场景。
 
 ### 6.2 降级日志
 
@@ -348,7 +353,7 @@ payload 版本化遵循"只追加不修改"原则：
 
 ### 8.1 操作码编号约束
 
-操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.0.1 起保持稳定，永不重定义、永不复用：
+操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.1 起保持稳定，永不重定义、永不复用：
 
 ```c
 /* include/uapi/linux/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
@@ -462,11 +467,9 @@ static const struct {
     uint32_t features;
     const char *description;
 } airy_ipc_supported_versions[] = {
-    { AIRY_IPC_VERSION_1_0, 0, "v1.0 基础版本" },
-    { AIRY_IPC_VERSION_1_1, AIRY_IPC_FEAT_TRACE_ID, "v1.0.1 新增 trace_id" },
-    { AIRY_IPC_VERSION_1_2,
-      AIRY_IPC_FEAT_TRACE_ID | AIRY_IPC_FEAT_BATCH_SUBMIT,
-      "v1.2 新增批量提交" },
+    /* v4.3 锁定：v1.1 是唯一基线，v1.0 从未发布 */
+    { AIRY_IPC_VERSION_1_1, AIRY_IPC_FEAT_TRACE_ID, "v1.1 唯一基线（trace_id）" },
+    /* v2.0+ 版本条目在主版本变更时新增 */
     { 0, 0, NULL }  /* 终止符 */
 };
 
@@ -489,11 +492,11 @@ uint32_t airy_ipc_get_supported_bitmap(void)
 ```bash
 # 查看内核支持的 IPC 版本
 cat /sys/kernel/agentrt/ipc/supported_versions
-# 输出: v1.0 v1.1 v1.2
+# 输出: v1.1
 
 # 查看当前默认协商版本
 cat /sys/kernel/agentrt/ipc/default_version
-# 输出: v1.2
+# 输出: v1.1
 
 # 查看特性标志
 cat /sys/kernel/agentrt/ipc/features
@@ -794,10 +797,10 @@ conn.send(0x10, b"...", Some(12345))?;
 # 查看 Agent 应用的 IPC 版本支持
 agentctl ipc version
 # 输出:
-# Client supports: v1.0 v1.1 v1.2
-# Server supports: v1.0 v1.1 v1.2
-# Negotiated: v1.2
-# Features: fast_path batch_submit zero_copy trace_id
+# Client supports: v1.1
+# Server supports: v1.1
+# Negotiated: v1.1
+# Features: fast_path trace_id
 
 # 查看特定连接的协商状态
 agentctl ipc status --pid 1234
@@ -811,15 +814,15 @@ agentctl ipc status --pid 1234
 ### 18.2 降级场景诊断
 
 ```bash
-# 旧版本 Agent 在新内核上运行
+# 旧版本 Agent 在新内核上运行（v2.0+ 场景示例）
 agentctl ipc diagnose --pid 5678
 # 输出:
 # PID: 5678
-# Client version: v1.0
-# Server version: v1.2
-# Negotiated version: v1.0 (downgraded)
-# Disabled features: batch_submit zero_copy
-# Warnings: 2 (see /var/log/agentrt/ipc-downgrade.log)
+# Client version: v1.1
+# Server version: v2.0
+# Negotiated version: v1.1 (baseline, no downgrade needed)
+# Disabled features: none (v1.1 baseline is fully supported)
+# Warnings: 0
 ```
 
 ---
@@ -835,19 +838,19 @@ from airymaxos.ipc import IPCVersion, IPCNegotiator
 
 class TestIPCVersionNegotiation:
     def test_negotiate_highest_common(self):
-        negotiator = IPCNegotiator([IPCVersion(1,0), IPCVersion(1,2)])
-        result = negotiator.negotiate(server_bitmap=0b101)  # v1.0 + v1.2
+        negotiator = IPCNegotiator([IPCVersion(1,1), IPCVersion(1,2)])
+        result = negotiator.negotiate(server_bitmap=0b110)  # v1.1 + v1.2
         assert result == IPCVersion(1, 2)
 
     def test_negotiate_lowest_when_no_high(self):
-        negotiator = IPCNegotiator([IPCVersion(1,0), IPCVersion(1,2)])
-        result = negotiator.negotiate(server_bitmap=0b001)  # v1.0 only
-        assert result == IPCVersion(1, 0)
+        negotiator = IPCNegotiator([IPCVersion(1,1), IPCVersion(1,2)])
+        result = negotiator.negotiate(server_bitmap=0b010)  # v1.1 only
+        assert result == IPCVersion(1, 1)
 
     def test_negotiate_fail_no_common(self):
         negotiator = IPCNegotiator([IPCVersion(1,2)])
         with pytest.raises(RuntimeError):
-            negotiator.negotiate(server_bitmap=0b001)  # v1.0 only
+            negotiator.negotiate(server_bitmap=0b010)  # v1.1 only, no v1.2
 ```
 
 ### 19.2 集成测试

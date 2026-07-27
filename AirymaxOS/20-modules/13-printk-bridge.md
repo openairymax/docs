@@ -275,7 +275,7 @@ Panic notifier 注册优先级低于 console 刷新，确保 console 通路优�
 
 | 错误码 | 值 | 触发场景 | 桥接参与方式 |
 |--------|-----|---------|------------|
-| `AIRY_ECAP_FROZEN` | -82 | `agent_caps[src_task].frozen == true`（C-S0 检查，A-ULS 控制） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
+| `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
 | `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求（50ms SLO 违约保护） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
 | `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | `sec_d` 写入 `LOG_FATAL` 审计日志 + 触发 `AIRY_FAULT_CAP_FORGED` |
 | `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与全局 Epoch 不匹配（已撤销或过期） | `sec_d` 写入审计日志 |

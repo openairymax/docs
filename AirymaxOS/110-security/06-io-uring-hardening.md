@@ -378,7 +378,7 @@ Agent 提交 SQE (IORING_OP_URING_CMD)
 4. **限流**：`pr_warn_ratelimited` 防止日志洪水
 5. **Fault 码**：`AIRY_FAULT_URING_MALFORMED = 0x100A`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册；注：原计划使用 0x1007，但该值已分配给 `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED`，故追加至 0x100A）
 
-> **OS-KER-172**（R6 新增）：所有 `airy_uring_sqe_validate()` 失败必须触发 `airy_security_fault` 通知 Micro-Supervisor；连续 3 次 malformed SQE 的 Agent 由 Macro-Supervisor 裁决为 `AIRY_VERDICT_PAUSE`（暂停）或 `AIRY_VERDICT_TERMINATE`（终止），详见 [10-user-supervisor-daemon.md §5.2](../20-modules/10-user-supervisor-daemon.md)。
+> **OS-KER-172**（R6 新增）：所有 `airy_uring_sqe_validate()` 失败必须触发 `airy_security_fault` 通知 Micro-Supervisor；连续 3 次 malformed SQE 的 Agent 由 Macro-Supervisor 裁决为 `AIRY_VERDICT_DENY`（拒绝）或 `AIRY_VERDICT_COMPLAIN`（投诉），详见 [10-user-supervisor-daemon.md §5.2](../20-modules/10-user-supervisor-daemon.md)。
 
 ---
 

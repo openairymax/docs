@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux ARE Standards 总览
 > **文档定位**：agentrt-linux ARE Standards 总览\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **理论根基**：体系并行论、五维正交24原则、IRON-9 v3 同源且部分代码共享\

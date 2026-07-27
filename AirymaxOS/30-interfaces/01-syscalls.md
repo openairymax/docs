@@ -158,8 +158,8 @@ static int airy_decode_and_invoke(cap_t cap,
         }
 
         /* 校验 5：消息长度 >= 128B 最小头 */
-        if (msg->hdr_len < AIRY_IPC_HDR_SIZE || msg->hdr_len > AIRY_IPC_HDR_SIZE) {
-                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: bad hdr_len %u", msg->hdr_len);
+        if (sizeof(struct airy_ipc_msg_hdr) != AIRY_IPC_HDR_SIZE) {
+                log_write(AIRY_LOG_ERROR, "airy_decode_invoke: bad hdr size");
                 return -EMSGSIZE;
         }
 
@@ -193,7 +193,7 @@ static int airy_decode_and_invoke(cap_t cap,
         /* 校验 10：Untyped Retype —— 验证 FreeIndex 空间是否充足（纯读取） */
         if (obj_type == AIRY_CAP_UNTYPED && op_type == AIRY_CAP_OP_RETYPE) {
                 u32 free_bytes = cap_untyped_get_free_bytes(cap);
-                u32 need_bytes = msg->obj_count * (1u << msg->obj_size_bits);
+                u32 need_bytes = airy_cap_retype_size(msg);  /* 由 msg->payload 解析 */
                 if (need_bytes > free_bytes) {
                         log_write(AIRY_LOG_ERROR,
                                   "airy_decode_invoke: untyped retype needs %u, has %u",
@@ -576,7 +576,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_ECAP_EPOCH` | -79 | Epoch 失配 | C-S9 校验失败（badge_epoch != global_epoch） |
 | `AIRY_ECAP_FORGED` | -80 | Badge 伪造 | C-S9 校验失败（badge_randtag != agent_caps[randtag]），触发 `AIRY_FAULT_CAP_FORGED` |
 | `AIRY_ECAP_PERM` | -81 | 权限不足 | C-S9 校验失败（badge_perms 不含 opcode 对应权限位） |
-| `AIRY_ECAP_FROZEN` | -82 | ring 已冻结 | C-S0 校验失败（ring->frozen == true） |
+| `AIRY_ECAP_FROZEN` | -82 | capability badge 已冻结 | badge 撤销（A-ULS 控制，非 C-S0） |
 | `AIRY_ESEC_D_THROTTLED` | -83 | sec_d 限流拒绝 | sec_d 限流器队列已满 |
 
 ### 6.4 其他子空间 `[-101, -240]`（对齐 SSoT error.h L84-156）
@@ -675,16 +675,16 @@ if (ret < 0) {
 | `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + cap_op 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ Badge 位布局（H2：[SC] 数据结构定义） | `airy_sys_call`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD cap-type dispatch） |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 + snapshot_id 布局 | `airy_sys_rovol_ctl` |
 | `cognition_types.h` | CoreLoopThree 三阶段枚举（PERCEPT/THINK/ACT） | `airy_sys_clt_notify` |
-| `error.h` | POSIX [-1,-40] + IPC [-41,-70] + Capability [-71,-100] + [SC] [-101,-200] + [DSL] [-201,-300] + Fault [0x1000,0x1FFF] | 全部 4 个 syscall + fastpath C-S0~C-S12 |
+| `error.h` | POSIX [-1,-40] + IPC [-41,-70] + Capability [-71,-100] + Config [-101,-120] + A-ULS [-121,-140] + MemoryRoVol [-141,-160] + Cognition [-161,-180] + Log [-181,-200] + Object [-201,-220] + Syscall [-221,-240] + Fault [0x1000,0x1FFF] | 全部 4 个 syscall + fastpath C-S0~C-S12 |
 
 ### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux 系统调用映射
 
 | agentrt 用户态（syscalls.h） | agentrt-linux 内核（SYSCALL_DEFINE） | 同源签名 | 实现差异 |
 |------------------------------|--------------------------------------|---------|---------|
-| `airy_sys_call()` | `SYSCALL_DEFINE2(airy_call, ...)` | `(cap_t, const struct airy_ipc_msg_hdr *) -> int` | 用户态 libc syscall() vs 内核 capability dispatch；v1.0.1：agentrt 用户态 `capability_badge=0`，agentrt-linux 内核由 sec_d 编译 Badge（H3/H4） |
-| `airy_sys_rovol_ctl()` | `SYSCALL_DEFINE3(airy_rovol_ctl, ...)` | `(uint32_t, uint32_t, uint64_t) -> int` | 用户态 mmap+msync vs 内核 PMEM |
-| `airy_sys_sched_ctl()` | `SYSCALL_DEFINE3(airy_sched_ctl, ...)` | `(uint32_t, const char *, const char *) -> int` | 用户态 cgroup fs vs 内核 sched_tac 策略 |
-| `airy_sys_clt_notify()` | `SYSCALL_DEFINE2(airy_clt_notify, ...)` | `(int, uint32_t) -> int` | 用户态 event loop vs 内核 kthread |
+| `airy_sys_call()` | `SYSCALL_DEFINE2(airy_sys_call, ...)` | `(cap_t, const struct airy_ipc_msg_hdr *) -> int` | 用户态 libc syscall() vs 内核 capability dispatch；v1.0.1：agentrt 用户态 `capability_badge=0`，agentrt-linux 内核由 sec_d 编译 Badge（H3/H4） |
+| `airy_sys_rovol_ctl()` | `SYSCALL_DEFINE3(airy_sys_rovol_ctl, ...)` | `(uint32_t, uint32_t, uint64_t) -> int` | 用户态 mmap+msync vs 内核 PMEM |
+| `airy_sys_sched_ctl()` | `SYSCALL_DEFINE3(airy_sys_sched_ctl, ...)` | `(uint32_t, const char *, const char *) -> int` | 用户态 cgroup fs vs 内核 sched_tac 策略 |
+| `airy_sys_clt_notify()` | `SYSCALL_DEFINE2(airy_sys_clt_notify, ...)` | `(int, uint32_t) -> int` | 用户态 event loop vs 内核 kthread |
 
 > **v1.0.1 移除的 [SS] 映射**：`airy_sys_send/recv/nbsend/nbrecv/reply_recv/yield/reply/notify` 共 8 个 IPC 原语在 agentrt 用户态仍保留为 libc 包装函数（内部调用 io_uring `IORING_OP_URING_CMD`），但在 agentrt-linux 内核侧不再注册为独立 syscall。这种"用户态包装存在、内核 syscall 不存在"的不对称是 IRON-9 v3 [IND] 完全独立层的合法形态。
 

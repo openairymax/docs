@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 认知设计文档
 
 > **文档定位**：agentrt-linux（AirymaxOS）认知设计文档（cognition，极境认知）\
-> **文档版本**：v1.0.1-fix\
+> **文档版本**：v1.0.1\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **核心约束**：IRON-9 v3 同源且部分代码共享——与 agentrt 用户态 coreloopthree 通过 \[SC] 共享契约层 + \[SS] 语义同源层协作，\[IND] 内核态 kthread 加速、Wasm runtime、GPU/NPU 驱动实现独立\
 > **子仓编号**：05\
@@ -479,7 +479,7 @@ sequenceDiagram
 1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `airy_cap_global_epoch` → 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
 2. 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`，比对 `READ_ONCE(agent_caps[src_task].randtag)` → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
 3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位（如 `AIRY_PERM_CLT_NOTIFY` / `AIRY_PERM_LLM_SUBMIT`） → 不满足返回 `AIRY_ECAP_PERM`(-81)
-4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_ECAP_FROZEN`(-82)
+4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_EIPC_FROZEN`(-53)
 5. slowpath LSM 钩子（`security_uring_cmd`，单参数 `struct io_uring_cmd *ioucmd`）仅在 C-S9 失败时调用，做策略裁决与冷酷执法
 
 **4.9.4 `agent_caps[1024]` 在认知子仓中的引用** \[SS]

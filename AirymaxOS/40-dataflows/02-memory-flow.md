@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）记忆卷载数据流
 > **文档定位**：agentrt-linux（AirymaxOS）记忆卷载数据流的详细设计，刻画 L1→L4 四层递进与 CXL/PMEM/MGLRU 硬件协同\
-> **文档版本**：1.0.1-fix\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：Linux 6.6 内核基线 mm 子系统 + Airymax 五维正交 24 原则\

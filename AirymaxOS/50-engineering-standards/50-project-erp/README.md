@@ -2,7 +2,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux 项目管理规范总览
 > **文档定位**：agentrt-linux（AirymaxOS）项目管理规范的顶层入口，定义项目资源、错误码、SBOM 等核心管理域的规范体系\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[工程标准规范手册](../00-engineering-standards-handbook.md)\
 > **编号权威**：[09-ssot-registry.md §3](../09-ssot-registry.md)\

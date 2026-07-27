@@ -241,7 +241,7 @@ static int airy_uring_cmd_check(struct io_uring_cmd *ioucmd)
     case -AIRY_ECAP_PERM:       /* -81: 权限位不满足 */
         return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd);  /* 0x1005 */
 
-    case -AIRY_ECAP_FROZEN:     /* -82: Ring 已冻结 */
+    case -AIRY_EIPC_FROZEN:     /* -53: Ring 已冻结 */
         /* Ring 冻结是 Error，不是 Fault，直接返回 */
         return fastpath_ret;
 
@@ -274,12 +274,12 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 | Epoch 不匹配 | `AIRY_ECAP_EPOCH` (-79) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_epoch != global_epoch`（已撤销/过期） | 立即冻结 + 通知重新申请 |
 | 权限不足 | `AIRY_ECAP_PERM` (-81) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_perms & required != required` | 立即冻结 + 通知 |
 | Badge 格式无效 | `AIRY_ECAP_BADGE` (-78) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | Badge 格式无效 / CAP_CARRY 但 badge=0 | 立即冻结 + 通知 |
-| Ring 已冻结 | `AIRY_ECAP_FROZEN` (-82) | —（Error，不触发 Fault） | `ring->frozen == true`（C-S0 检查） | 直接返回 Error，等待解冻 |
+| Ring 已冻结 | `AIRY_EIPC_FROZEN` (-53) | —（Error，不触发 Fault） | `ring->frozen == true`（C-S0 检查） | 直接返回 Error，等待解冻 |
 | Capability 槽位损坏 | — | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `agent_caps[agent_id].state` 异常或 Badge 64-bit 编码不一致（Epoch/RandomTag/Perms 三段校验失败） | 立即终止 Agent（SIGKILL） |
 | io_uring SQE 畸变（**上游检测**） | — | `AIRY_FAULT_URING_MALFORMED` (0x100A) | `airy_uring_sqe_validate()` 5 阶段校验失败（opcode/flags/payload_len 越界或 CRC32 不匹配，详见 [06-io-uring-hardening.md §3.5.3](../110-security/06-io-uring-hardening.md)） | `airy_security_fault()` 通知 Micro-Supervisor + 冻结 Ring（**在 fastpath C-S9 之前执行，不进入 §2.3 LSM 钩子**） |
 | sec_d 限流拒绝（**上游检测**） | `AIRY_ESEC_D_THROTTLED` (-83) | —（Error，不触发 Fault） | sec_d 令牌桶限流命中（per-Agent 配额/全局阈值/排队超限，详见 [10-user-supervisor-daemon.md §4.6](10-user-supervisor-daemon.md)） | 直接返回 Error 让调用方退避重试（**在 Badge 编译路径触发，不进入 fastpath C-S9**） |
 
-> **错误码 SSoT**：所有 Error/Fault 码定义以 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) 为唯一权威源。Ring 冻结是 Error（-82），不是 Fault——Error 可恢复（等待解冻），Fault 不可恢复（Micro-Supervisor 接管）。`AIRY_FAULT_URING_MALFORMED` (0x100A) 与 `AIRY_ESEC_D_THROTTLED` (-83) 是上游检测路径的扩展错误码，**不进入 §2.3 LSM 钩子的 slowpath 处置**（前者在 `airy_uring_sqe_validate()` 拦截，后者在 sec_d Badge 编译路径拦截），列出以完整覆盖 Micro-Supervisor 可能涉及的全部异常类型。
+> **错误码 SSoT**：所有 Error/Fault 码定义以 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) 为唯一权威源。Ring 冻结是 Error（-53），不是 Fault——Error 可恢复（等待解冻），Fault 不可恢复（Micro-Supervisor 接管）。`AIRY_FAULT_URING_MALFORMED` (0x100A) 与 `AIRY_ESEC_D_THROTTLED` (-83) 是上游检测路径的扩展错误码，**不进入 §2.3 LSM 钩子的 slowpath 处置**（前者在 `airy_uring_sqe_validate()` 拦截，后者在 sec_d Badge 编译路径拦截），列出以完整覆盖 Micro-Supervisor 可能涉及的全部异常类型。
 
 ---
 
@@ -308,7 +308,7 @@ static int airy_ipc_freeze_ring(struct airy_ipc_ring *ring, __u32 fault_code)
 }
 ```
 
-### 3.2 fastpath 零开销检查（v1.0.1: C-S0 检查 + Error 码 -82）
+### 3.2 fastpath 零开销检查（v1.0.1: C-S0 检查 + Error 码 -53）
 
 fastpath 在每次 IPC 操作时检查 `ring->frozen`（C-S0 检查，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)），但使用 `unlikely` 标注确保正常路径（99%+ 不冻结）不触发分支预测失败：
 
@@ -319,9 +319,9 @@ static inline int airy_ipc_fastpath_check(struct airy_ipc_ring *ring)
     /* C-S0: unlikely 标注——99%+ 不冻结，分支预测器预测不跳转 */
     if (unlikely(READ_ONCE(ring->frozen))) {
         /* 异常路径：Ring 已冻结，返回 Error（不是 Fault）
-         * AIRY_ECAP_FROZEN = -82，详见 08-sc-error-contract.md §2.4
+         * AIRY_EIPC_FROZEN = -53，详见 08-sc-error-contract.md §2.4
          */
-        return -AIRY_ECAP_FROZEN;   /* -82 */
+        return -AIRY_EIPC_FROZEN;   /* -53 */
     }
     return 0;
 }
@@ -354,12 +354,12 @@ int airy_ipc_send_fastpath(struct airy_ipc_ring *ring, const void *payload,
 
 | 事件 | 触发者 | 处理 |
 |------|--------|------|
-| fastpath 返回 Error | Micro-Supervisor（C-S0 检查） | 调用方收到 `AIRY_ECAP_FROZEN`（-82，Error 码，可恢复） |
+| fastpath 返回 Error | Micro-Supervisor（C-S0 检查） | 调用方收到 `AIRY_EIPC_FROZEN`（-53，Error 码，可恢复） |
 | eventfd 通知 | Micro-Supervisor（冷酷执法） | Macro-Supervisor 被唤醒 |
 | Macro-Supervisor 裁决 | Macro-Supervisor | 警告/降级/暂停/终止 |
 | 解冻（裁决后恢复） | Macro-Supervisor | `ring->frozen = false` |
 
-> **v1.0.1 区分 Error 与 Fault**：Ring 冻结是 Error（-82，可恢复），不是 Fault（不可恢复）。fastpath C-S0 返回 Error 让调用方决定重试或退出；Micro-Supervisor 的"冷酷执法"（Fault）仅在 Badge 伪造等不可恢复异常时触发。
+> **v1.0.1 区分 Error 与 Fault**：Ring 冻结是 Error（-53，可恢复），不是 Fault（不可恢复）。fastpath C-S0 返回 Error 让调用方决定重试或退出；Micro-Supervisor 的"冷酷执法"（Fault）仅在 Badge 伪造等不可恢复异常时触发。
 
 ### 3.5 FREEZE opcode（0x0005）ring 冻结语义（v1.0.1 新增）
 
@@ -777,7 +777,7 @@ Micro-Supervisor 的正常故障处理路径（Agent 故障 → 冷酷执法 →
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Micro-Supervisor 内核模块设计；纯 C LSM 检测非法 Capability（对齐 openEuler 纯 C 模式，不使用 BPF）；IPC 队列冻结（ring->frozen + unlikely 零开销）；die_notifier 内核崩溃通知链；eventfd 非阻塞故障通知；"内核冷酷执法"四步流程；借鉴 seL4 handleFault() 机制与策略分离 |
-| v1.1 | 2026-07-18 | **Capability Folding 集成版**（A-IPC 第一块基石）：① §2.3 capability 校验路径重构——从独立前置 `airy_cap_check()` + radix tree 查找改为 fastpath C-S9 内联 Badge 校验（`airy_cap_badge_ok()`，~10ns），LSM 钩子仅在 slowpath（异常路径）做策略裁决；② §2.4 异常类型表对齐 Badge 错误码（-78~-82, 0x1001-0x1006）；③ §3.2 fastpath C-S0 返回 `AIRY_ECAP_FROZEN` (-82) 明确 Error vs Fault 区分；④ §3.5 新增 FREEZE opcode (0x0005) ring 冻结语义；⑤ §4.1/§4.2 Fault 码更新（`AIRY_FAULT_IPC_FAULT`→`AIRY_FAULT_RING_CORRUPT` 0x1003）；⑥ §6.2 `AIRY_FAULT_CAP_FAULT`→`AIRY_FAULT_CAP_FORGED` (0x1001) + 完整 Fault 码参考；⑦ §6.4 新增 Badge 撤销解耦 `atomic_inc` 机制（1 行代码 O(1) 撤销，无 drain/bitmap/IPI）；⑧ §8.1/§8.2 性能 SLO + 资源预算对齐 agent_caps[] 静态数组（16KB）+ atomic_t Epoch；⑨ §9 相关文档清除内部审查路径引用 |
+| v1.1 | 2026-07-18 | **Capability Folding 集成版**（A-IPC 第一块基石）：① §2.3 capability 校验路径重构——从独立前置 `airy_cap_check()` + radix tree 查找改为 fastpath C-S9 内联 Badge 校验（`airy_cap_badge_ok()`，~10ns），LSM 钩子仅在 slowpath（异常路径）做策略裁决；② §2.4 异常类型表对齐 Badge 错误码（-78~-82, 0x1001-0x1006）；③ §3.2 fastpath C-S0 返回 `AIRY_EIPC_FROZEN` (-53) 明确 Error vs Fault 区分；④ §3.5 新增 FREEZE opcode (0x0005) ring 冻结语义；⑤ §4.1/§4.2 Fault 码更新（`AIRY_FAULT_IPC_FAULT`→`AIRY_FAULT_RING_CORRUPT` 0x1003）；⑥ §6.2 `AIRY_FAULT_CAP_FAULT`→`AIRY_FAULT_CAP_FORGED` (0x1001) + 完整 Fault 码参考；⑦ §6.4 新增 Badge 撤销解耦 `atomic_inc` 机制（1 行代码 O(1) 撤销，无 drain/bitmap/IPI）；⑧ §8.1/§8.2 性能 SLO + 资源预算对齐 agent_caps[] 静态数组（16KB）+ atomic_t Epoch；⑨ §9 相关文档清除内部审查路径引用 |
 | v1.1.1 | 2026-07-19 | **落后内容修复版**：① §2.3 修复 LSM 钩子重复校验——禁止 slowpath LSM 再次调用 `airy_cap_badge_ok()`，改为读取 `cmd->fastpath_ret` 执行冷酷执法（fastpath/slowpath 严格分工）；② §2.4 修复 MDB 残留——"MDB 派生链校验失败" 替换为 v1.1 `agent_caps[1024]` 静态数组 + Badge 64-bit 编码三段校验；③ §3.5 修复 FREEZE 权限位 bit 编号——`AIRY_BADGE_PERM_FREEZE` bit 4 → `AIRY_CAP_PERM_FREEZE` bit 5 (0x0020)，对齐 03-capability-model.md SSoT；④ §3.5 统一解冻协议——sec_d 串行化解冻 + Epoch 自增 + systemd watchdog（与 10-user-supervisor-daemon.md 严格一致）；⑤ §1.4 新增 12 daemon 完整协作关系；⑥ §1.5 新增 sched_tac 协作章节（sched_d + `airy_sys_sched_ctl` 编号 2 + Agent 8 态生命周期集成）；⑦ SSoT 声明新增 ADR-014 引用 + IRON-9 v3 四层模型引用；⑧ §2.3 新增 `AIRY_ESEC_D_THROTTLED` (-83) sec_d 限流错误码处理 + §2.4 异常类型表扩展两行上游检测路径（`AIRY_FAULT_URING_MALFORMED` 0x100A io_uring SQE 畸变 + `AIRY_ESEC_D_THROTTLED` -83 sec_d 限流），完整覆盖 Micro-Supervisor 可能涉及的异常类型 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 

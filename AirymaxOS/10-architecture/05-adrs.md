@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux 架构决策记录（ADR）
 
 > **文档定位**：agentrt-linux（AirymaxOS）架构决策记录（Architecture Decision Records）\
-> **文档版本**：0.1.1\
+> **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **决策者**：OpenAirymax 工程规范委员会

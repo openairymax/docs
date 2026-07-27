@@ -135,10 +135,10 @@ if (ret < 0) {
 借鉴 seL4 的极简主义（ES-SEL4-01），agentrt-linux 内核设计遵循体系并行的“最小完备集"原则：
 
 - **Syscall**：v1.0.1 后 4 核心 = 1 Capability Invocation（sec_d 专属管理）+ 3 控制原语（rovol/sched/clt），IPC 数据传递零 syscall（io_uring 承载），无冗余
-- **IPC opcode**：4 个（SEND/RECV/SEND\_BATCH/CANCEL），无冗余
+- **IPC opcode**：7 个（SEND/RECV/SEND\_BATCH/CANCEL/FREEZE/CAP\_REQUEST/CAP\_RESPONSE），无冗余
 - **Capability 操作**：7 个（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate），与 seL4 CNode 对齐
 - **struct\_ops 状态**：4 个（INIT/REGISTERED/ACTIVE/DRAINING），无冗余
-- **错误码**：13 个（-1 到 -12 + 0），无冗余
+- **错误码**：85 个（16 POSIX + 13 IPC + 13 Capability + 5 Config + 10 A-ULS + 8 MemoryRoVol + 6 Cognition + 6 Log + 4 Object + 4 Syscall），10 子空间
 - **MemoryRovol 层级**：4 层（L1-L4），无冗余
 
 每个功能点必须论证"无法在用户态安全实现"方可纳入内核。目标是 bug 最少——代码越少，bug 越少。
@@ -166,7 +166,7 @@ if (ret < 0) {
 | **\[SC] 共享契约层**  | 完全共享代码             | 10 个头文件（详见 §10.1）：error.h / log_types.h / ipc.h / sched.h / memory_types.h / security_types.h / cognition_types.h / syscalls.h / uapi_compat.h / lsm_types.h                                                                                                                                                                                | `kernel/include/uapi/linux/airymax/`（单一物理宿主，每个头文件底部含 \[DSL] 降级块） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源，签名独立演进 | sched_tac 25+ 调度回调语义、io\_uring ring 创建/提交/完成/注册、MSG\_RING 跨环消息、SQPOLL 状态机、DEFER\_TASKRUN、eBPF struct\_ops 注册、bpf\_prog 生命周期、bpf\_link 生命周期、bpf\_map\_ops 回调表、ringbuf reserve/submit、kfunc 注册模式 等 30+ 项                                                                                 | 各自独立实现                            |
 | **\[IND] 完全独立层** | 完全独立               | 策略守护进程注册、策略守护进程 enable/disable、调度上下文追踪、fallback 回退机制、cgroup 集成、core-sched 集成、debug dump；io-wq 工作队列、NO\_MMAP、REGISTERED\_FD\_ONLY、URING\_CMD；JIT 后端、trampoline 本机码生成、verifier 实现、CFS 钩子（不引入）、cfi\_stubs、KABI\_RESERVE（不采用）；VFS/网络/驱动用户态化改造；Rust 驱动框架 | 各自独立仓库                            |
-| **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集             | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + `AIRY_ECFGVERSION`、printk 原生日志、最简 128B IPC、EEVDF 默认调度、仅 POSIX capability、统一 Panic）                                                                                                                                  | 自包含，不依赖 \[SC] 其他符号                  |
+| **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集             | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 个 `AIRY_DSL_*` 降级宏映射、printk 原生日志、最简 128B IPC、EEVDF 默认调度、仅 POSIX capability、统一 Panic）                                                                                                                                  | 自包含，不依赖 \[SC] 其他符号                  |
 
 ### 2.1 维度对比
 
@@ -732,9 +732,9 @@ io_uring 内核侧 issue 路径
 
 | 子状态 | 校验内容 | 失败返回码 |
 | --- | --- | --- |
-| C-S9.EPOCH | `slot_epoch == expected_epoch`（O(1) 撤销生效判定） | `-AIRY_ECAP_FROZEN`（-82） |
-| C-S9.RANDTAG | RandomTag 派生关系合法性 | `-AIRY_ECAP_FROZEN`（-82） |
-| C-S9.PERMS | Perms 位段权限匹配（opcode vs cap 权限） | `-AIRY_EPERM`（-4） |
+| C-S9.EPOCH | `slot_epoch == expected_epoch`（O(1) 撤销生效判定） | `-AIRY_ECAP_EPOCH`（-79） |
+| C-S9.RANDTAG | RandomTag 伪造检测（badge_randtag != agent_caps[src_task].randtag） | `-AIRY_ECAP_FORGED`（-80） |
+| C-S9.PERMS | Perms 位段权限匹配（opcode vs cap 权限） | `-AIRY_ECAP_PERM`（-81） |
 
 **sec_d 串行化 Badge 编译**：sec_d 通过 `airy_sys_call`（编号 0）独占 Badge 编译/撤销，内部采用**令牌桶限流**（避免恶意 Agent 暴力耗尽 epoch 空间），**50ms SLO**（Badge 编译请求 50ms 内完成）。sec_d 限流拒绝时返回 `AIRY_ESEC_D_THROTTLED = -83`。
 
@@ -752,12 +752,18 @@ io_uring 内核侧 issue 路径
 - 完成接口：`io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数。
 - uring\_cmd LSM 钩子：单参数 `struct io_uring_cmd *ioucmd`。
 
-**故障码**（`AIRY_FAULT_*` 前缀）：
+**故障码**（`AIRY_FAULT_*` 前缀，v1.0.1 定义 6 个，详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §3.1）：
 
 | 故障码 | 值 | 含义 |
 | --- | --- | --- |
-| `AIRY_FAULT_URING_MALFORMED` | `0x100A` | io\_uring SQE/cqe 格式错误 |
-| `AIRY_FAULT_AUDIT_TAMPER` | `0x100B` | 审计哈希链被篡改（audit_d 检测） |
+| `AIRY_FAULT_CAP_FORGED` | `0x1001` | Badge 伪造检测（安全漏洞） |
+| `AIRY_FAULT_CAP_EPOCH_OVERFLOW` | `0x1002` | Epoch 计数器溢出 |
+| `AIRY_FAULT_IPC_MAGIC_REPEAT` | `0x1003` | IPC magic 校验连续失败 |
+| `AIRY_FAULT_LSM_HOOK_FAIL` | `0x1004` | LSM 钩子执行异常 |
+| `AIRY_FAULT_RING_CORRUPTION` | `0x1005` | IPC Ring Buffer 损坏 |
+| `AIRY_FAULT_CONFIG_TAMPER` | `0x1006` | 配置完整性校验失败 |
+
+> **v1.1+ 计划扩展**（当前 SSoT 未定义）：`AIRY_FAULT_URING_MALFORMED`(0x100A)、`AIRY_FAULT_AUDIT_TAMPER`(0x100B) 等。
 
 ***
 
@@ -1013,23 +1019,21 @@ agentrt-linux 的 Boot 流程基于 Linux 6.6 标准启动流程，增加以下�
 
 ### 12.1 错误码体系
 
-错误码统一使用 `AIRY_E*` 前缀，SSoT 定义于 `include/uapi/linux/airymax/error.h`：
+错误码统一使用 `AIRY_E*` 前缀，SSoT 定义于 `include/uapi/linux/airymax/error.h`。完整错误码体系详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)，v1.0.1 共 85 个错误码，分为 10 个子空间：
 
-| 错误码              | 值   | 含义    |
-| ---------------- | --- | ----- |
-| `AIRY_EOK`       | 0   | 成功    |
-| `AIRY_EINVAL`    | -1  | 无效参数  |
-| `AIRY_ENOMEM`    | -2  | 内存不足  |
-| `AIRY_ENOSYS`    | -3  | 未实现   |
-| `AIRY_EPERM`     | -4  | 权限不足  |
-| `AIRY_ENOENT`    | -5  | 资源不存在 |
-| `AIRY_EAGAIN`    | -6  | 重试    |
-| `AIRY_EMSGSIZE`  | -7  | 消息过大  |
-| `AIRY_EBADF`     | -8  | 描述符错误 |
-| `AIRY_EBUSY`     | -9  | 资源繁忙  |
-| `AIRY_ENOTSUP`   | -10 | 不支持   |
-| `AIRY_ETIMEDOUT`  | -11 | 超时    |
-| `AIRY_ECONFLICT` | -12 | 状态冲突  |
+| 子空间 | 值域 | 已定义数 | 示例 |
+|--------|------|---------|------|
+| POSIX 码 | `[-1, -40]` | 16 | `AIRY_EACCES(-1)`, `AIRY_EINVAL(-5)`, `AIRY_ENOMEM(-9)` |
+| IPC 码 | `[-41, -70]` | 13 | `AIRY_EIPC_MAGIC(-41)`, `AIRY_EIPC_FROZEN(-53)` |
+| Capability 码 | `[-71, -100]` | 13 | `AIRY_ECAP_MISSING(-71)`, `AIRY_ECAP_FORGED(-80)` |
+| Config 码 | `[-101, -120]` | 5 | `AIRY_ECFGVERSION(-101)`, `AIRY_ECFGJSON(-104)` |
+| A-ULS 码 | `[-121, -140]` | 10 | `AIRY_ESCHED_POLICY(-121)`, `AIRY_ELIFECYCLE_STATE(-127)` |
+| MemoryRoVol 码 | `[-141, -160]` | 8 | `AIRY_EMEM_TIER(-141)`, `AIRY_EMEM_OOM(-148)` |
+| Cognition 码 | `[-161, -180]` | 6 | `AIRY_ECOG_PHASE(-161)`, `AIRY_ECOG_CONFIDENCE(-166)` |
+| Log 码 | `[-181, -200]` | 6 | `AIRY_ELOG_RING_FULL(-181)`, `AIRY_ELOG_PERSIST(-186)` |
+| Object 码 | `[-201, -220]` | 4 | `AIRY_EOBJ_NOT_FOUND(-201)`, `AIRY_EOBJ_TYPE_MISMATCH(-204)` |
+| Syscall 码 | `[-221, -240]` | 4 | `AIRY_ESYS_NOTSUPP(-221)`, `AIRY_ESYS_BAD_HANDLE(-224)` |
+| 预留 | `[-241, -300]` | 0 | — |
 
 **使用规范**：遵循 主流 Linux 发行版 工程规范，使用 goto 风格错误处理、`WARN_ON_ONCE()` 而非 `BUG()`。
 
