@@ -270,7 +270,7 @@ typedef uint64_t cap_t;
 #define AIRY_CAP_MAX_AGENTS        1024
 
 /* Badge 64-bit Native Word 布局：Epoch<<48 | RandomTag<<16 | Perms
- * - Epoch[48:63]   16 bit：全局代序号，atomic_inc(&airy_cap_global_epoch) O(1) 撤销
+ * - Epoch[48:63]   16 bit：per-agent 代序号，airy_cap_epoch_bump(agent_id) O(1) 定向撤销（K9-1 主要机制）
  * - RandomTag[16:47] 32 bit：派生关系隐式编码（同源派生共享 RandomTag）
  * - Perms[0:15]    16 bit：权限位段（send/recv/cap_request/grant/revoke 等）
  */
@@ -290,20 +290,21 @@ struct airy_cap_slot {
 static struct airy_cap_slot __airymax_cap_table[AIRY_CAP_MAX_AGENTS] __aligned(64);
 struct airy_cap_slot *agent_caps __ro_after_init = __airymax_cap_table;
 
-/* security/airy/airy_cap.h: 全局 epoch（atomic_t，32 位），独立全局变量 */
+/* security/airy/airy_cap.h: 补充性全局 epoch（atomic_t，32 位），UNFREEZE 时使用；
+ * 主要撤销机制为 per-agent epoch（agent_caps[agent_id].epoch），见 03-capability-model.md */
 extern atomic_t airy_cap_global_epoch;
 ```
 
 **v1.0.1 Capability Folding 集成**（CNode/CSpace 概念保留 + 物理存储重构）：
 
-**v1.0.1 重构**：自 v1.0.1 起，agentrt-linux 的 capability 存储从 v1.0 的 `airy_cnode`（radix-tree）+ `airy_cap_mdb`（MDB 派生树）+ v1.0 capability 元数据结构体（含 cap_id/cap_type/rights/parent_cap_id/mint_depth/mint_quota 六字段）重构为 **Capability Folding 单平面架构**——`airy_cnode`/`airy_cspace`/v1.0 capability 元数据结构体作为逻辑/语义概念保留（[03-capability-model.md §2.1-2.4](../110-security/03-capability-model.md)），但物理存储改用 `agent_caps[1024]` 内核静态数组 + Badge 64-bit Native Word，撤销机制改用 `atomic_inc(&airy_cap_global_epoch)` O(1) 全局失效。
+**v1.0.1 重构**：自 v1.0.1 起，agentrt-linux 的 capability 存储从 v1.0 的 `airy_cnode`（radix-tree）+ `airy_cap_mdb`（MDB 派生树）+ v1.0 capability 元数据结构体（含 cap_id/cap_type/rights/parent_cap_id/mint_depth/mint_quota 六字段）重构为 **Capability Folding 单平面架构**——`airy_cnode`/`airy_cspace`/v1.0 capability 元数据结构体作为逻辑/语义概念保留（[03-capability-model.md §2.1-2.4](../110-security/03-capability-model.md)），但物理存储改用 `agent_caps[1024]` 内核静态数组 + Badge 64-bit Native Word，撤销机制改用 `airy_cap_epoch_bump(agent_id)` O(1) per-agent 定向失效（K9-1 主要撤销机制；`airy_cap_global_epoch` 作为补充性全局计数器仅用于 UNFREEZE）。
 
 | 维度 | v1.0 实现（已废弃） | v1.0.1 实现（当前权威） |
 |------|-------------------|---------------------|
 | 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 128 字节 cacheline 对齐，sec_d 唯一写者）+ Badge 64-bit Native Word |
 | 逻辑视图 | `airy_cspace`（CNode 树） | `airy_cspace` 保留（`slots` 指针指向 `agent_caps[agent_id]`） |
 | 派生关系 | `airy_cap_mdb`（全局 MDB，parent→children 链）+ v1.0 元数据 parent_cap_id 字段 | 不需要——Badge 64-bit Native Word 自包含 Epoch + RandomTag + Perms |
-| 撤销机制 | MDB 递归遍历子树（O(n)） | `atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1) 全局撤销 |
+| 撤销机制 | MDB 递归遍历子树（O(n)） | `airy_cap_epoch_bump(agent_id)` 一行代码 O(1) per-agent 定向撤销 |
 | 校验方式 | 独立 `airy_cap_check()` 前置 + radix tree 查找 | fastpath C-S9 内联 Badge 校验（~10ns）+ slowpath LSM 钩子接管 |
 | slot 对齐 | 动态分配（无对齐保证） | `__aligned(64)` cache line 对齐（防 false sharing + 侧信道） |
 
@@ -516,7 +517,7 @@ int sec_d_compile_badge(uint32_t agent_id, uint16_t perms, uint32_t *out_randtag
 | Snapshot | sec_d 每 5min 对 `agent_caps[1024]` 全量快照至 PMEM/SSD（`fsync` 保证持久化） | 5min 周期 |
 | WAL | 两次 Snapshot 之间，每次 Badge 编译/撤销追加写 WAL 日志条目（含 slot_idx + old_badge + new_badge + epoch） | 实时 |
 | 两阶段恢复 | 阶段 1：加载最近 Snapshot；阶段 2：重放 WAL 日志至 last_sync_lsn | 启动时 < 1s |
-| Epoch 自增 | 恢复完成后强制 `atomic_inc(&airy_cap_global_epoch)`，使所有飞行中的旧 Badge 失效 | O(1) |
+| Epoch 自增 | 恢复完成后强制 `airy_cap_epoch_bump_all()`（触发补充性 `airy_cap_global_epoch` 自增，UNFREEZE 语义），使所有飞行中的旧 Badge 失效 | O(1) |
 | systemd watchdog | `macro_d` 通过 systemd watchdog 监控 sec_d 心跳（默认 30s），超时强制重启 | 30s 触发 |
 
 > **崩溃一致性**：WAL 追加采用 `write()` + `fdatasync()` 两步，崩溃后通过 WAL last_sync_lsn 校验保证不重放已提交条目（幂等）。Snapshot 文件采用原子替换（`rename()`）保证一致性。
@@ -528,12 +529,12 @@ int sec_d_compile_badge(uint32_t agent_id, uint16_t perms, uint32_t *out_randtag
 | 0.1.1（奠基版本） | 单节点 | 无跨节点同步——`agent_caps[1024]` 仅本节点可见 | 0ms（本地） |
 | 1.0.1 | 多节点 | `gateway_d`（12 daemon 之一）承担跨节点 IPC，gossip 协议同步 Epoch（100ms 周期） | 100ms 最终一致 |
 
-**gossip Epoch 同步**（1.0.1）：
+**gossip Epoch 同步**（1.0.1，仅同步补充性全局计数器 `airy_cap_global_epoch`，用于 UNFREEZE 跨节点收敛；主要撤销机制 per-agent epoch 不跨节点同步，因 Badge 为 per-node artifact）：
 
-- `gateway_d` 每 100ms 向 peer 节点广播本节点 `airy_cap_global_epoch` 值。
+- `gateway_d` 每 100ms 向 peer 节点广播本节点 `airy_cap_global_epoch` 值（补充性全局计数器，UNFREEZE 时使用）。
 - 接收方比对：若 peer epoch > local epoch，触发本地 `atomic_set(&airy_cap_global_epoch, peer_epoch)` 收敛。
-- 跨节点 Badge **不互验**——每个节点 `agent_caps[1024]` 独立维护本地 Agent 集合，跨节点 Agent 通过 `gateway_d` 转发 IPC（数据面由 io_uring 承载，Badge 仅本节点有效）。
-- 跨节点撤销：发起节点 `atomic_inc` 本地 epoch，gossip 100ms 内传播至 peer，peer 节点对本节点内同名 Agent 执行 `atomic_inc` 完成跨节点撤销收敛。
+- 跨节点 Badge **不互验**——每个节点 `agent_caps[1024]` 独立维护本地 Agent 集合（含 per-agent epoch），跨节点 Agent 通过 `gateway_d` 转发 IPC（数据面由 io_uring 承载，Badge 仅本节点有效）。
+- 跨节点 UNFREEZE 撤销：发起节点 `airy_cap_epoch_bump_all()` 本地补充性 epoch，gossip 100ms 内传播至 peer，peer 节点对本节点执行 `airy_cap_epoch_bump_all()` 完成跨节点 UNFREEZE 收敛。
 
 #### 4.10.4 侧信道防护
 

@@ -11,9 +11,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **Macro-Supervisor 用户态守护进程** 的唯一权威源。systemd unit 管理 12 个 daemon、心跳检查、**v1.0.1 Badge 请求与撤销**（通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 请求 sec_d 编译 Badge，通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码撤销所有 Badge）、故障裁决（警告/降级/暂停/终止）、"用户温情裁决"策略、单点故障 fallback（内核 watchdog 直接重启 + 全局 Epoch 撤销）、io_uring_cmd 执行裁决均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Macro-Supervisor 职责与裁决流程。
+> **单一权威源声明**：本文件是 **Macro-Supervisor 用户态守护进程** 的唯一权威源。systemd unit 管理 12 个 daemon、心跳检查、**v1.0.1 Badge 请求与撤销**（通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 请求 sec_d 编译 Badge，通过 `airy_cap_epoch_bump(agent_id)` 撤销单 Agent Badge（K9-1 主要机制），通过 `airy_cap_epoch_bump_all()` 撤销所有 Badge（UNFREEZE，触发补充性 `airy_cap_global_epoch` 自增））、故障裁决（警告/降级/暂停/终止）、"用户温情裁决"策略、单点故障 fallback（内核 watchdog 直接重启 + per-agent epoch 撤销）、io_uring_cmd 执行裁决均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Macro-Supervisor 职责与裁决流程。
 >
-> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，Macro-Supervisor 不再直接注入 CNode 到 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge，sec_d 编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 通过 io_uring_cmd 执行裁决（不新增 syscall），所有裁决指令通过 `AIRY_IPC_OP_ADJUDICATE` opcode 传递到内核 Micro-Supervisor。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1) 立即失效所有已发出 Badge（无 drain、无 bitmap、无 IPI），详见 [09-kernel-agent-supervisor.md §6.4](09-kernel-agent-supervisor.md)。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，Macro-Supervisor 不再直接注入 CNode 到 radix tree——而是通过 `AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge，sec_d 编译 Badge 64-bit Native Word（`Epoch<<48 | RandomTag<<16 | Perms`）并写入 `agent_caps[agent_id]` 静态数组（详见 [07-airy-lsm-design.md §3.5](../110-security/07-airy-lsm-design.md)）。Macro-Supervisor 通过 io_uring_cmd 执行裁决（不新增 syscall），所有裁决指令通过 `AIRY_IPC_OP_ADJUDICATE` opcode 传递到内核 Micro-Supervisor。Badge 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch（K9-1 主要撤销机制）O(1) 立即失效该 Agent 已发出 Badge（无 drain、无 bitmap、无 IPI）；UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增，详见 [09-kernel-agent-supervisor.md §6.4](09-kernel-agent-supervisor.md)。
 >
 > 技术选型声明：IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（**不使用 page flipping**）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
@@ -266,7 +266,7 @@ Macro-Supervisor                     内核 sec_d（Badge 唯一写者）
     │  2. io_uring_cmd(CAP_REQUEST) ─────▶│
     │     opcode=0x0010                  │
     │                                    │  3. sec_d 编译 Badge
-    │                                    │     epoch = atomic_read(global_epoch)
+    │                                    │     epoch = READ_ONCE(agent_caps[agent_id].epoch)
     │                                    │     get_random_bytes_wait(&randtag)
     │                                    │     badge = (epoch<<48)|(randtag<<16)|perms
     │                                    │  4. WRITE_ONCE(agent_caps[agent_id])
@@ -329,21 +329,23 @@ static int macro_d_cap_request(__u32 agent_id, __u16 perms)
 
 > **Perms SSoT 对齐声明**：`AIRY_CAP_PERM_SEND` ~ `AIRY_CAP_PERM_BATCH` 7 个权限位严格对齐 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT。`AIRY_CAP_PERM_ADMIN` (0x8000) 是 Macro-Supervisor 用户态扩展（聚合权限位，非 SSoT 定义）。CAP_REQUEST opcode (0x0010) 是自举路径，**无需权限位**（fastpath C-S9 直接放行，详见 [03-capability-model.md §2.6.1](../110-security/03-capability-model.md)）。
 
-### 4.4 v1.0.1 Badge 撤销（一行代码 O(1)）
+### 4.4 v1.0.1 Badge 撤销（per-agent epoch bump O(1)）
 
-**v1.0.1 新增**：Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码完成，立即失效所有已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，全局 Epoch 自增后所有 fastpath C-S9.EPOCH 检查（`badge_epoch == global_epoch`）立即失败。
+**v1.0.1 新增**：Badge 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）完成，立即失效该 Agent 已发出 Badge。这是 Capability Folding 单平面架构的关键设计——无需 drain、无需 bitmap、无需 IPI，per-agent epoch 自增后该 Agent 的 fastpath C-S9.EPOCH 检查（`badge_epoch == slot_epoch`）立即失败。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。
 
 ```c
 /* services/daemons/macro_d/cap_revoke.c —— v1.0.1 Badge 撤销
- * 一行代码撤销所有 Badge，O(1) 复杂度
+ * per-agent epoch bump 撤销单个 Agent，O(1) 复杂度（K9-1 主要机制）
+ * UNFREEZE 全局撤销用 airy_cap_epoch_bump_all()（补充性全局计数器）
  */
 static int macro_d_cap_revoke_all(void)
 {
-    /* 1. 全局 Epoch 自增——立即失效所有已发出 Badge
-     * 所有 fastpath C-S9.EPOCH 检查（badge_epoch == global_epoch）立即失败
+    /* 1. UNFREEZE 全局 Epoch 自增——立即失效所有已发出 Badge
+     * 触发补充性全局计数器 airy_cap_global_epoch 自增
+     * 所有 fastpath C-S9.EPOCH 检查（badge_epoch != slot_epoch）立即失败
      * 详见 09-kernel-agent-supervisor.md §6.4
      */
-    atomic_inc(&airy_cap_global_epoch);
+    airy_cap_epoch_bump_all();
 
     /* 2. 记录撤销日志 */
     syslog(LOG_WARNING, "airy: all badges revoked (epoch incremented)");
@@ -407,7 +409,7 @@ sec_d 崩溃
     │
     ▼
 [阶段 3] Epoch 自增 + 全量重新编译（<500ms）
-    │  ├── atomic_inc(&airy_cap_global_epoch)  ← 旧 Badge 全部失效
+    │  ├── airy_cap_epoch_bump_all()  ← UNFREEZE 全局撤销，旧 Badge 全部失效
     │  ├── 遍历持久化状态，重新编译所有 ACTIVE Agent 的 Badge
     │  └── 新 Random Tag（旧 Random Tag 不复用）
     │
@@ -573,7 +575,7 @@ sec_d 重启后，除了恢复 agent_caps[] 状态，还需与 Macro-Supervisor 
 | Reconciliation 步骤 | 执行者 | 动作 |
 |---------------------|-------|------|
 | 1. 加载持久化状态 | sec_d | `airy_cap_persist_load()` |
-| 2. Epoch 自增 | sec_d | `atomic_inc(&airy_cap_global_epoch)`（旧 Badge 全失效）|
+| 2. Epoch 自增 | sec_d | `airy_cap_epoch_bump_all()`（UNFREEZE 全局撤销，触发补充性 `airy_cap_global_epoch` 自增，旧 Badge 全失效）|
 | 3. 全量重新编译 | sec_d | 遍历 ACTIVE Agent，重新编译 Badge（新 Random Tag）|
 | 4. 通知 Macro-Supervisor | sec_d | 广播 `CAP_RESPONSE`（新 Badge opaque handle）|
 | 5. Macro-Supervisor 更新 | Macro-Supervisor | 持有新 Badge，分发给 Agent |
@@ -896,14 +898,14 @@ sec_d 重启
     │  ├── 按 op_type 重放：
     │  │   ├── COMPILE    → WRITE_ONCE(agent_caps[id].{randtag,perms,state})
     │  │   ├── REVOKE_ONE → WRITE_ONCE(agent_caps[id].state, REVOKED)
-    │  │   ├── REVOKE_ALL → atomic_inc(&airy_cap_global_epoch)
+    │  │   ├── REVOKE_ALL → airy_cap_epoch_bump_all()（UNFREEZE，触发补充性 airy_cap_global_epoch 自增）
     │  │   └── EXPIRE     → WRITE_ONCE(agent_caps[id].state, EXPIRED)
     │  └── 重放至 WAL 末尾（EOF）
     │  耗时: <500ms（最坏 16MB / 32B = 524288 条记录）
     │
     ▼
-[阶段 3] Epoch 自增（强制所有已发出 Badge 失效）
-    │  └── atomic_inc(&airy_cap_global_epoch)
+[阶段 3] Epoch 自增（强制所有已发出 Badge 失效，UNFREEZE 语义）
+    │  └── airy_cap_epoch_bump_all()
     │  效果: 所有旧 Badge 的 Epoch 不匹配，C-S9.EPOCH 检查失败
     │  Agent 需重新通过 CAP_REQUEST 申请 Badge
     │
@@ -1005,8 +1007,8 @@ static int airy_sec_d_recover(void)
     }
     syslog(LOG_INFO, "airy: WAL replayed (%u records)", ret);
 
-    /* 阶段 3: Epoch 自增（强制所有已发出 Badge 失效）*/
-    atomic_inc(&airy_cap_global_epoch);
+    /* 阶段 3: Epoch 自增（强制所有已发出 Badge 失效，UNFREEZE 语义）*/
+    airy_cap_epoch_bump_all();
     syslog(LOG_WARNING, "airy: epoch incremented to %u (post-recovery)",
            atomic_read(&airy_cap_global_epoch));
 
@@ -1105,7 +1107,7 @@ static int airy_sec_d_wal_replay(const char *path)
             WRITE_ONCE(agent_caps[rec.agent_id].state, AIRY_CAP_STATE_REVOKED);
             break;
         case AIRY_WAL_OP_REVOKE_ALL:
-            atomic_inc(&airy_cap_global_epoch);
+            airy_cap_epoch_bump_all();  /* UNFREEZE：触发补充性 airy_cap_global_epoch 自增 */
             break;
         case AIRY_WAL_OP_EXPIRE:
             WRITE_ONCE(agent_caps[rec.agent_id].state, AIRY_CAP_STATE_EXPIRED);
@@ -1323,7 +1325,7 @@ Macro-Supervisor 是用户态单点，其故障可能导致：
 
 ### 7.2 内核 watchdog fallback（v1.0.1: 含 Badge 全局撤销）
 
-为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback。v1.0.1 起，watchdog 接管时**立即撤销所有 Badge**（`atomic_inc(&airy_cap_global_epoch)`），防止无监管期间恶意 Agent 利用已发出的 Badge 继续操作：
+为防止单点故障，Airymax 设计了**内核 watchdog 直接重启** fallback。v1.0.1 起，watchdog 接管时**立即撤销所有 Badge**（`airy_cap_epoch_bump_all()`，UNFREEZE 语义，触发补充性 `airy_cap_global_epoch` 自增），防止无监管期间恶意 Agent 利用已发出的 Badge 继续操作：
 
 ```c
 /* kernel/kernel/superv/airy_watchdog.c —— v1.0.1 内核 watchdog fallback
@@ -1343,11 +1345,11 @@ static void airy_superv_watchdog_fn(struct timer_list *t)
         /* 1. 立即冻结所有活跃 Ring（防止无监管期间数据损坏，最优先） */
         airy_ipc_freeze_all(AIRY_FAULT_TIMEOUT);
 
-        /* 2. v1.0.1 新增：立即撤销所有 Badge（atomic_inc 一行代码 O(1)）
+        /* 2. v1.0.1 新增：立即撤销所有 Badge（airy_cap_epoch_bump_all 一行代码 O(1)，UNFREEZE 语义）
          * 防止无监管期间恶意 Agent 利用已发出 Badge 操作
-         * 所有 fastpath C-S9.EPOCH 检查立即失败（badge_epoch != global_epoch）
+         * 所有 fastpath C-S9.EPOCH 检查立即失败（badge_epoch != slot_epoch，per-agent）
          */
-        atomic_inc(&airy_cap_global_epoch);
+        airy_cap_epoch_bump_all();
         pr_emerg("airy: all badges revoked (epoch=%u)\n",
                  atomic_read(&airy_cap_global_epoch));
 
@@ -1468,7 +1470,7 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 | 恢复 | `AIRY_ADJUD_RESUME` | `kill(SIGCONT)` + 恢复预算 | STOPPED → READY |
 | 解冻 Ring | `AIRY_IPC_OP_UNFREEZE`（[IND] 层 opcode） | `ring->frozen = false` | — |
 
-> **解冻协议（v1.0.1 统一：与 [09-kernel-agent-supervisor.md §3.5](09-kernel-agent-supervisor.md) 严格一致）**：上表中"解冻 Ring"的简化执行步骤仅作概要示意，完整解冻流程为：① Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 **sec_d** 请求解冻（**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**——绕过 sec_d 串行化会破坏 Badge 一致性）；② **sec_d 串行化解冻**（避免并发解冻导致状态不一致，sec_d 内部持锁串行处理）；③ 解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge）；④ 最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 §4.7）。
+> **解冻协议（v1.0.1 统一：与 [09-kernel-agent-supervisor.md §3.5](09-kernel-agent-supervisor.md) 严格一致）**：上表中"解冻 Ring"的简化执行步骤仅作概要示意，完整解冻流程为：① Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 **sec_d** 请求解冻（**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**——绕过 sec_d 串行化会破坏 Badge 一致性）；② **sec_d 串行化解冻**（避免并发解冻导致状态不一致，sec_d 内部持锁串行处理）；③ 解冻时执行 `airy_cap_epoch_bump_all()`（UNFREEZE 语义，触发补充性 `airy_cap_global_epoch` 自增使旧 Badge 失效，强制 Agent 重新申请 Badge）；④ 最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 §4.7）。
 
 ---
 

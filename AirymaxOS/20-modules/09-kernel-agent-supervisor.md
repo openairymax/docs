@@ -11,9 +11,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **Micro-Supervisor 内核模块** 的唯一权威源。纯 C LSM 非法 Capability 检测（对齐 openEuler 纯 C LSM 模式，**不使用 BPF LSM**）、IPC 队列冻结机制（`ring->frozen = true` + `unlikely(ring->frozen)` 零开销检查）、die_notifier 内核崩溃通知链、eventfd 故障通知、"内核冷酷执法"流程（检测 → 冻结 → 返回 `AIRY_FAULT_ABNORMAL_CAP`）、借鉴 seL4 `handleFault()` 模式、**FREEZE opcode（0x0005）ring 冻结语义**、**Badge 撤销解耦 atomic_inc 机制**（1 行 `atomic_inc` 立即失效所有已发出 Badge，无 drain、无 bitmap）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Micro-Supervisor 职责与执法流程。
+> **单一权威源声明**：本文件是 **Micro-Supervisor 内核模块** 的唯一权威源。纯 C LSM 非法 Capability 检测（对齐 openEuler 纯 C LSM 模式，**不使用 BPF LSM**）、IPC 队列冻结机制（`ring->frozen = true` + `unlikely(ring->frozen)` 零开销检查）、die_notifier 内核崩溃通知链、eventfd 故障通知、"内核冷酷执法"流程（检测 → 冻结 → 返回 `AIRY_FAULT_ABNORMAL_CAP`）、借鉴 seL4 `handleFault()` 模式、**FREEZE opcode（0x0005）ring 冻结语义**、**Badge 撤销解耦 per-agent epoch bump 机制**（K9-1 主要撤销机制：`airy_cap_epoch_bump(agent_id)` 递增 `agent_caps[agent_id].epoch` 立即失效该 Agent 已发出 Badge，无 drain、无 bitmap；`airy_cap_global_epoch` 作为补充性全局计数器仅用于 UNFREEZE `airy_cap_epoch_bump_all()`）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Micro-Supervisor 职责与执法流程。
 >
-> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，Micro-Supervisor 的 capability 校验路径从"独立前置 `airy_cap_check()` + radix tree 查找"重构为 **fastpath C-S9 内联 Badge 校验**（`airy_cap_badge_ok()`，~10ns）。Micro-Supervisor 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅在 slowpath（异常路径）做策略裁决。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码立即失效所有已发出 Badge，与 IPC fastpath 完全解耦（无 drain、无 bitmap、无 IPI）。详见 §3.5 FREEZE opcode 与 §6.4 Badge 撤销解耦。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，Micro-Supervisor 的 capability 校验路径从"独立前置 `airy_cap_check()` + radix tree 查找"重构为 **fastpath C-S9 内联 Badge 校验**（`airy_cap_badge_ok()`，~10ns）。Micro-Supervisor 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅在 slowpath（异常路径）做策略裁决。Badge 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）立即失效该 Agent 已发出 Badge，与 IPC fastpath 完全解耦（无 drain、无 bitmap、无 IPI）；`airy_cap_global_epoch` 作为补充性全局计数器仅用于 UNFREEZE（`airy_cap_epoch_bump_all()`）。详见 §3.5 FREEZE opcode 与 §6.4 Badge 撤销解耦。
 >
 > 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
@@ -271,7 +271,7 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 | Badge 伪造 | `AIRY_ECAP_FORGED` (-80) | `AIRY_FAULT_CAP_FORGED` (0x1001) | `badge_randtag != agent_caps[src_task].randtag` | 立即冻结 + 通知 + sec_d 审计 |
 | Badge 泄漏 | — | `AIRY_FAULT_CAP_LEAK` (0x1002) | sec_d 审计检测到跨 Agent 使用 Badge | 标记可疑 + 通知 Macro-Supervisor |
 | Ring 数据损坏 | `AIRY_EIPC_CRC32` (-51) | `AIRY_FAULT_RING_CORRUPT` (0x1003) | CRC32 校验失败 + 元数据不一致 | 立即冻结 Ring |
-| Epoch 不匹配 | `AIRY_ECAP_EPOCH` (-79) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_epoch != global_epoch`（已撤销/过期） | 立即冻结 + 通知重新申请 |
+| Epoch 不匹配 | `AIRY_ECAP_EPOCH` (-79) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_epoch != slot_epoch`（per-agent，已撤销/过期） | 立即冻结 + 通知重新申请 |
 | 权限不足 | `AIRY_ECAP_PERM` (-81) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | `badge_perms & required != required` | 立即冻结 + 通知 |
 | Badge 格式无效 | `AIRY_ECAP_BADGE` (-78) | `AIRY_FAULT_ABNORMAL_CAP` (0x1005) | Badge 格式无效 / CAP_CARRY 但 badge=0 | 立即冻结 + 通知 |
 | Ring 已冻结 | `AIRY_EIPC_FROZEN` (-53) | —（Error，不触发 Fault） | `ring->frozen == true`（C-S0 检查） | 直接返回 Error，等待解冻 |
@@ -313,7 +313,7 @@ static int airy_ipc_freeze_ring(struct airy_ipc_ring *ring, __u32 fault_code)
 fastpath 在每次 IPC 操作时检查 `ring->frozen`（C-S0 检查，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)），但使用 `unlikely` 标注确保正常路径（99%+ 不冻结）不触发分支预测失败：
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c —— fastpath C-S0 冻结检查（v1.0.1） */
+/* kernel/corekern/ipc/airy_ipc_fastpath.c —— fastpath C-S0 冻结检查（v1.0.1） */
 static inline int airy_ipc_fastpath_check(struct airy_ipc_ring *ring)
 {
     /* C-S0: unlikely 标注——99%+ 不冻结，分支预测器预测不跳转 */
@@ -376,7 +376,7 @@ int airy_ipc_send_fastpath(struct airy_ipc_ring *ring, const void *payload,
 **FREEZE 执行流程**：
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c —— FREEZE opcode 处理（v1.0.1） */
+/* kernel/corekern/ipc/airy_ipc_fastpath.c —— FREEZE opcode 处理（v1.0.1） */
 static int airy_ipc_handle_freeze(struct airy_ipc_cmd *cmd)
 {
     struct airy_ipc_ring *ring;
@@ -402,7 +402,7 @@ static int airy_ipc_handle_freeze(struct airy_ipc_cmd *cmd)
 **FREEZE 与冷酷执法的关系**：
 - **冷酷执法**（§6）：fastpath C-S9 检测到 Badge 异常 → Micro-Supervisor 主动 FREEZE
 - **策略冻结**：Macro-Supervisor 通过发送 FREEZE opcode 主动冻结 Ring（如维护、升级）
-- **解冻协议**（v1.0.1 统一：与 [10-user-supervisor-daemon.md §8.3](10-user-supervisor-daemon.md) 严格一致）：Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE`（[IND] 层 opcode，不在 [SC] ipc.h 7 核心 opcode 命名空间内，由 `services/daemons/macro_d/` 实现层独立定义）opcode 向 sec_d 请求解冻，**sec_d 串行化解冻**（避免并发解冻导致状态不一致），解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge），最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 [10-user-supervisor-daemon.md §4.7](10-user-supervisor-daemon.md)）。**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**（绕过 sec_d 串行化会破坏 Badge 一致性）。
+- **解冻协议**（v1.0.1 统一：与 [10-user-supervisor-daemon.md §8.3](10-user-supervisor-daemon.md) 严格一致）：Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE`（[IND] 层 opcode，不在 [SC] ipc.h 7 核心 opcode 命名空间内，由 `services/daemons/macro_d/` 实现层独立定义）opcode 向 sec_d 请求解冻，**sec_d 串行化解冻**（避免并发解冻导致状态不一致），解冻时执行 `airy_cap_epoch_bump_all()`（触发补充性全局计数器 `airy_cap_global_epoch` 自增，UNFREEZE 语义，使旧 Badge 失效，强制 Agent 重新申请 Badge），最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 [10-user-supervisor-daemon.md §4.7](10-user-supervisor-daemon.md)）。**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**（绕过 sec_d 串行化会破坏 Badge 一致性）。
 
 ---
 
@@ -608,18 +608,19 @@ static int airy_fault_enforce(__u32 fault_code, struct airy_ipc_cmd *cmd)
 | 上下文 | 无（不看原因） | 有（查询历史） |
 | 借鉴 | seL4 `handleFault()` | seL4 用户态 Fault Handler |
 
-### 6.4 Badge 撤销解耦 atomic_inc（v1.0.1 新增）
+### 6.4 Badge 撤销解耦 epoch bump（v1.0.1 新增）
 
-**v1.0.1 新增**：Capability Folding 的 Badge 撤销通过 **1 行 `atomic_inc`** 立即失效所有已发出 Badge，与 IPC fastpath 完全解耦。这是 Capability Folding 单平面架构的核心设计——撤销操作不阻塞 fastpath，不 drain，不维护 bitmap，不发送 IPI。
+**v1.0.1 新增**：Capability Folding 的 Badge 撤销通过 **1 行 `airy_cap_epoch_bump(agent_id)`** 立即失效该 Agent 已发出 Badge（K9-1 per-agent 主要撤销机制），与 IPC fastpath 完全解耦。这是 Capability Folding 单平面架构的核心设计——撤销操作不阻塞 fastpath，不 drain，不维护 bitmap，不发送 IPI。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。
 
 **撤销机制**（详见 [03-capability-model.md §2.4](../110-security/03-capability-model.md)）：
 
 ```c
-/* kernel/security/airy/capability.c —— Badge 撤销（v1.0.1） */
+/* kernel/security/airy/capability.c —— Badge 撤销（v1.0.1 K9-1 per-agent） */
 
-/* 全局 Epoch（1 个 atomic_t）
- * 撤销时 atomic_inc 立即失效所有已发出 Badge
- * Badge 中的 Epoch 字段（16-bit）与全局 Epoch 比对，不匹配即失效
+/* 补充性全局 Epoch（1 个 atomic_t，UNFREEZE 时使用）
+ * 主要撤销机制为 per-agent epoch（agent_caps[agent_id].epoch）
+ * 撤销时 airy_cap_epoch_bump(agent_id) 立即失效该 Agent 已发出 Badge
+ * Badge 中的 Epoch 字段（16-bit）与 per-agent slot epoch 比对，不匹配即失效
  */
 atomic_t airy_cap_global_epoch = ATOMIC_INIT(0);
 
@@ -627,30 +628,30 @@ atomic_t airy_cap_global_epoch = ATOMIC_INIT(0);
  * airy_cap_badge_revoke - 撤销指定 Agent 的所有 Badge
  * @agent_id: 待撤销的 Agent ID
  *
- * v1.0.1: 1 行 atomic_inc 完成全局撤销
+ * v1.0.1 K9-1: per-agent epoch bump 完成定向撤销
  *
  * 工作原理:
- *   1. atomic_inc(&airy_cap_global_epoch) 使全局 Epoch +1
- *   2. 所有已发出 Badge 的 Epoch 字段（编译时快照）与新的全局 Epoch 不匹配
+ *   1. airy_cap_epoch_bump(agent_id) 使 agent_caps[agent_id].epoch +1
+ *   2. 该 Agent 已发出 Badge 的 Epoch 字段（编译时快照）与新的 per-agent slot epoch 不匹配
  *   3. fastpath C-S9 检测到 Epoch 不匹配，返回 -AIRY_ECAP_EPOCH (-79)
  *   4. Agent 必须重新向 sec_d 请求 Badge（CAP_REQUEST opcode）
  *
  * 性能特征:
- *   - 撤销延迟: ~1ns（1 行 atomic_inc）
- *   - fastpath 影响: 0（fastpath 仅多一次 atomic_read 比较，已在 C-S9 中）
+ *   - 撤销延迟: ~1ns（1 行 per-agent epoch 自增）
+ *   - fastpath 影响: 0（fastpath 仅多一次 READ_ONCE 比较，已在 C-S9 中）
  *   - drain 阻塞: 无
  *   - bitmap 维护: 无
  *   - IPI 广播: 无
  *
  * 对比 seL4:
  *   seL4 撤销需遍历 CSpace + 递归 revoke（O(n) 复杂度）
- *   Airymax 撤销 = 1 行 atomic_inc（O(1) 复杂度）
+ *   Airymax 撤销 = 1 行 per-agent epoch bump（O(1) 复杂度）
  *   代价: Agent 需重新申请 Badge（CAP_REQUEST 自举）
  */
 void airy_cap_badge_revoke(uint32_t agent_id)
 {
-    /* 1 行代码完成全局 Badge 撤销 */
-    atomic_inc(&airy_cap_global_epoch);
+    /* 1 行代码完成 per-agent Badge 撤销（K9-1 主要撤销机制） */
+    airy_cap_epoch_bump(agent_id);  /* agent_caps[agent_id].epoch++ */
 
     /* 可选: 更新 agent_caps[agent_id].randtag 防止旧 Badge 复用
      * sec_d 重新编译 Badge 时会生成新的 Random Tag
@@ -665,15 +666,15 @@ void airy_cap_badge_revoke(uint32_t agent_id)
 
 **撤销与 fastpath 的解耦**：
 
-| 维度 | 传统 radix tree 撤销 | v1.0.1 atomic_inc 撤销 |
+| 维度 | 传统 radix tree 撤销 | v1.0.1 epoch bump 撤销（K9-1 per-agent） |
 |------|---------------------|---------------------|
-| 复杂度 | O(n) 遍历 CSpace | O(1) 1 行 atomic_inc |
+| 复杂度 | O(n) 遍历 CSpace | O(1) 1 行 `airy_cap_epoch_bump(agent_id)` |
 | 阻塞 | drain + mdelay(5) | 无阻塞 |
-| fastpath 影响 | IPI 缓存一致性开销 | 0（fastpath 仅多一次 atomic_read） |
+| fastpath 影响 | IPI 缓存一致性开销 | 0（fastpath 仅多一次 READ_ONCE） |
 | bitmap 维护 | 需维护撤销 bitmap | 无 bitmap |
 | Agent 恢复 | 自动恢复 | 需重新申请 Badge（CAP_REQUEST） |
 
-**设计哲学**：这是乔布斯/艾夫"简约就是美"在内核工程的落地——将复杂的撤销操作简化为 1 行 `atomic_inc`，代价转嫁给 Agent 重申请 Badge（CAP_REQUEST 自举）。这正是 37 号 §1.2 所说的"IPC 不是承载能力校验——IPC 就是能力校验"的逆向命题："撤销不是独立操作——撤销就是让 fastpath 自动拒绝"。
+**设计哲学**：这是乔布斯/艾夫"简约就是美"在内核工程的落地——将复杂的撤销操作简化为 1 行 `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent 定向撤销），代价转嫁给 Agent 重申请 Badge（CAP_REQUEST 自举）。这正是 37 号 §1.2 所说的"IPC 不是承载能力校验——IPC 就是能力校验"的逆向命题："撤销不是独立操作——撤销就是让 fastpath 自动拒绝"。
 
 ---
 
@@ -738,7 +739,7 @@ Micro-Supervisor 的正常故障处理路径（Agent 故障 → 冷酷执法 →
 | 指标 | SLO | 实测 | 说明 |
 |------|-----|------|------|
 | C-S9 Badge 校验（fastpath 内联） | ≤20ns | ~10ns | v1.0.1: `airy_cap_badge_ok()` 3×READ_ONCE + 位运算 + 比较，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md) |
-| Badge 撤销（atomic_inc） | ≤5ns | ~1ns | v1.0.1: 1 行 `atomic_inc(&airy_cap_global_epoch)`，详见 §6.4 |
+| Badge 撤销（per-agent epoch bump） | ≤5ns | ~1ns | v1.0.1 K9-1: 1 行 `airy_cap_epoch_bump(agent_id)`（`agent_caps[agent_id].epoch++`），详见 §6.4 |
 | FREEZE opcode 处理 | ≤500ns | ~200ns | v1.0.1: §3.5，含 Ring 查找 + smp_store_release + eventfd |
 | 冻结操作（冷酷执法） | ≤500ns | ~200ns | §6.2，含 Ring 查找 + frozen 设置 + 时间戳 |
 | eventfd 通知 | ≤100ns | ~50ns | §5.1，非阻塞 signal |
@@ -750,7 +751,7 @@ Micro-Supervisor 的正常故障处理路径（Agent 故障 → 冷酷执法 →
 | 资源 | 预算 | 实测 | 说明 |
 |------|------|------|------|
 | 内核静态内存 | ≤32KB | 128KB | v1.0.1: `agent_caps[1024]` 静态数组（1024 × 128B），sec_d 唯一写者，fastpath 多读者 READ_ONCE |
-| 全局 Epoch | 4B | 4B | v1.0.1: 1 个 `atomic_t`，撤销 = 1 行 `atomic_inc`，详见 §6.4 |
+| 全局 Epoch | 4B | 4B | v1.0.1: 1 个 `atomic_t`（补充性，UNFREEZE 时 `airy_cap_epoch_bump_all()` 触发 `atomic_inc`；主要撤销机制为 per-agent epoch，详见 §6.4） |
 | 事件队列 | 1024 条 | 1024 条 | eventfd 关联环形队列，溢出时仅 signal 计数 |
 | CPU（fastpath） | ≤20ns | ~10ns | v1.0.1: 仅 C-S9 Badge 校验，正常路径不进 slowpath |
 | CPU（slowpath） | 仅异常 | 仅异常 | v1.0.1: LSM 钩子仅在 C-S9 失败时被调用（§2.3） |

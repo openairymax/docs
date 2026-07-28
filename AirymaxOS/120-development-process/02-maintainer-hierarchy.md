@@ -116,7 +116,7 @@ C:	matrix:#airy_ipc
 P:	120-development-process/01-patch-lifecycle.md
 T:	git https://github.com/agentrt-linux/system.git develop
 F:	include/uapi/airy_ipc/
-F:	kernel/ipc/airy_ipc.c
+F:	kernel/corekern/ipc/airy_ipc_fastpath.c
 X:	kernel/ipc/airy_ipc/test/
 N:	[^a-z]airy_ipc
 K:	\b(airy_ipc_send|airy_ipc_recv)\b
@@ -798,7 +798,7 @@ int maintainers_parse(const char *file_path,
  * maintainers_lookup - 查找文件归属的维护者
  * @entries:    MAINTAINERS 条目数组
  * @count:      条目数量
- * @file_path:  要查找的文件路径（如 "kernel/ipc/airy_ipc.c"）
+ * @file_path:  要查找的文件路径（如 "kernel/corekern/ipc/airy_ipc_fastpath.c"）
  * @out_entry:  输出匹配的条目指针
  *
  * 匹配规则（按优先级）：

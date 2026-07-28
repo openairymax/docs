@@ -1628,7 +1628,7 @@ struct airy_ipc_msg_hdr hdr = {
 /* 提交到 io_uring——内核 fastpath C-S9 内联 Badge 校验 */
 io_uring_submit(ring);
 
-/* 3. Agent A 撤销 Badge 时，全局 Epoch 自增，派生 Badge 立即失效 */
+/* 3. Agent A 撤销 Badge 时，per-agent epoch 递增，该 Agent 派生 Badge 立即失效 */
 airy_sys_call(AIRY_OP_REVOKE_BADGE, &derived_badge);
 ```
 
@@ -1842,8 +1842,8 @@ static int __init airy_cap_agent_caps_init(void)
                  node, AIRY_CAP_MAX_AGENTS * sizeof(struct airy_cap_slot) / 1024);
     }
 
-    atomic_set(&airy_cap_global_epoch, 0);  /* 全局 Epoch 初始化（补充性计数器）*/
-    /* 注: per-agent epoch（agent_caps[i].epoch）由 __GFP_ZERO 自动清零 */
+    atomic_set(&airy_cap_global_epoch, 1);  /* 补充性全局 Epoch 初始化为 1（与代码一致）*/
+    /* 注: per-agent epoch（agent_caps[i].epoch）初始化为 1（非 0），确保空 badge（epoch=0）无法通过 C-S9.EPOCH 校验 */
     return 0;
 }
 ```
@@ -1978,7 +1978,7 @@ static int macro_d_set_numa_affinity(pid_t pid, const char *name)
 **策略**：在 fastpath C-S9 之前，prefetch `agent_caps[src_task]` 所在 cache line，隐藏 DRAM 访问延迟。
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c —— fastpath prefetch 优化（v1.0.1 新增）
+/* kernel/corekern/ipc/airy_ipc_fastpath.c —— fastpath prefetch 优化（v1.0.1 新增）
  *
  * 在 C-S0~C-S8 校验期间 prefetch agent_caps[src_task]，隐藏 DRAM 延迟。
  * prefetch 是非阻塞指令，CPU 继续执行后续校验，cache line 异步加载。
@@ -1988,9 +1988,9 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
 {
     struct airy_ipc_msg_hdr *hdr = cmd->hdr;
 
-    /* C-S0: ring 冻结检查 */
+    /* C-S0: ring 冻结检查（AIRY_EIPC_FROZEN=-53，非 AIRY_ECAP_FROZEN=-82） */
     if (unlikely(cmd->ring->frozen))
-        return -AIRY_ECAP_FROZEN;
+        return -AIRY_EIPC_FROZEN;
 
     /* C-S1: magic 检查 */
     if (unlikely(hdr->magic != AIRY_IPC_MAGIC))

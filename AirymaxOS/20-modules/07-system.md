@@ -334,7 +334,7 @@ config_d 是 agentrt-linux 12 daemon 之一（完整名单见 §6.7），负责�
 **热重载机制**：
 - 监听 inotify 事件（`/etc/agentrt/` 目录变化）+ 接收 SIGHUP。
 - 热重载流程：解析新配置 → 校验语义 → 通过 sysfs 推送至内核 → 通知 sec_d 重新加载 `agent_caps[1024]` 配置 → 通过 D-Bus 信号通知订阅者（DevStation、airymaxmon 等）。
-- 热重载不重启 daemon，但会触发 sec_d 的 Badge Epoch 推进（`atomic_inc(&airy_cap_global_epoch)`）以保证配置变更即时生效。
+- 热重载不重启 daemon，但会触发 sec_d 的 Badge Epoch 推进（`airy_cap_epoch_bump(agent_id)` per-agent，K9-1 主要机制；UNFREEZE 全局撤销用 `airy_cap_epoch_bump_all()`）以保证配置变更即时生效。
 
 **config_d 与 sec_d 协作**（v1.0.1 Capability Folding）：
 - config_d 加载 `agent_caps[1024]` 容量与 Badge Epoch 步进参数，通过 sysfs 推送至内核。
@@ -452,7 +452,7 @@ v1.0.1 Capability Folding（ADR-014 seL4 唯一来源，参见 `docs/architectur
 
 - **`agent_caps[1024]` 静态数组（128KB）**：config_d 通过 sysfs（`/sys/fs/airymax/agent_caps_capacity`）暴露容量配置；sec_d 作为唯一写者编译 Badge 写入数组。
 - **64-bit Badge 布局**（`Epoch<<48 | RandomTag<<16 | Perms`）：config_d 通过 sysfs（`/sys/fs/airymax/badge_epoch_step`）配置 Epoch 步进；airymaxmon 读取 Badge 状态用于安全监控。
-- **O(1) 撤销**（`atomic_inc(&airy_cap_global_epoch)`）：config_d 热重载触发 sec_d 推进 Epoch，全集群 100ms 内完成 Badge 失效。
+- **O(1) 撤销**（`airy_cap_epoch_bump(agent_id)` per-agent，K9-1 主要机制）：config_d 热重载触发 sec_d 推进 per-agent Epoch，全集群 100ms 内完成 Badge 失效。
 - **fastpath C-S9 内联校验（~10ns）+ slowpath LSM 钩子**：config_d 通过 sysfs（`/sys/fs/airymax/fastpath_c_s9_enabled`）控制 fastpath 开关；slowpath 走 airy_lsm（`LSM_ORDER_MUTABLE`，禁止 `LSM_ORDER_FIRST`）。
 - **v1.0.1 Syscall 24 槽位**：config_d 通过 sysfs（`/sys/fs/airymax/syscall_table_size`）暴露槽位数量；airymaxmon 监控 syscall 调用统计。
 - **io_uring SQE128 模式**：cmd 扩展至 80 字节（16→80），通过 `io_uring_cmd_to_pdu(cmd, pdu_type)` 安全宏访问 `pdu[32]` 字段；完成路径调用 `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数签名；`security_uring_cmd` LSM 钩子为单参数 `struct io_uring_cmd *ioucmd`。

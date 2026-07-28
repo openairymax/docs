@@ -77,7 +77,7 @@ Airymax 将 IPC 分为控制面与数据面：
 Ring Buffer 由内核 `alloc_pages(GFP_KERNEL)` 分配，物理宿主在内核态，mmap 映射到用户态。控制面进程仅持有 Ring 的 handle（opaque 引用），不持有 Ring 内存：
 
 ```c
-/* kernel/ipc/airy_ipc_ring.c —— Ring 生命周期与控制面解耦 */
+/* kernel/corekern/ipc/airy_ipc_ring.c —— Ring 生命周期与控制面解耦 */
 struct airy_ipc_ring {
     struct page *pages;          /* 内核态物理页，alloc_pages 分配 */
     void        *kaddr;          /* 内核态虚拟地址 */
@@ -150,7 +150,7 @@ A-IPC 的 Capability 校验采用分层设计，fastpath 仅查缓存，不依�
 ### 3.3 缓存设计
 
 ```c
-/* kernel/ipc/airy_ipc_cap.c —— Capability 离线缓存 */
+/* kernel/ipc/airy_ipc_capability.c —— Capability 离线缓存 */
 /*
  * Capability 校验结果缓存在内核 radix tree。
  * 控制面在线时定期刷新缓存（TTL 机制）。
@@ -248,7 +248,7 @@ static int airy_cap_check_fastpath(__u32 cap_id, __u64 required_badge)
 数据面在控制面离线期间记录状态变更到 reconciliation log：
 
 ```c
-/* kernel/ipc/airy_ipc_reconcile.c —— Reconciliation log */
+/* kernel/corekern/ipc/airy_ipc_reconcile.c —— Reconciliation log */
 enum airy_reconcile_op {
     AIRY_RECON_NEW_RING,        /* 新建 Ring（控制面离线时） */
     AIRY_RECON_DESTROY_RING,    /* 销毁 Ring */

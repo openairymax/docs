@@ -449,7 +449,7 @@ v1.0.1 Capability Folding（ADR-014 seL4 唯一来源，参见 `docs/architectur
 
 - **`agent_caps[1024]` 静态数组（128KB）**：每个节点上由 sec\_d 作为唯一写者，云原生 CRD controller 通过 `airy_sys_call(0)` 提交 capability 编译请求，sec\_d 串行化所有 Badge 编译以保证 Epoch 单调。
 - **64-bit Badge 布局**（`Epoch<<48 | RandomTag<<16 | Perms`）：跨节点 IPC 时 gateway\_d 验证对端 Badge 的 Epoch 是否在本节点 gossip 窗口内（100ms 偏差容忍），超出窗口则触发 §6.4 \[DSL] 降级。
-- **O(1) 撤销**（`atomic_inc(&airy_cap_global_epoch)`）：CRD 删除事件触发秒级 Epoch 推进，全集群 100ms 内完成 Badge 失效；CNI 网络策略联动纯 C LSM（airy_lsm）`uring_cmd` 单参数钩子（`struct io_uring_cmd *ioucmd`）即时阻断已撤销 capability 的 io\_uring 提交。
+- **O(1) 撤销**（`airy_cap_epoch_bump(agent_id)` per-agent，K9-1 主要机制）：CRD 删除事件触发秒级 per-agent Epoch 推进，全集群 100ms 内完成 Badge 失效；CNI 网络策略联动纯 C LSM（airy_lsm）`uring_cmd` 单参数钩子（`struct io_uring_cmd *ioucmd`）即时阻断已撤销 capability 的 io\_uring 提交。
 - **fastpath C-S9 内联校验（~10ns）+ slowpath LSM 钩子**：gateway\_d 跨节点 RPC 入口先走 fastpath C-S9 内联校验（~10ns），未命中或 Epoch 偏差时退化为 slowpath 走 airy\_lsm（`LSM_ORDER_MUTABLE`，非 `LSM_ORDER_FIRST`）钩子做完整 Cupolas blob 验证。
 - **io\_uring SQE128 模式**：cmd 扩展至 80 字节（16→80），通过 `io_uring_cmd_to_pdu(cmd, pdu_type)` 安全宏访问 `pdu[32]` 字段；完成路径调用 `io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数签名。
 
@@ -468,7 +468,7 @@ gateway\_d 是 12 daemon 之一（完整名单见 §6.7），负责跨节点 IPC
 2. gateway\_d 监听 `agent_caps[]` 变更，通过 gossip 协议广播 `(node_id, epoch, capability_bitmap_hash)` 给集群其他节点。
 3. 节点 B 的 gateway\_d 收到 gossip 消息，校验 Epoch 单调性，触发本地 sec\_d 重编译受影响的 Badge 子集（per-node Badge 重编译）。
 4. 跨节点 IPC 时，gateway\_d 在 fastpath C-S9 内联校验对端 Badge Epoch 是否在 100ms gossip 窗口内；超出窗口则触发 §6.4 \[DSL] 降级，退化为单节点本地校验。
-5. Epoch 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 触发，gossip 通道 100ms 内全集群同步失效。
+5. UNFREEZE 全局 Epoch 撤销通过 `airy_cap_epoch_bump_all()`（触发补充性 `airy_cap_global_epoch` 自增）触发，gossip 通道 100ms 内全集群同步失效。单 Agent 撤销通过 `airy_cap_epoch_bump(agent_id)` per-agent 定向失效（K9-1 主要机制）。
 
 ### 6.7 12 daemon 完整名单与云原生部署
 

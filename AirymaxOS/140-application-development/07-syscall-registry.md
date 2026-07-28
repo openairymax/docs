@@ -149,7 +149,7 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 | op 码 | 操作名 | 功能 | 0.1.1 对应 syscall | 说明 |
 |-------|--------|------|-------------------|------|
 | `AIRY_OP_COMPILE_BADGE` | Badge 编译 | sec_d 编译 Capability Badge（Epoch + Random Tag + Perms） | `airy_sys_delegate` / `airy_sys_mint` | 集中到 sec_d，消除分散 mint/derive |
-| `AIRY_OP_REVOKE_BADGE` | Badge 撤销 | sec_d 撤销 Badge（1 行 atomic_inc 立即生效） | `airy_sys_revoke` / `airy_sys_capability_revoke` | 全局 Epoch 自增，所有旧 Badge 失效 |
+| `AIRY_OP_REVOKE_BADGE` | Badge 撤销 | sec_d 撤销 Badge（1 行 per-agent epoch bump 立即生效） | `airy_sys_revoke` / `airy_sys_capability_revoke` | `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch，该 Agent 旧 Badge 失效（K9-1 主要机制） |
 | `AIRY_OP_LSM_CTL` | LSM 策略加载 | 加载 airy_lsm 策略 | `airy_sys_lsm_load_policy` / `airy_sys_lsm_ctl` | 合并 0.1.1 的两个 LSM syscall |
 | `AIRY_OP_WASM_LOAD` | Wasm 模块加载 | 加载 Wasm 3.0 安全模块 | `airy_sys_wasm_load_module` | cap-type dispatch |
 | `AIRY_OP_LSM_AUDIT_QUERY` | 审计查询 | 查询 airy_lsm 审计日志 | `airy_sys_lsm_audit_query` | 0.1.1 独立 syscall → v1.0.1 合入 |

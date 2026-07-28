@@ -218,7 +218,7 @@ Panic 路径下，Ring Buffer 所在内存可能已损坏（页表失效、内�
 | Ring Buffer reserve 失败 | `airy_printk_reserve()` 返回 NULL | 该条走 printk_safe 临时缓冲 |
 | NMI 上下文 | `in_nmi()` | 直接走 printk_safe NMI 缓冲 |
 | 内存毒化 | Ring Buffer page `PageHWPoison()` | 禁用桥接，走 printk_safe |
-| Badge Epoch 跃迁 | `airy_cap_global_epoch` 跃迁期间 | 桥接降级，仅写 log_buf 不写 Ring Buffer |
+| Badge Epoch 跃迁 | per-agent `agent_caps[agent_id].epoch` 跃迁期间 | 桥接降级，仅写 log_buf 不写 Ring Buffer |
 
 ### 3.2 printk_safe 原生路径
 
@@ -267,7 +267,7 @@ Panic notifier 注册优先级低于 console 刷新，确保 console 通路优�
 |--------|---------|---------|
 | printk 正常镜像 | 内核子系统调用 `printk()` | 写入 `AIRY_FAC_KERNEL` facility 记录，`caller_id = smp_processor_id()` |
 | sec_d 审计日志镜像 | `sec_d` 检测到 Badge 校验失败 | `sec_d` 通过 `airy_log_write()` 写入 `AIRY_FAC_SECURITY` facility 记录（不经过 printk 桥接） |
-| Badge Epoch 跃迁 | `atomic_inc(&airy_cap_global_epoch)` | 桥接进入降级模式，仅写 log_buf 不写 Ring Buffer（避免脏数据） |
+| Badge Epoch 跃迁 | `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent） | 桥接进入降级模式，仅写 log_buf 不写 Ring Buffer（避免脏数据） |
 
 ### 4.2 Badge 校验失败事件的日志记录
 
@@ -278,7 +278,7 @@ Panic notifier 注册优先级低于 console 刷新，确保 console 通路优�
 | `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
 | `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求（50ms SLO 违约保护） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
 | `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | `sec_d` 写入 `LOG_FATAL` 审计日志 + 触发 `AIRY_FAULT_CAP_FORGED` |
-| `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与全局 Epoch 不匹配（已撤销或过期） | `sec_d` 写入审计日志 |
+| `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） | `sec_d` 写入审计日志 |
 
 > **设计原则**：printk 桥接**不直接产生** Badge 校验失败日志（这些日志由 `sec_d` 通过 `airy_log_write()` 直接写入 Ring Buffer，绕过 printk 桥接）。printk 桥接仅承担"将 Linux 6.6 原生 printk 镜像到 Ring Buffer"的职责，与 Badge 校验链路解耦——这是 seL4 "机制与策略分离"原则的体现（ADR-014）：桥接是机制，Badge 校验是策略。
 
@@ -298,7 +298,7 @@ logger_d 消费路径（访问 agent_caps）：
 
 ### 4.4 O(1) 撤销对桥接的影响
 
-`atomic_inc(&airy_cap_global_epoch)` 触发 O(1) 撤销时，所有旧 Badge 立即失效。printk 桥接在 Epoch 跃迁期间的策略：
+`airy_cap_epoch_bump(agent_id)` 触发 O(1) per-agent 定向撤销时（K9-1 主要机制），该 Agent 的旧 Badge 立即失效。printk 桥接在 Epoch 跃迁期间的策略：
 
 1. **不停止桥接**——printk 是内核原生路径，与 Badge 生命周期解耦
 2. **继续写入 Ring Buffer**——但 `logger_d` 在 Epoch 跃迁期间消费时，会通过 fastpath C-S9 校验发现 Badge 失效，记录 `AIRY_ECAP_FROZEN`

@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **纯 C LSM 模块设计** 的唯一权威源。`DEFINE_LSM(airy)` 纯 C 注册、**v1.0.1 fastpath C-S9 + slowpath LSM 职责分割**（fastpath 内联 Badge 校验，LSM 钩子仅 slowpath 接管）、**sec_d Badge 编译职责**（sec_d 是 Badge 的唯一写者，编译 Badge = `Epoch<<48 | RandomTag<<16 | Perms`）、io_uring 安全钩子（opcode 白名单校验）、与 seL4 Capability 模型的关系、纯 C 性能优势（无 BPF 间接调用开销）、源码参考（OLK 6.6 security/ 目录）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Airymax LSM 模块结构与 fastpath/slowpath 职责分割。
 >
-> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，纯 C LSM 的 capability 校验路径从"独立前置 `airy_cap_check()` + radix tree 查找"重构为 **fastpath C-S9 内联 Badge 校验**（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)）。纯 C LSM 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅在 slowpath（异常路径）做策略裁决与冷酷执法。**sec_d 是 Badge 的唯一写者**——sec_d 编译 Badge 时使用全局 Epoch + 随机生成的 32-bit Random Tag + Perms 位掩码，写入 `agent_caps[agent_id]` 静态数组。Badge 撤销通过 `atomic_inc(&airy_cap_global_epoch)` 一行代码立即失效所有已发出 Badge（详见 [09-kernel-agent-supervisor.md §6.4](../20-modules/09-kernel-agent-supervisor.md)）。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，纯 C LSM 的 capability 校验路径从"独立前置 `airy_cap_check()` + radix tree 查找"重构为 **fastpath C-S9 内联 Badge 校验**（`airy_cap_badge_ok()`，~10ns，详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)）。纯 C LSM 不再在 `security_uring_cmd` 钩子中独立执行 capability 校验——fastpath C-S9 已在 io_uring 数据面完成 Badge 校验，LSM 钩子仅在 slowpath（异常路径）做策略裁决与冷酷执法。**sec_d 是 Badge 的唯一写者**——sec_d 编译 Badge 时使用 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）+ 随机生成的 32-bit Random Tag + Perms 位掩码，写入 `agent_caps[agent_id]` 静态数组。Badge 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch 立即失效该 Agent 已发出 Badge（K9-1 主要机制）；UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增（详见 [09-kernel-agent-supervisor.md §6.4](../20-modules/09-kernel-agent-supervisor.md)）。
 >
 > 技术选型声明：安全采用 **纯 C LSM 模块**（**不使用 BPF LSM**，对齐 openEuler 纯 C 模式：SELinux/AppArmor/Landlock/Tomoyo 全部纯 C）。整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
@@ -221,7 +221,7 @@ struct lsm_blob_sizes air_blob_sizes __lsm_ro_after_init = {
 fastpath C-S9 在 io_uring 数据面内联执行 Badge 校验，**不进入 LSM 钩子链**。Badge 是 64-bit Native Word：`(Epoch<<48 | RandomTag<<16 | Perms)`，校验仅需 3 次 READ_ONCE + 位运算 + 比较：
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c —— fastpath C-S9 Badge 校验（v1.0.1 内联，~10ns）
+/* kernel/corekern/ipc/airy_ipc_fastpath.c —— fastpath C-S9 Badge 校验（v1.0.1 内联，~10ns）
  * 详见 30-interfaces/07-ipc-fastpath.md §5.2
  */
 static __always_inline int airy_cap_badge_ok(struct task_struct *task,
@@ -229,12 +229,12 @@ static __always_inline int airy_cap_badge_ok(struct task_struct *task,
                                               __u16 opcode)
 {
     __u32 agent_id = task->pid;
-    __u32 global_epoch, randtag, perms;
+    __u32 slot_epoch, randtag, perms;
 
     /* 1. 三次 READ_ONCE 读取 agent_caps[agent_id]（无锁，多读者安全）
      * agent_caps[] 是 128KB 静态数组，sec_d 唯一写者
      */
-    global_epoch = READ_ONCE(airy_cap_global_epoch.counter);
+    slot_epoch = READ_ONCE(agent_caps[agent_id].epoch);
     randtag = READ_ONCE(agent_caps[agent_id].randtag);
     perms = READ_ONCE(agent_caps[agent_id].perms);
 
@@ -243,8 +243,8 @@ static __always_inline int airy_cap_badge_ok(struct task_struct *task,
     __u64 badge_randtag = (capability_badge >> 16) & 0xFFFFFFFF;
     __u64 badge_perms = capability_badge & 0xFFFF;
 
-    /* 3. C-S9.EPOCH: Epoch 校验（badge_epoch == global_epoch?） */
-    if (unlikely(badge_epoch != global_epoch))
+    /* 3. C-S9.EPOCH: Epoch 校验（badge_epoch == slot_epoch?，K9-1 per-agent） */
+    if (unlikely(badge_epoch != slot_epoch))
         return -AIRY_ECAP_EPOCH;   /* -79: Badge 已撤销/过期 */
 
     /* 4. C-S9.RANDTAG: RandomTag 校验（防伪造） */
@@ -276,10 +276,10 @@ io_uring_cmd_submit()（io_uring 核心，fs/io_uring.c）
 security_uring_cmd() LSM 钩子链（security/security.c）
        │
        ▼  ← Linux LSM 标准调用点
-airy_uring_cmd_check()（security/airy/airy_cap_hooks.c）
+airy_uring_cmd_check()（security/airy/airy_cap_check.c）
        │
        ├─【99%+ 正常路径】C-S9 Badge 校验通过（~10ns 内联）
-       │   └─ 返回 0 → io_uring 继续 issue → airy_uring_cmd()（kernel/ipc/airy_uring_cmd.c）
+       │   └─ 返回 0 → io_uring 继续 issue → airy_ipc_fastpath_send()（kernel/corekern/ipc/airy_ipc_fastpath.c）
        │
        └─【<1% 异常路径】C-S9 校验失败
            │
@@ -294,9 +294,9 @@ airy_uring_cmd_check()（security/airy/airy_cap_hooks.c）
 #### 3.3.2 security_uring_cmd 钩子完整实现（SSoT）
 
 ```c
-/* security/airy/airy_cap_hooks.c —— v1.0.1 security_uring_cmd 完整实现
+/* security/airy/airy_cap_check.c —— v1.0.1 security_uring_cmd 完整实现
  *
- * 物理宿主: kernel/security/airy/airy_cap_hooks.c
+ * 物理宿主: kernel/security/airy/airy_cap_check.c
  * 注册: LSM_HOOK_INIT(uring_cmd, airy_uring_cmd_check)
  * 调用上下文: io_uring 提交路径，持有 ctx->uring_lock
  * 调用频率: 每次 IORING_OP_URING_CMD 提交（99%+ fastpath 通过）
@@ -640,7 +640,7 @@ fastpath C-S0: Ring 冻结检查（unlikely(ring->frozen)）
        ▼
 fastpath C-S9: Badge 64-bit Native Word 校验（~10ns 内联）
        │
-       ├── C-S9.EPOCH: Epoch 校验（badge_epoch == global_epoch?）
+       ├── C-S9.EPOCH: Epoch 校验（badge_epoch == slot_epoch?，K9-1 per-agent）
        │   └── 不匹配 ─────────▶ 返回 -AIRY_ECAP_EPOCH (-79)
        │
        ├── C-S9.RANDTAG: RandomTag 校验（防伪造）
@@ -674,7 +674,7 @@ switch(fastpath_ret):
 
 ### 3.5 sec_d Badge 编译职责（v1.0.1 新增）
 
-**v1.0.1 新增**：sec_d（security daemon）是 Badge 的**唯一写者**。sec_d 编译 Badge 时使用全局 Epoch + 随机生成的 32-bit Random Tag + Perms 位掩码，写入 `agent_caps[agent_id]` 静态数组。这是 Capability Folding 单平面架构的关键约束——fastpath C-S9 仅做读操作（READ_ONCE），sec_d 独占写操作（WRITE_ONCE）。
+**v1.0.1 新增**：sec_d（security daemon）是 Badge 的**唯一写者**。sec_d 编译 Badge 时使用 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）+ 随机生成的 32-bit Random Tag + Perms 位掩码，写入 `agent_caps[agent_id]` 静态数组。这是 Capability Folding 单平面架构的关键约束——fastpath C-S9 仅做读操作（READ_ONCE），sec_d 独占写操作（WRITE_ONCE）。
 
 ```c
 /* services/daemons/sec_d/badge_compile.c —— sec_d Badge 编译（v1.0.1）
@@ -685,8 +685,8 @@ __u64 airy_cap_badge_compile(__u32 agent_id, __u16 perms)
     __u32 epoch, randtag;
     __u64 badge;
 
-    /* 1. 读取全局 Epoch（atomic_read，无锁） */
-    epoch = atomic_read(&airy_cap_global_epoch);
+    /* 1. 读取 per-agent epoch（READ_ONCE，无锁，K9-1 主要撤销机制） */
+    epoch = READ_ONCE(agent_caps[agent_id].epoch);
 
     /* 2. 生成 32-bit 随机 Random Tag（防伪造）
      * 使用 get_random_bytes_wait() 确保密码学安全
@@ -846,7 +846,7 @@ seL4 微内核采用 capability-based security——每个安全敏感操作需�
 |-----------|------------|------|
 | Capability 不可伪造 | sec_d 编译 Badge 时生成 32-bit 随机 Random Tag，fastpath C-S9.RANDTAG 校验 | 防伪造（~10ns 校验） |
 | 最小权限 | Perms 16-bit 位掩码，每操作校验 required perms | 最小授权 |
-| 递归撤销 | `atomic_inc(&airy_cap_global_epoch)` 一行代码立即失效所有已发出 Badge | O(1) 撤销，无 drain/bitmap/IPI |
+| 定向撤销 | `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch 立即失效该 Agent 已发出 Badge（K9-1 主要机制） | O(1) 撤销，无 drain/bitmap/IPI |
 | 形式化验证 | 参考验证方法（未完全形式化） | 可信基础 |
 
 ### 5.3 与 seL4 的差异（v1.0.1: agent_caps[] 静态数组）
@@ -856,7 +856,7 @@ seL4 微内核采用 capability-based security——每个安全敏感操作需�
 | 执行域 | 微内核（纯内核态） | Linux 6.6（LSM 钩子 slowpath + fastpath 内联） | 复用主线 LSM + io_uring 数据面 |
 | Capability 存储 | CSpace（内核对象） | `agent_caps[1024]` 静态数组（128KB） | v1.0.1: 替代 radix tree，无锁多读者 |
 | 校验方式 | 内核内联 | fastpath C-S9 内联（~10ns） + slowpath LSM | v1.0.1: fastpath/slowpath 职责分割 |
-| 撤销机制 | 递归遍历 CSpace（O(n)） | `atomic_inc` 全局 Epoch（O(1)） | v1.0.1: 1 行代码完成全局撤销 |
+| 撤销机制 | 递归遍历 CSpace（O(n)） | `airy_cap_epoch_bump(agent_id)` per-agent epoch 递增（O(1)） | v1.0.1 K9-1: 1 行代码完成单 Agent 定向撤销（主要机制）；UNFREEZE 全局撤销用 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增 |
 | 形式化验证 | 完全形式化 | 未形式化（CBMC 全函数验证 fastpath） | 工程权衡 |
 
 ---
@@ -924,9 +924,9 @@ Airymax 纯 C LSM 模块的源码结构对齐 OLK 6.6（openEuler Linux Kernel 6
 security/
 ├── airy/                    ← Airymax 新增（纯 C）
 │   ├── airy_lsm.c           LSM 注册（DEFINE_LSM）
-│   ├── airy_cap_hooks.c     v1.0.1: slowpath Capability 校验钩子（fastpath C-S9 异常接管）
+│   ├── airy_cap_check.c     v1.0.1: slowpath Capability 校验钩子（fastpath C-S9 异常接管）
 │   ├── airy_uring_hooks.c   io_uring 安全钩子
-│   ├── airy_capability.c    v1.0.1: agent_caps[] 静态数组 + 全局 Epoch + Badge 撤销（替代 airy_cap_tree.c）
+│   ├── airy_capability.c    v1.0.1: agent_caps[] 静态数组 + per-agent epoch（K9-1 主要撤销机制）+ 补充性全局 Epoch + Badge 撤销（替代 airy_cap_tree.c）
 │   ├── airy_internal.h      内部头文件
 │   └── Kconfig              配置
 ├── selinux/                 SELinux（纯 C 参考）
@@ -982,7 +982,7 @@ config SECURITY_AIRY
 # security/airy/Makefile（v1.0.1: airy_capability.o 替代 airy_cap_tree.o；D-11 对齐 OLK 6.6 += 风格）
 obj-$(CONFIG_SECURITY_AIRY) += airy.o
 airy-y += airy_lsm.o
-airy-y += airy_cap_hooks.o
+airy-y += airy_cap_check.o
 airy-y += airy_uring_hooks.o
 airy-y += airy_capability.o
 ```
@@ -1166,7 +1166,7 @@ static struct airy_cap_slot agent_caps[AIRY_CAP_MAX_AGENTS]
 | **不实现自定义 retpoline** | 0.1.1 阶段不实现 retpoline 自定义优化，完全依赖 OLK 6.6 默认 retpoline（`mitigations=auto` 已包含） | 0 |
 
 ```c
-/* security/airy/airy_cap_hooks.c —— fastpath C-S9 lfence 序列化（R8 补强，仅 paranoid 模式） */
+/* security/airy/airy_cap_check.c —— fastpath C-S9 lfence 序列化（R8 补强，仅 paranoid 模式） */
 static __always_inline int airy_cap_badge_ok_paranoid_wrapper(struct task_struct *task,
                                                                 __u64 capability_badge,
                                                                 __u16 opcode)

@@ -171,7 +171,7 @@ A-IPC 协议层专用错误码，覆盖 IPC 协议、Ring Buffer、io_uring_cmd�
 /* Capability Folding Badge 校验码（v1.0.1 新增） */
 /* 触发位置: fastpath C-S9 内联 airy_cap_badge_ok()，见 07-ipc-fastpath.md §5.2 */
 #define AIRY_ECAP_BADGE         (-78)   /* Badge 格式无效、Random Tag 不匹配、CAP_CARRY 但 badge=0 */
-#define AIRY_ECAP_EPOCH         (-79)   /* Badge Epoch 与全局 Epoch 不匹配（已撤销或过期） */
+#define AIRY_ECAP_EPOCH         (-79)   /* Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） */
 #define AIRY_ECAP_FORGED        (-80)   /* 检测到 Badge 伪造尝试（同时触发 AIRY_FAULT_CAP_FORGED） */
 #define AIRY_ECAP_PERM          (-81)   /* Badge 权限位不满足 opcode 所需权限 */
 #define AIRY_ECAP_FROZEN        (-82)   /* Capability badge 已冻结（badge 撤销，A-ULS 控制，非 C-S0） */
@@ -189,7 +189,7 @@ A-IPC 协议层专用错误码，覆盖 IPC 协议、Ring Buffer、io_uring_cmd�
 | 错误码 | 值 | 触发条件（C-S9 内） | 发送方处理 | 是否触发 Fault |
 |--------|---|---------|-----------|:---:|
 | `AIRY_ECAP_BADGE` | -78 | Badge 格式无效、Random Tag 不匹配（非伪造）、`CAP_CARRY` 置位但 `badge=0` 且 `opcode != CAP_REQUEST` | 检查 Badge 是否正确编译，重新向 sec_d 请求 | 否 |
-| `AIRY_ECAP_EPOCH` | -79 | `badge_epoch != global_epoch`（Badge 已撤销或过期） | 重新向 sec_d 请求 Badge（`CAP_REQUEST` opcode） | 否 |
+| `AIRY_ECAP_EPOCH` | -79 | `badge_epoch != slot_epoch`（per-agent，Badge 已撤销或过期） | 重新向 sec_d 请求 Badge（`CAP_REQUEST` opcode） | 否 |
 | `AIRY_ECAP_FORGED` | -80 | `badge_randtag != agent_caps[src_task].randtag`（Badge 伪造尝试） | 触发 Fault，sec_d 审计，可能终止 Agent | **是**（`AIRY_FAULT_CAP_FORGED` 0x1001） |
 | `AIRY_ECAP_PERM` | -81 | `badge_perms & required != required`（权限位不满足 opcode 所需） | 重新申请更高权限 Badge | 否 |
 | `AIRY_ECAP_FROZEN` | -82 | badge 撤销（A-ULS 控制，非 C-S0） | 等待解冻或联系管理员 | 否 |

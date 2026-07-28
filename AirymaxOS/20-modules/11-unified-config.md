@@ -481,7 +481,7 @@ Badge 64-bit Native Word 的位宽配置（详见 [03-capability-model.md §2.5]
 /* kernel/include/uapi/linux/airymax/config.h —— Badge 位宽配置（[SS] 语义同源） */
 
 /* Badge 64-bit Native Word 布局（默认配置）:
- *   Epoch (16 bits)     [63:48]  全局代际快照
+ *   Epoch (16 bits)     [63:48]  per-agent 代际快照（K9-1 主要撤销机制）
  *   Random Tag (32 bits) [47:16]  per-Agent 随机标签
  *   Perms (16 bits)      [15:0]   权限位图
  *
@@ -531,7 +531,7 @@ extern struct airy_cap_slot agent_caps[AIRY_CAP_MAX_AGENTS_DEFAULT] __aligned(64
 fastpath C-S9 Badge 校验的时间预算配置（详见 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)）：
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c —— fastpath 时间预算（[SS] 语义同源） */
+/* kernel/corekern/ipc/airy_ipc_fastpath.c —— fastpath 时间预算（[SS] 语义同源） */
 
 /* C-S9 Badge 校验时间预算（默认 10ns）
  * 超过预算的校验会触发 SLOW_PATH（io-wq 接管）

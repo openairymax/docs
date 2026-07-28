@@ -181,7 +181,7 @@ agentrt-linux 的 12 daemon 完整名单（与 [10-user-supervisor-daemon.md](10
 | 写者 | `sec_d` 唯一写者（串行化 Badge 编译） |
 | 读者 | 内核 fastpath + `logger_d` + 其他 daemon 只读 |
 | 校验 | fastpath C-S9 内联校验（~10ns） |
-| 撤销 | O(1)（`atomic_inc(&airy_cap_global_epoch)`） |
+| 撤销 | O(1)（`airy_cap_epoch_bump(agent_id)` per-agent，K9-1 主要机制） |
 
 ### 9.3 Badge 64-bit 布局
 
@@ -194,13 +194,13 @@ agentrt-linux 的 12 daemon 完整名单（与 [10-user-supervisor-daemon.md](10
 
 | 字段 | 位宽 | 偏移 | 用途 |
 |------|------|------|------|
-| `Epoch` | 16-bit | 48-63 | 全局 Epoch（O(1) 撤销时 `atomic_inc(&airy_cap_global_epoch)` 跃迁） |
+| `Epoch` | 16-bit | 48-63 | per-agent Epoch（O(1) 撤销时 `airy_cap_epoch_bump(agent_id)` 跃迁 `agent_caps[agent_id].epoch`，K9-1 主要机制） |
 | `RandomTag` | 32-bit | 16-47 | 随机标签（伪造检测：`badge_randtag != agent_caps[src_task].randtag` 即伪造） |
 | `Perms` | 16-bit | 0-15 | 权限位（`badge_perms & required != required` 即权限不足） |
 
 ### 9.4 O(1) 撤销机制
 
-`atomic_inc(&airy_cap_global_epoch)` 触发全局 Epoch 跃迁，所有旧 Badge 在 fastpath C-S9 校验时立即失效（`badge_epoch != global_epoch`），实现 O(1) 撤销。撤销后：
+`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制），该 Agent 的旧 Badge 在 fastpath C-S9 校验时立即失效（`badge_epoch != slot_epoch`），实现 O(1) 定向撤销。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。撤销后：
 
 - `agent_caps[src_task].frozen = true`（C-S0 检查）
 - 后续 Badge 校验失败返回 `AIRY_ECAP_FROZEN = -82`
@@ -227,7 +227,7 @@ fastpath C-S9（~10ns，内联）          slowpath（airy_lsm LSM 钩子）
 | 操作 | 触发方式 | 数据流 |
 |------|---------|--------|
 | Badge 编译 | `airy_sys_call(0, CAP_COMPILE, ...)` | `sec_d` 校验请求 → 写入 `agent_caps[src_task]` → 返回 64-bit Badge |
-| Badge 撤销 | `atomic_inc(&airy_cap_global_epoch)` | 全局 Epoch 跃迁 → 所有旧 Badge 失效（O(1)） |
+| Badge 撤销 | `airy_cap_epoch_bump(agent_id)` | per-agent epoch 跃迁 → 该 Agent 旧 Badge 失效（O(1)） |
 | Badge 查询 | `airy_sys_call(0, CAP_QUERY, ...)` | `sec_d` 查询 `agent_caps[src_task]` → 返回 Badge 状态 |
 
 ---

@@ -408,7 +408,7 @@ struct airy_audit_chain_signature {
 
 | 字段 | 用途 | logger_d 访问方式 |
 |------|------|------------------|
-| `agent_caps[src_task].epoch` | 校验 Badge Epoch 是否匹配全局 Epoch | fastpath C-S9 内联校验（~10ns） |
+| `agent_caps[src_task].epoch` | 校验 Badge Epoch 是否匹配 per-agent slot Epoch | fastpath C-S9 内联校验（~10ns） |
 | `agent_caps[src_task].randtag` | 校验 Badge RandomTag 是否匹配 | fastpath C-S9 内联校验 |
 | `agent_caps[src_task].perms` | 校验 Badge 权限位是否满足日志写入所需权限 | fastpath C-S9 内联校验 |
 | `agent_caps[src_task].frozen` | 检测 Ring 是否冻结 | C-S0 检查（O(1)） |
@@ -428,7 +428,7 @@ static void logger_validate_badge(struct airy_log_record *rec, u64 badge)
 
     /* fastpath C-S9 内联校验（~10ns） */
     if (unlikely(badge_epoch != agent_caps[src_task].epoch)) {
-        /* Epoch 不匹配：Badge 已被 O(1) 撤销（atomic_inc(&airy_cap_global_epoch)） */
+        /* Epoch 不匹配：Badge 已被 O(1) 撤销（airy_cap_epoch_bump(agent_id)，K9-1 per-agent） */
         rec->level = LOG_ERROR;
         rec->facility = AIRY_FAC_SECURITY;
         return;  /* 记录 Badge 过期事件，但不丢弃日志 */
@@ -456,7 +456,7 @@ Capability Folding 校验失败时，`logger_d` 将错误码记录至 Ring Buffe
 
 ### 7.5 O(1) 撤销机制
 
-`atomic_inc(&airy_cap_global_epoch)` 触发全局 Epoch 跃迁后，所有旧 Badge 在 `logger_d` 侧 fastpath C-S9 校验时立即失效（Epoch 不匹配），实现 O(1) 撤销。`logger_d` 在 Epoch 跃迁期间记录的日志会标记 `AIRY_EIPC_FROZEN`，但**不丢弃日志**——日志是故障诊断最后防线，即使 Badge 失效也要保留记录用于事后审计。
+`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）后，该 Agent 的旧 Badge 在 `logger_d` 侧 fastpath C-S9 校验时立即失效（Epoch 不匹配），实现 O(1) 定向撤销。`logger_d` 在 Epoch 跃迁期间记录的日志会标记 `AIRY_EIPC_FROZEN`，但**不丢弃日志**——日志是故障诊断最后防线，即使 Badge 失效也要保留记录用于事后审计。
 
 ---
 

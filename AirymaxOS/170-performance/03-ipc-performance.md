@@ -386,7 +386,7 @@ out_free_batch:
 内核 kthread 之间通信用 kfifo + wait_event_interruptible（这是 Linux 6.6 内核基线的强制约定）：
 
 ```c
-/* kernel/ipc/airy_kfifo_channel.c */
+/* kernel/corekern/ipc/airy_kfifo_channel.c */
 #include <linux/kfifo.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
@@ -792,7 +792,7 @@ out_err:
 | IPC 传输 | 内核 io_uring `IORING_OP_URING_CMD` | 用户态消息队列 | 128B 消息头结构（Layout C v4） |
 | 消息类型枚举 | AIRY_IPC_MSG_* | AIRY_IPC_MSG_* | `include/uapi/linux/airymax/ipc.h` |
 | Badge 64-bit Native Word | fastpath C-S9 内联校验（~10ns） | 用户态 Badge 校验 | Badge 编码 = `Epoch<<48 \| RandomTag<<16 \| Perms` |
-| 全局 Epoch | `atomic_t airy_cap_global_epoch` | 用户态 atomic | Epoch 撤销语义（O(1) atomic_inc） |
+| per-agent Epoch（主）/ 全局 Epoch（辅） | per-agent `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ 补充性 `atomic_t airy_cap_global_epoch`（UNFREEZE 用） | 用户态 atomic | Epoch 撤销语义（O(1) per-agent epoch bump / UNFREEZE atomic_inc） |
 | agent_caps[] 静态数组 | 128KB 内核静态数组（sec_d 唯一写者） | 用户态等价结构 | `airy_cap_badge_compile()` / `airy_cap_badge_ok()` |
 | opcode 枚举 | SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE | 同左 | 7 种 opcode（[SC] 共享契约层） |
 | 错误码 | AIRY_E_IPC_*（-41~-70）+ AIRY_ECAP_*（-78~-82） | 同左 | `include/uapi/linux/airymax/error.h` |

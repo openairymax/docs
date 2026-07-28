@@ -218,9 +218,8 @@ kernel/                         # kernel 子仓本身是 Linux 6.6 完整 fork�
 │   │   ├── stc_mcs_map.c       # seL4 MCS 关键性标志 → Linux 调度策略/GFP 映射 [SS]
 │   │   └── stc_stats.c         # sched_tac 派发统计（atomic 计数器）[SS]
 │   ├── ipc/                    # 基于 io_uring 的 IPC 优化 [SS]
-│   │   ├── airy_uring_cmd.c    # IORING_OP_URING_CMD 入口（ring/fastpath/zero_copy 路由）[SS]
-│   │   ├── airy_ipc_ring.c     # SPSC ring buffer 管理（frozen flag 静默化）[SS]
-│   │   ├── airy_ipc_fastpath.c # IPC fastpath 发送（unlikely 检查后委托 ring_post）[SS]
+│   │   ├── airy_ipc_fastpath.c # IPC fastpath 发送（C-S0 冻结检查 + 委托 ring_post）[SS]
+│   │   ├── airy_ipc_ring.c     # SPSC ring buffer 管理（frozen flag + smp_store_release）[SS]
 │   │   ├── airy_ipc_zero_copy.c # registered-buffer + mmap 零拷贝路径 [SS]
 │   │   └── airy_ipc_internal.h # ring 实例与内部数据结构 [SS]
 │   ├── bpf/                    # eBPF 可观测性探针（非核心架构，H5 约束）[IND]
@@ -280,9 +279,8 @@ kernel/                         # kernel 子仓本身是 Linux 6.6 完整 fork�
 
 基于 io\_uring 构建 IPC 通道的内核侧实现。IPC 消息头与操作码 \[SC] 与 agentrt 共享：
 
-- `airy_uring_cmd.c`：`IORING_OP_URING_CMD` 入口处理器，解析 `ioucmd->cmd_op` 并路由到 ring/fastpath/zero\_copy 三条路径 \[SS]。
-- `airy_ipc_ring.c`：SPSC（单生产者/单消费者）ring buffer 管理，power-of-2 对齐，含 frozen flag 静默化机制 \[SS]。
-- `airy_ipc_fastpath.c`：IPC fastpath 发送，`unlikely()` 检查 frozen flag 后委托 `airy_ipc_ring_post()`，对应 `AIRY_IPC_OP_SEND` 热路径 \[SS]。
+- `airy_ipc_fastpath.c`：IPC fastpath 发送，`unlikely()` 检查 frozen flag 后委托 `airy_ipc_ring_post()`，对应 `AIRY_IPC_OP_SEND` 热路径 \[SS]。M1 阶段将在此文件中集成 `IORING_OP_URING_CMD` 入口分发逻辑（M0 简化为直接调用 `airy_ipc_fastpath_send()`）。
+- `airy_ipc_ring.c`：SPSC（单生产者/单消费者）ring buffer 管理，power-of-2 对齐，含 frozen flag 静默化机制与 `smp_store_release`/`smp_load_acquire` 内存序 \[SS]。
 - `airy_ipc_zero_copy.c`：registered-buffer + mmap 零拷贝路径，`alloc_pages` + `vm_insert_pages` 映射（不使用 DMA coherent memory，ALK-6.6 约束）\[SS]。
 - `airy_ipc_internal.h`：ring 实例与内部数据结构（`struct airy_ipc_ring`），仅供 corekern/ipc 内部引用 \[SS]。
 
@@ -311,7 +309,7 @@ eBPF struct\_ops 扩展，struct\_ops 状态机与 common\_value \[SC] 与 agent
 >
 > - **`agent_caps[1024]` 静态数组**（128KB，每槽 128 字节，`__aligned(64)` cacheline 对齐）替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `_pad`(2) + `_reserved[56]` = 80 字节内容，对齐填充至 128 字节。
 > - **Badge 64-bit 编码**：`Epoch<<48 | RandomTag<<16 | Perms`（bits 63:48 为 16 位 Epoch，bits 47:16 为 32 位 RandomTag，bits 15:0 为 16 位 Perms），派生关系隐式编码在 RandomTag 中，无需 MDB 链表维护。
-> - **O(1) 撤销**：`atomic_inc(&airy_cap_global_epoch)` 全局递增 epoch（`atomic_t`，32 位），所有 badge 校验路径通过 epoch 比对自动失效旧 badge。
+> - **O(1) 撤销**：`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制），fastpath C-S9 校验路径通过 epoch 比对自动失效该 Agent 的旧 badge；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销（`airy_cap_epoch_bump_all()`）时使用。
 > - **CNode 7 操作语义保留**（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate），但实现路径通过 sec_d 串行化（不暴露并发 CNode 操作 API）。
 > - **fastpath C-S9 内联校验**（~10ns）：在 io\_uring `IORING_OP_URING_CMD` 数据面路径上内联 Badge 校验（3 次 READ_ONCE + 位操作 + 比较），避免 slowpath LSM 钩子开销（slowpath 保留作审计/兜底）。
 >
@@ -426,8 +424,8 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 | cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 128 字节 `__aligned(64)` cacheline 对齐） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
 | 写者模型 | 内核态多写者（CNode 操作并发） | **sec_d 唯一写者**（用户态串行化） | 用户态串行化消除内核锁，sec_d 持单写令牌 |
 | Badge 编码 | 64-bit badge 字段（endpoint\_cap/notification\_cap） | **`Epoch<<48 \| RandomTag<<16 \| Perms`** | epoch 位段支持 O(1) 撤销，RandomTag 隐式编码派生关系 |
-| 派生关系 | MDB（Mapping Database）双向链表维护父子 | **RandomTag 隐式编码**（同源派生共享 RandomTag） | 免链表维护，撤销通过 epoch 全局递增实现 |
-| 撤销机制 | `cteRevoke` 递归遍历 MDB 子树 | **`atomic_inc(&airy_cap_global_epoch)`** O(1) | epoch 递增使所有旧 badge 自动失效，校验路径比对 epoch |
+| 派生关系 | MDB（Mapping Database）双向链表维护父子 | **RandomTag 隐式编码**（同源派生共享 RandomTag） | 免链表维护，撤销通过 per-agent epoch 递增实现 |
+| 撤销机制 | `cteRevoke` 递归遍历 MDB 子树 | **`airy_cap_epoch_bump(agent_id)`** O(1) per-agent | per-agent epoch 递增使该 Agent 旧 badge 自动失效，校验路径比对 slot_epoch |
 | 校验路径 | fastpath `cap_endpoint_cap_get_capEPBadge` + slowpath | **fastpath C-S9 内联校验**（~10ns）+ slowpath LSM 钩子（`airy_lsm`） | fastpath 内联避免函数调用开销，slowpath 保留审计 |
 | CNode 操作 | 7 操作（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）内核态并发 | **7 操作语义保留**，实现路径通过 sec_d 串行化 | 语义对齐 seL4（ES-SEL4-08），实现消除并发 |
 
@@ -452,7 +450,8 @@ struct airy_cap_slot {
 static struct airy_cap_slot __airymax_cap_table[AIRY_CAP_MAX_AGENTS] __aligned(64);
 struct airy_cap_slot *agent_caps __ro_after_init = __airymax_cap_table;
 
-/* security/airy/airy_cap.h: 全局 epoch（atomic_t，32 位），独立全局变量 */
+/* security/airy/airy_cap.h: 补充性全局 epoch（atomic_t，32 位），UNFREEZE 时使用；
+ * 主要撤销机制为 per-agent epoch（agent_caps[agent_id].epoch），见 03-capability-model.md */
 extern atomic_t airy_cap_global_epoch;
 ```
 
@@ -467,15 +466,15 @@ static __always_inline int airy_cap_badge_ok(__u64 badge, __u32 agent_id,
     __u64 epoch = AIRY_BADGE_EPOCH(badge);      /* bits 63:48 */
     __u64 perms = AIRY_BADGE_PERMS(badge);       /* bits 15:0  */
     __u64 randtag = AIRY_BADGE_RANDTAG(badge);   /* bits 47:16 */
-    __u64 global_epoch;
+    __u64 slot_epoch;
     __u64 slot_randtag;
 
     if (unlikely(agent_id >= AIRY_CAP_MAX_AGENTS))
         return -AIRY_ECAP_MISSING;
 
-    /* C-S9.1: Epoch check — 1 atomic read */
-    global_epoch = (__u64)atomic_read(&airy_cap_global_epoch);
-    if (unlikely(epoch != global_epoch))
+    /* C-S9.1: Epoch check — 1 READ_ONCE（K9-1 per-agent epoch） */
+    slot_epoch = (__u64)READ_ONCE(agent_caps[agent_id].epoch);
+    if (unlikely(epoch != slot_epoch))
         return -AIRY_ECAP_EPOCH;
 
     /* C-S9.2: RandomTag check — 1 READ_ONCE from cacheline-aligned slot */
@@ -717,12 +716,12 @@ v1.0.1 Capability Folding 将 capability 校验从控制面 syscall 折叠到数
 io_uring 内核侧 issue 路径
     ↓
 [fastpath C-S9] 内联 Badge 校验（~10ns）
-    ├─ C-S9.EPOCH：slot_epoch == expected_epoch？（不匹配返回 -AIRY_ECAP_FROZEN=-82）
-    ├─ C-S9.RANDTAG：RandomTag 派生关系校验
-    └─ C-S9.PERMS：Perms 位段权限校验（send/recv/cap_request 等）
+    ├─ C-S9.EPOCH：slot_epoch == expected_epoch？（不匹配返回 -AIRY_ECAP_EPOCH=-79）
+    ├─ C-S9.RANDTAG：RandomTag 派生关系校验（不匹配返回 -AIRY_ECAP_FORGED=-80）
+    └─ C-S9.PERMS：Perms 位段权限校验（不匹配返回 -AIRY_ECAP_PERM=-81）
     ↓
 校验通过 → io_uring_cmd_done(cmd, ret, res2, issue_flags) 4 参数完成
-校验失败 → 返回 -82 或 -83（AIRY_ESEC_D_THROTTLED sec_d 限流拒绝）
+校验失败 → 返回 -79/-80/-81（AIRY_ESEC_D_THROTTLED sec_d 限流拒绝）
     ↓
 [slowpath] airy_lsm 钩子（LSM_ORDER_MUTABLE，CONFIG_LSM 控制）
     └─ security_uring_cmd(struct io_uring_cmd *ioucmd) 单参数钩子叠加审计

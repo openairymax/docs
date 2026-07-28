@@ -84,7 +84,7 @@ Linux 6.6 提供 `kernel.io_uring_disabled` sysctl，控制 io_uring 的全局�
 ### 2.2 sysctl 配置
 
 ```c
-/* kernel/ipc/airy_uring_security.c —— io_uring_disabled 控制 */
+/* security/airy/airy_lsm.c —— io_uring_disabled 控制 */
 /*
  * Airymax 默认 io_uring_disabled=0（可用），
  * 安全事件时可动态切换为 2（完全禁用）。
@@ -147,7 +147,7 @@ Airymax 对 Agent 可用的 io_uring opcode 实施白名单限制，仅允许 IP
 ### 3.2 白名单实现
 
 ```c
-/* kernel/ipc/airy_uring_security.c —— opcode 白名单 */
+/* security/airy/airy_lsm.c —— opcode 白名单 */
 /*
  * opcode 白名单：仅允许 IORING_OP_URING_CMD + 基础 opcode
  * 其他 opcode 一律拒绝，返回 -EOPNOTSUPP
@@ -230,7 +230,7 @@ opcode 白名单（§3.2 `airy_uring_opcode_check()`）仅校验 `cmd_op` 是否
 #### 3.5.3 `airy_uring_sqe_validate()` 完整 C 实现
 
 ```c
-/* kernel/ipc/airy_uring_security.c —— malformed SQE 完整校验（R6 补强） */
+/* security/airy/airy_lsm.c —— malformed SQE 完整校验（R6 补强） */
 /*
  * airy_uring_sqe_validate: 5 阶段 malformed SQE 完整校验
  *   阶段 1: opcode 白名单（复用 airy_uring_opcode_allowed）
@@ -396,7 +396,7 @@ io_uring_cmd 回调中执行纯 C LSM 双重校验，确保 Capability 与 opcod
 ### 4.2 双重校验实现
 
 ```c
-/* kernel/ipc/airy_uring_security.c —— 纯 C LSM 双重校验 */
+/* security/airy/airy_lsm.c —— 纯 C LSM 双重校验 */
 /*
  * io_uring_cmd 回调中的纯 C LSM 双重校验
  * 第一层：opcode 白名单
@@ -492,7 +492,7 @@ Agent 请求注册 buffer
 ### 5.3 注册实现
 
 ```c
-/* kernel/ipc/airy_uring_security.c —— registered buffer 安全注册 */
+/* security/airy/airy_lsm.c —— registered buffer 安全注册 */
 static int airy_uring_register_buffer_check(struct io_ring_ctx *ctx,
                                               void __user *addr,
                                               unsigned long size)

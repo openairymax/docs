@@ -385,7 +385,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | docs/AirymaxRT/10-architecture/00-architectural-principles.md | 架构原则 | 五维正交 24 原则 |
 | 50-engineering-standards/10-coding-style/ | 编码规范 | C / Rust / 安全编码规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
-| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（14 个 ADR） |
+| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（17 个 ADR） |
 
 ### 5.8 E-8 可测试性原则
 

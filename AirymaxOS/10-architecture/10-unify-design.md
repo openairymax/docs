@@ -385,7 +385,7 @@ A-IPC 的物理载体是 [SC] `ipc.h` Layout C v4 128B 定长消息头（2 cache
 | 52 | crc32 | 4B | CRC32 覆盖 `header[0:52) + payload` | C-S12 |
 | 56 | reserved[72] | 72B | 保留，必须为零 | C-S4 |
 
-> **Badge 64-bit Native Word 位布局**：`Epoch<<48 | RandomTag<<16 | Perms`（Epoch 16 位全局代际 + RandomTag 32 位 per-Agent 随机标签 + Perms 16 位权限位图）。详见 [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md)。
+> **Badge 64-bit Native Word 位布局**：`Epoch<<48 | RandomTag<<16 | Perms`（Epoch 16 位 per-agent 代际 + RandomTag 32 位 per-Agent 随机标签 + Perms 16 位权限位图）。详见 [02-ipc-protocol.md §2.6](../30-interfaces/02-ipc-protocol.md)。
 
 ### 8.4 单平面架构（H1, H4）
 
@@ -455,9 +455,9 @@ badge_epoch   = AIRY_BADGE_EPOCH(badge);
 badge_randtag = AIRY_BADGE_RANDTAG(badge);
 badge_perms   = AIRY_BADGE_PERMS(badge);
 
-/* 1. Epoch 校验（1 次 atomic_read）——撤销立即生效 */
-global_epoch  = airy_cap_epoch_get();
-if (unlikely(badge_epoch != global_epoch))
+/* 1. Epoch 校验（1 次 READ_ONCE，K9-1 per-agent）——撤销立即生效 */
+slot_epoch    = airy_cap_epoch_get(hdr->src_task);
+if (unlikely(badge_epoch != slot_epoch))
     return -AIRY_ECAP_EPOCH;  /* -79 */
 
 /* 2. Random Tag 校验（1 次 READ_ONCE）——防伪造 */
@@ -503,7 +503,7 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 
 ### 8.8 IPC 队列冻结（A-ULS 触发）
 
-当 Micro-Supervisor 检测到异常时，通过 `airy_sys_call + REVOKE_BADGE` 触发 `atomic_inc(&airy_cap_global_epoch)` 立即撤销所有 Badge（1 行代码，无 drain、无 bitmap、无 IPI），同时通过 `AIRY_IPC_OP_FREEZE` opcode 冻结特定 ring。fastpath 通过 C-S0（`ring->frozen == false`）+ C-S9（`badge_epoch != global_epoch`）双重检查零开销跳过——正常路径不触发冻结检查的分支预测失败，仅异常路径才进入冻结处理。
+当 Micro-Supervisor 检测到异常时，通过 `airy_sys_call + REVOKE_BADGE` 触发 `airy_cap_epoch_bump(agent_id)` 立即撤销该 Agent 的 Badge（K9-1 per-agent 主要机制，1 行代码，无 drain、无 bitmap、无 IPI），同时通过 `AIRY_IPC_OP_FREEZE` opcode 冻结特定 ring。fastpath 通过 C-S0（`ring->frozen == false`）+ C-S9（`badge_epoch != slot_epoch`）双重检查零开销跳过——正常路径不触发冻结检查的分支预测失败，仅异常路径才进入冻结处理。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。
 
 ### 8.9 IRON-9 v3 四层模型在 A-IPC 的落地
 
@@ -521,7 +521,7 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 | syscall 数量 | 12（8 seL4 IPC 原语 + 4 控制原语） | 4（1 Capability Invocation + 3 控制原语） |
 | 能力校验路径 | 双路径（控制面 decode_and_invoke + 数据面 cap_check_fast） | 单路径（数据面 fastpath C-S9 内联） |
 | 能力数据结构 | radix tree + per-CPU cache + IPI coherency（~300 行） | `agent_caps[1024]` 静态数组 + 1 个 atomic_t（~50 行） |
-| 撤销机制 | 5ms drain + bitmap + IPI | 1 行 `atomic_inc` |
+| 撤销机制 | 5ms drain + bitmap + IPI | 1 行 `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent 主要机制）；UNFREEZE 全局撤销用 `airy_cap_epoch_bump_all()` |
 | 自举机制 | NULL Badge 硬编码特例 | `AIRY_IPC_OP_CAP_REQUEST` opcode（无硬编码） |
 | 完整性校验 | 无 | CRC32 覆盖 `header[0:52) + payload` |
 | fastpath 延迟 | ~160ns（不含 cap check）+ 50-100ns cap check = ~210-260ns | ~158ns（含 C-S9 Badge ~10ns） |

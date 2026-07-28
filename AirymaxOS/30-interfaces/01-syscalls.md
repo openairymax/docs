@@ -74,11 +74,11 @@ int ret = airy_sys_call(sec_d_cap, &msg);
  * msg.dst_task = target_agent_id
  */
 
-/* sec_d 撤销 Badge（1 行 atomic_inc 立即生效） */
+/* sec_d 撤销 Badge（per-agent epoch bump 立即生效） */
 int ret = airy_sys_call(sec_d_cap, &msg);
 /* msg.opcode = AIRY_IPC_OP_FREEZE
  * msg.dst_task = target_agent_id
- * 内核执行：airy_cap_epoch_increment() → atomic_inc(&airy_cap_global_epoch)
+ * 内核执行：airy_cap_epoch_bump(agent_id) → agent_caps[agent_id].epoch++
  */
 ```
 
@@ -573,7 +573,7 @@ agentrt-linux 为不同 Agent 任务类别定义延迟预算（latency budget）
 | `AIRY_ECAP_RADIX_MISS` | -76 | radix tree 未命中 | （v1.0.1 废弃，保留编号） |
 | `AIRY_ECAP_STATIC_KEY` | -77 | static key 错误 | （保留，0.1.1 不启用） |
 | `AIRY_ECAP_BADGE` | -78 | Badge 错误 | C-S9 校验失败（badge=0 但 CAP_CARRY 置位，或 CAP_REQUEST 非 sec_d） |
-| `AIRY_ECAP_EPOCH` | -79 | Epoch 失配 | C-S9 校验失败（badge_epoch != global_epoch） |
+| `AIRY_ECAP_EPOCH` | -79 | Epoch 失配 | C-S9 校验失败（badge_epoch != slot_epoch，per-agent） |
 | `AIRY_ECAP_FORGED` | -80 | Badge 伪造 | C-S9 校验失败（badge_randtag != agent_caps[randtag]），触发 `AIRY_FAULT_CAP_FORGED` |
 | `AIRY_ECAP_PERM` | -81 | 权限不足 | C-S9 校验失败（badge_perms 不含 opcode 对应权限位） |
 | `AIRY_ECAP_FROZEN` | -82 | capability badge 已冻结 | badge 撤销（A-ULS 控制，非 C-S0） |
@@ -661,7 +661,7 @@ if (ret < 0) {
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
 | **[SC] 共享契约层** | 完全共享代码 | `syscalls.h`（4 核心 + 20 预留 = 24 槽位编号）+ `sched.h`（任务描述符 magic 0x41475453 'AGTS'、优先级 0-139）+ `ipc.h`（IPC magic 0x41524531 'ARE1'、`struct airy_ipc_msg_hdr` Layout C v4 含 `capability_badge` 字段）+ `security_types.h`（capability 44 ID（41 POSIX + 3 Airymax 扩展） + cap_op 7 操作 + Badge 位布局宏 + Capability 权限位）+ `memory_types.h`（MemoryRovol L1-L4）+ `cognition_types.h`（三阶段枚举）+ `error.h`（POSIX/IPC/Capability/[SC]/[DSL]/Fault 码空间） |
-| **[SS] 语义同源层** | 操作模式同源，签名独立演进 | agentrt `syscalls.h`（用户态 libc syscall 包装）↔ agentrt-linux `airy_syscalls.h`（内核 `SYSCALL_DEFINE*`）4 核心同源；Badge 校验机制（`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、`airy_cap_global_epoch` atomic_t）由 agentrt-linux 内核侧实现，agentrt 用户态不感知（H3） |
+| **[SS] 语义同源层** | 操作模式同源，签名独立演进 | agentrt `syscalls.h`（用户态 libc syscall 包装）↔ agentrt-linux `airy_syscalls.h`（内核 `SYSCALL_DEFINE*`）4 核心同源；Badge 校验机制（`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、per-agent `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ `airy_cap_global_epoch` atomic_t（补充性全局计数器，UNFREEZE 时使用））由 agentrt-linux 内核侧实现，agentrt 用户态不感知（H3） |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台 syscall 封装（Linux/macOS/Windows 三平台）↔ agentrt-linux 内核 syscall 表注册（`arch/x86/entry/syscalls/syscall_64.tbl` 新增段）；agentrt 用户态 `capability_badge=0`，agentrt-linux 内核 `capability_badge` 由 sec_d 编译 |
 | **[DSL] 降级生存层** | 降级模式生存 | [DSL] 模式下 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验（H6）；IPC 数据面 fastpath 仍可用，控制面 `airy_sys_call` 降级为传统 cap_t 引用模式 |
 
@@ -704,7 +704,7 @@ if (ret < 0) {
 | 降级场景 | agentrt 用户态行为 | agentrt-linux 内核行为 | 生存保证 |
 |---------|-------------------|----------------------|---------|
 | sec_d 不可用 | `capability_badge=0`（H3） | fastpath C-S9 跳过 Badge 校验（H6） | IPC 数据面 fastpath 仍可用，传统 cap_t 引用模式 |
-| Badge Epoch 溢出 | 不感知（H3） | atomic_inc 回绕，触发 `AIRY_ECAP_EPOCH` (-79) 重新编译 Badge | 短暂 IPC 失败，sec_d 重编译后恢复 |
+| Badge Epoch 溢出 | 不感知（H3） | per-agent epoch 回绕，触发 `AIRY_ECAP_EPOCH` (-79) 重新编译 Badge | 短暂 IPC 失败，sec_d 重编译后恢复 |
 | agent_caps[] 容量满 | 不感知（H3） | 返回 `AIRY_ECAP_MISSING` (-71)，新 Agent 无法获得 Badge | 0.1.1 Agent < 100，1024 槽位足够 |
 | Ring 数据损坏 | 不感知 | C-S12 CRC32 失败，触发 `AIRY_FAULT_RING_CORRUPT` (0x1003) | 消息丢弃，接收方走 SLOW_RECV 等待重传 |
 
@@ -735,7 +735,7 @@ graph TB
     subgraph "[SS] 语义同源层"
         SS_BADGE[airy_cap_badge_ok<br/>3 READ_ONCE + 位运算]
         SS_CAPS[agent_caps 1024<br/>内核静态数组]
-        SS_EPOCH[airy_cap_global_epoch<br/>1 个 atomic_t]
+        SS_EPOCH[agent_caps[].epoch<br/>per-agent（K9-1 主要撤销）]
     end
 
     subgraph "[DSL] 降级生存层"

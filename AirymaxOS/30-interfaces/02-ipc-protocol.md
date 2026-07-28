@@ -160,7 +160,7 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 
 > **SSoT 声明**：本结构体定义以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）为单一数据源。结构体名 `struct airy_ipc_msg_hdr`，`__attribute__((aligned(64)))` 对齐（D-9 修复后移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐），UAPI 类型 `__u32`/`__u16`/`__u64`/`__u8`，字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。本协议主文档与 SSoT 逐字节一致，**缩进风格对齐 OLK-6.6 §1（Tab 8）**。
 >
-> **[SC] / [SS] 边界声明（H2）**：本头文件中 `struct airy_ipc_msg_hdr` 数据结构、字段偏移与大小、magic 值、opcode 枚举、flags 位定义、Badge 位布局宏、Capability 权限位、`_Static_assert(sizeof == 128)` 属于 [SC] 共享契约层；`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、`airy_cap_global_epoch` atomic_t、Random Tag 生成、C-S9 校验逻辑、sec_d Badge 编译流程属于 [SS] 语义同源层（不在本头文件，定义在内核实现侧，权威源为 [07-ipc-fastpath.md §5.2](07-ipc-fastpath.md) 与 [03-capability-model.md §3](../110-security/03-capability-model.md)）。
+> **[SC] / [SS] 边界声明（H2）**：本头文件中 `struct airy_ipc_msg_hdr` 数据结构、字段偏移与大小、magic 值、opcode 枚举、flags 位定义、Badge 位布局宏、Capability 权限位、`_Static_assert(sizeof == 128)` 属于 [SC] 共享契约层；`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、per-agent `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ `airy_cap_global_epoch` atomic_t（补充性全局计数器，UNFREEZE 时使用）、Random Tag 生成、C-S9 校验逻辑、sec_d Badge 编译流程属于 [SS] 语义同源层（不在本头文件，定义在内核实现侧，权威源为 [07-ipc-fastpath.md §5.2](07-ipc-fastpath.md) 与 [03-capability-model.md §3](../110-security/03-capability-model.md)）。
 
 ### 2.1 字段语义
 
@@ -254,7 +254,7 @@ CRC32 覆盖范围: header[0:52) + payload（D-9 修复后字段顺序调整，�
 **物理载体**：
 - 字段位置：`struct airy_ipc_msg_hdr` offset 40-47，8 字节 `__u64`（D-9 修复后 8 字节自然对齐）
 - 位布局：`(Epoch << 48) | (RandomTag << 16) | Perms`
-  - `Epoch`（bits 48-63，16 位）：全局代际快照，由 `airy_cap_global_epoch` atomic_t 维护，1 行 `atomic_inc` 即可全局撤销
+  - `Epoch`（bits 48-63，16 位）：per-agent 代际快照，由 `agent_caps[agent_id].epoch` 维护（K9-1 主要撤销机制），单 Agent 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增该 Agent 的 epoch；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销时使用
   - `RandomTag`（bits 16-47，32 位）：随机标签，由 sec_d 在编译 Badge 时通过 `get_random_bytes()` 生成，防伪造
   - `Perms`（bits 0-15，16 位）：权限位，由 `AIRY_CAP_PERM_*` 宏定义（SEND/RECV/CALL/GRANT/REVOKE/FREEZE/BATCH）
 
@@ -278,7 +278,7 @@ H6: [DSL] 降级模式下 capability_badge 字段存在但被忽略（值=0，�
 | 编译 | `AIRY_BADGE_COMPILE(epoch, randtag, perms)` | sec_d（唯一写者） | 写入 `agent_caps[src_task]` |
 | 携带 | 发送方在 `capability_badge` 字段填入 Badge | 发送方 fastpath | 填入消息头 offset 40 |
 | 校验 | C-S9 内联 `airy_cap_badge_ok()` | 接收方 fastpath | 3 个 `READ_ONCE` + 位运算 |
-| 撤销 | `airy_cap_epoch_increment()` | sec_d（特权操作） | `atomic_inc(&airy_cap_global_epoch)` |
+| 撤销 | `airy_cap_epoch_bump(agent_id)` | sec_d（特权操作） | `agent_caps[agent_id].epoch++`（K9-1 per-agent，主要撤销机制） |
 | 自举 | `AIRY_IPC_OP_CAP_REQUEST` opcode | 任意 Agent | 无 Badge 即可请求 |
 | 降级 | `AIRY_SC_FALLBACK` 编译开关 | 构建系统 | `capability_badge=0`，跳过 C-S9 |
 
@@ -294,7 +294,7 @@ H6: [DSL] 降级模式下 capability_badge 字段存在但被忽略（值=0，�
 | 错误码 | 值 | 触发条件 |
 |--------|---|---------|
 | `AIRY_ECAP_BADGE` | -78 | Badge 格式无效、Random Tag 不匹配、`CAP_CARRY` 置位但 `badge=0` 且 `opcode != CAP_REQUEST` |
-| `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与全局 Epoch 不匹配（已撤销或过期） |
+| `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） |
 | `AIRY_ECAP_FORGED` | -80 | Badge 伪造尝试（同时触发 `AIRY_FAULT_CAP_FORGED` 0x1001） |
 | `AIRY_ECAP_PERM` | -81 | 权限位不满足 opcode 所需 |
 | `AIRY_EIPC_FROZEN` | -53 | Ring 已冻结（C-S0 检查） |
@@ -491,7 +491,7 @@ agentrt-linux 内核态 IPC 通过 `capability_badge` 字段承载 64-bit Native
    - 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`
    - 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`
    - `READ_ONCE(agent_caps[src_task].randtag)` 比对 → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
-   - 比对 `badge_epoch == airy_cap_global_epoch` → 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
+   - 比对 `badge_epoch == slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
    - 比对 `badge_perms & required == required` → 不满足返回 `AIRY_ECAP_PERM`(-81)
 3. **接收方**：使用通过校验的 Badge 权限执行受保护操作。
 
@@ -788,10 +788,10 @@ graph TB
 | 维度 | 单节点 Badge（v1.0.1 选择） | 假设的跨主机 Badge（已拒绝） |
 |------|--------------------------|---------------------------|
 | 物理载体 | `agent_caps[1024]` 内核静态数组（per-node） | 需要分布式共享内存（RDMA/CXL）或分布式 KV |
-| 全局 Epoch | `atomic_t`（单节点原子操作，~1ns） | 需要分布式原子操作（Paxos/Raft，~ms 级） |
+| per-agent Epoch（主）/ 全局 Epoch（辅） | `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ 补充性 `atomic_t`（UNFREEZE 用，单节点原子操作，~1ns） | 需要分布式原子操作（Paxos/Raft，~ms 级） |
 | Random Tag | `get_random_bytes_wait()`（per-node CRNG） | 需要跨主机唯一性保证（避免碰撞） |
 | 校验延迟 | ~10ns（fastpath C-S9 内联） | ~ms 级（网络往返 + 分布式共识） |
-| 故障域 | 单节点故障不影响其他节点 | 任一节点故障可能影响全局 Epoch |
+| 故障域 | 单节点故障不影响其他节点 | 任一节点故障可能影响补充性全局 Epoch |
 | 一致性模型 | 单节点线性一致 | 需要 CAP 取舍（强一致 vs 可用性） |
 | 复杂度 | 低（Linux 内核标准原语） | 高（需引入分布式共识协议） |
 
@@ -834,6 +834,7 @@ graph TB
 │  │  └────────────────┘  │        │  └────────────────┘  │         │
 │  │                      │        │                      │         │
 │  │  agent_caps[] (A)    │        │  agent_caps[] (B)    │         │
+│  │  per-agent epoch (A)│        │  per-agent epoch (B)│         │
 │  │  global_epoch (A)    │        │  global_epoch (B)    │         │
 │  │  sec_d (A)           │        │  sec_d (B)           │         │
 │  └──────────────────────┘        └──────────────────────┘         │
@@ -842,7 +843,7 @@ graph TB
 
 关键设计:
   1. A-IPC 严格单节点（H1-H6），不跨主机
-  2. Badge per-node 独立（agent_caps[]、global_epoch、sec_d 均为 per-node）
+  2. Badge per-node 独立（agent_caps[] 含 per-agent epoch（K9-1 主要撤销机制）、airy_cap_global_epoch（补充性全局计数器，UNFREEZE 时使用）、sec_d 均为 per-node）
   3. 跨节点 IPC 由 gateway_d daemon 承载，使用 gRPC over QUIC/TCP + mTLS
   4. 跨节点消息在入站节点重新进行 Badge 校验（每节点独立 C-S9）
   5. 128B 消息头跨节点保持二进制兼容（[SC] 字段不修改）
@@ -1181,10 +1182,10 @@ static int gateway_d_cert_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 #### 9.6.3 跨节点 Epoch 撤销传播
 
-当某节点撤销所有 Badge（`atomic_inc(&airy_cap_global_epoch)`），该节点的 Badge 全部失效。但**跨节点 IPC 不受影响**——因为：
+当某节点撤销所有 Badge（`airy_cap_epoch_bump_all()`，触发补充性全局计数器 `airy_cap_global_epoch` 自增，用于 UNFREEZE 全局撤销），该节点的 Badge 全部失效。但**跨节点 IPC 不受影响**——因为：
 
-1. **跨节点 IPC 的 Badge 在入站时重新编译**（§9.5.2）：Node B 的 `gateway_d` 在入站时为 Agent B1 编译新的 Badge，使用 Node B 当前的 `global_epoch`
-2. **Node A 的 Epoch 撤销不影响 Node B**：Node A 的 `atomic_inc` 仅影响 Node A 的 Badge，Node B 的 `global_epoch` 独立
+1. **跨节点 IPC 的 Badge 在入站时重新编译**（§9.5.2）：Node B 的 `gateway_d` 在入站时为 Agent B1 编译新的 Badge，使用 Node B 当前的 `global_epoch`（补充性全局计数器）
+2. **Node A 的 Epoch 撤销不影响 Node B**：Node A 的 `airy_cap_epoch_bump_all()` 仅影响 Node A 的 Badge，Node B 的 `global_epoch` 独立
 3. **跨节点消息在 Node A 出站时使用 Node A 的 Badge**（已校验），在 Node B 入站时重新编译为 Node B 的 Badge（重新校验）
 
 **唯一需要跨节点同步的场景**：Agent 从 Node A 迁移到 Node B 时，需要通知 Node A 撤销该 Agent 的 Badge（防止旧 Node 上的残留 Badge 被滥用）。这是 **Agent 迁移协议**的职责，由 cluster manager 通过 Raft 共识协调：

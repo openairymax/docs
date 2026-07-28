@@ -326,7 +326,7 @@ TLA+ 规约文件 `formal/ipc_ring_state_machine.tla` 验证 io_uring IPC Ring B
 
 - **不变量 1**：Ring 状态始终属于 6 态之一。
 - **不变量 2**：状态转换仅在合法路径上（10 条合法转换：IDLE→SQE_READY→ISSUED→PROCESSING→CQE_READY→COMPLETED 为主路径，外加 ERROR→IDLE 回收路径）。
-- **不变量 3**：Badge 单调性——同一 Agent 的 `Epoch` 字段在 Ring 生命周期内非降（`atomic_inc(&airy_cap_global_epoch)` 保证）。
+- **不变量 3**：Badge 单调性——同一 Agent 的 `Epoch` 字段在 Ring 生命周期内非降（`airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch 保证，K9-1 主要机制）。
 - **不变量 4**：magic 0x41524531 'ARE1' 在所有 SQE/CQE 中保持一致。
 - **活性 1**：每个已提交的 SQE 终将产生 CQE（无消息丢失）。
 - **安全性 1**：fastpath C-S9 Badge 校验失败的请求必定走 SLOW_PATH（io-wq 接管），不会进入 PROCESSING 态。
@@ -409,7 +409,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 | 形式化验证 | Isabelle/HOL 定理证明（数学证明） | CBMC 模型检验（高置信度工程证据） | 验证深度差异 | 工程成本（20 人年 vs 1 人月） |
 | 调度模型 | MCS（Mixed Criticality Systems） | sched\_tac（SCHED\_DEADLINE/FIFO/EEVDF + MCS 映射，仅 sched\_tac 不使用 BPF 调度器） | 映射落地 | Linux 调度器兼容 |
 | 故障处理 | handleFault() 内核回调 | `airy_fault_enforce()` + SIGKILL + Macro-Supervisor | 等价落地 | Linux 信号机制 + 用户态监管 |
-| 内存隔离 | 页表隔离 + capability 级联 | Landlock 沙箱 + Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` O(1)）+ KASAN + Cupolas | 强化落地 | Linux 进程模型 + 多层防护 |
+| 内存隔离 | 页表隔离 + capability 级联 | Landlock 沙箱 + Badge 撤销（`airy_cap_epoch_bump(agent_id)` per-agent O(1)，K9-1 主要机制）+ KASAN + Cupolas | 强化落地 | Linux 进程模型 + 多层防护 |
 
 ##### 4.3.6.2 关键差异详解
 
@@ -417,7 +417,7 @@ CBMC 形式化验证基于若干前提假设，这些假设构成验证结果的
 - **Capability 存储差异**：seL4 CNode/CSpace/MDB 动态结构，支持无限 capability；AirymaxOS `agent_caps[1024]` 静态数组，固定 1024 个 Agent 槽位（128KB，`__aligned(64)` cache line 对齐）。工程理由：O(1) 访问 + 锁-free fastpath（~10ns）；影响：Agent 数量限制为 1024（0.1.1 实际 < 100），但 fastpath 性能提升 10x。
 - **IPC 机制差异**：seL4 Call/Send/Recv 系统调用，~100ns fastpath；AirymaxOS io_uring `IORING_OP_URING_CMD` + SQE128，~10ns fastpath（C-S9 Badge 校验）。工程理由：Linux 生态兼容 + 零拷贝 + SQE128 扩展；影响：失去 seL4 的原子性保证（Call 语义），通过 request_id 模式弥补。
 - **形式化验证差异（重点）**：seL4 Isabelle/HOL 定理证明，覆盖所有可能执行路径（数学证明）；AirymaxOS CBMC 模型检验，覆盖有限状态空间 + 有限步数（模型检验）。工程理由：Isabelle/HOL 需要 20+ 人年（seL4 经验），CBMC 可在 1 人月内完成。本质鸿沟：CBMC 验证提供"高置信度工程证据"（覆盖 70%+ 常见漏洞），seL4 Isabelle/HOL 提供"数学证明"（覆盖 100% 可能路径），两者在验证深度上有本质区别，不可等同。升级路径：1.0.1+ 可考虑引入 TLA+ 规约；1.4+ 可考虑 Coq/Isabelle 部分证明。
-- **内存隔离差异**：seL4 页表隔离 + capability 级联撤销；AirymaxOS Landlock 沙箱 + Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` O(1) 撤销）。工程理由：Linux 进程模型兼容 + 快速撤销（~1ns vs seL4 递归撤销 ~μs）；影响：失去 seL4 的硬件级隔离，但通过 Landlock + Badge 双重防护弥补。
+- **内存隔离差异**：seL4 页表隔离 + capability 级联撤销；AirymaxOS Landlock 沙箱 + Badge 撤销（`airy_cap_epoch_bump(agent_id)` per-agent O(1) 撤销，K9-1 主要机制）。工程理由：Linux 进程模型兼容 + 快速撤销（~1ns vs seL4 递归撤销 ~μs）；影响：失去 seL4 的硬件级隔离，但通过 Landlock + Badge 双重防护弥补。
 
 ##### 4.3.6.3 诚实声明
 
@@ -548,14 +548,14 @@ sec_d 是 v1.0.1 Capability Folding 的唯一 Badge 编译者，必须保证串�
 | `sec_d_throttle_burst` | 1000 req/s 突发 100ms | 超过令牌桶容量的请求返回 `AIRY_ESEC_D_THROTTLED = -83` | 限流正确触发 |
 | `sec_d_throttle_recovery` | 限流后等待 1s | 令牌桶恢复，请求通过 | 限流可恢复 |
 | `sec_d_throttle_concurrent` | 8 线程并发 5000 req | 串行化无数据竞争 + 限流统计准确 | sec_d 唯一写者保证 |
-| `sec_d_throttle_epoch_monotonic` | 限流期间 `atomic_inc(&airy_cap_global_epoch)` | Epoch 单调非降 | O(1) 撤销不破坏单调性 |
+| `sec_d_throttle_epoch_monotonic` | 限流期间 `airy_cap_epoch_bump(agent_id)` per-agent | Epoch 单调非降 | O(1) 撤销不破坏单调性 |
 
 **50ms SLO 测试**：
 
 | 测试用例 | 输入 | 期望输出 | SLO |
 |---------|------|---------|-----|
 | `sec_d_badge_compile_slo` | 单次 Badge 编译（`Epoch<<48 \| RandomTag<<16 \| Perms`） | 编译完成 | < 50ms（P99） |
-| `sec_d_badge_revoke_slo` | 单次 `atomic_inc(&airy_cap_global_epoch)` O(1) 撤销 | 撤销完成 | < 1ms（P99） |
+| `sec_d_badge_revoke_slo` | 单次 `airy_cap_epoch_bump(agent_id)` per-agent O(1) 撤销 | 撤销完成 | < 1ms（P99） |
 | `sec_d_fastpath_cs9_slo` | fastpath C-S9 内联校验 | 校验完成 | < 10ns（P99.9） |
 | `sec_d_agent_caps_write_exclusive` | sec_d 写 `agent_caps[1024]` 静态数组 | 无并发写者 | sec_d 唯一写者 |
 

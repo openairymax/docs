@@ -328,7 +328,7 @@ cap_pass:
 | fastpath C-S9 | 3 个 READ_ONCE + 位运算（~10ns） | 直接 `goto cap_pass`（~1ns） |
 | Capability 校验 | Badge 完整校验（Epoch/RandomTag/Perms） | 跳过，仅 POSIX cap（slowpath） |
 | sec_d 状态 | 在线，可编译/撤销 Badge | 不可达，暂停服务 |
-| `airy_cap_global_epoch` | 撤销时 atomic_inc | 冻结，避免误失效 |
+| `airy_cap_global_epoch` | UNFREEZE 时 atomic_inc（补充性，K9-1 起非主要机制） | 冻结，避免误失效 |
 | IPC 可用性 | 完整（7 opcode） | 仅 SEND/RECV（2 opcode） |
 | CAP_REQUEST 自举 | 支持（首次 Badge 申请） | 不支持（sec_d 不可达） |
 

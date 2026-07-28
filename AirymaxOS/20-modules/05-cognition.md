@@ -476,7 +476,7 @@ sequenceDiagram
 
 **fastpath C-S9 校验步骤** \[SS]（cognition 子仓与 services 子仓共用同一 fastpath）：
 
-1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `airy_cap_global_epoch` → 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
+1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
 2. 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`，比对 `READ_ONCE(agent_caps[src_task].randtag)` → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
 3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位（如 `AIRY_PERM_CLT_NOTIFY` / `AIRY_PERM_LLM_SUBMIT`） → 不满足返回 `AIRY_ECAP_PERM`(-81)
 4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_EIPC_FROZEN`(-53)
@@ -497,7 +497,7 @@ struct airy_cap_entry {
 - **索引语义**：`agent_caps[src_task].randtag` 与 IPC 消息头 `src_task` 字段一一对应，cognition 子仓的 cogn_d 作为 `src_task` 之一，其 Badge 由 sec_d 编译至 `agent_caps[cogn_d_task_id]`。
 - **只读访问**：cognition 子仓（含 CoreLoopThree kthread）对 `agent_caps[]` 仅通过 `READ_ONCE()` 读取，**禁止任何写入**（写入由 sec_d 通过 `airy_sys_call` 独占）。
 - **容量上限**：1024 槽位承载 1024 个 Agent/daemon task，cogn_d 占 1 槽，CoreLoopThree kthread 复用 cogn_d 的槽位（kthread 是 cogn_d 的内核态延伸，非独立 task）。
-- **Epoch 失效**：sec_d 撤销时 `atomic_inc(&airy_cap_global_epoch)`，cogn_d 的 Badge 自动失效，下一次 IPC 触发 `AIRY_ECAP_EPOCH`(-79)，cogn_d 重新向 sec_d 申请 Badge。
+- **Epoch 失效**：sec_d 撤销时 `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent 主要机制），cogn_d 的 Badge 自动失效，下一次 IPC 触发 `AIRY_ECAP_EPOCH`(-79)，cogn_d 重新向 sec_d 申请 Badge。
 
 **4.9.5 OLK 6.6 工程规范** \[IND]
 

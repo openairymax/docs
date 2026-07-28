@@ -224,7 +224,7 @@ C-S9 是 Capability Folding 的核心执行点，内联在 fastpath 校验链中
 >
 > | 子检查点 | 命名 | 行业等价语义 | 校验内容 |
 > |---------|------|------------|---------|
-> | Epoch 校验 | `C-S9.EPOCH` | capability generation check | `badge_epoch == global_epoch` |
+> | Epoch 校验 | `C-S9.EPOCH` | capability generation check | `badge_epoch == slot_epoch`（per-agent） |
 > | Random Tag 校验 | `C-S9.RANDTAG` | capability authenticity check | `badge_randtag == agent_caps[src].randtag` |
 > | 权限校验 | `C-S9.PERMS` | capability permission check | `airy_cap_has_perm(badge_perms, opcode)` |
 >
@@ -264,9 +264,9 @@ badge_epoch   = AIRY_BADGE_EPOCH(badge);     /* bits 48-63 */
 badge_randtag = AIRY_BADGE_RANDTAG(badge);   /* bits 16-47 */
 badge_perms   = AIRY_BADGE_PERMS(badge);     /* bits 0-15  */
 
-/* (3a) C-S9.EPOCH: Epoch 校验——badge_epoch == global_epoch */
-global_epoch  = airy_cap_epoch_get();        /* atomic_read */
-if (unlikely(badge_epoch != global_epoch))
+/* (3a) C-S9.EPOCH: Epoch 校验——badge_epoch == slot_epoch（K9-1 per-agent） */
+slot_epoch    = READ_ONCE(agent_caps[hdr->src_task].epoch);
+if (unlikely(badge_epoch != slot_epoch))
     return -AIRY_ECAP_EPOCH;  /* -79，已撤销或过期 */
 
 /* (3b) C-S9.RANDTAG: Random Tag 校验——防伪造 */
@@ -291,7 +291,7 @@ cap_pass:
 **C-S9 关键不变量**：
 - **纯读取零副作用**（OS-KER-225）：C-S9 不持有锁、不调度、不写共享内存（`agent_caps[]` 是只读访问），唯一副作用是检测到伪造时调用 `airy_security_fault()` 触发 Fault（异步处理）。
 - **agent_caps[] 隔离**（30 号 §3 修复）：`agent_caps[]` 是内核静态数组，用户态不可见、不可写，与 kfifo 数据结构物理隔离。
-- **badge_epoch 与 global_epoch 解耦**：badge_epoch 是 Badge 编译时的快照，global_epoch 是当前全局代际，两者解耦避免 race condition。
+- **badge_epoch 与 slot_epoch 解耦**（K9-1 per-agent）：badge_epoch 是 Badge 编译时的快照，slot_epoch 是目标 Agent 的当前 per-agent 代际（`agent_caps[src_task].epoch`），两者解耦避免 race condition。K9-1 将 epoch 从全局改为 per-agent 后，撤销单 Agent 只使其自身 epoch 递增，不影响其他 Agent。
 
 ### 3.2 接收方条件（进入 FAST_RECV）
 
@@ -377,10 +377,10 @@ io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。v1.0.
 
 ### 5.2 fastpath 完整实现（v1.0.1 新增，Capability Folding C-S9 内联）
 
-以下代码是 A-IPC fastpath 的 SSoT 实现参考，物理宿主为 `kernel/ipc/airy_uring_cmd.c`。fastpath 入口 `airy_uring_cmd()` 在 io_uring 持有 `ctx->uring_lock` 时被调用，锁内仅做校验 + 快速投递（无 `wake_up`），需要唤醒时返回 `-EAGAIN`，io-wq 接管（锁外）。
+以下代码是 A-IPC fastpath 的 SSoT 实现参考，物理宿主为 `kernel/corekern/ipc/airy_ipc_fastpath.c`。fastpath 入口 `airy_ipc_fastpath_send()` 在 io_uring 持有 `ctx->uring_lock` 时被调用，锁内仅做校验 + 快速投递（无 `wake_up`），需要唤醒时返回 `-EAGAIN`，io-wq 接管（锁外）。
 
 ```c
-/* kernel/ipc/airy_uring_cmd.c */
+/* kernel/corekern/ipc/airy_ipc_fastpath.c */
 
 #include <linux/io_uring.h>
 #include <linux/io_uring_types.h>
@@ -454,7 +454,7 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
 {
     struct airy_ipc_msg_hdr *hdr = cmd->hdr;
     u64 badge;
-    u16 badge_epoch, global_epoch;
+    u16 badge_epoch, slot_epoch;
     u32 badge_randtag, agent_randtag;
     u16 badge_perms;
 
@@ -523,9 +523,9 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
     badge_randtag = AIRY_BADGE_RANDTAG(badge);
     badge_perms   = AIRY_BADGE_PERMS(badge);
 
-    /* (3a) Epoch 校验 */
-    global_epoch  = airy_cap_epoch_get();
-    if (unlikely(badge_epoch != global_epoch))
+    /* (3a) Epoch 校验（K9-1 per-agent） */
+    slot_epoch    = READ_ONCE(agent_caps[hdr->src_task].epoch);
+    if (unlikely(badge_epoch != slot_epoch))
         return -AIRY_ECAP_EPOCH;  /* -79, 已撤销或过期 */
 
     /* (3b) Random Tag 校验：防伪造 */
@@ -1048,9 +1048,9 @@ CBMC（C Bounded Model Checker）是对 fastpath **100 行代码**做全函数�
 | 验证对象 | 物理宿主 | 行数 | 验证工具 | 验证目标 |
 |---------|---------|------|---------|---------|
 | `airy_cap_badge_ok()` | kernel/security/airy/capability.c | ~30 行 | CBMC | 内存安全 + Badge 校验逻辑不变量 |
-| `airy_ipc_validate()` | kernel/ipc/airy_uring_cmd.c | ~40 行 | CBMC | C-S0~C-S11 校验链完备性 |
-| `airy_ipc_deliver_fast()` | kernel/ipc/airy_uring_cmd.c | ~20 行 | CBMC | kfifo_in 边界 + preempt 平衡 |
-| `airy_ipc_crc32_ok()` | kernel/ipc/airy_crc32.c | ~10 行 | CBMC | CRC32 计算无越界 |
+| `airy_ipc_validate()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~40 行 | CBMC | C-S0~C-S11 校验链完备性 |
+| `airy_ipc_deliver_fast()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~20 行 | CBMC | kfifo_in 边界 + preempt 平衡 |
+| `airy_ipc_crc32_ok()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~10 行 | CBMC | CRC32 计算无越界 |
 | **合计** | — | **~100 行** | CBMC | 全函数验证（H4 硬约束） |
 
 #### 10.6.2 CBMC 属性规约（Property Specifications）
@@ -1089,7 +1089,7 @@ int airy_cap_badge_ok(struct task_struct *task, u64 badge, u16 opcode)
         "P1.1: agent_caps[agent_id] access in bounds");
 
     /* CBMC 不变量: READ_ONCE 不引入数据竞争（单写者 sec_d + 多读者 fastpath） */
-    u16 global_epoch = (u16)atomic_read(&airy_cap_global_epoch);
+    u16 slot_epoch = READ_ONCE(agent_caps[agent_id].epoch);
     u32 agent_randtag = READ_ONCE(agent_caps[agent_id].randtag);
     u16 agent_perms   = READ_ONCE(agent_caps[agent_id].perms);
 
@@ -1103,8 +1103,8 @@ int airy_cap_badge_ok(struct task_struct *task, u64 badge, u16 opcode)
     __CPROVER_assert(((badge >> 16) & 0xFFFFFFFF) <= 0xFFFFFFFF,
         "P1.3: badge_randtag extraction no overflow");
 
-    /* CBMC 不变量: C-S9.EPOCH 校验逻辑正确 */
-    if (badge_epoch != global_epoch)
+    /* CBMC 不变量: C-S9.EPOCH 校验逻辑正确（K9-1 per-agent） */
+    if (badge_epoch != slot_epoch)
         return -AIRY_ECAP_EPOCH;
 
     /* CBMC 不变量: C-S9.RANDTAG 校验逻辑正确 */
@@ -1272,19 +1272,19 @@ verification_targets:
     object_bits: 4
 
   - name: airy_ipc_crc32_ok
-    source: kernel/ipc/airy_crc32.c
+    source: kernel/corekern/ipc/airy_ipc_fastpath.c
     function: airy_ipc_crc32_ok
     unwind: 32                    # CRC32 表查找循环最多 256 次
     object_bits: 16              # 覆盖最大 payload
 
   - name: airy_ipc_deliver_fast
-    source: kernel/ipc/airy_uring_cmd.c
+    source: kernel/corekern/ipc/airy_ipc_fastpath.c
     function: airy_ipc_deliver_fast
     unwind: 10
     object_bits: 16
 
   - name: airy_ipc_validate
-    source: kernel/ipc/airy_uring_cmd.c
+    source: kernel/corekern/ipc/airy_ipc_fastpath.c
     function: airy_ipc_validate
     unwind: 20
     object_bits: 16
@@ -1399,9 +1399,9 @@ verify_target() {
 TARGETS=(
     "airy_cap_badge_ok|kernel/security/airy/capability.c|airy_cap_badge_ok|10|8"
     "airy_op_required_perms|kernel/security/airy/capability.c|airy_op_required_perms|5|4"
-    "airy_ipc_crc32_ok|kernel/ipc/airy_crc32.c|airy_ipc_crc32_ok|32|16"
-    "airy_ipc_deliver_fast|kernel/ipc/airy_uring_cmd.c|airy_ipc_deliver_fast|10|16"
-    "airy_ipc_validate|kernel/ipc/airy_uring_cmd.c|airy_ipc_validate|20|16"
+    "airy_ipc_crc32_ok|kernel/corekern/ipc/airy_ipc_fastpath.c|airy_ipc_crc32_ok|32|16"
+    "airy_ipc_deliver_fast|kernel/corekern/ipc/airy_ipc_fastpath.c|airy_ipc_deliver_fast|10|16"
+    "airy_ipc_validate|kernel/corekern/ipc/airy_ipc_fastpath.c|airy_ipc_validate|20|16"
 )
 
 FAILED=0

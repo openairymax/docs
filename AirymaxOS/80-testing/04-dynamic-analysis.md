@@ -871,7 +871,7 @@ v1.0.1 Capability Folding 引入三类专属竞态场景：
 |------|---------|---------|---------|
 | **R1** | 1024 Agent 并发调用 `airy_cap_badge_compile()` 编译 Badge | `spinlock_t airy_cap_compile_lock`（串行化编译） | KCSAN + lockdep |
 | **R2** | fastpath 多读者读 `agent_caps[]` + slowpath 写者更新 cap_entry | RCU（`rcu_read_lock()` / `synchronize_rcu()`） | KCSAN |
-| **R3** | Epoch 撤销（写者递增 `airy_cap_global_epoch`）+ Badge 校验（读者读 Epoch） | `seqlock_t airy_epoch_seqlock`（读侧不阻塞、写侧串行） | KCSAN + lockdep |
+| **R3** | UNFREEZE 撤销（写者递增补充性 `airy_cap_global_epoch`）+ Badge 校验（读者读 per-agent epoch） | `seqlock_t airy_epoch_seqlock`（读侧不阻塞、写侧串行） | KCSAN + lockdep |
 
 ### 15.2 R1：1024 Agent 并发 Badge 编译
 
@@ -943,16 +943,16 @@ void airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
 
 竞态测试：1024 个读者线程循环调用 `airy_cap_badge_ok()`，1 个写者线程周期性调用 `airy_cap_derive(AIRY_CAP_OP_REVOKE)`，KCSAN 检测是否存在数据竞争。
 
-### 15.4 R3：Epoch 撤销 + Badge 校验（seqlock 保护）
+### 15.4 R3：UNFREEZE 全局 Epoch 撤销 + Badge 校验（seqlock 保护）
 
-`airy_cap_global_epoch` 是全局单调递增计数器，撤销时递增。fastpath 读取该计数器与 Badge 中的 Epoch 比对，使用 `seqlock_t` 保证读到一致的值：
+`airy_cap_global_epoch` 是补充性全局计数器（K9-1 起不再是主要撤销机制；主要撤销机制为 per-agent `agent_caps[agent_id].epoch`，已在 R1/R2 覆盖），仅用于 UNFREEZE 全局撤销（`airy_cap_epoch_bump_all()`）。UNFREEZE 时递增该计数器，fastpath 读取 per-agent epoch 与 Badge 中的 Epoch 比对（主要机制），同时 `airy_cap_global_epoch` 通过 `seqlock_t` 保证读到一致的值（补充性 UNFREEZE 收敛用）：
 
 ```c
-/* kernel/airymaxos/cap/airy_epoch.c */
+/* kernel/airymaxos/cap/airy_epoch.c —— 补充性全局 Epoch（UNFREEZE 用） */
 static seqlock_t airy_epoch_seqlock = __SEQLOCK_UNLOCKED(airy_epoch_seqlock);
-u64 airy_cap_global_epoch = 0;
+u64 airy_cap_global_epoch = 0;  /* 补充性全局计数器，非主要撤销机制 */
 
-/* 读者（fastpath） */
+/* 读者（fastpath UNFREEZE 收敛校验） */
 u16 airy_epoch_read(void)
 {
     unsigned int seq;
@@ -964,7 +964,7 @@ u16 airy_epoch_read(void)
     return epoch;
 }
 
-/* 写者（slowpath 撤销） */
+/* 写者（UNFREEZE 全局撤销：airy_cap_epoch_bump_all() 内部调用） */
 void airy_epoch_advance(void)
 {
     write_seqlock(&airy_epoch_seqlock);

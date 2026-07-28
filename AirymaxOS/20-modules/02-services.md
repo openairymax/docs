@@ -336,13 +336,13 @@ v1.0.1 Capability Folding 将 capability check 从独立控制面操作"折叠"�
 - 令牌桶容量：默认 100 req/s，突发 150（对齐 `gateway_d` 速率限制基线）
 - Badge 编译 SLO：P99 < 50ms（含 `get_random_bytes()` 生成 RandomTag + 写入 `agent_caps[]`）
 - 超限触发 `AIRY_ESEC_D_THROTTLED = -83`（扩展错误码），调用方退避重试
-- 撤销操作 O(1)：`atomic_inc(&airy_cap_global_epoch)` 全局失效，16-bit Epoch 回绕触发 `airy_cap_epoch_rollover_total` CRITICAL 告警
+- 撤销操作 O(1)：`airy_cap_epoch_bump(agent_id)` per-agent 定向失效（K9-1 主要机制），16-bit Epoch 回绕触发 `airy_cap_epoch_rollover_total` CRITICAL 告警
 
 **4.6.3 io_uring fastpath C-S9 Badge 内联校验在 services 层的体现** \[SS]
 
 services 层的 12 daemon 通过 `IORING_OP_URING_CMD` 提交 IPC 消息时，fastpath C-S9 在内核态内联校验 `capability_badge`（~10ns，3 个 `READ_ONCE` + 位运算）：
 
-1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `airy_cap_global_epoch` → 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
+1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
 2. 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`，比对 `READ_ONCE(agent_caps[src_task].randtag)` → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
 3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位 → 不满足返回 `AIRY_ECAP_PERM`(-81)
 4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_EIPC_FROZEN`(-53)

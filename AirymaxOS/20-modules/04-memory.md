@@ -561,9 +561,9 @@ MemoryRovol L1-L4 分层访问受 `sec_d` 颁发的 Badge 权限控制。`mem_d`
 
 **Badge Epoch 失效场景**：
 
-- `sec_d` 执行 `atomic_inc(&airy_cap_global_epoch)` 撤销时，所有飞行中的 MemoryRovol 操作 fastpath C-S9.EPOCH 校验失败，返回 `-AIRY_ECAP_FROZEN = -82`（capability 冻结）。
+- `sec_d` 执行 `airy_cap_epoch_bump(agent_id)` 撤销时（K9-1 per-agent 主要机制），该 Agent 所有飞行中的 MemoryRovol 操作 fastpath C-S9.EPOCH 校验失败，返回 `-AIRY_ECAP_FROZEN = -82`（capability 冻结）。
 - `mem_d` 收到 `-82` 后中止当前操作，通知 `macro_d` 重启受影响 Agent。
-- 跨节点迁移时，`gateway_d` gossip 100ms 内同步 Epoch，确保 peer 节点 Badge 一致失效。
+- 跨节点迁移时，`gateway_d` gossip 100ms 内同步补充性 `airy_cap_global_epoch`（UNFREEZE 用），确保 peer 节点 Badge 一致失效。
 
 > **设计原则**：MemoryRovol 分层访问的 Badge 校验遵循"机制在内核（fastpath C-S9），策略在用户态（sec_d 编译 Badge）"原则（ADR-014 seL4 思想借鉴）。mem_d 不自行决定权限，仅执行 Badge 校验结果。
 

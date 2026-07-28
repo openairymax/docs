@@ -285,7 +285,7 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 
 **seL4 对比**：seL4 的 `cteRevoke` 需递归遍历 MDB 派生树，复杂度 O(N)。
 
-**agentrt-linux 创新**：Badge 撤销采用 **1 行** **`atomic_inc`** 立即生效——全局 Epoch 自增，所有旧 Badge 自动失效。复杂度从撤销方的 O(N) 转移到被撤销方的重新申请。
+**agentrt-linux 创新**：Badge 撤销采用 **1 行** **`airy_cap_epoch_bump(agent_id)`** 立即生效——per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）递增，该 Agent 旧 Badge 自动失效。复杂度从撤销方的 O(N) 转移到被撤销方的重新申请。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。
 
 > **详细设计**：详见 [03-capability-model.md](../110-security/03-capability-model.md)。
 
