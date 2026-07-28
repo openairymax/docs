@@ -343,7 +343,7 @@ static int __init test_airy_cap_41_ids(void)
         }
 
         /* 回收后拒绝 */
-        ret = airy_cap_revoke(current_cred(), cap);
+        ret = airy_cap_derive(agent_id, agent_id, AIRY_CAP_OP_REVOKE, 0);
         if (ret) {
             pr_err("airy_selftest: cap: ID %d revoke failed: %d\n", cap, ret);
             return ret;
@@ -537,7 +537,8 @@ int  airy_lsm_count_registered_hooks(void);
 int  airy_lsm_invoke_hook_by_name(const char *name);
 int  airy_cap_check(const struct cred *, int cap);
 int  airy_cap_grant(const struct cred *, int cap);
-int  airy_cap_revoke(const struct cred *, int cap);
+int  airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
+                     enum airy_cap_op op, uint16_t new_perms);
 int  airy_sc_compute_sha256(int idx, u8 out[32]);
 
 #endif /* _AIRY_SELFTEST_H */

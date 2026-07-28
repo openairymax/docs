@@ -2650,7 +2650,7 @@ agentrt（用户态运行底座）与 agentrt-linux（智能体操作系统）�
 
 | 模块前缀 | 所属模块 | IRON-9 v3 | 示例 |
 |---------|---------|-----------|------|
-| `airy_cap_*` | Capability 令牌系统 | [SS] | `airy_cap_mint()`、`airy_cap_revoke()` |
+| `airy_cap_*` | Capability 令牌系统 | [SS] | `airy_cap_mint()`、`airy_cap_derive(AIRY_CAP_OP_REVOKE, ...)` |
 | `airy_sandbox_*` | 沙箱隔离 | [SS] | `airy_sandbox_create()`、`airy_sandbox_enter()` |
 | `airy_security_*` | 安全策略 | [SS] | `airy_security_check()`、`airy_security_enforce()` |
 | `cupolas_*` | Cupolas 安全穹顶服务 | [SS] | `cupolas_init()`、`cupolas_config_load()` |

@@ -905,7 +905,7 @@ int airy_cap_badge_compile(struct airy_agent *agent, u16 perms, u64 *badge_out)
 
 ### 15.3 R2：fastpath 多读者 + slowpath 写者（RCU 保护）
 
-fastpath `airy_cap_badge_ok()` 是热路径（~10ns SLA），必须无锁读；slowpath `airy_cap_revoke()` 更新 cap_entry 时通过 RCU 保护：
+fastpath `airy_cap_badge_ok()` 是热路径（~10ns SLA），必须无锁读；slowpath `airy_cap_derive(AIRY_CAP_OP_REVOKE)` 更新 cap_entry 时通过 RCU 保护：
 
 ```c
 /* kernel/airymaxos/cap/airy_cap_check.c（fastpath 读者） */
@@ -925,22 +925,23 @@ int airy_cap_badge_ok(u64 badge, const struct airy_cap_entry *entry)
     return ret;
 }
 
-/* kernel/airymaxos/cap/airy_cap_revoke.c（slowpath 写者） */
-void airy_cap_revoke(int idx)
+/* kernel/airymaxos/cap/airy_cap_derive.c（slowpath 写者） */
+void airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
+                     enum airy_cap_op op, uint16_t new_perms)
 {
     struct airy_cap_entry *old, *new;
-    new = kmemdup(&agent_caps[idx], sizeof(*new), GFP_KERNEL);
+    new = kmemdup(&agent_caps[dst_agent], sizeof(*new), GFP_KERNEL);
     new->epoch += 1;           /* 撤销 = Epoch 递增 */
     new->random_tag = get_random_u32();
-    old = rcu_dereference_protected(agent_caps_ref[idx],
+    old = rcu_dereference_protected(agent_caps_ref[dst_agent],
                                     lockdep_is_held(&airy_cap_write_lock));
-    rcu_assign_pointer(agent_caps_ref[idx], new);
+    rcu_assign_pointer(agent_caps_ref[dst_agent], new);
     synchronize_rcu();         /* 等待所有 fastpath 读者退出 */
     kfree(old);
 }
 ```
 
-竞态测试：1024 个读者线程循环调用 `airy_cap_badge_ok()`，1 个写者线程周期性调用 `airy_cap_revoke()`，KCSAN 检测是否存在数据竞争。
+竞态测试：1024 个读者线程循环调用 `airy_cap_badge_ok()`，1 个写者线程周期性调用 `airy_cap_derive(AIRY_CAP_OP_REVOKE)`，KCSAN 检测是否存在数据竞争。
 
 ### 15.4 R3：Epoch 撤销 + Badge 校验（seqlock 保护）
 
@@ -1006,7 +1007,7 @@ static int writer_thread(void *data)
     int idx = (int)(long)data;
     while (!kthread_should_stop()) {
         /* R2：RCU 写者 */
-        airy_cap_revoke(idx);
+        airy_cap_derive(idx, idx, AIRY_CAP_OP_REVOKE, 0);
         /* R3：Epoch 推进 */
         airy_epoch_advance();
         msleep(10);
@@ -1042,7 +1043,7 @@ MODULE_LICENSE("GPL");
 | `agent_caps[].random_tag` 重复数 | 0 | 重复即 Badge 编译串行化失败 |
 | `airy_cap_global_epoch` 回退次数 | 0 | 回退即 seqlock 实现错误 |
 | fastpath 平均时延 | ≤ 10ns | 超过即 RCU 读路径过重 |
-| slowpath `airy_cap_revoke()` 平均时延 | ≤ 1μs | 超过即 `synchronize_rcu()` 耗时过长 |
+| slowpath `airy_cap_derive(REVOKE)` 平均时延 | ≤ 1μs | 超过即 `synchronize_rcu()` 耗时过长 |
 
 **OS-TEST-051**：CI nightly 必须加载 `airy_concurrent_test.ko`（`CONFIG_KCSAN=y` + `CONFIG_LOCKDEP=y`），1024 读者 + 1 写者运行 30 分钟，覆盖 R1/R2/R3 三类竞态场景；任一 KCSAN data-race 报告、lockdep 死锁报告、`random_tag` 重复或 `airy_cap_global_epoch` 回退即标记 nightly 失败。
 

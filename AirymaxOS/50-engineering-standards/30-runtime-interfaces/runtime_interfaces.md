@@ -605,7 +605,7 @@ sequenceDiagram
 
     Note over US: 卸载时：通过能力引用注销
 
-    US->>SYSCALL: airy_cap_revoke(cap)
+    US->>SYSCALL: airy_cap_derive(agent_id, agent_id, AIRY_CAP_OP_REVOKE, 0)
     SYSCALL->>OPS: 注销 ops
     OPS->>KERNEL: 移除 ops 钩子
     KERNEL-->>OPS: 注销完成
@@ -1548,18 +1548,22 @@ int airy_cap_derive(are_cap_t parent, uint64_t subset,
                        are_cap_t *child_out);
 
 /**
- * airy_cap_revoke - 撤销能力
- * @cap: 要撤销的能力令牌
+ * airy_cap_derive - 派生/撤销能力（REVOKE 通过 op=AIRY_CAP_OP_REVOKE）
+ * @src_agent: 源 Agent ID
+ * @dst_agent: 目标 Agent ID
+ * @op: 操作类型（AIRY_CAP_OP_REVOKE 执行撤销）
+ * @new_perms: 新权限位掩码
  *
- * 撤销操作会递归撤销所有子能力，是不可逆操作。
+ * 撤销操作（op=AIRY_CAP_OP_REVOKE）会递归撤销所有子能力，是不可逆操作。
  * 所有持有该能力或其子能力的 Agent 将立即失去对应权限。
  *
  * 返回值:
- *   0: 成功撤销
+ *   0: 成功
  *   -AIRY_EINVAL: 参数无效
  *   -AIRY_EPERM: 权限不足（不是能力所有者）
  */
-int airy_cap_revoke(are_cap_t cap);
+int airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
+                    enum airy_cap_op op, uint16_t new_perms);
 ```
 
 #### 2.3 POSIX capability 41 ID（0-40）枚举
@@ -2183,7 +2187,7 @@ agentrt-linux（AirymaxOS）的 Cupolas 权限引擎严格参考了 seL4 的 cap
 | **能力是唯一访问方式** | 所有资源访问必须通过能力令牌 | `airy_cap_mint` 系列接口 |
 | **能力不可伪造** | 能力令牌由内核管理，用户空间无法伪造 | 内核态能力存储 |
 | **能力派生保持权限不增** | 子能力的权限 <= 父能力的权限 | `mint`/`derive` 必须检查权限子集约束 |
-| **能力可撤销** | 能力撤销递归影响所有派生能力 | `airy_cap_revoke` 递归撤销 |
+| **能力可撤销** | 能力撤销递归影响所有派生能力 | `airy_cap_derive(AIRY_CAP_OP_REVOKE)` 递归撤销 |
 | **最小权限原则** | 每个组件只拥有完成其功能所需的最小能力 | 沙箱创建时默认最小能力集 |
 
 #### 11.2 超越 seL4 的创新

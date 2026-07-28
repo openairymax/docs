@@ -51,7 +51,7 @@ Micro-Supervisor 是内核态的纯 C LSM 模块，不做任何"人性化"决策
 | 初始化入口 | `kernel/kernel/superv/airy_superv_init.c` | `late_initcall` + Micro-Supervisor 启动 |
 | Capability 检测 | `kernel/kernel/superv/airy_cap_check_superv.c` | 纯 C LSM 钩子 |
 | IPC 队列冻结 | `kernel/kernel/superv/airy_ipc_freeze_superv.c` | `ring->frozen` 设置 |
-| die_notifier | `kernel/kernel/superv/airy_die_notify_superv.c` | 内核崩溃通知链 |
+| die_notifier | `security/airy/airy_die_notify.c` | die_notifier 规范注册（LSM 侧，非 superv 模块） |
 | eventfd 通知 | `kernel/kernel/superv/airy_eventfd_superv.c` | 向 Macro-Supervisor 通知 |
 | [IND] 头文件 | `kernel/include/uapi/linux/airymax/superv.h` | 独立实现（不在 [SC] 10 头文件清单中，仅内核 Micro-Supervisor 使用） |
 

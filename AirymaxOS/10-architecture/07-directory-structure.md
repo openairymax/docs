@@ -77,7 +77,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | seL4 原则 | agentrt-linux 目录映射 |
 |----------|----------------------|
-| 微内核只保留原子机制 | kernel/kernel/superv/ 只放 Micro-Supervisor（5 个 .c） |
+| 微内核只保留原子机制 | kernel/kernel/superv/ 只放 Micro-Supervisor（4 个 .c） |
 | 服务用户态化 | services/daemons/ 放 12 个 daemon |
 | 机制在内核，策略在用户态 | Micro-Supervisor（机制）+ Macro-Supervisor（策略） |
 | capability-based security | security/capability/ + security/airy_lsm/ |
@@ -523,7 +523,6 @@ kernel/
 │   │   ├── stc_mcs_map.c            # seL4 MCS 语义映射
 │   │   └── stc_stats.c              # 调度统计
 │   ├── ipc/                          # io_uring IPC 内核侧
-│   │   ├── airy_uring_cmd.c         # IORING_OP_URING_CMD 处理
 │   │   ├── airy_ipc_ring.c          # Ring Buffer 管理
 │   │   ├── airy_ipc_fastpath.c      # fastpath（unlikely(ring->frozen)）
 │   │   └── airy_ipc_zero_copy.c     # registered buffer + mmap
@@ -545,11 +544,10 @@ kernel/
 │       ├── airy_struct_ops.c        # struct airy_struct_ops_value（可观测性用，非 sched_ext）
 │       └── airy_bpf_probe.c         # 可观测性探针
 │
-├── kernel/kernel/superv/                    # ★ Micro-Supervisor 内核模块（5 个 .c）
+├── kernel/kernel/superv/                    # ★ Micro-Supervisor 内核模块（4 个 .c）
 │   ├── airy_superv_init.c           # Micro-Supervisor 初始化入口（late_initcall）
 │   ├── airy_cap_check_superv.c     # v1.1 slowpath LSM 钩子（C-S9 失败接管）
 │   ├── airy_ipc_freeze_superv.c    # ring->frozen = true（smp_store_release）
-│   ├── airy_die_notify_superv.c    # die_notifier（priority INT_MAX）
 │   ├── airy_eventfd_superv.c       # eventfd_signal 非阻塞通知
 │   └── Kbuild                       # superv 模块构建
 │
@@ -800,7 +798,6 @@ security/
 │   ├── airy_cap_array.c             # agent_caps[1024] 静态数组管理（v1.0.1 替代 radix_tree 派生树）
 │   ├── airy_cap_derive.c            # seL4 CNode 派生（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）
 │   ├── airy_cap_check.c             # slowpath 校验（fastpath C-S9 Badge 内联在 kernel/kernel/superv/airy_cap_check.c）
-│   ├── airy_cap_revoke.c            # 撤销（atomic_inc(&airy_cap_global_epoch) O(1) 立即生效）
 │   ├── airy_cap_rotate.c            # 轮换（Epoch 更新）
 │   └── airy_cap.h
 │
@@ -1499,7 +1496,7 @@ typedef int32_t airy_err_t;
 
 | Supervisor | 执行域 | 物理路径 | 职责 |
 |-----------|--------|---------|------|
-| Micro-Supervisor | 内核态 | `kernel/kernel/superv/`（5 个 .c） | 冷酷执法：检测 → 冻结 → 返回 AIRY_FAULT_ABNORMAL_CAP → eventfd 通知 |
+| Micro-Supervisor | 内核态 | `kernel/kernel/superv/`（4 个 .c） | 冷酷执法：检测 → 冻结 → 返回 AIRY_FAULT_ABNORMAL_CAP → eventfd 通知 |
 | Macro-Supervisor | 用户态 | `services/daemons/macro_d/` | 温情裁决：接收 eventfd → 查询上下文 → 裁决（警告/降级/暂停/终止） |
 
 详细设计见 [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md)。
@@ -1629,7 +1626,7 @@ graph TD
 | `include/kernel/` | Linux 6.6 原生 | 内核内部头 |
 | `include/airymax/` | ★ Airymax 新增 | 内核内部头（[IND] 独立层，非 UAPI；如 `maintainer_types.h`/`build_types.h`/`kconfig_types.h`） |
 | `corekern/` | ★ Airymax 新增 | 内核增强（api/sched/ipc/taskflow/memory/time/object/locking/irq/bpf） |
-| `kernel/kernel/superv/` | ★ Airymax 新增 | Micro-Supervisor（5 个 .c） |
+| `kernel/kernel/superv/` | ★ Airymax 新增 | Micro-Supervisor（4 个 .c） |
 | `log/` | ★ Airymax 新增 | A-ULP 内核侧 |
 | `ipc/` | ★ Airymax 新增 | IPC 内核基础设施 |
 | `config/` | ★ Airymax 新增 | ALK 配置项 |
@@ -1683,14 +1680,13 @@ graph TD
 
 ### 9.4 Micro-Supervisor 内核模块
 
-**路径**：`kernel/kernel/superv/`（5 个 .c）
+**路径**：`kernel/kernel/superv/`（4 个 .c）
 
 **文件**：
 1. `airy_superv_init.c`：Micro-Supervisor 初始化入口（`late_initcall`）
 2. `airy_cap_check_superv.c`：v1.1 slowpath LSM 钩子（C-S9 失败接管，详见 [07-airy-lsm-design.md §3.3](../110-security/07-airy-lsm-design.md)）
 3. `airy_ipc_freeze_superv.c`：`ring->frozen = true`（`smp_store_release`）
-4. `airy_die_notify_superv.c`：`die_notifier`（priority `INT_MAX`）
-5. `airy_eventfd_superv.c`：`eventfd_signal` 非阻塞通知
+4. `airy_eventfd_superv.c`：`eventfd_signal` 非阻塞通知
 
 **冷酷执法 4 步流程**：
 1. 检测（`airy_uring_cmd_check`）

@@ -207,18 +207,21 @@ struct airy_cap_slot {
     __u32   flags;            /* Slot flags */
     __u32   randtag;          /* Random tag for forgery prevention */
     __u16   perms;            /* Permission bits */
-    __u16   _pad;             /* Alignment */
+    __u16   epoch;            /* Per-agent epoch (K9-1: primary revocation mechanism) */
     __u8    _reserved[56];    /* Cacheline padding */
 } __attribute__((aligned(64)));
 
 extern struct airy_cap_slot agent_caps[AIRY_CAP_MAX_AGENTS];
 
-/* 全局 Epoch（1 个 atomic_t，撤销时 1 行 atomic_inc 立即失效所有 Badge）*/
+/* 全局 Epoch（补充性全局计数器，v1.0.1 K9-1 起不再是主要撤销机制；
+ * per-agent epoch（agent_caps[agent_id].epoch）是主要撤销机制，
+ * 撤销爆炸半径从全局 1024 个 Agent 收窄到单个 Agent。）
+ */
 extern atomic_t airy_cap_global_epoch;
 
-static inline uint16_t airy_cap_epoch_get(void)
+static inline uint16_t airy_cap_epoch_get(uint32_t agent_id)
 {
-    return (uint16_t)atomic_read(&airy_cap_global_epoch);
+    return READ_ONCE(agent_caps[agent_id].epoch);
 }
 ```
 
@@ -431,8 +434,11 @@ int airy_cap_badge_compile(uint32_t agent_id, uint16_t perms)
     /* 2. 获取全局 mutex（串行化 Badge 编译，保证 agent_caps[] 写入顺序）*/
     mutex_lock(&airy_cap_compile_mutex);
 
-    /* 3. 读取当前全局 Epoch（atomic_read，~1ns）*/
-    epoch = (uint16_t)atomic_read(&airy_cap_global_epoch);
+    /* 3. 读取当前 per-agent Epoch（READ_ONCE，~1ns）
+     *    v1.0.1 K9-1: 从全局 atomic_read 改为 per-agent READ_ONCE，
+     *    撤销爆炸半径从全局 1024 个 Agent 收窄到单个 Agent。
+     */
+    epoch = READ_ONCE(agent_caps[agent_id].epoch);
 
     /* 4. 生成 32-bit Random Tag（防伪造，~1.5μs 平均）
      *    使用 get_random_bytes_wait 确保熵充足（不使用 get_random_bytes_arch）
@@ -520,7 +526,6 @@ int airy_cap_badge_compile_batch(const struct airy_cap_compile_req *requests,
                                   size_t count, uint64_t *badges_out)
 {
     uint32_t *randtags;
-    uint16_t epoch;
     int ret = 0;
     size_t i;
 
@@ -529,7 +534,7 @@ int airy_cap_badge_compile_batch(const struct airy_cap_compile_req *requests,
 
     /* 1. 单次 mutex 获取 */
     mutex_lock(&airy_cap_compile_mutex);
-    epoch = (uint16_t)atomic_read(&airy_cap_global_epoch);
+    /* v1.0.1 K9-1: per-agent epoch，在循环内按 agent_id 读取 */
 
     /* 2. 批量生成 Random Tag（一次填充 count×4 字节随机池）*/
     randtags = kmalloc_array(count, sizeof(uint32_t), GFP_KERNEL);
@@ -548,6 +553,7 @@ int airy_cap_badge_compile_batch(const struct airy_cap_compile_req *requests,
     for (i = 0; i < count; i++) {
         uint32_t agent_id = requests[i].agent_id;
         uint16_t perms = requests[i].perms;
+        uint16_t epoch;  /* v1.0.1 K9-1: per-agent epoch */
         uint64_t badge;
 
         if (unlikely(agent_id >= AIRY_CAP_MAX_AGENTS)) {
@@ -555,6 +561,7 @@ int airy_cap_badge_compile_batch(const struct airy_cap_compile_req *requests,
             break;
         }
 
+        epoch = READ_ONCE(agent_caps[agent_id].epoch);
         badge = AIRY_BADGE_COMPILE(epoch, randtags[i], perms);
         WRITE_ONCE(agent_caps[agent_id].randtag, randtags[i]);
         WRITE_ONCE(agent_caps[agent_id].perms, perms);
@@ -596,14 +603,15 @@ agentrt-linux 借鉴 seL4 的 7 种核心 CNode 派生操作（`src/object/cnode
 | **Mint** | `airy_cap_mint()` | v1.0.1 | 铸造 capability（可附加新 badge 数据） |
 | **Move** | `airy_cap_move()` | 1.0.1 | 移动 capability（改变 CNode 位置，badge 不变） |
 | **Mutate** | `airy_cap_mutate()` | 1.0.1 | 变异 capability（修改权限位，不重新生成 RandomTag） |
-| **Revoke** | `airy_cap_revoke()` | v1.0.1 | 递归撤销 capability（`atomic_inc(&airy_cap_global_epoch)`） |
+| **Revoke** | `airy_cap_derive(AIRY_CAP_OP_REVOKE)` | v1.0.1 | 递归撤销 capability（per-agent epoch bump，O(1) 定向撤销） |
 | **Delete** | `airy_cap_delete()` | 1.0.1 | 删除单个 capability（不影响派生树） |
-| **Rotate** | `airy_cap_rotate()` | v1.0.1 | 轮换 Badge（仅更新 Epoch，不重新生成 RandomTag） |
+| **Rotate** | `airy_cap_rotate()` | v1.0.1 | 轮换 Badge（重新生成 RandomTag，保留 Epoch 和 Perms） |
 
 **Rotate vs Revoke 区别**：
-- `Revoke`：`atomic_inc(&airy_cap_global_epoch)`，全局撤销所有 Agent 的所有 Badge
-- `Rotate`：仅更新单个 Agent 的 `agent_caps[agent_id].randtag`，不影响其他 Agent
-- 使用场景：Revoke 用于安全事件（Badge 泄漏），Rotate 用于定期轮换（降低 Badge 暴力破解风险）
+- `Revoke`：递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch++`），仅使该 Agent 的 Badge 失效，不影响其他 Agent
+- `Rotate`：重新生成目标 Agent 的 RandomTag（`agent_caps[agent_id].randtag = get_random_u32()`），同样仅影响该 Agent
+- 使用场景：Revoke 用于安全事件（Badge 泄漏，需立即失效），Rotate 用于定期轮换（降低 Badge 暴力破解风险）
+- **注**：v1.0.1 已从全局 epoch（`airy_cap_global_epoch`）改为 per-agent epoch，撤销爆炸半径从 1024 个 Agent 收窄到单个 Agent
 
 ### 3.2 Mint 操作（缩减权限派生）
 
@@ -667,12 +675,17 @@ int airy_cap_derive(uint32_t src_cap, uint32_t dest_agent,
 
 ```c
 /**
- * airy_cap_revoke - 递归撤销所有派生 capability
- * @src_cap: 源 capability ID
+ * airy_cap_derive(AIRY_CAP_OP_REVOKE) - 递归撤销所有派生 capability
+ * @src_agent: 源 Agent ID
  *
  * 返回: 0 成功，-AIRY_EINVAL 源 cap 无效
  *
  * 借鉴 seL4 cnode.c:528-550 的 cteRevoke 算法。
+ *
+ * v1.0.1 实现：递增目标 Agent 的 per-agent epoch
+ *（`agent_caps[agent_id].epoch++`），使该 Agent 所有已分发
+ * Badge 立即失效。撤销爆炸半径从全局 1024 个 Agent 收窄到
+ * 单个 Agent。
  *
  * 递归撤销算法（MDB 链表遍历 + preemptionPoint）:
  *   while (还有派生 capability) {
@@ -687,7 +700,7 @@ int airy_cap_derive(uint32_t src_cap, uint32_t dest_agent,
  *
  * @since 1.0.1
  */
-int airy_cap_revoke(uint32_t src_cap);
+/* 实际签名：airy_cap_derive(src_agent, dst_agent, AIRY_CAP_OP_REVOKE, 0) */
 ```
 
 **preemptionPoint 设计**：借鉴 seL4 的抢占点模式，长时间撤销操作分块可抢占。每撤销 N 个 capability（默认 N=64）插入一次抢占点，允许调度器响应更高优先级任务。
@@ -696,7 +709,7 @@ int airy_cap_revoke(uint32_t src_cap);
 
 ## 4. POSIX Capability 集成
 
-### 4.1 41 ID 枚举
+### 4.1 44 ID 枚举
 
 对齐 `security_types.h`（[SC] 共享头文件）定义的 POSIX capability 41 ID（0-40） 枚举。agentrt-linux 在 Linux 6.6 标准 41 个 POSIX capability（编号 0-40，CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40，无废弃）基础上，新增 Airymax 专属 capability（编号 41-43）：
 
@@ -775,7 +788,7 @@ static inline int airy_cap_badge_ok(u64 src_task, u64 badge, u16 opcode)
 {
     u16 badge_epoch;
     u32 badge_randtag, agent_randtag;
-    u16 badge_perms, global_epoch;
+    u16 badge_perms, agent_epoch;
 
     /* CAP_REQUEST 自举: 首 Badge 申请走 sec_d，无 Badge 校验 */
     if (unlikely(opcode == AIRY_IPC_OP_CAP_REQUEST)) {
@@ -792,10 +805,10 @@ static inline int airy_cap_badge_ok(u64 src_task, u64 badge, u16 opcode)
         goto cap_pass;  /* H3: agentrt 用户态 badge=0 跳过；H6: [DSL] 降级跳过 */
     }
 
-    /* #1: Epoch 校验（1 次 atomic_read，~1ns）*/
+    /* #1: Epoch 校验（1 次 READ_ONCE，~1ns）—— v1.0.1 K9-1: per-agent epoch */
     badge_epoch = AIRY_BADGE_EPOCH(badge);
-    global_epoch = airy_cap_epoch_get();
-    if (unlikely(badge_epoch != global_epoch))
+    agent_epoch = READ_ONCE(agent_caps[src_task].epoch);
+    if (unlikely(badge_epoch != agent_epoch))
         return -AIRY_ECAP_EPOCH;  /* -79: Badge 已撤销 */
 
     /* #2: Random Tag 校验（1 次 READ_ONCE，~1ns）——防伪造核心*/
@@ -907,7 +920,7 @@ enum airy_cap_state {
 | 旧 syscall（v1.0） | 旧编号 | v1.0.1 处理方式 | v1.0.1 落地 |
 |-------------------|-------|--------------|----------|
 | `airy_sys_capability_request` | 592 | 移除 → CAP_REQUEST opcode 自举 | A-IPC `AIRY_IPC_OP_CAP_REQUEST`（无 syscall，无特殊 Badge，无硬编码 dst_task） |
-| `airy_sys_capability_revoke` | 593 | 移除 → `airy_sys_call` + `REVOKE_BADGE` | 1 行 `atomic_inc(&airy_cap_global_epoch)`（无 drain、无 bitmap）|
+| `airy_sys_capability_revoke` | 593 | 移除 → `airy_sys_call` + `REVOKE_BADGE` | 1 行 `agent_caps[agent_id].epoch++`（无 drain、无 bitmap，per-agent 定向撤销）|
 | `airy_sys_lsm_load_policy` | 594 | 移除 → `airy_sys_call` + `LSM_CTL` | sec_d 专属 |
 | `airy_sys_capability_derive` | 595 | 移除 → `airy_sys_call` + `COMPILE_BADGE` | sec_d 专属 |
 | `airy_sys_capability_mint` | 596 | 移除 → `airy_sys_call` + `COMPILE_BADGE` | sec_d 专属 |
@@ -1156,7 +1169,7 @@ int airy_vault_seal_tpm(uint32_t cap_id, uint32_t tpm_handle);
 | v1.0.1 syscall | 编号 | 子命令 | 功能 | 调用者 |
 |--------------|------|--------|------|--------|
 | `airy_sys_call` | 512 | `COMPILE_BADGE` | sec_d 编译 Badge（含 mint/mintcopy/derive 等价语义）| 仅 sec_d |
-| `airy_sys_call` | 512 | `REVOKE_BADGE` | 撤销 Badge（1 行 `atomic_inc(&airy_cap_global_epoch)`）| 仅 sec_d |
+| `airy_sys_call` | 512 | `REVOKE_BADGE` | 撤销 Badge（1 行 `agent_caps[agent_id].epoch++`，per-agent 定向撤销）| 仅 sec_d |
 | `airy_sys_call` | 512 | `LSM_CTL` | 加载 LSM 策略 | 仅 sec_d |
 | `airy_sys_call` | 512 | `WASM_LOAD` | 加载 Wasm 模块 | 仅 sec_d |
 | `airy_sys_rovol_ctl` | 513 | — | MemoryRovol 控制 | rovol_d |
@@ -1217,10 +1230,11 @@ struct airy_cmd_compile_badge {
 
 /* REVOKE_BADGE 子命令参数 */
 struct airy_cmd_revoke_badge {
-    uint32_t agent_id;              /* 目标 Agent ID（0 = 全局撤销，atomic_inc）*/
+    uint32_t agent_id;              /* 目标 Agent ID（per-agent 定向撤销）*/
     uint32_t reserved;
-    /* REVOKE_BADGE 执行: atomic_inc(&airy_cap_global_epoch)
-     * 效果: 所有已发出 Badge 的 Epoch 立即过期，下次 fastpath C-S9 校验失败
+    /* REVOKE_BADGE 执行: agent_caps[agent_id].epoch++
+     * 效果: 该 Agent 已发出 Badge 的 Epoch 立即过期，下次 fastpath C-S9 校验失败
+     *       （仅影响目标 Agent，不影响其他 Agent——K9-1 per-agent epoch 修复）
      * 性能: 1 行代码，~1ns，无 drain、无 bitmap、无 IPI
      */
 };
@@ -1488,7 +1502,7 @@ agentrt-linux 独有：
 | 跳过 C-S9 | fastpath 不执行 `airy_cap_badge_ok()`，直接 `goto cap_pass` |
 | 仅保留 POSIX capability | 41 个标准 cap 位图校验（slowpath `airy_cap_check()`） |
 | sec_d 不可达 | Badge 编译/撤销暂停，恢复后批量处理 |
-| Epoch 不更新 | `airy_cap_global_epoch` 冻结，避免误失效 |
+| Epoch 不更新 | per-agent `agent_caps[agent_id].epoch` 冻结，避免误失效 |
 
 详细 [DSL] 降级模式见 [11-degraded-survival-layer.md §4.4](../10-architecture/11-degraded-survival-layer.md)。
 
@@ -1562,7 +1576,7 @@ airy_ipc_deliver_fast()（NONBLOCK，~158ns 总延迟）
 | 物理存储 | `struct radix_tree_root slots`（动态分配） | `agent_caps[1024]` 静态数组（128KB） |
 | 校验路径 | 独立前置 `airy_cap_check()` + per-cpu cache | fastpath C-S9 内联 `airy_cap_badge_ok()` |
 | 校验延迟 | ~50-100ns（radix tree 遍历 + cache 查询） | ~10ns（3 个 READ_ONCE + 位运算） |
-| 撤销机制 | 递归遍历 children 链表 + IPI 失效 per-cpu cache | 1 行 `atomic_inc(&airy_cap_global_epoch)` |
+| 撤销机制 | 递归遍历 children 链表 + IPI 失效 per-cpu cache | 1 行 `agent_caps[agent_id].epoch++`（per-agent 定向撤销）|
 | 锁开销 | CSpace 读写锁 + per-cpu cache 锁 | 零锁（单写者 sec_d + 多读者 fastpath） |
 | 同步开销 | RCU synchronize + IPI | 零 RCU、零 IPI |
 | syscall 数量 | 9 个独立 syscall（0.1.1 模型 592-600） | 4 核心 syscall + op-dispatch（548-551，`airy_sys_call` 承载 COMPILE_BADGE / REVOKE_BADGE） |
@@ -1631,8 +1645,8 @@ void agent_terminate_cleanup(uint32_t agent_id)
     blob = cupolas_cred(current_cred());
     cspace = blob->cspace;
 
-    /* 2. 递归撤销根 capability */
-    airy_cap_revoke(cspace->root_cap);
+    /* 2. 递归撤销根 capability（v1.0.1 K9-1: 通过 airy_cap_derive + AIRY_CAP_OP_REVOKE）*/
+    airy_cap_derive(agent_id, agent_id, AIRY_CAP_OP_REVOKE, 0);
 
     /* 3. 清理 CSpace */
     airy_cspace_destroy(cspace);
@@ -1828,7 +1842,8 @@ static int __init airy_cap_agent_caps_init(void)
                  node, AIRY_CAP_MAX_AGENTS * sizeof(struct airy_cap_slot) / 1024);
     }
 
-    atomic_set(&airy_cap_global_epoch, 0);
+    atomic_set(&airy_cap_global_epoch, 0);  /* 全局 Epoch 初始化（补充性计数器）*/
+    /* 注: per-agent epoch（agent_caps[i].epoch）由 __GFP_ZERO 自动清零 */
     return 0;
 }
 ```
@@ -2051,7 +2066,9 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
   │  └──────────────────────────────────┘   │
   │  ┌──────────────────────────────────┐   │
   │  │       airy_cap_global_epoch       │   │
-  │  │  （atomic_t，单节点内全局）         │   │
+  │  │  （atomic_t，补充性全局计数器；     │   │
+  │  │   主要撤销机制为 per-agent epoch   │   │
+  │  │   agent_caps[i].epoch）            │   │
   │  └──────────────────────────────────┘   │
   │  ┌──────────────────────────────────┐   │
   │  │       sec_d（唯一 Badge 编译者）   │   │
@@ -2061,7 +2078,7 @@ static int airy_ipc_validate(struct airy_ipc_cmd *cmd)
 
 **0.1.1 单节点一致性保证**：
 - sec_d 独占 `agent_caps[1024]`（H4 单写者约束，详见 §2.4）
-- `airy_cap_global_epoch` 是单节点 atomic_t，无跨节点同步需求
+- `airy_cap_global_epoch` 是单节点 atomic_t（补充性全局计数器；主要撤销机制为 per-agent `agent_caps[i].epoch`），无跨节点同步需求
 - 所有 Agent 的 Badge 在同一节点编译、校验、撤销
 - **明确声明：0.1.1 不实现跨节点 Badge 一致性**（AirymaxOS 0.1.1 是单节点部署）
 
@@ -2144,16 +2161,16 @@ Agent_A（节点 A）→ Agent_B（节点 B）跨节点 IPC:
  * 冲突解决: 收到对端 epoch > 本地 epoch 时，本地 epoch 提升至对端值。
  */
 
-static int airy_epoch_gossip_merge(uint16_t remote_epoch)
+static int airy_epoch_gossip_merge(uint32_t agent_id, uint16_t remote_epoch)
 {
-    uint16_t local_epoch = (uint16_t)atomic_read(&airy_cap_global_epoch);
+    uint16_t local_epoch = READ_ONCE(agent_caps[agent_id].epoch);
 
     /* 高 Epoch 覆盖低 Epoch（单调递增）*/
     if (remote_epoch > local_epoch) {
-        atomic_set(&airy_cap_global_epoch, remote_epoch);
-        syslog(LOG_INFO, "airy: epoch synced %u → %u (gossip)",
-               local_epoch, remote_epoch);
-        /* 本节点所有旧 Badge 自动失效（C-S9.EPOCH 检查失败）*/
+        WRITE_ONCE(agent_caps[agent_id].epoch, remote_epoch);
+        syslog(LOG_INFO, "airy: agent %u epoch synced %u → %u (gossip)",
+               agent_id, local_epoch, remote_epoch);
+        /* 该 Agent 旧 Badge 自动失效（C-S9.EPOCH 检查失败）*/
     }
     /* remote_epoch <= local_epoch: 无操作（本地已是最新或更新）*/
     return 0;
@@ -2228,8 +2245,9 @@ static void test_cap_revoke_recursive(struct kunit *test)
     KUNIT_EXPECT_EQ(test, 0,
         airy_cap_mintcopy(child1, agent_d, 0x03, &grandchild));
 
-    /* 4. 撤销根 capability */
-    KUNIT_EXPECT_EQ(test, 0, airy_cap_revoke(root_cap));
+    /* 4. 撤销根 capability（v1.0.1 K9-1: 通过 airy_cap_derive + AIRY_CAP_OP_REVOKE）*/
+    KUNIT_EXPECT_EQ(test, 0,
+        airy_cap_derive(agent_a, agent_a, AIRY_CAP_OP_REVOKE, 0));
 
     /* 5. 验证所有派生 capability 已撤销 */
     KUNIT_EXPECT_EQ(test, get_cap_state(child1), AIRY_CAP_STATE_REVOKED);

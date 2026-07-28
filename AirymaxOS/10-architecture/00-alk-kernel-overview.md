@@ -110,7 +110,7 @@ ALK-6.6 = Linux 6.6 LTS (vanilla)
          + 4 核心 syscall（548-551）+ op-dispatch
          + io_uring 数据面（IORING_OP_URING_CMD）
          + 纯 C LSM（airy_lsm，H5 硬约束）
-         + Micro-Supervisor（kernel/superv/，5 个 .c）
+         + Micro-Supervisor（kernel/superv/，4 个 .c）
          + Capability 静态数组（agent_caps[1024]，128KB）
 ```
 
@@ -136,9 +136,8 @@ kernel/                          # Linux 6.6 内核源码树
 │   └── airymax/                 # 内核内部头文件
 ├── kernel/
 │   ├── corekern/                # 核心内核改造（api/bpf/ipc/irq/locking/memory/object/sched/taskflow/time）
-│   └── superv/                  # Micro-Supervisor（5 个 .c + Kbuild）
+│   └── superv/                  # Micro-Supervisor（4 个 .c + Kbuild）
 │       ├── airy_cap_check_superv.c    # Capability 检查（superv 侧）
-│       ├── airy_die_notify_superv.c   # Agent 死亡通知
 │       ├── airy_eventfd_superv.c      # eventfd 机制
 │       ├── airy_ipc_freeze_superv.c   # IPC 冻结
 │       └── airy_superv_init.c         # Micro-Supervisor 初始化入口
@@ -151,7 +150,6 @@ kernel/                          # Linux 6.6 内核源码树
 │       ├── airy_cap_array.c     # agent_caps[1024] 静态数组
 │       ├── airy_cap_check.c     # fastpath C-S9 Badge 校验
 │       ├── airy_cap_derive.c    # Capability 派生（Copy/Mint/MintCopy）
-│       ├── airy_cap_revoke.c    # Capability 撤销（atomic_inc O(1)）
 │       ├── airy_cap_rotate.c    # Capability 轮换
 │       ├── airy_die_notify.c    # Agent 死亡通知（security 侧）
 │       ├── airy_eventfd.c       # eventfd（security 侧）
@@ -174,7 +172,7 @@ ALK-6.6 对 Linux 6.6 vanilla 的改造点清单：
 | 1      | `include/uapi/linux/airymax/`            | \[SC] 共享契约层 10 头文件 + syscall.xml        | 新增     | \~2,000 行      |
 | 2      | `include/uapi/asm-generic/unistd.h`      | 新增 4 核心 syscall 编号（548-551）             | 修改     | \~10 行         |
 | 3      | `arch/x86/entry/syscalls/syscall_64.tbl` | 新增 4 核心 syscall 表项                      | 修改     | \~4 行          |
-| 4      | `kernel/superv/`                         | Micro-Supervisor（5 个 .c + Kbuild）       | 新增     | \~3,000 行      |
+| 4      | `kernel/superv/`                         | Micro-Supervisor（4 个 .c + Kbuild）       | 新增     | \~3,000 行      |
 | 5      | `kernel/corekern/`                       | 核心内核改造（调度/IPC/内存/capability 原语）         | 新增     | \~15,000 行     |
 | 6      | `security/airy/`                         | Airy LSM（纯 C，H5 硬约束）                    | 新增     | \~5,000 行      |
 | 7      | `include/airymax/`                       | 内核内部头文件                                 | 新增     | \~3,000 行      |

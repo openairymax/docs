@@ -225,7 +225,7 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 | `airy_agent_get_state()` | io_uring `IORING_OP_URING_CMD`（查询 CQE 状态） | 查询当前状态 |
 | `airy_agent_set_token_budget()` | `airy_sys_clt_notify(AIRY_CLT_SET_MODE)`（Token 预算模式） | 设置 Token 预算 |
 | `airy_agent_get_token_budget()` | `airy_sys_clt_notify(AIRY_CLT_GET_METRICS)` | 查询 Token 预算 |
-| `airy_cap_revoke()` | `airy_sys_call(AIRY_OP_REVOKE_BADGE)` | 终止时递归撤销 capability |
+| `airy_cap_derive(AIRY_CAP_OP_REVOKE)` | `airy_sys_call(AIRY_OP_REVOKE_BADGE)` | 终止时递归撤销 capability |
 
 **映射设计决策理由**：
 1. **前缀分离**：`airy_agent_*` 是 SDK 应用层 API（用户友好），4 核心 syscall 是内核系统调用（机制层）。分离前缀遵循 K-1（机制在内核，策略在用户态）——SDK 层封装策略（重试、错误转换、日志），系统调用层仅提供机制。

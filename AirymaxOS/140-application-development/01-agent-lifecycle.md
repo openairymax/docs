@@ -322,7 +322,7 @@ int airy_agent_stop(u32 agent_id, u32 exit_code);
 /*
  * 借鉴 seL4 cnode.c:528-550 的 cteRevoke 算法
  *
- * airy_cap_revoke - 递归撤销所有派生 capability
+ * airy_cap_derive - 递归撤销所有派生 capability（AIRY_CAP_OP_REVOKE）
  * @agent_id: Agent ID
  *
  * 递归撤销算法（借鉴 MDB 链表遍历 + preemptionPoint）：
@@ -338,7 +338,8 @@ int airy_agent_stop(u32 agent_id, u32 exit_code);
  *     }
  * }
  */
-int airy_cap_revoke(u32 agent_id);
+int airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
+                    enum airy_cap_op op, uint16_t new_perms);
 ```
 
 ### 5.3 资源清理清单

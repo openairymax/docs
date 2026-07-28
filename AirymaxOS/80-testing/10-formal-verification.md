@@ -279,12 +279,14 @@ int airy_cap_grant(struct cred *cred, int cap)
     return 0;
 }
 
-int airy_cap_revoke(struct cred *cred, int cap)
+/* REVOKE 现作为 airy_cap_derive() 的 op 代码 AIRY_CAP_OP_REVOKE 处理 */
+int airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
+                    enum airy_cap_op op, uint16_t new_perms)
 {
-    if (cap < 0 || cap >= CAP_AIRY_LAST + 1)
+    if (op != AIRY_CAP_OP_REVOKE || dst_agent >= AIRY_AGENT_MAX)
         return -EINVAL;
-    
-    cap_clear(cred->airy_caps_granted, cap);
+
+    agent_caps[dst_agent].perms &= ~new_perms;
     return 0;
 }
 ```
