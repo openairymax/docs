@@ -4,6 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）已知限制集中登记文档——参照 seL4 `CAVEATS.md` 工程实践，集中文档化所有已知设计限制、平台验证覆盖、形式化验证边界、兼容性降级策略与已延期设计项。各子模块文档中已有的"已知问题"章节仅作为子模块内部记录，**本文档为跨子仓的集中索引与权威登记**。\
 > **文档版本**：v1.0.1\
+> **最后更新**： 2026-07-28\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **保密级别**：开源公开\
 > **SPDX-License-Identifier**：AGPL-3.0-or-later OR Apache-2.0\
@@ -20,9 +21,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [5. 发行版与硬件兼容性限制](#5-发行版与硬件兼容性限制)
 - [6. POSIX 兼容性限制](#6-posix-兼容性限制)
 - [7. 安全模型限制](#7-安全模型限制)
-- [8. 已知文档问题登记](#8-已知文档问题登记)
-- [9. 已延期到 1.0.1 的设计项](#9-已延期到-101-的设计项)
-- [10. 子仓已知限制索引](#10-子仓已知限制索引)
+- [8. 已修复缺陷登记（K9-1 回归 6 项致命缺陷）](#8-已修复缺陷登记k9-1-回归-6-项致命缺陷)
+- [9. 已知文档问题登记](#9-已知文档问题登记)
+- [10. 已延期到 1.0.1 的设计项](#10-已延期到-101-的设计项)
+- [11. 子仓已知限制索引](#11-子仓已知限制索引)
 
 ***
 
@@ -257,17 +259,63 @@ agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生
 
 ***
 
-## 8. 已知文档问题登记
+## 8. 已修复缺陷登记（K9-1 回归 6 项致命缺陷）
+
+> **登记时间**：2026-07-28
+> **关联 ADR**：[ADR-017](05-adrs.md#adr-017-capability-派生操作与-ipc-ring-buffer-6-项致命缺陷修复k9-1-回归--arm64-内存序)
+> **修复验证基准**：seL4 `src/object/cnode.c`（cteInsert/cteMove/cteRevoke/emptySlot）+ Linux 6.6（prepare_creds/key_revoke/io_uring ring buffer）
+
+K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch，在 7 种 CNode 派生操作（COPY/MINT/MOVE/MUTATE/REVOKE/DELETE/ROTATE）与 IPC SPSC ring buffer 中引入 6 项致命缺陷。经 seL4 与 Linux 6.6 双参考实现交叉验证，全部修复并集中登记如下。详细修复说明见 [110-security/03-capability-model.md §15.2](../110-security/03-capability-model.md) 与 [30-interfaces/07-ipc-fastpath.md §6.5](../30-interfaces/07-ipc-fastpath.md)。
+
+### 8.1 缺陷索引表
+
+| 编号 | 严重程度 | 缺陷简述 | 修复文件 | seL4 对照 | Linux 6.6 对照 |
+|------|---------|---------|---------|----------|---------------|
+| CAP-FIX-01 | P0 致命 | REVOKE 跳过 `airy_cap_lookup()` 导致 `src` 空指针解引用 | [airy_cap_derive.c:55-62](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L55-L62) | `cteRevoke` 直接用 slot | `key_revoke` 直接访问 key |
+| CAP-FIX-02 | P0 致命 | COPY/MINT/MOVE 新 slot 未继承 source 的 `epoch` 字段 | [airy_cap_derive.c:83,108,129](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L83) | `cteInsert` 完整复制 | `prepare_creds` memcpy 全字段 |
+| CAP-FIX-03 | P1 高危 | DELETE/MOVE 源失效未清除 `epoch`，存在信息泄漏 | [airy_cap_derive.c:137,175](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L137) | `cteMove`/`emptySlot` 清除所有字段 | `key_invalidate` 清零 |
+| CAP-FIX-04 | P0 致命 | `airy_cap_register` 未从 badge 提取初始化 `epoch` | [airy_cap_array.c:64](../../agentrt-linux/kernel/security/airy/airy_cap_array.c#L64) | `insertNewCap` 初始化所有字段 | `prepare_creds` 确定值 |
+| CAP-FIX-05 | P0 致命 | `airy_cap_rotate` 无锁保护，与 `airy_cap_derive_lock` 竞态 | [airy_cap_rotate.c:32-35](../../agentrt-linux/kernel/security/airy/airy_cap_rotate.c#L32-L35) | `preemptionPoint` 串行化 | `key_revoke` `down_write` 串行化 |
+| IPC-FIX-01 | P0 致命 | SPSC ring buffer ARM64 内存序：memcpy+head 重排致消费者读旧数据 | [airy_ipc_ring.c](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c) | — | io_uring `smp_store_release/smp_load_acquire` 配对 |
+
+### 8.2 修复完整性结论
+
+| 维度 | 结论 |
+|------|------|
+| 缺陷真实性 | 6 项缺陷全部真实存在，经代码审查与 K9-1 重构历史确认 |
+| 修复正确性 | 6 项修复全部正确，代码审查 + seL4/Linux 6.6 双参考交叉验证 |
+| seL4 对齐 | CAP-FIX-01~05 对齐 seL4 `cteInsert`/`cteMove`/`cteRevoke`/`emptySlot`/`insertNewCap` 字段处理原则 |
+| Linux 6.6 对齐 | CAP-FIX-01/04/05 对齐 `prepare_creds`/`key_revoke`；IPC-FIX-01 对齐 io_uring `smp_store_release` |
+| 回归风险 | 低——6 项修复均为字段补全/内存序补全，未改变核心算法 |
+| M1 补充任务 | 需为 REVOKE/COPY/MINT/MOVE/DELETE/ROTATE 6 条代码路径补充 KUnit 单元测试 |
+
+### 8.3 已知遗留设计观察（非阻塞 M0）
+
+以下设计观察在 6 项缺陷修复过程中识别，**不属于致命缺陷，不阻塞 M0 阶段验收**，登记备查供后续版本评估：
+
+| 编号 | 观察 | 影响 | 处置建议 |
+|------|------|------|---------|
+| OBS-01 | 双锁不一致：`airy_cap_array_lock`（register）与 `airy_cap_derive_lock`（derive）独立 | register 与 derive 间存在微小 TOCTOU 窗口 | M1 评估是否合并为单锁或引入 RCU 读侧 |
+| OBS-02 | REVOKE 非递归：仅 bump 单 agent epoch，不递归撤销派生链 | 与 seL4 `cteRevoke` 递归撤销语义不同 | M0 可接受（per-agent epoch 已使派生 badge 失效）；M2 评估是否引入 MDB 递归撤销 |
+| OBS-03 | 无 MDB（Mother Descriptor）：未维护 capability 父子关系 | 无法支持 OBS-02 的递归撤销 | M2 评估是否引入简化版 MDB |
+| OBS-04 | freeze 状态分离：`airy_ipc_ring_freeze_state` 与 `airy_cap_slot` 分离存储 | freeze 与 cap 状态需双查询 | M1 评估是否合并到 `airy_cap_slot` |
+| OBS-05 | 零拷贝 TOCTOU：用户态 mmap ring buffer 后，badge 字段可被用户态修改 | 用户态可在 fastpath 校验后篡改 badge | M1 评估是否引入 immutable badge region 或 copy-on-validate |
+| OBS-06 | epoch 回绕：`__u16 epoch` 在 65535 次撤销后回绕到 0 | 理论上可能与未撤销 badge epoch 重合 | 实际影响极小（单 agent 65535 次撤销）；M3 评估是否扩展为 `__u32` |
+| OBS-07 | 文件计数：M0 实际 .c 文件 36 个（v9.0 报告预期 37 个） | 因删除死代码 `airy_uring_cmd_handle` 等导致 | 文档已同步说明，无功能影响 |
+
+***
+
+## 9. 已知文档问题登记
 
 以下问题已在各子模块文档中登记，此处作为跨子仓索引：
 
-### 8.1 P0 级问题（ABI 稳定性基础）
+### 9.1 P0 级问题（ABI 稳定性基础）
 
 | 编号        | 问题                                            | 来源                                                                                                                | 状态  |
 | --------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --- |
 | P0-SYS-01 | README syscall 编号冲突（1001-1004 vs 548-571 编号段） | [140-application-development/07-syscall-registry.md §11.1](../140-application-development/07-syscall-registry.md) | 已修复（v3.0） |
 
-### 8.2 P1 级问题（文档同步/错误码一致性）
+### 9.2 P1 级问题（文档同步/错误码一致性）
 
 | 编号        | 问题                                      | 来源                                                                                                                | 状态                |
 | --------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -275,7 +323,7 @@ agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生
 | P1-SYS-02 | 生命周期文档交叉引用错误                            | [140-application-development/07-syscall-registry.md §11.2](../140-application-development/07-syscall-registry.md) | ✅ 已修复（2026-07-09） |
 | P1-CAP-01 | README 文档索引未更新                          | [110-security/03-capability-model.md §15.1](../110-security/03-capability-model.md)                               | 待修复               |
 
-### 8.3 维护者声明
+### 9.3 维护者声明
 
 参见 [50-engineering-standards/07-maintainers-and-governance.md §6.2](../50-engineering-standards/07-maintainers-and-governance.md)：
 
@@ -283,11 +331,11 @@ agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生
 
 ***
 
-## 9. 已延期到 1.0.1 的设计项
+## 10. 已延期到 1.0.1 的设计项
 
 以下设计项已明确延期到 1.0.1 阶段实现，**不属于 0.1.1 奠基版本范围**：
 
-### 9.1 工程标准遗留项
+### 10.1 工程标准遗留项
 
 | 编号   | 遗留项                        | 说明                  |
 | ---- | -------------------------- | ------------------- |
@@ -298,7 +346,7 @@ agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生
 | —    | Rust 编号登记缺口                | OS-RUST 编号前缀待建立     |
 | —    | Rust 驱动规范（§8.3）            | 待 1.0.1 Rust 引入后补充  |
 
-### 9.2 形式化验证遗留项
+### 10.2 形式化验证遗留项
 
 | 编号 | 遗留项                            | 说明                       |
 | -- | ------------------------------ | ------------------------ |
@@ -306,7 +354,7 @@ agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生
 | —  | Rust Kani 验证框架                 | cognition/cloudnative 子仓 |
 | —  | capability + LSM 融合模型完整论证      | 1.0.1 M1 阶段（\~10h）       |
 
-### 9.3 服务用户态化风险评估
+### 10.3 服务用户态化风险评估
 
 ES-SEL4-3（服务用户态化）的落地风险待 1.0.1 阶段评估：
 
@@ -320,45 +368,48 @@ ES-SEL4-3（服务用户态化）的落地风险待 1.0.1 阶段评估：
 
 ***
 
-## 10. 子仓已知限制索引
+## 11. 子仓已知限制索引
 
-### 10.1 索引表
+### 11.1 索引表
 
 | 子仓          | 已知限制来源                   | 详见                     |
 | ----------- | ------------------------ | ---------------------- |
 | kernel      | IPC Fastpath 形式化验证未完成    | [§1](#1-实现正确性与形式化验证边界) |
-| services    | daemon 用户态化风险待评估         | [§9.3](#93-服务用户态化风险评估) |
+| services    | daemon 用户态化风险待评估         | [§10.3](#103-服务用户态化风险评估) |
 | security    | capability + LSM 融合模型待论证 | [§7](#7-安全模型限制)        |
 | memory      | CXL/PMEM 降级策略            | [§5](#5-发行版与硬件兼容性限制)   |
-| cognition   | Rust Kani 验证框架未建立        | [§9.2](#92-形式化验证遗留项)   |
-| cloudnative | Rust Kani 验证框架未建立        | [§9.2](#92-形式化验证遗留项)   |
+| cognition   | Rust Kani 验证框架未建立        | [§10.2](#102-形式化验证遗留项)   |
+| cloudnative | Rust Kani 验证框架未建立        | [§10.2](#102-形式化验证遗留项)   |
 | system      | Go 子仓无形式化验证              | —                      |
 | tests-linux | kselftest 覆盖率待提升         | [§4.1](#41-smp-支持状态)   |
 
-### 10.2 项目风险登记
+### 11.2 项目风险登记
 
 参见 [50-engineering-standards/50-project-erp/project\_erp.md §10.2](../50-engineering-standards/50-project-erp/project_erp.md) 的"已知风险登记"章节。
 
 ***
 
-## 11. 相关文档
+## 12. 相关文档
 
 - [seL4 CAVEATS.md](https://github.com/seL4/seL4/blob/master/CAVEATS.md) —— 参照基准（258 行，GPL-2.0-only）
 - [10-architecture/08-threat-model.md](08-threat-model.md) —— 安全威胁模型
+- [10-architecture/05-adrs.md ADR-017](05-adrs.md) —— K9-1 回归 6 项致命缺陷修复架构决策
 - [50-engineering-standards/10-coding-style/C\_Cpp\_coding\_style.md §6.5](../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) —— OS-KER-229 编译期断言
 - [50-engineering-standards/04-engineering-philosophy.md](../50-engineering-standards/04-engineering-philosophy.md) —— OS-IRON-012 seL4 借鉴边界
 - [160-compatibility/05-cross-distro.md §13](../160-compatibility/05-cross-distro.md) —— 发行版兼容性降级策略
 - [160-compatibility/02-posix-compat.md §7](../160-compatibility/02-posix-compat.md) —— POSIX 兼容性
-- [110-security/03-capability-model.md §15](../110-security/03-capability-model.md) —— capability 模型已知问题
+- [110-security/03-capability-model.md §15](../110-security/03-capability-model.md) —— capability 模型已知问题（含 §15.2 K9-1 6 项缺陷修复登记）
+- [30-interfaces/07-ipc-fastpath.md §6.5](../30-interfaces/07-ipc-fastpath.md) —— SPSC ring buffer 内存序修复（IPC-FIX-01）
 
 ***
 
-## 12. 版本历史
+## 13. 版本历史
 
 | 版本    | 日期         | 变更                |
 | ----- | ---------- | ----------------- |
 | 0.1.1 | 2026-07-16 | 初始创建，集中登记 9 类已知限制 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-28 | 新增 §8 已修复缺陷登记（K9-1 回归 6 项致命缺陷：CAP-FIX-01~05 + IPC-FIX-01），关联 ADR-017；§8.3 登记 7 项非阻塞设计观察（OBS-01~07）；原 §8-12 顺延为 §9-13 |
 
 ***
 

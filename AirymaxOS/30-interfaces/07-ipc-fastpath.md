@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # IPC Fastpath 状态机设计
 > **文档定位**：agentrt-linux（AirymaxOS） IPC Fastpath 状态机设计——fastpath/slowpath 双路径状态机、Capability Folding C-S9 Badge 内联校验、io_uring `IORING_OP_URING_CMD` 复用与 kfifo kthread 集成、性能优化与形式化验证计划\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-28\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -814,6 +814,39 @@ if (likely(kfifo_out_peek(&kfifo->fifo, &hdr, 1) == 1)) {
 
 背压通知：达 `HI_WMARK` 时通过 CQE `flags` 置 `AIRY_CQE_F_BACKPRESSURE`，提示用户态降速；达 `FULL` 时返回 `AIRY_EAGAIN`（NOWAIT）或阻塞（默认）。
 
+### 6.5 SPSC Ring Buffer 内存序（v1.0.1 修复——ADR-017 缺陷 #6）
+
+> **关联 ADR**：[ADR-017 缺陷 #6](../10-architecture/05-adrs.md#adr-017-capability-派生操作与-ipc-ring-buffer-6-项致命缺陷修复k9-1-回归--arm64-内存序)
+
+**缺陷背景**：`airy_ipc_ring.c` 实现的 SPSC（Single-Producer Single-Consumer）ring buffer 中，生产者先 `memcpy` 消息头到 slot，再更新 `ring->head`。在 ARM64 等弱内存序架构上，CPU 可能重排这两个 store，导致消费者看到新的 `head` 但读到旧数据（stale/uninitialised memory）。
+
+**修复方案**：采用 Linux 6.6 io_uring 的 `smp_store_release/smp_load_acquire` 配对模式（优于 kfifo 的旧 `smp_wmb` 模式）：
+
+| 屏障 | 位置 | 作用 | 参考实现 |
+|------|------|------|---------|
+| `smp_store_release(&ring->head, next)` | 生产者 `airy_ipc_ring_post()`：memcpy 之后、head 更新 | 保证 memcpy（数据 store）在 head 更新（index store）之前对其他 CPU 可见 | [io_uring.c:2278](../../.engineer-reference/kernel-OLK-6.6/io_uring/io_uring.c#L2278) `smp_store_release(&rings->sq.head, ...)` |
+| `smp_load_acquire(&ring->head)` | 消费者 `airy_ipc_ring_consume()`：head 读取、空检查 | 保证 head 读取在后续 memcpy（数据 read）之前完成，防止读到旧数据 | io_uring `smp_load_acquire` 配对模式（io_uring.c 头部注释 11-22 行） |
+
+```c
+/* 生产者 fastpath（airy_ipc_ring_post）——修复后 */
+memcpy(&ring->slots[ring->head], hdr, sizeof(*hdr));
+smp_store_release(&ring->head, next);   /* 发布写入：数据可见后才更新 head */
+
+/* 消费者 fastpath（airy_ipc_ring_consume）——修复后 */
+if (smp_load_acquire(&ring->head) == ring->tail)  /* 获取读取：先读 head 再读数据 */
+    return -ENOMSG;
+memcpy(out, &ring->slots[ring->tail], sizeof(*out));
+```
+
+**为什么选择 release/acquire 而非 wmb/rmb**：
+
+| 方案 | 来源 | ARM64 性能 | 语义清晰度 | agentrt-linux 选择 |
+|------|------|-----------|----------|-------------------|
+| `smp_store_release` + `smp_load_acquire` | Linux 6.6 io_uring（现代模式） | 最优（仅单向屏障） | 高（配对语义明确） | ✅ v1.0.1 |
+| `smp_wmb()` + `smp_rmb()` | Linux 6.6 kfifo（旧模式） | 较差（全屏障开销） | 中（需手动配对） | ❌ 未采纳 |
+
+**验证**：修复后 SPSC ring buffer 数据可见性保证达到 Linux 6.6 io_uring 同等水平，在 ARM64 等弱内存序架构上消除"消费者读到旧数据"的竞态。
+
 ---
 
 ## 7. 性能优化
@@ -1452,6 +1485,15 @@ v0.2.8 §3 fastpath 触发条件中 C-S9 / C-R7 的 capability 检查（`airy_ca
 - **A-IPC 模块定位**：A-IPC 是 Unify Design 5 模块之一（[10-unify-design.md](../10-architecture/10-unify-design.md) §5），负责统一 IPC fastpath 的状态机、零拷贝路径、capability 检查缓存
 - **权威源边界**：本文档是 fastpath 状态机（§2 8 状态 + §3 触发条件 + §4 回退机制）的唯一权威源；128B 消息头布局的权威源为 [02-ipc-protocol.md](02-ipc-protocol.md) + [SC] `ipc.h`；capability 模型的权威源为 [03-capability-model.md](../110-security/03-capability-model.md)
 - **技术选型统一**：IPC 零拷贝统一为 `IORING_OP_URING_CMD` + registered buffer + mmap（不使用 page flipping），与 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §4.2 [IND] 层 IPC 实现差异表一致
+
+### A.4 v1.0.1 SPSC Ring Buffer 内存序修复（2026-07-28）
+
+v1.0.1 修复 `airy_ipc_ring.c` SPSC ring buffer 在 ARM64 等弱内存序架构上的数据可见性缺陷（ADR-017 缺陷 #6）：
+
+- **§6.5 新增 SPSC Ring Buffer 内存序章节**：明确生产者 `smp_store_release(&ring->head, next)` 与消费者 `smp_load_acquire(&ring->head)` 配对模式
+- **参考实现**：Linux 6.6 io_uring（[io_uring.c:2278](../../.engineer-reference/kernel-OLK-6.6/io_uring/io_uring.c#L2278)）`smp_store_release(&rings->sq.head, ...)` 现代模式，优于 kfifo 的旧 `smp_wmb()` 模式
+- **缺陷登记**：详见 [09-known-caveats.md §8](../10-architecture/09-known-caveats.md) 与 [ADR-017](../10-architecture/05-adrs.md#adr-017-capability-派生操作与-ipc-ring-buffer-6-项致命缺陷修复k9-1-回归--arm64-内存序)
+- **关联文档**：[03-capability-model.md §15.2](../110-security/03-capability-model.md) Capability 模型同步登记 CAP-FIX-01~05 缺陷修复
 
 ---
 

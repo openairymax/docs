@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # seL4 风格 Capability 安全模型
 > **文档定位**：agentrt-linux（AirymaxOS）Capability 安全模型的完整工程契约，定义 CNode/MDB 数据模型、派生算法、POSIX capability 集成、令牌生命周期、Cupolas blob 布局、策略裁决与 Vault backend 抽象；并落地 A-IPC Capability Folding 单平面架构下的 Badge 64-bit Native Word 模型与 fastpath C-S9 内联校验\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-22\
+> **最后更新**： 2026-07-28\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：seL4 `src/object/cnode.c`（CNode 操作）+ `src/object/cnode.c:cteRevoke`（递归撤销）+ Linux 6.6 `security/commoncap.c`（POSIX capability）+ agentrt Cupolas 权限模型\
 > **文档性质**：实现方案文档（非设计文档）。本契约在 [01-lsm-framework.md](01-lsm-framework.md) 第 7 章 LSM 与 capability 共存的基础上，补充完整的 capability 数据模型、派生算法、生命周期与接口定义\
@@ -2268,6 +2268,74 @@ static void test_cap_revoke_recursive(struct kunit *test)
 
 **修复指引**：更新 README.md 第 3.1 节，追加 03-capability-model.md 完成状态。
 
+### 15.2 已修复缺陷登记：K9-1 per-agent epoch 回归 6 项致命缺陷（2026-07-28 修复）
+
+> **关联 ADR**：[ADR-017](../10-architecture/05-adrs.md#adr-017-capability-派生操作与-ipc-ring-buffer-6-项致命缺陷修复k9-1-回归--arm64-内存序)
+
+K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch 后，7 种 CNode 派生操作（COPY/MINT/MOVE/MUTATE/REVOKE/DELETE/ROTATE）引入 6 项致命缺陷。经 seL4 `src/object/cnode.c`（cteInsert/cteMove/cteRevoke/emptySlot）与 Linux 6.6（prepare_creds/key_revoke）双参考实现交叉验证，全部修复并登记如下。
+
+#### 15.2.1 缺陷 CAP-FIX-01: REVOKE 空指针解引用
+
+| 项 | 内容 |
+|---|------|
+| **严重程度** | P0（致命——内核空指针解引用导致 panic） |
+| **根因** | K9-1 改为 per-agent epoch 后，REVOKE 需 `src->epoch++`，但原代码对 REVOKE 跳过 `src = airy_cap_lookup(src_agent)`，导致 `src` 未初始化即解引用 |
+| **修复** | [airy_cap_derive.c:55-62](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L55-L62) 移除 `if (op != AIRY_CAP_OP_REVOKE)` 守卫，所有操作统一执行 source lookup 并校验 |
+| **seL4 对照** | `cteRevoke`（[cnode.c:528](../../.engineer-reference/seL4-master/src/object/cnode.c#L528)）直接使用传入 `slot` 参数，从不跳过源查找 |
+| **Linux 6.6 对照** | `key_revoke`（[key.c:1117](../../.engineer-reference/kernel-OLK-6.6/security/keys/key.c#L1117)）直接访问传入 `key` 参数，先 `key_check(key)` 校验 |
+
+#### 15.2.2 缺陷 CAP-FIX-02: COPY/MINT/MOVE 未继承 epoch 字段
+
+| 项 | 内容 |
+|---|------|
+| **严重程度** | P0（致命——所有派生 capability fastpath C-S9.1 校验失败） |
+| **根因** | K9-1 引入 per-agent epoch 后，COPY/MINT/MOVE 创建新 slot 时未继承 source 的 epoch，新 slot epoch=0 而 badge epoch 来自源（如 1），epoch 不匹配 |
+| **修复** | [airy_cap_derive.c:83,108,129](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L83) 在 COPY/MINT/MOVE 三个 case 添加 `dst->epoch = src->epoch` |
+| **seL4 对照** | `cteInsert`（[cnode.c:435-436](../../.engineer-reference/seL4-master/src/object/cnode.c#L435)）`destSlot->cap = newCap; destSlot->cteMDBNode = newMDB` 完整复制所有字段 |
+| **Linux 6.6 对照** | `prepare_creds`（[cred.c:218](../../.engineer-reference/kernel-OLK-6.6/kernel/cred.c#L218)）`memcpy(new, old, sizeof(struct cred))` 整结构体复制 |
+
+#### 15.2.3 缺陷 CAP-FIX-03: DELETE/MOVE 未清除源 epoch 字段
+
+| 项 | 内容 |
+|---|------|
+| **严重程度** | P1（高危——信息泄漏 + 重用混淆） |
+| **根因** | DELETE/MOVE 使源 slot 失效时，badge 置为 NULL 但 epoch 残留旧值，可能导致重注册时混淆或攻击者推断历史撤销次数 |
+| **修复** | [airy_cap_derive.c:137,175](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L137) 在 MOVE 源失效和 DELETE 中添加 `WRITE_ONCE(src->epoch, 0)`，与 badge/agent_id/flags/randtag/perms 一起清除 |
+| **seL4 对照** | `cteMove`（[cnode.c:458-460](../../.engineer-reference/seL4-master/src/object/cnode.c#L458)）`srcSlot->cap = cap_null_cap_new(); srcSlot->cteMDBNode = nullMDBNode` 清除源所有字段 |
+| **seL4 对照** | `emptySlot`（[cnode.c:587-588](../../.engineer-reference/seL4-master/src/object/cnode.c#L587)）`slot->cap = cap_null_cap_new(); slot->cteMDBNode = nullMDBNode` DELETE 时清除所有字段 |
+
+#### 15.2.4 缺陷 CAP-FIX-04: airy_cap_register 未初始化 epoch
+
+| 项 | 内容 |
+|---|------|
+| **严重程度** | P0（致命——新注册 Agent 首次 fastpath 校验即失败） |
+| **根因** | `airy_cap_register` 从 badge 提取 perms 和 randtag 但未提取 epoch，新 slot epoch 与 badge epoch 不一致 |
+| **修复** | [airy_cap_array.c:64](../../agentrt-linux/kernel/security/airy/airy_cap_array.c#L64) 添加 `agent_caps[agent_id].epoch = (__u16)AIRY_BADGE_EPOCH(badge)` |
+| **seL4 对照** | `insertNewCap`（[cnode.c:750-751](../../.engineer-reference/seL4-master/src/object/cnode.c#L750)）`slot->cap = cap; slot->cteMDBNode = mdb_node_new(...)` 初始化所有字段 |
+| **Linux 6.6 对照** | `prepare_creds` memcpy 后手动调整 `atomic_long_set(&new->usage, 1)` 等，确保每字段有确定值 |
+
+#### 15.2.5 缺陷 CAP-FIX-05: airy_cap_rotate 缺少并发控制
+
+| 项 | 内容 |
+|---|------|
+| **严重程度** | P0（致命——竞态条件导致 badge 不一致状态） |
+| **根因** | 原 `airy_cap_rotate` 独立实现轮换逻辑无锁保护，与 `airy_cap_derive_lock` spinlock 不协调，并发 rotate + derive(REVOKE) 会导致 randtag 与 epoch 写入交错 |
+| **修复** | [airy_cap_rotate.c:32-35](../../agentrt-linux/kernel/security/airy/airy_cap_rotate.c#L32-L35) 重写为薄包装，委托 `airy_cap_derive(agent_id, agent_id, AIRY_CAP_OP_ROTATE, 0)`，复用 `airy_cap_derive_lock` spinlock |
+| **Linux 6.6 对照** | `key_revoke`（[key.c:1128](../../.engineer-reference/kernel-OLK-6.6/security/keys/key.c#L1128)）`down_write_nested(&key->sem, 1)` 串行化所有撤销类操作 |
+| **Linux 6.6 对照** | keyring `__key_link_begin` 用 `keyring_serialise_sem` 串行化链接操作 |
+
+#### 15.2.6 修复完整性结论
+
+| 缺陷 | 真实性 | 修复正确性 | seL4 对齐 | Linux 6.6 对齐 |
+|------|--------|----------|----------|---------------|
+| CAP-FIX-01 REVOKE 空指针 | ✅ 真实 | ✅ 正确 | ✅ cteRevoke | ✅ key_revoke |
+| CAP-FIX-02 未继承 epoch | ✅ 真实 | ✅ 正确 | ✅ cteInsert | ✅ prepare_creds |
+| CAP-FIX-03 未清除源 epoch | ✅ 真实 | ✅ 正确 | ✅ cteMove/emptySlot | ✅ key_invalidate |
+| CAP-FIX-04 register 未初始化 epoch | ✅ 真实 | ✅ 正确 | ✅ insertNewCap | ✅ prepare_creds |
+| CAP-FIX-05 rotate 缺并发控制 | ✅ 真实 | ✅ 正确 | ✅ preemptionPoint | ✅ key_revoke 串行化 |
+
+**M1 阶段补充任务**：为 REVOKE/COPY/MINT/MOVE/DELETE/ROTATE 6 条代码路径补充 KUnit 单元测试，防止回归。
+
 ---
 
 ## 16. 相关文档
@@ -2330,6 +2398,7 @@ static void test_cap_revoke_recursive(struct kunit *test)
 | **v1.1** | **2026-07-18** | **Capability Folding 集成版（A-IPC 第一块基石）**：(1) §2.4 CSpace 物理存储从 `radix_tree_root` 重构为 `agent_caps[1024]` 静态数组（H4 落地）；(2) §2.5 新增 Badge 64-bit Native Word 模型（Epoch 16位 + Random Tag 32位 + Perms 16位）；(3) §4.3 新增 fastpath C-S9 内联校验 `airy_cap_badge_ok()`（~10ns，3 个 READ_ONCE + 位运算）；(4) §5.3 状态转换表更新为 syscall 12→4 精确映射（原 592-600 全部废弃，统一走 `airy_sys_call` + 子命令）；(5) §9 系统调用集成重写为 v1.1 版本（4 个核心 syscall + 子命令）；(6) §11 守卫流程更新为 fastpath C-S9 内联（A-IPC 路径无独立守卫）；(7) §12.3 [IND] 层独立更新（radix tree → 静态数组）；(8) §12.4 新增 [DSL] 降级生存层（H6 落地）；(9) §12.5 新增 Capability Folding 集成总览（H1-H6 + 数据结构隔离三原则 + fastpath C-S9 落地路径 + v1.0/v1.1 对比）；(10) 清除所有内部审查路径引用 |
 | 1.0.1 | 2027-XX-XX | 内核实现完成，TPM Vault 封存落地，形式化验证探索 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-28 | §15.2 新增 K9-1 per-agent epoch 回归 6 项致命缺陷修复登记（CAP-FIX-01~05），关联 ADR-017。经 seL4 cteInsert/cteMove/cteRevoke/emptySlot 与 Linux 6.6 prepare_creds/key_revoke 双参考实现交叉验证 |
 
 ---
 

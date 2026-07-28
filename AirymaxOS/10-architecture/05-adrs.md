@@ -48,6 +48,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ADR-014 | 微内核设计思想来源单一化（仅 seL4，不引入 Zircon/Minix3）                   | Accepted |
 | ADR-015 | （已撤销——定位调整方向错误）                                                  | Deprecated |
 | ADR-016 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1）        | Accepted |
+| ADR-017 | Capability 派生操作与 IPC Ring Buffer 6 项致命缺陷修复（K9-1 回归 + ARM64 内存序） | Accepted |
 
 ***
 
@@ -1198,9 +1199,81 @@ agentrt-linux 实施版本基线锁定战略：
 
 ***
 
+## ADR-017: Capability 派生操作与 IPC Ring Buffer 6 项致命缺陷修复（K9-1 回归 + ARM64 内存序）
+
+- **状态**: Accepted
+- **日期**: 2026-07-28
+- **决策者**: 工程规范委员会
+
+### 背景
+
+K9-1 将 Capability 撤销机制从全局 epoch（`airy_cap_global_epoch`）改为 per-agent epoch（`agent_caps[agent_id].epoch`），将撤销爆炸半径从 1024 个 Agent 收窄到单个 Agent。此重构在 7 种 CNode 派生操作（COPY/MINT/MOVE/MUTATE/REVOKE/DELETE/ROTATE）与 IPC SPSC ring buffer 中引入了 6 项致命缺陷：
+
+1. **REVOKE 空指针解引用**：REVOKE 跳过 `airy_cap_lookup()` 导致 `src` 未初始化即解引用 `src->epoch`
+2. **COPY/MINT/MOVE 未继承 epoch**：新 slot 的 epoch 为 0，badge 中的 epoch 来自源，导致 fastpath C-S9.1 校验失败
+3. **DELETE/MOVE 未清除源 epoch**：源 slot 失效后 epoch 残留，存在信息泄漏与重用混淆风险
+4. **airy_cap_register 未初始化 epoch**：新注册 slot 的 epoch 未从 badge 提取，首次校验即失败
+5. **airy_cap_rotate 缺少并发控制**：独立实现轮换逻辑无锁保护，与 `airy_cap_derive_lock` 不协调，存在竞态
+6. **IPC Ring Buffer ARM64 内存序**：SPSC ring buffer 生产者 `memcpy` + head 更新可被重排，消费者读到旧数据
+
+### 决策
+
+基于 seL4 `src/object/cnode.c`（cteInsert/cteMove/cteRevoke/emptySlot）与 Linux 6.6（prepare_creds/key_revoke/io_uring ring buffer）双参考实现交叉验证，采用以下修复方案：
+
+| 缺陷 | 修复方案 | 参考实现 |
+|------|---------|---------|
+| #1 REVOKE 空指针 | 移除 `if (op != AIRY_CAP_OP_REVOKE)` 守卫，所有操作统一执行 `src = airy_cap_lookup()` 并校验 | seL4 `cteRevoke`（[cnode.c:528](../../../../.engineer-reference/seL4-master/src/object/cnode.c#L528)）直接使用 slot 参数；Linux 6.6 `key_revoke`（[key.c:1117](../../../../.engineer-reference/kernel-OLK-6.6/security/keys/key.c#L1117)）直接访问 key |
+| #2 未继承 epoch | COPY/MINT/MOVE 三个 case 添加 `dst->epoch = src->epoch` | seL4 `cteInsert`（[cnode.c:410](../../../../.engineer-reference/seL4-master/src/object/cnode.c#L410)）完整复制 cap + MDB；Linux 6.6 `prepare_creds`（[cred.c:218](../../../../.engineer-reference/kernel-OLK-6.6/kernel/cred.c#L218)）memcpy 全字段 |
+| #3 未清除源 epoch | DELETE 和 MOVE 源失效添加 `WRITE_ONCE(src->epoch, 0)` | seL4 `cteMove`（[cnode.c:458-460](../../../../.engineer-reference/seL4-master/src/object/cnode.c#L458)）清除 src cap + MDB；seL4 `emptySlot`（[cnode.c:587-588](../../../../.engineer-reference/seL4-master/src/object/cnode.c#L587)）清除 cap + cteMDBNode |
+| #4 register 未初始化 epoch | `airy_cap_register` 添加 `agent_caps[agent_id].epoch = (__u16)AIRY_BADGE_EPOCH(badge)` | seL4 `insertNewCap`（[cnode.c:750-751](../../../../.engineer-reference/seL4-master/src/object/cnode.c#L750)）初始化 cap + MDB；Linux 6.6 `prepare_creds` 确保每字段有确定值 |
+| #5 rotate 缺少并发控制 | 重写 `airy_cap_rotate` 为薄包装，委托 `airy_cap_derive(agent_id, agent_id, AIRY_CAP_OP_ROTATE, 0)`，复用 `airy_cap_derive_lock` spinlock | Linux 6.6 `key_revoke`（[key.c:1128](../../../../.engineer-reference/kernel-OLK-6.6/security/keys/key.c#L1128)）`down_write_nested` 串行化；keyring `__key_link_begin` 用 `keyring_serialise_sem` |
+| #6 ARM64 内存序 | 生产者 `smp_store_release(&ring->head, next)`，消费者 `smp_load_acquire(&ring->head)` | Linux 6.6 io_uring（[io_uring.c:2278](../../../../.engineer-reference/kernel-OLK-6.6/io_uring/io_uring.c#L2278)）`smp_store_release(&rings->sq.head, ...)`；kfifo（[kfifo.h:423](../../../../.engineer-reference/kernel-OLK-6.6/include/linux/kfifo.h#L423)）用 `smp_wmb`（旧模式） |
+
+### 理由
+
+1. **seL4 对齐**：seL4 的 CNode 操作遵循"源对象强制校验 + 完整字段继承 + 完整字段清理"三原则。agentrt-linux 借鉴 seL4 的 7 种派生操作，修复后完全对齐这三项原则。
+
+2. **Linux 6.6 对齐**：
+   - `prepare_creds()` 用 `memcpy` 整结构体复制所有字段 → 验证 #2/#4 修复正确
+   - `key_revoke()` 用 `down_write` 串行化所有撤销类操作 → 验证 #1/#5 修复正确
+   - io_uring 用 `smp_store_release/smp_load_acquire` 配对 → 验证 #6 修复正确（优于 kfifo 的旧 `smp_wmb` 模式）
+
+3. **K9-1 回归根因**：K9-1 引入 per-agent epoch 字段后，未同步更新 7 种派生操作的字段继承/清理逻辑。这是典型的"字段新增但操作未覆盖"回归模式，通过本 ADR 的 6 项修复彻底闭合。
+
+### 影响
+
+| 影响范围 | 描述 |
+|---------|------|
+| security/airy/airy_cap_derive.c | REVOKE/COPY/MINT/MOVE/DELETE/ROTATE 6 个 case 修复 |
+| security/airy/airy_cap_array.c | `airy_cap_register` 添加 epoch 初始化 |
+| security/airy/airy_cap_rotate.c | 重写为 `airy_cap_derive` 薄包装 |
+| kernel/corekern/ipc/airy_ipc_ring.c | `airy_ipc_ring_post`/`airy_ipc_ring_consume` 添加 release/acquire 内存序 |
+| 文档 SSoT | [03-capability-model.md](../110-security/03-capability-model.md) §15.2 已修复缺陷登记 + [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) §6.5 SPSC ring buffer 内存序 + [09-known-caveats.md](09-known-caveats.md) §8 已修复缺陷登记 |
+
+### 替代方案
+
+| 缺陷 | 替代方案 | 未采纳原因 |
+|------|---------|-----------|
+| #6 ARM64 内存序 | `smp_wmb()` + `smp_rmb()`（kfifo 旧模式） | io_uring 的 `smp_store_release/smp_load_acquire` 在 ARM64 上更高效（避免全屏障开销），且是 Linux 6.6 现代模式 |
+| #5 rotate 并发控制 | 独立 `DEFINE_SPINLOCK(airy_cap_rotate_lock)` | 引入第二把锁增加死锁风险与 cacheline 开销，复用 `airy_cap_derive_lock` 更简单且无死锁风险 |
+| #2 epoch 继承 | 在 `airy_cap_badge_ok` 中跳过 epoch 校验 | 削弱安全模型（epoch 是 K9-1 的核心撤销机制），不可妥协 |
+
+### 后果
+
+**正面后果**：
+- K9-1 per-agent epoch 机制完全闭合，7 种 CNode 派生操作字段一致性达到 seL4 同等水平
+- ARM64 等弱内存序架构上 SPSC ring buffer 数据可见性保证达到 io_uring 同等水平
+- 6 项缺陷均有 seL4 + Linux 6.6 双参考实现交叉验证，修复可信度高
+
+**负面后果**：
+- `airy_cap_derive_lock` spinlock 现在保护 ROTATE 操作，略微增加 ROTATE 路径延迟（~10ns spinlock 开销，可接受）
+- 需在 M1 阶段补充 KUnit 单元测试覆盖 REVOKE/COPY/MINT/MOVE/DELETE/ROTATE 代码路径，防止回归
+
+***
+
 ## IRON-9 v3 四层共享模型汇总
 
-> **OS-ARCH-009**： 16 个 ADR 中涉及 agentrt 同源关系的 6 个核心 ADR（ADR-003 / 004 / 005 / 006 / 007 / 010）遵循 IRON-9 v3 四层共享模型分布——capability / IPC / 认知 / 记忆契约经 \[SC] 共享，8 子仓与 7 模块经 \[SS] 同源，构建与平台适配经 \[IND] 独立，\[SC] 头文件损坏时经 \[DSL] 降级生存层保证最小可运行子集。
+> **OS-ARCH-009**： 17 个 ADR 中涉及 agentrt 同源关系的 6 个核心 ADR（ADR-003 / 004 / 005 / 006 / 007 / 010）遵循 IRON-9 v3 四层共享模型分布——capability / IPC / 认知 / 记忆契约经 \[SC] 共享，8 子仓与 7 模块经 \[SS] 同源，构建与平台适配经 \[IND] 独立，\[SC] 头文件损坏时经 \[DSL] 降级生存层保证最小可运行子集。
 
 ### 四层模型概览
 

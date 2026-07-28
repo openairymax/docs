@@ -970,7 +970,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-ARCH-006 | 微内核化改造遵循"seL4 思想分布落地"原则——capability/IPC 契约经 \[SC] 共享保证双端一致，形式化验证落入 \[IND] 由 tests-linux 独立维护，io\_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait\_event\_interruptible                  | 10-architecture/03-microkernel-strategy.md §10 L656       |
 | OS-ARCH-007 | 工程基线在 agentrt（CMake/libc/POSIX）与 agentrt-linux（Kbuild/Kconfig/Linux 6.6）间遵循 IRON-9 v3 四层共享模型——编码契约经 \[SC] 共享，构建系统与平台适配落入 \[IND] 各自独立，禁止在双端工程基线间引入构建兼容垫片                             | 10-architecture/04-engineering-baseline.md §8 L581        |
 | OS-ARCH-008 | 工程基线跨态协作遵循"契约共享、构建独立"原则——头文件编码契约经 \[SC] 直接共享，CMake 与 Kbuild 经 \[SS] 风格同源但工具链独立落入 \[IND]，禁止生成 `build_compat shim` 或构建兼容垫片                                                            | 10-architecture/04-engineering-baseline.md §8 L654        |
-| OS-ARCH-009 | 14 个 ADR 中涉及 agentrt 同源关系的 6 个核心 ADR（ADR-003/004/005/006/007/010）遵循 IRON-9 v3 四层共享模型分布——capability/IPC/认知/记忆契约经 \[SC] 共享，8 子仓与 7 模块经 \[SS] 同源，构建与平台适配经 \[IND] 独立                    | 10-architecture/05-adrs.md §12 L1070                      |
+| OS-ARCH-009 | 17 个 ADR 中涉及 agentrt 同源关系的 6 个核心 ADR（ADR-003/004/005/006/007/010）遵循 IRON-9 v3 四层共享模型分布——capability/IPC/认知/记忆契约经 \[SC] 共享，8 子仓与 7 模块经 \[SS] 同源，构建与平台适配经 \[IND] 独立（ADR-017 为缺陷修复 ADR，不涉及同源映射）                    | 10-architecture/05-adrs.md §12 L1070                      |
 | OS-ARCH-010 | ADR 同源关系汇总遵循"头文件契约共享、ADR-003/010 双端映射、构建与验证独立"原则——ADR-004/005/006/007 经 \[SC] 共享契约，ADR-003/010 经 \[SS] 双端同源映射，io\_uring 仅用于用户态-内核态通信、kthread 间改用 kfifo + wait\_event\_interruptible | 10-architecture/05-adrs.md §12 L1156                      |
 
 ***
