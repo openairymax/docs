@@ -636,7 +636,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Airymax Unify Design 5 模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）完整设计；消解 7 个架构冲突点；四大技术领域覆盖度；[DSL] 降级生存层；sched_tac + IORING_OP_URING_CMD + 纯 C LSM + alloc_pages/mmap 技术选型固化；SSoT 声明 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**：(1) §1.1 新增 C-08 双平面架构死锁冲突点；(2) §1.2 新增"IPC 就是能力校验"设计哲学；(3) §1.4 新增与 Capability Folding 的关系；(4) §8 A-IPC 全面重写为单平面架构（Capability Folding 工程定义 + 6 条硬约束 H1-H6 + Layout C v4 + syscall 12→4 + C-S9 Badge 校验 + 数据结构隔离三原则 + IRON-9 v3 四层落地 + v1.0/v1.1 对比）；(5) §9 [DSL] 新增 ipc.h 降级块（H6）+ [DSL] 错误码空间；(6) §10 SSoT 声明新增 Capability Folding 决策权威声明；(7) §11 相关文档新增 01-syscalls.md / 07-ipc-fastpath.md / 110-security/03-capability-model.md / 120-cross-project-code-sharing.md 引用；(8) 清除所有内部审查文档路径引用 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

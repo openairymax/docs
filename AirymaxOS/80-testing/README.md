@@ -155,13 +155,13 @@ agentrt-linux v1.0 测试体系在内核调度、IPC 传输、安全钩子、内
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立 KUnit/kselftest 核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（测试体系作为验证守护者）；新增 Airymax Unify Design 映射（sched_tac 调度测试 + IPC 零拷贝测试 + [SC] 逐字节校验为核心）；文档索引对齐实际目录文件 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-## 8. 回归测试框架（v1.1 增量补强）
+## 8. 回归测试框架（v1.0.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 10 卷文档覆盖单元测试、系统测试、动态分析、覆盖率等正向验证，但缺少专门的回归测试框架定义。v1.1 引入 Capability Folding 架构后，fastpath C-S9 内联校验、`agent_caps[]` 静态数组等改动一旦引入回归，将影响全部 120 个 Agent syscall。本章节定义回归测试套件组织、触发机制、git bisect 自动化与通过率门槛。
+> **补强背景**：80-testing/ 现有 10 卷文档覆盖单元测试、系统测试、动态分析、覆盖率等正向验证，但缺少专门的回归测试框架定义。v1.0.1 引入 Capability Folding 架构后，fastpath C-S9 内联校验、`agent_caps[]` 静态数组等改动一旦引入回归，将影响全部 120 个 Agent syscall。本章节定义回归测试套件组织、触发机制、git bisect 自动化与通过率门槛。
 
 ### 8.1 回归测试套件组织
 
@@ -357,7 +357,7 @@ fi
 
 ---
 
-## 9. 长时稳定性测试（v1.1 增量补强）
+## 9. 长时稳定性测试（v1.0.1 增量补强）
 
 > **补强背景**：80-testing/ 现有测试均为短时（分钟级至小时级），缺少 24h+ 高负载稳定性测试。v1.0.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组、Epoch 单调递增计数器等数据结构在长期高负载下可能累积微小问题（内存碎片、计数器回绕、RCU grace period 延迟累积）。本章节定义 24h nightly + 7d release 前的长时稳定性测试。
 
@@ -430,7 +430,7 @@ airy-stress \
 
 ---
 
-## 10. Live Patch 兼容性测试（v1.1 增量补强）
+## 10. Live Patch 兼容性测试（v1.0.1 增量补强）
 
 > **补强背景**：80-testing/ 未定义 live patch（kpatch/kexec）对 AirymaxOS 数据结构的影响。v1.0.1 Capability Folding 架构的 `agent_caps[1024]` 静态数组布局、Epoch 全局计数器、Badge 64-bit 格式等若在 live patch 中被修改，将导致运行中 Agent 的 Badge 全部失效或内存损坏。本章节定义 live patch 兼容性测试范围与回滚机制。
 
@@ -552,7 +552,7 @@ fi
 
 ---
 
-## 11. 升级/降级测试（v1.1 增量补强）
+## 11. 升级/降级测试（v1.0.1 增量补强）
 
 > **补强背景**：80-testing/ 未定义 AirymaxOS 版本升级/降级测试。v1.0.1 Capability Folding 架构引入 `agent_caps[1024]` 静态数组与 Badge 64-bit 格式，与 v1.0.x 的 41 ID 权限模型不兼容，必须定义明确的升级/降级路径与数据迁移。本章节定义版本间升级、降级、config 迁移、ABI 兼容性测试。
 
@@ -561,14 +561,14 @@ fi
 | 升级路径 | 兼容性 | 数据迁移 | 测试范围 |
 |---------|--------|---------|---------|
 | 0.1.1 → 1.0.1 | ABI 不兼容 | `airy_migrate_config` 自动迁移 | config 迁移 + Agent 状态恢复 |
-| 1.0.1 → 1.1.0 | ABI 不兼容（41 ID → Capability Folding） | `airy_migrate_caps` 迁移权限模型 | config 迁移 + `agent_caps[]` 重建 + Agent 重新认证 |
+| 1.0.1 → 2.0.1 | ABI 不兼容（41 ID → Capability Folding） | `airy_migrate_caps` 迁移权限模型 | config 迁移 + `agent_caps[]` 重建 + Agent 重新认证 |
 | 0.1.1 → 1.1.0 | ABI 不兼容 | 两步迁移（0.1.1 → 1.0.1 → 1.1.0） | 全量升级测试 |
 
 ### 11.2 降级路径
 
 | 降级路径 | 适用场景 | 数据兼容性 | 测试范围 |
 |---------|---------|-----------|---------|
-| 1.1.0 → 1.0.1 | 紧急回滚（v1.1.0 发现 critical bug） | `agent_caps[]` 数据丢失（降级后重建 41 ID 模型） | 紧急回滚 + Agent 重新认证 |
+| 2.0.1 → 1.0.1 | 紧急回滚（v2.0.1 发现 critical bug） | `agent_caps[]` 数据丢失（降级后重建 41 ID 模型） | 紧急回滚 + Agent 重新认证 |
 | 1.0.1 → 0.1.1 | 不支持 | — | 禁止降级 |
 
 ### 11.3 测试范围
@@ -576,8 +576,8 @@ fi
 | 测试项 | 升级 | 降级 |
 |--------|------|------|
 | config 迁移 | `airy_migrate_config` 自动迁移 `airy_defconfig` | config 回滚至上一版本 |
-| `agent_caps[]` 兼容性 | v1.0.x 41 ID → v1.1 Badge 迁移（`airy_migrate_caps`） | v1.1 Badge 丢弃，重建 v1.0.x 41 ID |
-| ABI 兼容性 | 用户态 daemon 重新编译（v1.1 [SC] 头文件） | daemon 回滚至 v1.0.x 二进制 |
+| `agent_caps[]` 兼容性 | v1.0.x 41 ID → v2.0.1 Badge 迁移（`airy_migrate_caps`） | v2.0.1 Badge 丢弃，重建 v1.0.x 41 ID |
+| ABI 兼容性 | 用户态 daemon 重新编译（v2.0.1 [SC] 头文件） | daemon 回滚至 v1.0.x 二进制 |
 | Agent 状态恢复 | 升级中 RUNNING Agent 暂停，升级后恢复 | 降级中 RUNNING Agent 强制 STOPPED |
 | 审计哈希链 | 升级前后哈希链连续 | 降级后哈希链标注"版本切换"断点 |
 
@@ -676,9 +676,9 @@ TEST(airy_upgrade, zero_data_loss) {
 
 ---
 
-## 12. 混沌工程（v1.1 增量补强）
+## 12. 混沌工程（v1.0.1 增量补强）
 
-> **补强背景**：80-testing/ 现有测试均为确定性故障注入（如 §15 多 daemon 故障注入），缺少随机故障注入的混沌工程测试。v1.1 的 12 daemon 协同架构在随机故障组合下可能暴露未预见的级联失败。本章节定义随机故障注入的混沌工程测试框架。
+> **补强背景**：80-testing/ 现有测试均为确定性故障注入（如 §15 多 daemon 故障注入），缺少随机故障注入的混沌工程测试。v1.0.1 的 12 daemon 协同架构在随机故障组合下可能暴露未预见的级联失败。本章节定义随机故障注入的混沌工程测试框架。
 
 ### 12.1 故障注入类型
 

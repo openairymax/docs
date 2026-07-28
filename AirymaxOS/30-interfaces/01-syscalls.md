@@ -728,7 +728,7 @@ graph TB
         SC0[syscalls.h<br/>24 槽位编号]
         SC1[sched.h<br/>AGTS magic]
         SC2[ipc.h<br/>ARE1 magic + 128B hdr<br/>+ capability_badge offset 40]
-        SC3[security_types.h<br/>41 cap ID + 7 cap_op<br/>+ Badge 位布局宏]
+        SC3[security_types.h<br/>44 cap ID + 7 cap_op<br/>+ Badge 位布局宏]
         SC4[error.h<br/>6 码空间]
     end
 

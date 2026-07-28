@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**：agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
-> **v3.5 修复说明**：P0-I12~I13——(1) 文档版本 `0.1.1` → `v1.0.1`（对齐 IRON-8）；(2) 错误码值修正：`AIRY_EPERM` -4 → -12、`AIRY_EAGAIN` -6 → -35（对齐 SSoT `error.h` L39/L43）；(3) `AIRY_ETIMEDOUT` → `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间）；(4) "250 LSM 钩子" → "5 LSM 钩子"（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`）；(5) 移除对不存在文件 `00-requirements/03-non-functional-requirements.md` 的引用\
+> **v3.5 修复说明**：P0-I12~I13——(1) 文档版本 `0.1.1` → `v1.0.1`（对齐 IRON-7）；(2) 错误码值修正：`AIRY_EPERM` -4 → -12、`AIRY_EAGAIN` -6 → -35（对齐 SSoT `error.h` L39/L43）；(3) `AIRY_ETIMEDOUT` → `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间）；(4) "250 LSM 钩子" → "5 LSM 钩子"（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`）；(5) 移除对不存在文件 `00-requirements/03-non-functional-requirements.md` 的引用\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---

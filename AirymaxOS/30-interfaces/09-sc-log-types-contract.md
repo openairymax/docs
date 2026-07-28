@@ -270,7 +270,7 @@ Linux 6.6 的 `printk` 定义 8 级日志级别（`KERN_EMERG` ~ `KERN_DEBUG`）
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：A-ULP [SC] log_types.h 二进制契约；128B 固定记录格式（magic/level/facility/timestamp/caller_id/payload/reserved）；5 级日志枚举（LOG_DEBUG~LOG_FATAL）；printk 8 级映射；物理宿主 `kernel/include/uapi/linux/airymax/log_types.h` |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 | v1.0.1 | 2026-07-26 | **v3.5 审查修复 P0-I6/I7/I8**：(1) 日志级别前缀 `LOG_*` → `AIRY_LOG_*`（对齐 SSoT L37-44），补充 `AIRY_LOG_LEVEL_MAX`；(2) 设施编号 `AIRY_FAC_*`（12 个 enum）→ `AIRY_LOG_FAC_*`（7 个 `#define` 宏，对齐 SSoT L53-59）；(3) 移除"AIRY_LOG_* 已废弃"错误声明；(4) `reserved` 字段 `__u64` → `__u8[8]`（对齐 SSoT L30）；(5) include guard `_AIRY_LOG_TYPES_H` → `_UAPI_AIRYMAX_LOG_TYPES_H`；(6) 移除虚构 `AIRY_PRINTK_TO_LEVEL` 宏与 `airy_log_level_valid()` 内联函数（SSoT 中均不存在）；(7) [DSL] 块对齐 SSoT `AIRY_DSL_LOG_*` 宏；(8) 补充 `AIRY_LOG_RECORD_SIZE` 宏 |
 
 ---

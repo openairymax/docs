@@ -1025,7 +1025,7 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 | 0.1.1 | 2026-07-07 | 增强：补充 cgroup cpuset 队列模型、状态机、fallback、kf_mask、IRON-9 v3 四层共享模型落地；修复 agentos→agentrt 命名 | 工程规范委员会 |
 | 0.1.1 | 2026-07-07 | 新增 Copyright 头 + §16 agentrt 一致性检查（15 项全 PASS） | 工程规范委员会 |
 | 0.1.1 | 2026-07-17 | 修正：基于 Linux 6.6 内核基线采用sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射）替代 sched_ext，SCHED_AGENT → stc_* 策略枚举，BPF 代码重写为用户态 C 代码，DSQ → cgroup cpuset 队列模型 | 工程规范委员会 |
-| v1.0.1 | 2026-07-26 | P0-D5/D6 修复：用户态调度器引入 airy_task_shadow 影子结构替代内核 task_struct 直接解引用（P0-D5）；task_table 改为链地址法哈希表 task_hash[TASK_HASH_SIZE]，使用 Knuth 乘法哈希避免 pid % MAX_AGENTS 碰撞（P0-D6）；文档版本号统一为 v1.0.1（IRON-8） | 工程规范委员会 |
+| v1.0.1 | 2026-07-26 | P0-D5/D6 修复：用户态调度器引入 airy_task_shadow 影子结构替代内核 task_struct 直接解引用（P0-D5）；task_table 改为链地址法哈希表 task_hash[TASK_HASH_SIZE]，使用 Knuth 乘法哈希避免 pid % MAX_AGENTS 碰撞（P0-D6）；文档版本号统一为 v1.0.1（IRON-7） | 工程规范委员会 |
 
 ---
 

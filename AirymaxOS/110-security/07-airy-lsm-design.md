@@ -1070,7 +1070,7 @@ Airymax LSM 在 `security_capable` 钩子中检查 POSIX capability，在 `secur
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：纯 C LSM 模块设计；对齐 openEuler 纯 C LSM 模式（SELinux/AppArmor/Landlock/Tomoyo 全部纯 C，不使用 BPF LSM）；DEFINE_LSM(airy) 纯 C 注册 + LSM_ORDER_FIRST；Capability 校验钩子（security_uring_cmd 回调）；io_uring 安全钩子（opcode 白名单）；借鉴 seL4 capability-based security；纯 C 性能优势（fastpath ~160ns，无 BPF 间接调用开销）；源码参考 OLK 6.6 security/ 目录 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**（A-IPC 第一块基石）：① §1.3 设计目标新增 sec_d Badge 编译职责；② §2.1 初始化从 radix tree 改为 agent_caps[] 静态数组 + 全局 Epoch；③ §3 重构——fastpath C-S9 内联 Badge 校验（~10ns） + slowpath LSM 钩子接管（仅 C-S9 失败时），新增 §3.5 sec_d Badge 编译职责（唯一写者 + WRITE_ONCE + Random Tag 强制）；④ §5 seL4 对齐表更新（CSpace→agent_caps[]，radix tree→静态数组，撤销 O(n)→O(1) atomic_inc）；⑤ §6 性能更新（fastpath ~160ns→~10ns，FAST_SEND ~320ns→~158ns）；⑥ §7 源码结构 airy_cap_tree.c→airy_capability.c，Makefile 更新；⑦ §9 测试场景对齐 Badge 错误码（-78~-82, 0x1001-0x1006），性能 SLO 更新；⑧ §10 相关文档清除内部审查路径引用，新增 v1.1 引用 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

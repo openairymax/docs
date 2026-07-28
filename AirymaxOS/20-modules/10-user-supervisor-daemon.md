@@ -1412,7 +1412,7 @@ static int macro_d_execute_adjudication(pid_t pid,
                                               enum airy_adjudication action)
 {
     struct airy_ipc_cmd cmd = {
-        .op = AIRY_IPC_OP_ADJUDICATE,
+        .op = AIRY_IPC_OP_ADJUDICATE,  /* [IND] 层 opcode：裁决下发 */
         .agent_id = pid,
         .adjudication = action,
     };
@@ -1466,9 +1466,9 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 | 暂停 | `AIRY_ADJUD_PAUSE` | `kill(SIGSTOP)` | RUNNING → STOPPED |
 | 终止 | `AIRY_ADJUD_TERMINATE` | `kill(SIGKILL)` | RUNNING → DEAD |
 | 恢复 | `AIRY_ADJUD_RESUME` | `kill(SIGCONT)` + 恢复预算 | STOPPED → READY |
-| 解冻 Ring | `AIRY_IPC_OP_UNFREEZE` | `ring->frozen = false` | — |
+| 解冻 Ring | `AIRY_IPC_OP_UNFREEZE`（[IND] 层 opcode） | `ring->frozen = false` | — |
 
-> **解冻协议（v1.1.1 统一：与 [09-kernel-agent-supervisor.md §3.5](09-kernel-agent-supervisor.md) 严格一致）**：上表中"解冻 Ring"的简化执行步骤仅作概要示意，完整解冻流程为：① Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 **sec_d** 请求解冻（**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**——绕过 sec_d 串行化会破坏 Badge 一致性）；② **sec_d 串行化解冻**（避免并发解冻导致状态不一致，sec_d 内部持锁串行处理）；③ 解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge）；④ 最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 §4.7）。
+> **解冻协议（v1.0.1 统一：与 [09-kernel-agent-supervisor.md §3.5](09-kernel-agent-supervisor.md) 严格一致）**：上表中"解冻 Ring"的简化执行步骤仅作概要示意，完整解冻流程为：① Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 **sec_d** 请求解冻（**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**——绕过 sec_d 串行化会破坏 Badge 一致性）；② **sec_d 串行化解冻**（避免并发解冻导致状态不一致，sec_d 内部持锁串行处理）；③ 解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge）；④ 最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 §4.7）。
 
 ---
 
@@ -1524,7 +1524,7 @@ static int airy_adjudicate_execute(struct airy_ipc_cmd *cmd)
 | v1.0 | 2026-07-17 | 初始版本：Macro-Supervisor 用户态守护进程设计；systemd unit 管理 12 个 daemon；心跳检查（进程存活/心跳消息/响应探测）；Capability 注入（io_uring_cmd）；故障裁决四选项（警告/降级/暂停/终止）；"用户温情裁决"策略矩阵；单点故障 fallback（内核 watchdog 直接重启 + [DSL] 降级）；io_uring_cmd 执行裁决（不新增 syscall） |
 | **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) §4 重构为 Badge 请求机制（`AIRY_IPC_OP_CAP_REQUEST` opcode 向 sec_d 请求 Badge 编译，替代 v1.0 CNode 注入 radix tree）；(2) §4.3 Capability 类型改为 Badge Perms 16-bit 位掩码（8 种 Perms）；(3) §4.4 新增 Badge 撤销（`atomic_inc(&airy_cap_global_epoch)` 一行代码 O(1)）；(4) §5.2 裁决策略矩阵对齐 v1.1 Fault 码 0x1001~0x1006（`AIRY_FAULT_CAP_FORGED` 首次即终止）；(5) §7.2 watchdog fallback 新增 Badge 全局撤销；(6) §9.1 性能 SLO 新增 Badge 请求/撤销延迟；(7) §10 相关文档新增 6 份 v1.1 引用，清除内部审查路径引用 |
 | **v1.1.1** | **2026-07-19** | **落后内容修复版**：① §1.3 修复 12 daemon 命名（原 logger/cognition/memory/security daemon 后缀统一为 `_d`，删除原独立 ipc daemon——IPC 由 io_uring 承载、Badge 编译由 sec_d 承担）；② §2.2/§2.3 daemon 拉起代码与依赖顺序对齐 12 daemon 命名；③ §4.3 Perms 表格完全重写——原 BADGE_PERM 前缀统一为 `AIRY_CAP_PERM_*`（对齐 03-capability-model.md SSoT），FREEZE 位编号修正为 bit 5 (0x0020)，移除 SSoT 不存在的 4 项非 SSoT opcode（CANCEL/CAP_REQUEST/CAP_REVOKE/RING_CREATE）；④ §4.5.4 修复原 packed 属性 → `__aligned(64)`（OLK 6.6 工程规范）；⑤ §7.2 watchdog fallback 修复原 force 系列 API → `orderly_poweroff(true)`（OLK 6.6 标准 API）+ 操作顺序调整（先冻结 Ring → 再撤销 Badge → 再降级 → 再重启，防止无监管期间数据损坏最优先）；⑥ §4.6 修复原限流机制表述——改为"多阶段限流机制"避免与 IRON-9 v3 四层模型语义冲突；⑦ §8.3 补充解冻协议完整流程说明（与 09-kernel-agent-supervisor.md §3.5 严格一致：sec_d 串行化 + Epoch 自增 + systemd watchdog 监控）；⑧ SSoT 声明新增 ADR-014 引用 + IRON-9 v3 四层模型引用 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

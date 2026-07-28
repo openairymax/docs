@@ -588,7 +588,7 @@ jobs:
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：A-UEF [SC] error.h 二进制契约；Error 码 5 子空间分配（POSIX/IPC/Capability/[SC]/[DSL]）；Fault 码 0x1000+ 分配；CI 逐字节校验；[DSL] 降级块；物理宿主 `kernel/include/uapi/linux/airymax/error.h` |
 | v1.1 | 2026-07-18 | Capability Folding 同步：IPC 码空间 -41~-52 重定义（与 fastpath C-S 检查链对齐）；新增 Capability 码 -78~-82（Badge 校验：BADGE/EPOCH/FORGED/PERM/FROZEN）；Fault 码 0x1001-0x1003 重定义（CAP_FORGED/CAP_LEAK/RING_CORRUPT）；`AIRY_FAULT_VM_FAULT` 迁移至 0x1006；新增 [DSL] 码 -207（CAP_BADGE_SKIP）；新增 §1.4 Capability Folding 错误码的 [SC]/[SS] 边界；新增 §5.3 [DSL] 模式 Badge 降级语义；新增 §3.3 Error/Fault 协同说明 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

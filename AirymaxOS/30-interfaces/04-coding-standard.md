@@ -502,7 +502,7 @@ AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
 | `sched.h` | `struct airy_task_desc` 类型命名 + magic 宏 UPPER_SNAKE + kernel-doc | kernel / cognition |
 | `ipc.h` | `struct airy_ipc_msg_hdr` 类型命名 + `AIRY_IPC_*` 宏前缀 + Doxygen | kernel / services |
 | `syscalls.h` | `AIRY_SYS_*` 宏命名 + 24 槽位编号 + kernel-doc | kernel / cognition |
-| `security_types.h` | 41 cap ID 枚举 + 250 LSM 钩子枚举 + `snake_case_t` | kernel / security |
+| `security_types.h` | 44 cap ID 枚举 + 250 LSM 钩子枚举 + `snake_case_t` | kernel / security |
 | `memory_types.h` | L1-L4 结构命名 + GFP 掩码宏 + Doxygen | kernel / memory |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + kernel-doc | kernel / cognition |
 

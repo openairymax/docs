@@ -419,7 +419,7 @@ cap_pass:
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：[DSL] 降级生存层统一框架；`#ifdef AIRY_SC_FALLBACK` 机制；Panic 回退到 printk_safe；最小可运行子集（38 POSIX 码 + 最简 IPC + EEVDF 默认调度）；IRON-9 v3 第四层定义 |
 | **v1.1** | **2026-07-18** | **Capability Folding H6 集成版**：(1) §2.2 各头文件降级块职责表更新——ipc.h 新增 `capability_badge=0` 字段，security_types.h 新增 Badge 访问宏，syscalls.h 从 12 编号缩减为 4 编号；(2) §4.1.2 IPC 消息头子集更新为 Layout C v4 兼容版（4 个字段含 capability_badge=0）；(3) §4.2 降级模式能力边界表新增 Badge 校验跳过 + Badge 编译/撤销暂停；(4) §4.4 新增 [DSL] 模式下 Capability Folding Badge 处理（H6 落地详细说明，含 Badge 字段处理/正常 vs [DSL] 对比/IPC 流程/Badge 恢复）；(5) 清除所有内部审查路径引用 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

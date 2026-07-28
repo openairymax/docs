@@ -381,10 +381,10 @@ uint16_t airy_ipc_negotiate_version(uint16_t client_version)
 #include <linux/airymax/ipc.h>       /* SSoT: IPC 消息头 */
 
 /* 客户端发送 FEATURE_QUERY IPC 消息（payload type = FEATURE_QUERY） */
+/* AIRY_IPC_OP_FEATURE_QUERY 为 [IND] 层 opcode，不在 [SC] ipc.h 7 核心 opcode 命名空间内 */
 struct airy_ipc_msg_hdr hdr = {
 	.magic    = AIRY_IPC_MAGIC,
-	.version  = AIRY_IPC_VERSION_CURRENT,
-	.opcode   = AIRY_IPC_OP_FEATURE_QUERY,  /* IPC 层 opcode，非 syscall */
+	.opcode   = AIRY_IPC_OP_FEATURE_QUERY,  /* [IND] 层 opcode：特性探测，非 syscall */
 	.payload_len = 0,
 };
 
@@ -397,6 +397,8 @@ if (ret == 0) {
 ```
 
 > **SSoT 声明**：特性探测走 IPC 协议层（`AIRY_IPC_OP_FEATURE_QUERY` opcode），不引入独立 syscall。这避免了 syscall 编号膨胀，与 syscalls.h SSoT（4 核心 + 20 预留）一致。
+>
+> **[IND] 层 opcode 声明**：`AIRY_IPC_OP_FEATURE_QUERY` 是特性探测子系统的 [IND] 层实现 opcode，**不在 [SC] `include/uapi/linux/airymax/ipc.h` 的 7 个核心 opcode 命名空间内**。[SC] ipc.h 仅定义 SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE 7 个核心 opcode；FEATURE_QUERY 由 `services/daemons/` 实现层独立定义，通过 io_uring `IORING_OP_URING_CMD` 子命令承载，避免 SSoT 漂移。
 
 ---
 
@@ -410,7 +412,7 @@ if (ret == 0) {
 # 生成 ABI 快照
 make CHECK_ABI=1 abidump
 
-# 对比两个版本的 ABI 快照（IRON-8: 0.1.1 后直接过渡到 1.0.1）
+# 对比两个版本的 ABI 快照（IRON-7: 0.1.1 后直接过渡到 1.0.1）
 abi-compliance-checker -l agentrt-linux \
 	-old abidump-1.0.1.xml \
 	-new abidump-<X.Y.Z>.xml
@@ -433,7 +435,7 @@ abi-compliance-checker -l agentrt-linux \
 ### 7.3 回归测试套件
 
 ```bash
-# 运行 ABI 兼容性回归测试（IRON-8: 0.1.1 → 1.0.1 直跳，无中间版本）
+# 运行 ABI 兼容性回归测试（IRON-7: 0.1.1 → 1.0.1 直跳，无中间版本）
 ./test_abi_compat --old-version=1.0.1 --new-version=<X.Y.Z>
 
 # 运行弃用接口回归测试（当前无弃用接口，套件为占位）

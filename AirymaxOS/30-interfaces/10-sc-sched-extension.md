@@ -401,7 +401,7 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：Agent 8 态生命周期枚举；3 态降级（RUNNING/STOPPED/DEAD）；sched_tac 接口（sched_setattr/sched_setscheduler）；seL4 MCS 映射（scBudget→sched_runtime, scPeriod→sched_deadline）；物理宿主 kernel/include/uapi/linux/airymax/sched.h |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 | v1.0.1 | 2026-07-26 | **v3.5 审查修复 P0-I4/I5**：(1) 移除虚构 `struct airy_sched_attr`，对齐 SSoT `struct airy_task_desc`（64 字节，11 字段，含 magic/prio/runtime_ns/deadline_ns/period_ns/vtime/agent_id/sched_policy/weight/state/reserved）；(2) 调度策略标识符从 `AIRY_SCHED_*`（值 0-2）修正为 `AIRY_SCHED_POLICY_*`（值 1-4，对齐 sched.h L97-100）；(3) include guard `_AIRYM_SCHED_H` → `_UAPI_AIRYMAX_SCHED_H`；(4) 8 态枚举补充 `AIRY_AGENT_STATE_MAX`；(5) [DSL] 块对齐 SSoT（`AIRY_DSL_SCHED_POLICY_*` + `AIRY_DSL_VTIME_DECAY`）；(6) 补充 `AIRY_TASK_MAGIC`/`AIRY_PRIO_MIN/MAX`/`AIRY_SLICE_DFL`/`AIRY_WEIGHT_MIN/MAX`/`airy_vtime_t`/`AIRY_VTIME_ONE`/`airy_vtime_decay()`；(7) `AIRY_MCS_MAP_*`/`AIRY_MCS_CHECK` 标注为文档说明性示例（非 SSoT 定义）；(8) 移除虚构 `AIRY_SCHED_VERSION`/`AIRY_SCHED_VERSION_CHECK` |
 
 ---

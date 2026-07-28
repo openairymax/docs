@@ -532,7 +532,7 @@ A-ULP 的延迟 SLO（受 [170-performance/05-agent-latency-slo.md](../170-perfo
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：零拷贝 Ring Buffer 日志数据流；alloc_pages + mmap 内存方案（不使用 DMA 一致性内存）；无锁 reserve/commit 两阶段写入；Fastpath ~50-100ns；eventfd 通知；Logger Daemon 分离；Panic 回退 printk_safe；性能对比 100-500 倍提升 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 | v1.0.1-fix | 2026-07-26 | P0-D1/D2 修复：引入三索引模型（head/commit/tail SPSC 所有权分离），消费者读取 `[tail, commit)` 而非 `[tail, head)` 避免读到未提交数据；生产者 Ring 满时返回 NULL 而非越权写 tail；commit 实现改为写入独立 commit 索引 + per-slot magic 扫描推进；内核 mmap 添加 P0-D3/P0-D8 修复说明 |
 
 ---

@@ -821,7 +821,7 @@ airy_vtime_decay(airy_vtime_t vtime, u64 consumed_slice, u32 weight)
 | refill 机制    | refill + 带宽管理 | cgroup cpu.max/cpu.weight     |
 | 常量带宽 vs 突发   | 参数化           | stc_agent 策略枚举可配             |
 
-**Agent 调度数量上限**：MAC\_MAX\_AGENTS 1024，基准测试验证到 1000 个并发。
+**Agent 调度数量上限**：AIRY\_CAP\_MAX\_AGENTS 1024，基准测试验证到 1000 个并发。
 
 ### 7.4 线程状态机
 

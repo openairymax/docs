@@ -393,7 +393,7 @@ graph TB
     subgraph "[SC] 共享契约层"
         SC1[sched.h<br/>AGTS magic]
         SC2[ipc.h<br/>ARE1 magic]
-        SC3[security_types.h<br/>41 cap ID]
+        SC3[security_types.h<br/>44 cap ID]
         SC4[memory_types.h<br/>L1-L4]
         SC5[cognition_types.h<br/>3 阶段]
         SC6[syscalls.h<br/>24 槽位]

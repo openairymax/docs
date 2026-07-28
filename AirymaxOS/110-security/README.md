@@ -175,7 +175,7 @@ agentrt-linux v1.0 安全加固体系在内核调度、IPC 传输、安全钩子
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 + 03 文档奠基（含 capability 数据模型、CNode/MDB 派生链、POSIX 41 ID、令牌 7 状态、Cupolas blob、4 值策略裁决、Vault backend、syscall 592-600、`LSM_ORDER_FIRST` 共存） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（**纯 C LSM 不使用 BPF LSM 对齐 openEuler 为核心**）；新增 Airymax Unify Design 映射（A-ULS Capability + 纯 C LSM、A-IPC IPC 安全 + io_uring 加固为核心）；新增 4 个文档（04-ipc-data-plane-autonomy / 05-ipc-control-plane-reconciliation / 06-io-uring-hardening / 07-airy-lsm-design）；文档索引对齐实际目录文件 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

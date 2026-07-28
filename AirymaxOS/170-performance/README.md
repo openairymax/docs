@@ -183,7 +183,7 @@ A-ULP 的日志 Ring Buffer 基于 **alloc_pages + mmap**（**不使用 DMA 一�
 |------|------|------|
 | 0.1.1 | 2026-07-13 | 初始版本，6/6 文档完成（调度 + 内存 + IPC + Token + SLO + 基准测试） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）；IORING_OP_URING_CMD（不使用 page flipping）；纯 C LSM（不使用 BPF LSM）；alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v3 四层模型（新增 [DSL] 降级生存层）；新增sched_tac 三层调度性能 SLO（SCHED_DEADLINE ≤150ns / SCHED_FIFO ≤100ns / EEVDF ≤100ns / IPC ≤50ns / 日志 ≤100ns / Capability ≤30ns / 吞吐 ≥10M msg/s）；新增 Airymax Unify Design 五模块映射（A-ULS 调度性能 / A-IPC IPC fastpath / A-ULP 日志 Ring Buffer） |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

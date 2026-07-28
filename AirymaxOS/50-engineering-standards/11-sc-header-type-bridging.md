@@ -392,7 +392,7 @@ jobs:
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1 |
 | v1.0.1-fix | 2026-07-26 | **文档-代码策略对立修复**（v3.5 审查 P0）：重写为反映 uapi_compat.h 实际策略——二路条件编译（`#ifdef __linux__` / `#else`，非三路 `__KERNEL__`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 改为二路编译（Linux + 第三方） |
 | v1.0.2 | 2026-07-26 | **02-P0-17 SSoT 冲突修复**（v4.0 审查）：§4.1/§4.2 头文件分类修正——原表将 12 个文件统称 "[SC] 头文件" 与 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014 "10 个核心 + bpf_struct_ops.h 补充"）冲突。已修正为三类分类：10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件（文件头自声明非核心）+ syscall.h codegen 产物（@generated 标记，非 [SC] 契约）。§4.3 CI 校验项 "12 头文件" → "10+1 头文件"。 |
 

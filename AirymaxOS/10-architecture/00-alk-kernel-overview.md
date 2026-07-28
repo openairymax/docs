@@ -127,7 +127,7 @@ kernel/                          # Linux 6.6 内核源码树
 │   │   ├── ipc.h                # IPC magic + 128B 消息头
 │   │   ├── sched.h              # sched_tac 约束 + 任务描述符
 │   │   ├── memory_types.h       # MemoryRovol L1-L4 数据结构
-│   │   ├── security_types.h     # POSIX 41 cap + Badge 访问宏
+│   │   ├── security_types.h     # 44 cap（41 POSIX + 3 Airymax）+ Badge 访问宏
 │   │   ├── cognition_types.h    # 三阶段枚举
 │   │   ├── syscalls.h           # 4 核心 syscall 编号（548-551）
 │   │   ├── uapi_compat.h        # __KERNEL__/__linux__ 桥接
@@ -449,7 +449,7 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 | 3  | `ipc.h`             | IPC 协议       | magic `0x41524531` + 128B 消息头   |
 | 4  | `sched.h`           | 调度约束         | magic `0x41475453` + 任务描述符      |
 | 5  | `memory_types.h`    | 内存类型         | MemoryRovol L1-L4               |
-| 6  | `security_types.h`  | 安全类型         | POSIX 41 cap + Badge 访问宏        |
+| 6  | `security_types.h`  | 安全类型         | 44 cap（41 POSIX + 3 Airymax）+ Badge 访问宏 |
 | 7  | `cognition_types.h` | 认知类型         | 三阶段枚举                           |
 | 8  | `syscalls.h`        | Syscall 编号   | 4 核心（548-551）                   |
 | 9  | `uapi_compat.h`     | UAPI 兼容      | `__KERNEL__` / `__linux__` 桥接   |

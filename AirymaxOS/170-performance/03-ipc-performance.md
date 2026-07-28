@@ -844,7 +844,7 @@ out_err:
 |------|------|---------|
 | 0.1.1 | 2026-07-10 | 初版：io_uring 零拷贝 + kfifo 批量读取性能工程设计 |
 | **v1.1** | **2026-07-18** | **Capability Folding 集成版**：(1) 新增 FAST_SEND ~158ns / SLOW_SEND ~600ns-5.5μs 性能 SLO；(2) 新增 §1.5/§1.6 FAST_SEND/SLOW_SEND 性能拆解；(3) §2.1 128B 消息头更新为 Layout C v4 + capability_badge (offset 40-47)；(4) §6 错误码体系完全重写（-800~-899 废弃 → -41~-70 IPC + -78~-82 Capability + 0x1001~0x1006 Fault）；(5) §7.1 Cupolas 权限校验重构为 fastpath C-S9 + slowpath LSM 职责分割；(6) §9 IRON-9 v3 同源映射对齐 Badge 64-bit Native Word + agent_caps[] 静态数组；(7) §10 相关文档新增 8 份 v1.1 引用；(8) 全文 AgentsIPC→A-IPC 统一术语 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

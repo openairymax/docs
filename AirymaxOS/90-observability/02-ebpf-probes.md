@@ -528,7 +528,7 @@ agentrt-linux 在 Linux 6.6 内核基线上严格遵循五维正交 24 原则—
 
 ## 第 13 章 IRON-9 v3 四层共享模型落地
 
-### 13.1 三层共享模型
+### 13.1 四层共享模型
 
 IRON-9 v3 将 agentrt 与 agentrt-linux 的 eBPF 协作划分为四层：
 

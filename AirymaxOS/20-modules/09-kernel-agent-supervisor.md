@@ -76,7 +76,7 @@ Micro-Supervisor 作为内核态监管组件，与 Macro-Supervisor 管理的 12
 | 3 | mem_d | 记忆管理守护；mem_d IPC 异常触发冷酷执法 | fastpath C-S9 |
 | 4 | gateway_d | 跨节点 IPC 网关（1.0.1）；gateway_d Badge 校验在源节点完成 | fastpath C-S9（per-node） |
 | 5 | logger_d | 日志消费守护（A-ULP）；logger_d 故障不影响 Badge 校验 | fastpath C-S9 |
-| 6 | macro_d | 故障通知接收方 + 裁决执行者；通过 `AIRY_IPC_OP_ADJUDICATE` 下发裁决 | fastpath C-S9（持 FREEZE 权限位） |
+| 6 | macro_d | 故障通知接收方 + 裁决执行者；通过 `AIRY_IPC_OP_ADJUDICATE`（[IND] 层 opcode）下发裁决 | fastpath C-S9（持 FREEZE 权限位） |
 | 7 | audit_d | 审计守护；所有 Badge 编译/撤销/冻结事件写入 audit_d 审计链 | fastpath C-S9 |
 | 8 | sched_d | sched_tac 策略守护进程；通过 `airy_sys_sched_ctl`（编号 550）控制调度参数 | fastpath C-S9 |
 | 9 | dev_d | 设备驱动守护；dev_d IPC 异常触发 Ring 冻结 | fastpath C-S9 |
@@ -402,7 +402,7 @@ static int airy_ipc_handle_freeze(struct airy_ipc_cmd *cmd)
 **FREEZE 与冷酷执法的关系**：
 - **冷酷执法**（§6）：fastpath C-S9 检测到 Badge 异常 → Micro-Supervisor 主动 FREEZE
 - **策略冻结**：Macro-Supervisor 通过发送 FREEZE opcode 主动冻结 Ring（如维护、升级）
-- **解冻协议**（v1.0.1 统一：与 [10-user-supervisor-daemon.md §8.3](10-user-supervisor-daemon.md) 严格一致）：Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE` opcode 向 sec_d 请求解冻，**sec_d 串行化解冻**（避免并发解冻导致状态不一致），解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge），最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 [10-user-supervisor-daemon.md §4.7](10-user-supervisor-daemon.md)）。**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**（绕过 sec_d 串行化会破坏 Badge 一致性）。
+- **解冻协议**（v1.0.1 统一：与 [10-user-supervisor-daemon.md §8.3](10-user-supervisor-daemon.md) 严格一致）：Macro-Supervisor 通过 `AIRY_IPC_OP_UNFREEZE`（[IND] 层 opcode，不在 [SC] ipc.h 7 核心 opcode 命名空间内，由 `services/daemons/macro_d/` 实现层独立定义）opcode 向 sec_d 请求解冻，**sec_d 串行化解冻**（避免并发解冻导致状态不一致），解冻时执行 `atomic_inc(&airy_cap_global_epoch)`（Epoch 自增使旧 Badge 失效，强制 Agent 重新申请 Badge），最后通过 `ring->frozen = false` 解冻 Ring。sec_d 解冻全过程由 systemd watchdog 监控（`WatchdogSec=3`，超时触发 sec_d 重启 + 两阶段恢复，详见 [10-user-supervisor-daemon.md §4.7](10-user-supervisor-daemon.md)）。**禁止 Macro-Supervisor 直接设置 `ring->frozen = false`**（绕过 sec_d 串行化会破坏 Badge 一致性）。
 
 ---
 
@@ -779,7 +779,7 @@ Micro-Supervisor 的正常故障处理路径（Agent 故障 → 冷酷执法 →
 | v1.0 | 2026-07-17 | 初始版本：Micro-Supervisor 内核模块设计；纯 C LSM 检测非法 Capability（对齐 openEuler 纯 C 模式，不使用 BPF）；IPC 队列冻结（ring->frozen + unlikely 零开销）；die_notifier 内核崩溃通知链；eventfd 非阻塞故障通知；"内核冷酷执法"四步流程；借鉴 seL4 handleFault() 机制与策略分离 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**（A-IPC 第一块基石）：① §2.3 capability 校验路径重构——从独立前置 `airy_cap_check()` + radix tree 查找改为 fastpath C-S9 内联 Badge 校验（`airy_cap_badge_ok()`，~10ns），LSM 钩子仅在 slowpath（异常路径）做策略裁决；② §2.4 异常类型表对齐 Badge 错误码（-78~-82, 0x1001-0x1006）；③ §3.2 fastpath C-S0 返回 `AIRY_EIPC_FROZEN` (-53) 明确 Error vs Fault 区分；④ §3.5 新增 FREEZE opcode (0x0005) ring 冻结语义；⑤ §4.1/§4.2 Fault 码更新（`AIRY_FAULT_IPC_FAULT`→`AIRY_FAULT_RING_CORRUPT` 0x1003）；⑥ §6.2 `AIRY_FAULT_CAP_FAULT`→`AIRY_FAULT_CAP_FORGED` (0x1001) + 完整 Fault 码参考；⑦ §6.4 新增 Badge 撤销解耦 `atomic_inc` 机制（1 行代码 O(1) 撤销，无 drain/bitmap/IPI）；⑧ §8.1/§8.2 性能 SLO + 资源预算对齐 agent_caps[] 静态数组（16KB）+ atomic_t Epoch；⑨ §9 相关文档清除内部审查路径引用 |
 | v1.1.1 | 2026-07-19 | **落后内容修复版**：① §2.3 修复 LSM 钩子重复校验——禁止 slowpath LSM 再次调用 `airy_cap_badge_ok()`，改为读取 `cmd->fastpath_ret` 执行冷酷执法（fastpath/slowpath 严格分工）；② §2.4 修复 MDB 残留——"MDB 派生链校验失败" 替换为 v1.1 `agent_caps[1024]` 静态数组 + Badge 64-bit 编码三段校验；③ §3.5 修复 FREEZE 权限位 bit 编号——`AIRY_BADGE_PERM_FREEZE` bit 4 → `AIRY_CAP_PERM_FREEZE` bit 5 (0x0020)，对齐 03-capability-model.md SSoT；④ §3.5 统一解冻协议——sec_d 串行化解冻 + Epoch 自增 + systemd watchdog（与 10-user-supervisor-daemon.md 严格一致）；⑤ §1.4 新增 12 daemon 完整协作关系；⑥ §1.5 新增 sched_tac 协作章节（sched_d + `airy_sys_sched_ctl` 编号 2 + Agent 8 态生命周期集成）；⑦ SSoT 声明新增 ADR-014 引用 + IRON-9 v3 四层模型引用；⑧ §2.3 新增 `AIRY_ESEC_D_THROTTLED` (-83) sec_d 限流错误码处理 + §2.4 异常类型表扩展两行上游检测路径（`AIRY_FAULT_URING_MALFORMED` 0x100A io_uring SQE 畸变 + `AIRY_ESEC_D_THROTTLED` -83 sec_d 限流），完整覆盖 Micro-Supervisor 可能涉及的异常类型 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

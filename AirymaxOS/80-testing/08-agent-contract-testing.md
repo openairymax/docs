@@ -948,13 +948,13 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 ---
 
-## 15. 多 Daemon 灾难恢复测试（v1.1 增量补强）
+## 15. 多 Daemon 灾难恢复测试（v1.0.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 §1-§14 覆盖单 Agent 行为契约与 cogn_d / mem_d / macro_d / audit_d 单 daemon 交互契约，但未覆盖 v1.1 引入的 12 daemon 协同架构在多 daemon 同时故障下的灾难恢复场景。本章节定义多 daemon 灾难恢复测试矩阵（S1-S7）、故障注入机制、恢复 SLO 验证与数据一致性验证，作为 §1-§14 的增量补强，不替换现有任何内容。
+> **补强背景**：80-testing/ 现有 §1-§14 覆盖单 Agent 行为契约与 cogn_d / mem_d / macro_d / audit_d 单 daemon 交互契约，但未覆盖 v1.0.1 引入的 12 daemon 协同架构在多 daemon 同时故障下的灾难恢复场景。本章节定义多 daemon 灾难恢复测试矩阵（S1-S7）、故障注入机制、恢复 SLO 验证与数据一致性验证，作为 §1-§14 的增量补强，不替换现有任何内容。
 
 ### 15.1 测试场景矩阵（S1-S7）
 
-v1.1 的 12 daemon 包括：`sec_d`、`cogn_d`、`mem_d`、`gateway_d`、`logger_d`、`macro_d`、`audit_d`、`sched_d` 等。本测试矩阵覆盖 3 类单故障 + 3 类双故障 + 1 类全故障：
+v1.0.1 的 12 daemon 包括：`sec_d`、`cogn_d`、`mem_d`、`gateway_d`、`logger_d`、`macro_d`、`audit_d`、`sched_d` 等。本测试矩阵覆盖 3 类单故障 + 3 类双故障 + 1 类全故障：
 
 | 场景 | 故障 daemon | 验证重点 | 恢复 SLO |
 |------|-----------|---------|---------|
@@ -1152,7 +1152,7 @@ if any(not r["slo_met"] or r["consistency_failures"] for r in results.values()):
 
 **OS-TEST-099**：CI nightly 必须运行 `airy_disaster_matrix.py` 遍历 S1-S7 全部 7 个场景，验证恢复 SLO（S1: 5s / S2: 3s / S3: 5s / S4: 10s / S5: 10s / S6: 15s / S7: 30s）与 6 项数据一致性不变式；任一场景 SLO 未满足或数据一致性失败即标记 nightly 失败并阻断 release。
 
-**OS-KER-151**：v1.1 多 daemon 灾难恢复测试（§15）中 S7 全故障场景下，内核 fastpath C-S9 必须独立运行（不依赖任何 user-space daemon），`agent_caps[]` 状态由内核持久化；若 S7 场景下 fastpath 出现依赖 daemon 的代码路径即视为架构违反，PR 阻断。
+**OS-KER-151**：v1.0.1 多 daemon 灾难恢复测试（§15）中 S7 全故障场景下，内核 fastpath C-S9 必须独立运行（不依赖任何 user-space daemon），`agent_caps[]` 状态由内核持久化；若 S7 场景下 fastpath 出现依赖 daemon 的代码路径即视为架构违反，PR 阻断。
 
 ---
 

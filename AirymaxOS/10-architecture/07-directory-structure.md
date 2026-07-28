@@ -429,7 +429,7 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 3. 共享库会引入跨子仓耦合，违反 P5
 4. 复制代码会引入版本漂移，违反 P3 单一宿主
 
-**最终选择：I1（三层共享模型）**
+**最终选择：I1（四层共享模型）**
 
 **落地约束**：
 1. **[SC] 共享层**：10 头文件物理宿主 kernel/include/uapi/linux/airymax/，各子仓 -I 引用
@@ -1329,7 +1329,7 @@ sc-dual-ci:
 | 5 | `memory_types.h` | MemoryRovol | — | `kernel/include/uapi/linux/airymax/memory_types.h` | L1-L4 enum（HOT/WARM/COLD/PMEM）+ GFP 掩码语义（AIRY_GFP_HOT/WARM/COLD/PMEM） |
 | 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `uint64_t` |
 | 7 | `cognition_types.h` | A-UCS | — | `kernel/include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t`（= `__s32`，Q16.16 定点数，因 -mno-80387 禁 FPU）+ `enum airy_cog_phase`（PERCEPT/THINK/ACT）+ `enum airy_think_mode`（FAST/SLOW） |
-| 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.1: 4 核心系统调用（AIRY_SYS_CALL=0 ... AIRY_SYS_CLT_NOTIFY=3）+ 20 预留（4-23）= 24 槽位 |
+| 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.0.1: 4 核心系统调用（AIRY_SYS_CALL=548 ... AIRY_SYS_CLT_NOTIFY=551）+ 20 预留（552-571）= 24 槽位 |
 | 9 | `uapi_compat.h` | 桥接 | — | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`），确保 [SC] 头文件跨平台逐字节相同编译 |
 | 10 | `lsm_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/lsm_types.h` | `struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构 |
 

@@ -859,7 +859,7 @@ jobs:
 
 ---
 
-## 15. AirymaxOS 专属并发竞态测试（v1.1 增量补强）
+## 15. AirymaxOS 专属并发竞态测试（v1.0.1 增量补强）
 
 > **补强背景**：80-testing/ 现有 §5（KCSAN）覆盖通用并发 sanitizer，但未针对 v1.0.1 Capability Folding 架构引入的专属并发场景（1024 Agent 并发 Badge 编译、fastpath 多读者 + slowpath 写者、Epoch 撤销 + Badge 校验）进行专项测试。本章节定义 AirymaxOS 专属并发竞态测试矩阵（R1-R3）、内核测试模块与验证门槛，作为 §1-§14 的增量补强，不替换现有任何内容。
 
@@ -1050,9 +1050,9 @@ MODULE_LICENSE("GPL");
 
 ---
 
-## 16. Agent 生命周期内存泄漏检测（v1.1 增量补强）
+## 16. Agent 生命周期内存泄漏检测（v1.0.1 增量补强）
 
-> **补强背景**：80-testing/ 现有 §8（kmemleak）覆盖通用内核内存泄漏检测，但未针对 v1.1 Agent 8 态生命周期（INACTIVE→SPAWNING→READY→RUNNING→BLOCKED→STOPPING→STOPPED→DEAD）的创建/销毁循环进行专项量化检测。本章节定义 10000 次创建/销毁循环 + 1MB 阈值的内存泄漏量化检测，作为 §1-§14 的增量补强，不替换现有任何内容。
+> **补强背景**：80-testing/ 现有 §8（kmemleak）覆盖通用内核内存泄漏检测，但未针对 v1.0.1 Agent 8 态生命周期（INACTIVE→SPAWNING→READY→RUNNING→BLOCKED→STOPPING→STOPPED→DEAD）的创建/销毁循环进行专项量化检测。本章节定义 10000 次创建/销毁循环 + 1MB 阈值的内存泄漏量化检测，作为 §1-§14 的增量补强，不替换现有任何内容。
 
 ### 16.1 10000 次创建/销毁循环 + 1MB 阈值
 
@@ -1141,7 +1141,7 @@ MODULE_LICENSE("GPL");
 
 **OS-TEST-052**：CI nightly 必须运行 `airy_agent_lifecycle_stress.ko`（10000 次创建/销毁循环，覆盖 Agent 8 态完整生命周期），监控 kmemleak 报告、slab 增长、`airy_agent_mem_stats.total_bytes` 增长、`agent_caps[]` 利用率、L1-L4 记忆残留、审计日志残留 6 类指标；任一指标超过阈值即标记 nightly 失败并创建 issue。
 
-**OS-KER-117**：v1.1 Agent 生命周期内存泄漏检测（§16）中，10000 次循环后 `airy_agent` / `airy_token_budget` / `airy_cap_entry` 三个 slab 缓存的活跃对象数必须回到基线值；任一 slab 残留对象即视为内存泄漏，PR 阻断，禁止通过 `kmemleak_ignore()` 抑制报告。
+**OS-KER-117**：v1.0.1 Agent 生命周期内存泄漏检测（§16）中，10000 次循环后 `airy_agent` / `airy_token_budget` / `airy_cap_entry` 三个 slab 缓存的活跃对象数必须回到基线值；任一 slab 残留对象即视为内存泄漏，PR 阻断，禁止通过 `kmemleak_ignore()` 抑制报告。
 
 ### 16.4 `airy_agent_lifecycle_stress` 工具
 

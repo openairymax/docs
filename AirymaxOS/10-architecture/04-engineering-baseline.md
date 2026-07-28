@@ -602,9 +602,9 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 | `error.h`           | `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块                 | kernel-doc + errno           | 全部子仓 |
 | `log_types.h`       | `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射              | kernel-doc + 80 列            | kernel / services  |
 | `ipc.h`             | magic 0x41524531 'ARE1' + 128B 消息头                             | kernel-doc + errno           | kernel / services  |
-| `sched.h`           | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF + MAC\_MAX\_AGENTS=1024 | kernel-doc + snake\_case     | kernel / cognition |
+| `sched.h`           | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF + AIRY\_CAP\_MAX\_AGENTS=1024 | kernel-doc + snake\_case     | kernel / cognition |
 | `memory_types.h`    | MemoryRovol L1-L4 + GFP 掩码                                     | kernel-doc + 80 列            | kernel / memory    |
-| `security_types.h`  | 41 cap + 250 LSM + Cupolas blob                                | kernel-doc + minimal typedef | kernel / security  |
+| `security_types.h`  | 44 cap + 250 LSM + Cupolas blob                                | kernel-doc + minimal typedef | kernel / security  |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式                                           | kernel-doc + snake\_case     | kernel / cognition |
 | `syscalls.h`        | 4 核心 syscall 编号 + 20 预留槽位（v1.0.1）                                     | kernel-doc + K\&R            | kernel / cognition |
 | `uapi_compat.h`     | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                       | kernel-doc + minimal typedef | IRON-9 跨端 |
@@ -678,9 +678,9 @@ graph TB
 | ----- | ---------- | ------------------------------------------------------------------- |
 | 0.1.1 | 2026-07-06 | 初始版本（含工程基线完整定义）                                                     |
 | 0.1.1 | 2026-07-09 | 增补：双基线锁定策略（ADR-016）+ Linux 7.1 前瞻性预留设计（§8.4，10 条建议 + 迁移路径）+ 版本规划表更新 |
-| 1.x.x | 2027+      | 首个开发版本，长期锁定 Linux 6.6 LTS（与代码实现同步验证）                                |
-| 2.x.x | 规划中        | 下一代基线，升级至 Linux 7.1                                                 |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| 1.0.1 | 2026-07-13+ | 首个开发版本（IRON-7：0.1.1 后直接 1.0.1），长期锁定 Linux 6.6 LTS（与代码实现同步验证） |
+| 2.0.1 | 规划中        | 下一代基线（IRON-7 约束：1.0.1 后版本号待定），升级至 Linux 7.1 |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ***
 

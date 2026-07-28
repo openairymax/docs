@@ -371,7 +371,7 @@ A-IPC 模块组成
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：IPC 数据面自治三原则；原则一 Ring 生命周期解耦（内核 alloc_pages + 引用计数独立）；原则二离线缓存校验（radix tree + TTL + 两层校验）；原则三 Reconciliation（最终一致 + reconciliation log）；与 A-IPC/A-ULS/[DSL] 模块协作关系 |
 | v1.1 | 2026-07-18 | **Capability Folding 集成版**——① §3 原则二添加 v1.1 重构说明：实现机制从 v1.0 `radix tree` 缓存升级为 v1.1 `agent_caps[1024]` 静态数组 + 64-bit Badge 内联校验（fastpath C-S9 ~10ns），原则目标不变；② §3.5 错误码 `AIRY_ECAP_OFFLINE` 替换为 `AIRY_EDSL_CAP_MINIMAL`（-206，[DSL] 兜底码）；③ §3.3 `AIRY_ECAP_NOT_FOUND` 替换为 `AIRY_ECAP_RADIX_MISS`（-76，[DSL] 兜底码）；④ 全文术语对齐 v1.1（Capability Folding 单平面架构） |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 

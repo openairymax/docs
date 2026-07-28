@@ -854,7 +854,7 @@ static void test_syscall_number_stability(struct kunit *test)
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。6 类 × 20 编号段方案（512-631），31 个已分配编号。建立完整编号分配规则、UAPI 头文件模板、注册审批流程、ABI 稳定性约束、Agent 生命周期 API 映射、已知不一致问题清单 |
-| v1.0.1 | 2026-07-22 | **Capability Folding 系统性重写**：(1) 编号起点 512 → 548（避开 x86_64 x32 历史遗留区域 512-547，修复 P0-014）；(2) 6 类 × 20 编号段 → 4 核心 syscall + 20 预留 = 24 槽位（548-571）；(3) 31 个独立 syscall → 4 核心 syscall + op-dispatch 模型；(4) Agent 生命周期 API 从独立 TASK syscall 映射改为 4 核心 syscall + io_uring 组合映射；(5) IPC 数据传递从独立 IPC syscall 改为 io_uring `IORING_OP_URING_CMD` 零 syscall 数据面；(6) 0.1.1 的 31-syscall 模型保留在附录 A 作为历史参考。按 IRON-8 铁律，版本号统一为 v1.0.1 |
+| v1.0.1 | 2026-07-22 | **Capability Folding 系统性重写**：(1) 编号起点 512 → 548（避开 x86_64 x32 历史遗留区域 512-547，修复 P0-014）；(2) 6 类 × 20 编号段 → 4 核心 syscall + 20 预留 = 24 槽位（548-571）；(3) 31 个独立 syscall → 4 核心 syscall + op-dispatch 模型；(4) Agent 生命周期 API 从独立 TASK syscall 映射改为 4 核心 syscall + io_uring 组合映射；(5) IPC 数据传递从独立 IPC syscall 改为 io_uring `IORING_OP_URING_CMD` 零 syscall 数据面；(6) 0.1.1 的 31-syscall 模型保留在附录 A 作为历史参考。按 IRON-7 铁律，版本号统一为 v1.0.1 |
 
 ---
 

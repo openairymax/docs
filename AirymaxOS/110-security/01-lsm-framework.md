@@ -712,7 +712,6 @@ Cupolas daemon 作为用户态策略引擎通过 A-IPC 总线（128B 消息头�
  * in services/daemons/, NOT in [SC] ipc.h's 7 core opcodes. */
 struct airy_ipc_msg_hdr hdr = {
     .magic    = AIRY_IPC_MAGIC,           /* 0x41524531 'ARE1' */
-    .version  = AIRY_IPC_VERSION_CURRENT,
     .opcode   = AIRY_IPC_OP_AUDIT_EVENT,  /* [IND] 层 opcode：审计事件上报 */
     .payload_len = sizeof(struct airy_audit_payload),  /* payload 区大小 */
 };

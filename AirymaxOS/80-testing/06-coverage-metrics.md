@@ -748,9 +748,9 @@ int airy_coverage_agent_path_illegal_count(void)
 
 ---
 
-## 12. 性能回归 CI（v1.1 增量补强）
+## 12. 性能回归 CI（v1.0.1 增量补强）
 
-> **补强背景**：170-performance/ 目录当前无 .md 文档落地（v1.1 待补），性能回归检测缺乏 CI 自动化。v1.0.1 Capability Folding 引入 fastpath C-S9 内联校验（~10ns SLA）、Badge 编译等新性能敏感路径，若无 CI 性能回归守护，延迟退化可能悄然合入主干。本章节作为 170-performance/ 文档缺位期间的临时落地，待 170-performance/03-ipc-performance.md 建立后迁移。
+> **补强背景**：170-performance/ 目录当前无 .md 文档落地（v1.0.1 待补），性能回归检测缺乏 CI 自动化。v1.0.1 Capability Folding 引入 fastpath C-S9 内联校验（~10ns SLA）、Badge 编译等新性能敏感路径，若无 CI 性能回归守护，延迟退化可能悄然合入主干。本章节作为 170-performance/ 文档缺位期间的临时落地，待 170-performance/03-ipc-performance.md 建立后迁移。
 
 ### 12.1 基准测试集
 
@@ -824,7 +824,7 @@ jobs:
 | 灾难 | > 50% | 立即阻断 release；触发回滚至上一稳定版本 |
 
 ```json
-// perf_baseline.json（v1.1 基线，固定硬件配置下测量）
+// perf_baseline.json（v1.0.1 基线，固定硬件配置下测量）
 {
   "hardware": {
     "cpu": "Intel Xeon Platinum 8480+ (2.0GHz, 56C/112T)",

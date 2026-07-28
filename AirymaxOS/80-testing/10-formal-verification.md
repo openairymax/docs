@@ -1037,7 +1037,7 @@ CBMC 验证的工程价值：
 | 版本 | 验证技术 | 验证对象 | 目标 |
 |------|---------|---------|------|
 | v1.0.1（当前） | CBMC（model checking） | fastpath C-S9 11 属性 | 高置信度工程证据 |
-| v1.1 | CBMC + TLA+（IPC 状态机） | fastpath + IPC Ring 状态机 | 状态机无死锁证明 |
+| v1.0.1 | CBMC + TLA+（IPC 状态机） | fastpath + IPC Ring 状态机 | 状态机无死锁证明 |
 | v1.2 | + Coq/Isabelle（逐步精化） | Capability 算法 refinement | 抽象→实现 精化证明 |
 | v1.3 | + TLA+ info-flow | Agent 间信息流 | 机密性/完整性证明 |
 | v1.4+ | 评估引入 TLA+ / Coq 全链精化 | fastpath 全链 | 接近 seL4 验证深度 |

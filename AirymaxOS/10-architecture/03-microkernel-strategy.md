@@ -604,7 +604,7 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 | `error.h`           | 错误码契约              | `AIRY_E*` 错误码 + `AIRY_FAULT_*` 故障码 + [DSL] 降级块                                 | 全部子仓 |
 | `log_types.h`       | 诊断/审计              | `AIRY_LOG_MAGIC` + 128B 记录 + 5 级日志枚举 + printk 映射                                | kernel / services  |
 | `ipc.h`             | Endpoint / Message   | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）                    | kernel / services  |
-| `sched.h`           | TCB 调度               | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED\_AGENT 宏）+ MAC\_MAX\_AGENTS=1024 | kernel / cognition |
+| `sched.h`           | TCB 调度               | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED\_AGENT 宏）+ AIRY\_CAP\_MAX\_AGENTS=1024 | kernel / cognition |
 | `memory_types.h`    | Untyped / Frame      | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
 | `security_types.h`  | CNode / Capability   | 41 cap + 250 LSM + Cupolas blob 布局 + capability 派生                               | kernel / security  |
 | `cognition_types.h` | —                    | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式                                  | kernel / cognition |

@@ -262,7 +262,7 @@ agentrt-linux 在 agentrt 17 类规则编号体系基础上，新增 OS 专属�
 | v1.3 | 2026-07-13 | 50-engineering-standards 精简合并 53→23 文档 |
 | v1.4 | 2026-07-13 | D 类 OLK-6.6 工程标准 8 项差距移交 1.0.1 M1+；修正子目录文档计数 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v2 升级为 v3 四层模型（新增 [DSL] 降级生存层）；新增 `11-sc-header-type-bridging.md`（[SC] 类型桥接文档）；SSoT 升级为 v2（`09-ssot-registry.md`）；`120-cross-project-code-sharing.md` 升级为 IRON-9 v3 四层模型；新增 Airymax Unify Design 五模块工程标准映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC） |
-| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-8 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
