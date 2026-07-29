@@ -153,57 +153,140 @@ _Static_assert(sizeof(struct airy_log_record) == 128,
 `uapi_compat.h` 是类型桥接的实现头文件，物理宿主为 `kernel/include/uapi/linux/airymax/uapi_compat.h`。实际代码内容如下（与 SSoT 源文件逐字节一致）：
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-/* SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * uapi_compat.h — [SC] Shared Contract Layer: UAPI type compatibility
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * Provides Linux kernel-style fixed-width types (__u8/__u16/__u32/__u64/__s32)
- * for cross-platform compatibility between agentrt (user-space) and
- * agentrt-linux (kernel) code.
+ * A-UAPI Compat: three-way type bridge for [SC] shared contract headers.
  *
- * IRON-9 v2 [SC] layer — shared between agentrt and agentrt-linux.
+ * This header provides portable fixed-width integer types for UAPI headers
+ * that must compile identically in kernel-space, Linux user-space, and
+ * non-Linux platforms (macOS, Windows agentrt).
+ *
+ *   #ifdef __KERNEL__      -> #include <linux/types.h>   (provides __u32 etc.)
+ *   #elif defined(__linux__) -> #include <linux/types.h>  (same UAPI types)
+ *   #else                  -> typedef from <stdint.h>    (macOS/Windows)
  */
 
-#ifndef _AIRY_UAPI_COMPAT_H
-#define _AIRY_UAPI_COMPAT_H
+#ifndef _UAPI_AIRYMAX_UAPI_COMPAT_H
+#define _UAPI_AIRYMAX_UAPI_COMPAT_H
 
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Linux kernel-style fixed-width types.
- *
- * d9 修复（预先存在问题）：在 Linux 平台上，__u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64
- * 由 <asm/types.h> 通过 <linux/types.h> 定义。直接 typedef 会与系统头文件冲突
- *（conflicting types for '__u64'; have 'uint64_t' {aka 'long unsigned int'} vs
- * 'unsigned long long'）。
- *
- * 修复策略：Linux 平台包含 <linux/types.h> 获取系统定义；非 Linux 平台自定义。
- */
-#ifdef __linux__
-#include <linux/types.h>
-/* Linux: __u8/__u16/__u32/__u64/__s8/__s16/__s32/__s64 由 <linux/types.h> 提供 */
+#ifdef __KERNEL__
+	/* Kernel-space: use Linux kernel UAPI types */
+	#include <linux/types.h>
+#elif defined(__linux__)
+	/* Linux user-space: <linux/types.h> is the authoritative source of
+	 * __u32/__u64/... types. Include it directly rather than redefining
+	 * with <stdint.h> types, which may differ in type identity (e.g. on
+	 * 64-bit, uint64_t = unsigned long vs __u64 = unsigned long long). */
+	#include <linux/types.h>
 #else
-/* 非 Linux 平台（macOS/Windows 等）：自定义 kernel-style 类型 */
-typedef uint8_t  __u8;
-typedef uint16_t __u16;
-typedef uint32_t __u32;
-typedef uint64_t __u64;
-
-typedef int8_t   __s8;
-typedef int16_t  __s16;
-typedef int32_t  __s32;
-typedef int64_t  __s64;
+	/* Non-Linux user-space (macOS, Windows): same mapping */
+	#include <stdint.h>
+	typedef int32_t   __s32;
+	typedef uint32_t  __u32;
+	typedef int64_t   __s64;
+	typedef uint64_t  __u64;
+	typedef int16_t   __s16;
+	typedef uint16_t  __u16;
+	typedef int8_t    __s8;
+	typedef uint8_t   __u8;
 #endif
 
-#ifdef __cplusplus
-}
+/* ─── Struct Alignment Abstraction (OS-IRON-016 sanctioned exception) ──
+ *
+ * AIRY_ALIGNED(N) provides a compiler-agnostic way to specify struct
+ * alignment in UAPI headers without directly using __attribute__.
+ *
+ * C11's _Alignas cannot be placed after a struct type definition (it
+ * only applies to variable declarations), so compiler extensions are
+ * unavoidable for struct-level alignment. This macro is the single
+ * sanctioned exception to OS-IRON-016's prohibition on __attribute__
+ * in UAPI headers — all other __attribute__ uses remain prohibited.
+ *
+ * Usage (placement after closing brace, same as __attribute__):
+ *
+ *   struct foo {
+ *       ...
+ *   } AIRY_ALIGNED(64);
+ *
+ * Supported compilers:
+ *   GCC / Clang: __attribute__((aligned(N)))   [Linux kernel + user-space]
+ *   MSVC:        __declspec(align(N))           [Windows user-space, placed
+ *                                               before struct keyword via
+ *                                               AIRY_ALIGNED_PREFIX]
+ *   C11 fallback: _Alignas(N)                   [may not work for struct
+ *                                               type definitions]
+ *
+ * Rationale: Linux 6.6 UAPI headers use __aligned(N) (from
+ * include/uapi/linux/types.h) which expands to __attribute__((aligned(N))).
+ * AirymaxOS cannot reuse __aligned(N) directly in [SC] headers because
+ * macOS/Windows user-space builds do not include <linux/types.h>.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+	#define AIRY_ALIGNED(n) __attribute__((aligned(n)))
+#elif defined(_MSC_VER)
+	/* MSVC: __declspec(align(N)) must be placed BEFORE the struct keyword.
+	 * Use AIRY_ALIGNED_PREFIX(N) struct foo { ... }; for MSVC builds.
+	 * For portable code, use AIRY_ALIGNED(N) after the closing brace —
+	 * MSVC will silently ignore it (no alignment), which is acceptable
+	 * because Windows agentrt uses Clang, not MSVC, for [SC] headers. */
+	#define AIRY_ALIGNED(n)
+	#define AIRY_ALIGNED_PREFIX(n) __declspec(align(n))
+#else
+	/* C11 fallback: _Alignas may not enforce struct-level alignment
+	 * after a type definition. This is a best-effort fallback. */
+	#define AIRY_ALIGNED(n) _Alignas(n)
 #endif
 
-#endif /* _AIRY_UAPI_COMPAT_H */
+/* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
+ * When AIRY_SC_FALLBACK is defined, the three-way type bridge collapses
+ * to a two-way bridge: __KERNEL__ vs non-__KERNEL__. The non-Linux
+ * branch (macOS/Windows) reuses the Linux user-space typedefs because
+ * both rely on <stdint.h> with identical fixed-width mappings. This
+ * guarantees that agentrt cross-platform builds still compile when the
+ * full [SC] contract is degraded. See [DSL] §2.2.
+ */
+#ifdef AIRY_SC_FALLBACK
+	#ifdef __KERNEL__
+		/* Kernel branch unchanged — <linux/types.h> is authoritative. */
+	#else
+		/* All user-space branches collapse to <stdint.h> mapping. */
+		#ifndef _AIRY_DSL_UAPI_COMPAT_DONE
+			#define _AIRY_DSL_UAPI_COMPAT_DONE
+			#include <stdint.h>
+			#ifndef __s32
+				typedef int32_t   __s32;
+			#endif
+			#ifndef __u32
+				typedef uint32_t  __u32;
+			#endif
+			#ifndef __s64
+				typedef int64_t   __s64;
+			#endif
+			#ifndef __u64
+				typedef uint64_t  __u64;
+			#endif
+			#ifndef __s16
+				typedef int16_t   __s16;
+			#endif
+			#ifndef __u16
+				typedef uint16_t  __u16;
+			#endif
+			#ifndef __s8
+				typedef int8_t    __s8;
+			#endif
+			#ifndef __u8
+				typedef uint8_t   __u8;
+			#endif
+		#endif
+	#endif
+	#define AIRY_DSL_UAPI_BRANCHES  2  /* __KERNEL__ vs user-space */
+
+	#warning "AIRY_SC_FALLBACK active: uapi_compat.h degraded to two-way bridge (__KERNEL__ vs user-space)"
+#endif /* AIRY_SC_FALLBACK */
+
+#endif /* _UAPI_AIRYMAX_UAPI_COMPAT_H */
 ```
 
 ### 3.2 设计原则：直接使用 UAPI 类型名称
@@ -216,7 +299,7 @@ typedef int64_t  __s64;
 | 别名层级 | 无（不引入 `airy_u32`） | 减少认知负担，避免别名与原始类型混用 |
 | Linux 平台策略 | `#include <linux/types.h>` | 复用系统定义，避免 typedef 冲突 |
 | 第三方平台策略 | `typedef uint8_t __u8` 等 | 将 stdint 类型映射为 UAPI 名称，源码无需条件编译 |
-| 条件编译宏 | `#ifdef __linux__` | 二路判定，覆盖 Linux 内核态 + 用户态 |
+| 条件编译宏 | `#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else` | 三路判定：内核态、Linux 用户态、非 Linux 用户态（macOS/Windows） |
 
 ### 3.3 二进制布局一致性
 
@@ -243,7 +326,7 @@ error: conflicting types for '__u64'
 
 **根因**：Linux 平台上 `<asm/types.h>` 已将 `__u64` 定义为 `unsigned long long`（在 64 位平台上），而 `uint64_t` 是 `unsigned long`。虽然二者大小都是 8 字节，但 C 类型系统视为不同类型，触发冲突。
 
-**修复**：Linux 平台直接 `#include <linux/types.h>` 复用系统定义，不进行 `typedef`。这是当前 `uapi_compat.h` 采用二路条件编译（而非三路）的根本原因。
+**修复**：Linux 平台直接 `#include <linux/types.h>` 复用系统定义，不进行 `typedef`。当前 `uapi_compat.h` 采用三路条件编译（`#ifdef __KERNEL__` 内核态 / `#elif defined(__linux__)` Linux 用户态 / `#else` 非 Linux 用户态），内核态与 Linux 用户态都通过 `<linux/types.h>` 获取类型定义，非 Linux 平台通过 `<stdint.h>` + typedef 提供等价类型。
 
 ---
 

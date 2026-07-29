@@ -61,9 +61,9 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 
 ## 第 2 章 IRON 工程铁律（不可妥协）
 
-### 2.1 OS-IRON 编号汇总（15 条铁律）
+### 2.1 OS-IRON 编号汇总（16 条铁律）
 
-> **SSoT 声明**：OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（15 条铁律，含 OS-IRON-015 编号管理元规则，2026-07-15 提升）。本表为该注册表的公开镜像，必须与之一一对应。原表中不属于 IRON 层级的规则已重分类：①"7 层自动化验证强制"→ OS-ACC-002（验收标准）；②"信任链分层不可越级提交"→ OS-STD-GOV-008；③"Reviewed-by 不可替代 Signed-off-by"→ 由 IRON-005（审查优先）+ IRON-007（DCO）共同涵盖；④"组织 6 级成熟度 Level 2"→ OS-STD-GOV-009。
+> **SSoT 声明**：OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（16 条铁律，含 OS-IRON-015 编号管理元规则，2026-07-15 提升；OS-IRON-016 UAPI 编译器无关原则，2026-07-29 登记）。本表为该注册表的公开镜像，必须与之一一对应。原表中不属于 IRON 层级的规则已重分类：①"7 层自动化验证强制"→ OS-ACC-002（验收标准）；②"信任链分层不可越级提交"→ OS-STD-GOV-008；③"Reviewed-by 不可替代 Signed-off-by"→ 由 IRON-005（审查优先）+ IRON-007（DCO）共同涵盖；④"组织 6 级成熟度 Level 2"→ OS-STD-GOV-009。
 
 | 编号 | 规则 | 五维映射 | 来源文档 |
 |------|------|---------|---------|
@@ -82,6 +82,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 | **OS-IRON-013** | 8 子仓独立 git 仓库 + submodule 管理——拆分为 8 个独立 leaf 仓，由管理仓通过 submodule 统一管理 | S-2 | 04 工程思想 §13 |
 | **OS-IRON-014** | [SC] 共享契约层 10 个 [SC] 核心头文件单一数据源（禁止物理副本）——10 个 [SC] 头文件物理宿主在 kernel/include/uapi/linux/airymax/，其他子仓通过 -I 引用（bpf_struct_ops.h 为补充共享文件，非 [SC] 核心） | E-7 | 120 跨项目代码共享 |
 | **OS-IRON-015** | 编号管理元规则——OS-KER / OS-STD / OS-OBS / OS-DRV 等所有规则编号一经分配不得复用；废弃规则标记 `DEPRECATED` 但保留编号（原 OS-STD-017，2026-07-15 提升为 OS-IRON-015） | S-1 | 90-observability/02-ebpf-probes.md §14.2 |
+| **OS-IRON-016** | UAPI 头文件编译器无关原则——`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C 标准（C11），避免直接使用编译器扩展（`__attribute__`/`__builtin_*`/`__asm__`/`__sync_*`/`__atomic_*`/`typeof`）。唯一例外：结构体缓存行对齐通过 `AIRY_ALIGNED(N)` 宏（定义于 `uapi_compat.h`）实现，因 C11 `_Alignas` 不支持结构体类型定义后对齐 | K-2 / E-7 | 04 工程思想 §2.4 |
 
 ### 2.2 IRON 铁律执行机制
 
@@ -102,6 +103,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 | OS-IRON-013 | 8 子仓仓库结构校验 + submodule 一致性检查 | 跨仓直接引用（非 submodule）被拒绝 |
 | OS-IRON-014 | `scripts/check-sc-single-source.sh` 检查 [SC] 头文件单一数据源 | 物理副本被检测并拒绝 |
 | OS-IRON-015 | SSoT 注册表唯一性校验 + 废弃规则编号占用扫描 + CI 编号冲突检测 | 重复登记或复用废弃编号被 CI 阻断合并 |
+| OS-IRON-016 | UAPI 头文件编译器扩展扫描（`grep -rnE "__attribute__\|__builtin_\|__asm__\|__sync_\|__atomic_\|typeof" include/uapi/linux/airymax/ --exclude="uapi_compat.h"`）+ CI 双编译器验证（gcc + clang）+ `AIRY_ALIGNED(N)` 宏使用校验 | UAPI 头文件含直接编译器扩展（非 AIRY_ALIGNED 宏）被 CI 阻断合并 |
 
 ---
 
@@ -172,6 +174,7 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 | **共享契约层** | [SC] | 完全共享头文件 | 10 个头文件（见 §4.2） | `include/uapi/linux/airymax/` 目录，两端 `#include` 同一头文件 |
 | **语义同源层** | [SS] | 语义一致，实现独立 | MicroCoreRT 调度语义 / AgentsIPC 128B 消息头 / Cupolas 安全模型 / CoreLoopThree 三层循环 | 两端独立实现，通过行为契约测试验证语义一致 |
 | **完全独立层** | [IND] | 完全独立 | agentrt-linux 专属：内核驱动框架、Kbuild、内核内部 API；agentrt 专属：跨平台用户态运行时、SDK 四语言 | 各自独立仓库，无依赖关系 |
+| **降级生存层** | [DSL] | 自包含降级块 | 38 POSIX 码降级映射 + 最简 IPC + EEVDF 默认调度 | `#ifdef AIRY_SC_FALLBACK` 降级块内嵌 [SC] 头文件，损坏时最小可运行子集 |
 
 ### 4.2 [SC] 共享契约层头文件清单
 
@@ -185,6 +188,10 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + CoreLoopThree 上下文结构 + Token 能效指标结构 + GPU/NPU 能力描述符 | [SC] |
 | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 0-139 + AIRY_SLICE_DFL（20ms） | [SC] |
 | `include/uapi/linux/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位 | [SC] |
+| `include/uapi/linux/airymax/error.h` | A-UEF 统一错误与故障定义：10 子空间错误码（POSIX/IPC/Capability/Config/Sched/Mem/Cog/Log/Obj/Sys）+ 故障码 + [DSL] 38 POSIX 降级映射 | [SC] |
+| `include/uapi/linux/airymax/log_types.h` | A-ULP 日志级别 + 128B 日志记录结构 + 设施码 + Ring Buffer 布局 | [SC] |
+| `include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（Linux `__u32` / 第三方 `uint32_t` / C11 标准）+ 编译器无关类型定义 | [SC] |
+| `include/uapi/linux/airymax/lsm_types.h` | 纯 C LSM 类型：capability slot 结构 + per-agent epoch + badge 字段布局 + airy_task_sec blob + 7 派生操作枚举 | [SC] |
 
 ### 4.3 代码共享边界
 

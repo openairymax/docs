@@ -419,7 +419,7 @@ if (unlikely(fatal_error)) {
 2. **枚举与位宽约束**：枚举值用于位域或固定位宽字段时，必须编译期校验上界。
 3. **`__noreturn` 标注**：`airy_panic`、`airy_halt`、`do_exit` 等不会返回的函数必须声明为 `__noreturn`；调用这些函数后的代码路径编译器将正确消除"缺少 return"警告。
 4. **头文件依赖最小化**：内核内部头文件不得依赖用户态接口头文件；`include/uapi/linux/airymax/` 下的 [SC] 共享契约层头文件必须保持最小依赖集，仅包含自身类型定义所需的头文件。
-5. **UAPI 头文件编译器无关原则**（OS-IRON-016）：`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C11 标准，禁止使用 `__attribute__`、`__builtin_*`、`__asm__`、`__sync_*`、`__atomic_*`、`typeof` 等编译器扩展，以保证可被任意 C11 标准编译器（GCC/Clang/MSVC/ICC）消费。内核内部头文件（`include/uapi/linux/airymax/`）不受此约束（D-8 OLK 6.6 UAPI 路径对齐：UAPI 头文件物理宿主 `include/uapi/linux/airymax/`，内核内部头文件 `include/uapi/linux/airymax/`）。详见 [04-engineering-philosophy.md §2.4](../04-engineering-philosophy.md)。
+5. **UAPI 头文件编译器无关原则**（OS-IRON-016）：`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C11 标准，禁止直接使用 `__attribute__`、`__builtin_*`、`__asm__`、`__sync_*`、`__atomic_*`、`typeof` 等编译器扩展，以保证可被任意 C11 标准编译器（GCC/Clang/MSVC/ICC）消费。唯一例外：结构体缓存行对齐必须通过 `AIRY_ALIGNED(N)` 宏（定义于 `uapi_compat.h`）实现，因 C11 `_Alignas` 不支持结构体类型定义后对齐。`uapi_compat.h` 是唯一允许包含 `__attribute__` 的 UAPI 头文件（仅用于 `AIRY_ALIGNED` 宏定义）。内核内部头文件不受此约束。详见 [04-engineering-philosophy.md §2.4](../04-engineering-philosophy.md)。
 6. **`unreachable()` 标注不可达路径**：调用 `__noreturn` 函数后的代码路径，或逻辑上不可达的 `default`/`case` 分支，必须使用 Linux 内核 `unreachable()` 宏（等价于 `__builtin_unreachable()`，定义于 `include/linux/compiler.h`）标注。`airy_panic()` 之后的代码若 `airy_panic()` 已声明为 `__noreturn`，编译器自动消除警告，无需额外 `unreachable()`；仅在未声明 `__noreturn` 的场景或 `switch` 默认分支需显式标注。
 7. **位操作函数**：优先使用 Linux 内核位操作 API（`__builtin_clzl()` / `__builtin_ctzl()` / `__builtin_popcountl()` / `bitmap_*` 系列，定义于 `include/linux/bitops.h` / `include/asm-generic/bitops/`），不引入 seL4 `clzl()` / `ctzl()` / `popcountl()` 函数封装（违反 IRON-1 禁止新特性）。
 8. **缓存行对齐 padding**：使用 Linux 内核 `____cacheline_aligned` / `__cacheline_aligned` / `CACHELINE_ALIGN` 等已有宏（定义于 `include/linux/cache.h`），不引入 seL4 `PAD_TO_NEXT_CACHE_LN()` 宏。
@@ -2928,7 +2928,7 @@ inline void secure_memset(void* ptr, uint8_t value, size_t size) {
 
 #### 8.1 错误码定义
 
-> **SSoT 说明**：以下为模块级错误码枚举示例（-1000~-999 段），**非 C 内核错误码 SSoT**。C 内核首要错误码体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`、`AIRY_ETIMEDOUT=-110`），权威定义见 `agentrt/commons/include/airy_types.h` + `agentrt/commons/utils/error/include/error.h`（详见 `120-cross-project-code-sharing.md` §2.5）。以下枚举仅用于演示模块级错误码命名规范。
+> **SSoT 说明**：以下为模块级错误码枚举示例（-1000~-999 段），**非 C 内核错误码 SSoT**。C 内核首要错误码体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`、`AIRY_ETIMEDOUT=-110`），权威定义见 `agentrt/commons/include/airy_types.h` + `agentrt/commons/utils/error/include/error.h`（详见 `120-cross-project-code-sharing.md` §2.4）。以下枚举仅用于演示模块级错误码命名规范。
 
 ```cpp
 // 错误码命名：模块名_E描述（模块级错误码示例，非 C 内核 SSoT）

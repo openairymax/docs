@@ -91,46 +91,82 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ### 2.2 补充共享文件 1：bpf\_struct\_ops.h（非 [SC] 核心头文件）
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_BPF_STRUCT_OPS_H
-#define _AIRY_BPF_STRUCT_OPS_H
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
+#ifndef _UAPI_AIRYMAX_BPF_STRUCT_OPS_H
+#define _UAPI_AIRYMAX_BPF_STRUCT_OPS_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /**
- * struct airy_struct_ops_value - shared struct_ops state
- * @state: Operation state machine value.
- * @common: Common value shared between BPF and scheduler.
+ * enum airy_struct_ops_state - 4-state machine (kernel-driven)
+ * @AIRY_STRUCT_OPS_INIT:       Allocated, not registered
+ * @AIRY_STRUCT_OPS_REGISTERED: register_bpf_struct_ops() done
+ * @AIRY_STRUCT_OPS_ACTIVE:     Fully live, serving calls
+ * @AIRY_STRUCT_OPS_DRAINING:   Quiescing, no new calls accepted
+ *
+ * State transitions are kernel-driven; agentrt userspace observes
+ * state via BTF (read-only).
+ */
+enum airy_struct_ops_state {
+	AIRY_STRUCT_OPS_INIT        = 0,
+	AIRY_STRUCT_OPS_REGISTERED  = 1,
+	AIRY_STRUCT_OPS_ACTIVE      = 2,
+	AIRY_STRUCT_OPS_DRAINING    = 3,
+	AIRY_STRUCT_OPS_STATE_MAX
+};
+
+/**
+ * struct bpf_struct_ops_common_val - common value embedded as first field
+ * @state:          enum airy_struct_ops_state
+ * @refcount:       kernel-managed reference count
+ * @registered_ns:  monotonic time of REGISTERED transition
+ * @activated_ns:   monotonic time of ACTIVE transition
+ * @_reserved:      reserved for future kernel fields
+ *
+ * Alignment: AIRY_ALIGNED(64) to avoid false sharing across CPUs.
+ */
+struct bpf_struct_ops_common_val {
+	__u32   state;
+	__u32   refcount;
+	__u64   registered_ns;
+	__u64   activated_ns;
+	__u8    _reserved[32];
+} AIRY_ALIGNED(64);
+
+/**
+ * struct airy_struct_ops_value - shared struct_ops value type
+ * @common:  bpf_struct_ops_common_val (MUST be first)
+ * @version: struct_ops ABI version
+ * @flags:   reserved for future use
+ * @name:    human-readable identifier
+ * @_reserved: padding to 128 bytes
  *
  * Shared between agentrt (user-space BPF loader) and
- * agentrt-linux (kernel struct_ops framework).
+ * agentrt-linux (kernel struct_ops framework). The `common` field
+ * MUST be first to satisfy the kernel bpf_struct_ops framework layout.
  */
 struct airy_struct_ops_value {
-	__u32	state;
-	__u64	common;
-};
+	struct bpf_struct_ops_common_val common;  /* MUST be first */
+	__u32   version;
+	__u32   flags;
+	__u8    name[48];
+	__u8    _reserved[8];
+} AIRY_ALIGNED(64);
 
-enum airy_struct_ops_state {
-	AIRY_OPS_INIT	= 0,
-	AIRY_OPS_REGISTERED	= 1,
-	AIRY_OPS_ACTIVE	= 2,
-	AIRY_OPS_DRAINING	= 3,
-};
-
-#endif /* _AIRY_BPF_STRUCT_OPS_H */
+#endif /* _UAPI_AIRYMAX_BPF_STRUCT_OPS_H */
 ```
 
 > **定位说明**：`bpf_struct_ops.h` 是 agentrt 与 agentrt-linux 之间的**补充共享文件**（SDK 网关状态管理共享结构），两端共享代码但**不属于 10 个 [SC] 核心头文件**。其 `struct airy_struct_ops_value` 和 `enum airy_struct_ops_state` 用于 agentrt 用户态 BPF loader 与 agentrt-linux 内核 struct_ops 框架之间的状态同步。
 
-### 2.2.1 [SC] 核心头文件 9：uapi\_compat.h（三路类型桥接）
+### 2.3 [SC] 核心头文件：uapi\_compat.h（三路类型桥接）
 
-> **定位说明**：`uapi_compat.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级），提供三路类型桥接：内核态（`__u32` 等，通过 `<linux/types.h>`）、用户态 Linux（`uint32_t` 等，通过 `<stdint.h>` + typedef）、第三方平台（`uint32_t` with stdint.h）。
+> **定位说明**：`uapi_compat.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级），提供三路类型桥接：内核态（`__u32` 等，通过 `<linux/types.h>`）、Linux 用户态（`__u32` 等，通过 `<linux/types.h>`）、非 Linux 用户态（`uint32_t` 等，通过 `<stdint.h>` + typedef 映射为 `__u32`）。
 
-所有 10 个 [SC] 核心头文件 + `bpf_struct_ops.h`（补充）均通过 `#include <airymax/uapi_compat.h>` 获取 `__u8`/`__u16`/`__u32`/`__u64`/`__s32`/`__s64` 等 UAPI 类型。该文件在 Linux 内核态直接包含 `<linux/types.h>`，在用户态 Linux 上通过 `<stdint.h>` + typedef 提供等价类型，在 macOS/Windows 上通过 `<stdint.h>` 提供等价类型，确保 [SC] 头文件在 agentrt 用户态跨平台（Linux/macOS/Windows）和 agentrt-linux 内核态均能逐字节相同地编译。
+所有 10 个 [SC] 核心头文件 + `bpf_struct_ops.h`（补充）均通过 `#include <linux/airymax/uapi_compat.h>` 获取 `__u8`/`__u16`/`__u32`/`__u64`/`__s32`/`__s64` 等 UAPI 类型。该文件在 Linux 内核态和 Linux 用户态均直接包含 `<linux/types.h>` 复用系统定义（避免 typedef 冲突），在 macOS/Windows 上通过 `<stdint.h>` + typedef 提供等价类型，确保 [SC] 头文件在 agentrt 用户态跨平台（Linux/macOS/Windows）和 agentrt-linux 内核态均能逐字节相同地编译。
 
-> **设计约束**：[SC] 头文件中**禁止**直接 `#include <linux/types.h>`（macOS/Windows 无此头文件），**必须**通过 `<airymax/uapi_compat.h>` 间接获取 UAPI 类型。
+> **设计约束**：[SC] 头文件中**禁止**直接 `#include <linux/types.h>`（macOS/Windows 无此头文件），**必须**通过 `<linux/airymax/uapi_compat.h>` 间接获取 UAPI 类型。
 
-### 2.2.2 [SC] 核心头文件 1：error.h（A-UEF 统一错误码）
+### 2.4 [SC] 核心头文件：error.h（A-UEF 统一错误码）
 
 > **定位说明**：`error.h` 是 [SC] 10 个核心头文件之一（IRON-9 v3 升级，A-UEF 模块），物理宿主为 `kernel/include/uapi/linux/airymax/error.h`，agentrt 用户态通过 `-I` 引用，禁止物理副本。
 
@@ -158,14 +194,14 @@ enum airy_struct_ops_state {
 
 任何文档、代码不得另起定义，必须引用此权威源。详见 `180-i18n/03-error-message-i18n.md` §2.2 和 `30-interfaces/08-sc-error-contract.md`。
 
-### 2.3 头文件 1：memory\_types.h
+### 2.5 [SC] 核心头文件：memory\_types.h
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_MEMORY_TYPES_H
-#define _AIRY_MEMORY_TYPES_H
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
+#ifndef _UAPI_AIRYMAX_MEMORY_TYPES_H
+#define _UAPI_AIRYMAX_MEMORY_TYPES_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* MemoryRovol L1-L4 hierarchy (shared semantics) */
 enum airy_mem_level {
@@ -185,17 +221,17 @@ enum airy_mem_level {
 #define AIRY_GFP_COLD		(0x04u)	/* Cold: node-remote */
 #define AIRY_GFP_PMEM		(0x08u)	/* Persistent memory */
 
-#endif /* _AIRY_MEMORY_TYPES_H */
+#endif /* _UAPI_AIRYMAX_MEMORY_TYPES_H */
 ```
 
-### 2.4 头文件 2：security\_types.h
+### 2.6 [SC] 核心头文件：security\_types.h
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_SECURITY_TYPES_H
-#define _AIRY_SECURITY_TYPES_H
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
+#ifndef _UAPI_AIRYMAX_SECURITY_TYPES_H
+#define _UAPI_AIRYMAX_SECURITY_TYPES_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* POSIX capability 41 IDs (0-40, subset shown) */
 #define AIRY_CAP_AGENT_SPAWN		41	/* Agent spawn capability (Airymax 专属，从 41 开始避免与 Linux 0-40 冲突) */
@@ -225,17 +261,17 @@ enum airy_cap_op {
 	AIRY_CAP_OP_ROTATE	= 6,
 };
 
-#endif /* _AIRY_SECURITY_TYPES_H */
+#endif /* _UAPI_AIRYMAX_SECURITY_TYPES_H */
 ```
 
-### 2.5 头文件 3：cognition\_types.h
+### 2.7 [SC] 核心头文件：cognition\_types.h
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_COGNITION_TYPES_H
-#define _AIRY_COGNITION_TYPES_H
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
+#ifndef _UAPI_AIRYMAX_COGNITION_TYPES_H
+#define _UAPI_AIRYMAX_COGNITION_TYPES_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* Q16.16 fixed-point: required because -mno-80387 (no FPU) */
 typedef __s32 airy_q16_t;
@@ -254,17 +290,17 @@ enum airy_think_mode {
 	AIRY_THINK_SLOW	= 1,	/* System-2: slow, deliberative */
 };
 
-#endif /* _AIRY_COGNITION_TYPES_H */
+#endif /* _UAPI_AIRYMAX_COGNITION_TYPES_H */
 ```
 
-### 2.6 头文件 4：sched.h
+### 2.8 [SC] 核心头文件：sched.h
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-#ifndef _AIRY_SCHED_H
-#define _AIRY_SCHED_H
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
+#ifndef _UAPI_AIRYMAX_SCHED_H
+#define _UAPI_AIRYMAX_SCHED_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* sched_tac (Linux 6.6 内核基线 原生调度类: SCHED_NORMAL=0/SCHED_FIFO=1/SCHED_DEADLINE=6)
  * 禁止定义 SCHED_AGENT 内核调度类宏, 禁止使用 SCHED_EXT=7（OLK 6.6 已 backport 但选择不使用）。 */
@@ -323,24 +359,24 @@ struct airy_task_desc {
 	airy_vtime_t	vtime;		/* Q16.16 fixed-point */
 };
 
-#endif /* _AIRY_SCHED_H */
+#endif /* _UAPI_AIRYMAX_SCHED_H */
 ```
 
-### 2.7 头文件 5：ipc.h
+### 2.9 [SC] 核心头文件：ipc.h
 
 > **SSoT 权威源声明**：本头文件为 A-IPC `Layout C v4` 消息头与 Badge 位布局的 [SC] 共享契约层物理宿主。Layout C v4 字段语义权威源为 [02-ipc-protocol.md §2](../30-interfaces/02-ipc-protocol.md)；fastpath 校验语义（C-S9 等）属于 [SS] 语义同源层，不在本头文件中定义，权威源为 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)；Badge 64-bit Native Word 安全模型权威源为 [03-capability-model.md §3](../110-security/03-capability-model.md)。
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
  * kernel/include/uapi/linux/airymax/ipc.h —— [SC] 共享契约层，物理宿主
  * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
  * 校验机制属于 [SS] 语义同源层，不在本头文件中定义
  */
-#ifndef AIRYMAX_IPC_H
-#define AIRYMAX_IPC_H
+#ifndef _UAPI_AIRYMAX_IPC_H
+#define _UAPI_AIRYMAX_IPC_H
 
-#include <airymax/types.h>  /* __u32, __u64, __u8 */
+#include <linux/airymax/uapi_compat.h>  /* __u32, __u64, __u8 via type bridge */
 
 #ifdef __cplusplus
 extern "C" {
@@ -468,7 +504,7 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 }
 #endif
 
-#endif /* AIRYMAX_IPC_H */
+#endif /* _UAPI_AIRYMAX_IPC_H */
 ```
 
 **[SC] 与 [SS] 的精确边界（H2）**：
@@ -478,20 +514,20 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 - **[IND] 完全独立层**：agentrt 用户态不使用 `capability_badge`（始终为 0），使用传统 `cap_t` 引用；agentrt-linux 内核使用 `capability_badge` + C-S9 内联校验。
 - **[DSL] 降级生存层**：`capability_badge` 字段存在但被忽略（值=0），C-S9 跳过，退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组）。
 
-### 2.8 头文件 6：syscalls.h
+### 2.10 [SC] 核心头文件：syscalls.h
 
 > **SSoT 权威源声明**：本头文件为 agentrt-linux syscall 接口的 [SC] 共享契约层物理宿主。Capability Folding 单平面架构将原 12 syscall 精简为 4 syscall（IPC 数据传递全部走 io_uring 数据面），权威源为 [01-syscalls.md §1](../30-interfaces/01-syscalls.md)。
 
 ```c
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
  * kernel/include/uapi/linux/airymax/syscalls.h —— [SC] 共享契约层，物理宿主
  * IRON-9 v3 [SC] 层：agentrt 与 agentrt-linux 共享数据结构定义
  */
-#ifndef AIRYMAX_SYSCALLS_H
-#define AIRYMAX_SYSCALLS_H
+#ifndef _UAPI_AIRYMAX_SYSCALLS_H
+#define _UAPI_AIRYMAX_SYSCALLS_H
 
-#include <airymax/types.h>
+#include <linux/airymax/uapi_compat.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -539,7 +575,7 @@ extern "C" {
 }
 #endif
 
-#endif /* AIRYMAX_SYSCALLS_H */
+#endif /* _UAPI_AIRYMAX_SYSCALLS_H */
 ```
 
 ***

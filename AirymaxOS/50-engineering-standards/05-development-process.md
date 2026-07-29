@@ -2274,14 +2274,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|------|
 | 内核态 → 用户态 | UAPI 头文件使用 `GPL-2.0-only WITH Linux-syscall-note` | `Linux-syscall-note` 例外允许用户态引用系统调用接口 |
 | 用户态 → 内核态 | 用户态代码不链接内核态代码 | 通过 syscall / io_uring / AgentsIPC 消息通信，无代码级链接 |
-| [SC] 共享契约层 | 6 个 `include/uapi/linux/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
+| [SC] 共享契约层 | 10 个 `include/uapi/linux/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
 
 ### 2.2 IRON-9 v3 四层共享模型的许可证约束
 
 | 层次 | 许可证策略 | 说明 |
 |------|-----------|------|
 | **[SC] 共享契约层** | `GPL-2.0-only WITH Linux-syscall-note` | 10 个头文件含 UAPI 定义，遵循内核 UAPI 许可证 |
-| **[SS] 语义同源层** | 各自独立许可证 | agentrt 端用户态用 AGPL-3.0 OR Apache-2.0；agentrt-linux 端内核态用 GPL-2.0 WITH Linux-syscall-note |
+| **[SS] 语义同源层** | 各自独立许可证 | agentrt 端用户态用 AGPL-3.0 OR Apache-2.0；agentrt-linux 端内核态用 GPL-2.0-only WITH Linux-syscall-note |
 | **[IND] 完全独立层** | 各自独立许可证 | 按文件类型适用本矩阵 §1.1 |
 
 ### 2.3 构建脚本与检查脚本的区分

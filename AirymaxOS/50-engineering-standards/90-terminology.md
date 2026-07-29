@@ -80,8 +80,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ----------- | ------------------------------------ | ----- | ------------ | ------------------- |
 | 统一错误与故障定义体系 | Unified Error and Fault Framework    | A-UEF | `airy_err_*` | `error.h`           |
 | 统一日志与打印系统   | Unified Logging and Printk Subsystem | A-ULP | `airy_log_*` | `log_types.h`       |
-| 统一计算与调度体系   | Unified Computing and Scheduling     | A-UCS | —            | `cognition_types.h` |
-| 统一生命周期管理    | Unified Lifecycle Management         | A-ULS | —            | `sched.h`           |
+| 统一认知体系     | Unified Cognition Subsystem          | A-UCS | —            | `cognition_types.h` |
+| 统一生命周期监督框架 | Unified Lifecycle Supervision Framework | A-ULS | —            | `sched.h`           |
 | 统一进程间通信体系   | Unified Inter-Process Communication  | A-IPC | `airy_ipc_*` | `ipc.h`             |
 
 ### 2.4 IRON-9 v3 四层模型术语对照
@@ -89,7 +89,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 层次    | 标注     | 全称                      | 共享程度                              |
 | ----- | ------ | ----------------------- | --------------------------------- |
 | 共享契约层 | \[SC]  | Shared Contract         | 完全共享代码（10 个头文件）                   |
-| 语义同源层 | \[SS]  | Semantic Sharing        | 高层 API 语义同源，签名独立演进                |
+| 语义同源层 | \[SS]  | Semantic Sibling       | 高层 API 语义同源，签名独立演进                |
 | 完全独立层 | \[IND] | Independent             | 完全独立实现                            |
 | 降级生存层 | \[DSL] | Degraded Survival Layer | 自包含降级块（`#ifdef AIRY_SC_FALLBACK`） |
 
@@ -980,15 +980,15 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 
 ***
 
-#### A-UCS / Unified Configuration Subsystem
+#### A-UCS / Unified Cognition Subsystem
 
-**定义**: Unified Configuration Subsystem（统一配置管理体系），Airymax Unify Design 5 模块之一。A-UCS 统一 agentrt-linux（AirymaxOS）的配置管理，采用 sysctl/JSON 双向同步进行热重载。A-ULS 的调度参数、A-IPC 的 Ring 大小、A-ULP 的日志级别均通过 A-UCS 进行配置变更。
+**定义**: Unified Cognition Subsystem（统一认知体系），Airymax Unify Design 5 模块之一。A-UCS 统一 agentrt-linux（AirymaxOS）的认知计算模型，包含 CoreLoopThree（感知-思考-行动三阶段循环）、Thinkdual（快慢双模推理）和 Q16.16 定点数运算。[SC] 头文件 `cognition_types.h` 是其唯一权威类型定义源。
 
-**技术领域**: 治理
+**技术领域**: 认知计算
 
-**标准名称**: A-UCS（Unified Configuration Subsystem，统一配置管理体系）
+**标准名称**: A-UCS（Unified Cognition Subsystem，统一认知体系）
 
-**参见**: Airymax Unify Design、A-ULS、A-IPC、A-ULP、airy\_defconfig
+**参见**: Airymax Unify Design、A-ULS、A-IPC、A-ULP、CoreLoopThree、Thinkdual
 
 ***
 
@@ -1180,11 +1180,11 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | Linux 6.6 内核基线           | Linux 6.6 Kernel Baseline                    | —                          | \[IND]                    | —                            |
 | 内核配置 fragment            | airy\_defconfig                              | —                          | \[IND]                    | —                            |
 | sched\_tac               | SCHED\_DEADLINE/SCHED\_FIFO/EEVDF + seL4 MCS | —                          | \[IND]                    | sched\_ext + eBPF 调度方案       |
-| 用户态调度器策略名                | AIRY\_SCHED\_AGENT                           | `airy_sched_agent_*`       | \[SS]                     | SCHED\_AGENT（旧称，易与内核调度类编号混淆） |
+| 用户态调度器策略名                | AIRY\_STC\_POLICY\_NAME                      | `airy_sched_agent_*`       | \[SS]                     | ~~AIRY\_SCHED\_AGENT~~（2026-07-18 废弃）、SCHED\_AGENT（旧称，易与内核调度类编号混淆） |
 | 微核心运行时                   | MicroCoreRT                                  | `airy_core_*`              | \[SS]                     | 微内核（不加限定词时）                  |
 | Agent 进程间通信              | AgentsIPC                                    | `airy_ipc_*`               | \[SS]                     | —                            |
 | IPC 零拷贝机制                | IORING\_OP\_URING\_CMD                       | —                          | \[IND]                    | page flipping                |
-| 安全穹顶                     | Cupolas                                      | `cupolas_*`                | \[SS]                     | Cupolas安全模块                  |
+| 安全穹顶                     | Cupolas                                      | `airy_cupolas_*`          | \[SS]                     | Cupolas安全模块                  |
 | 纯 C LSM 模块               | 纯 C LSM（不使用 BPF LSM）                         | `security/airy/`           | \[IND]                    | BPF LSM                      |
 | 日志/IPC 共享内存方案            | alloc\_pages + mmap                          | —                          | \[IND]                    | DMA 一致性内存                    |
 | 统一错误码与故障定义体系             | A-UEF                                        | `AIRY_E*` / `AIRY_FAULT_*` | \[SC]                     | —                            |
@@ -1231,10 +1231,10 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | 内核                 | `airy_core_[action]`                 | `airy_init`                     | \[SS]        |
 | 系统调用               | `airy_sys_[domain]_[action]`         | `airy_sys_call`                 | \[SC]        |
 | 认知层                | `airy_[prefix]_[action]`             | `airy_tc_context_window_append` | \[SS]        |
-| 安全穹顶               | `cupolas_[subsystem]_[action]`       | `cupolas_permission_check`      | \[SS]        |
+| 安全穹顶               | `airy_cupolas_[subsystem]_[action]`  | `airy_cupolas_guard_enter`      | \[SS]        |
 | 用户态服务              | `[service]_[action]`                 | `cogn_d_complete`               | \[IND]       |
 | IPC 通信             | `airy_ipc_[action]`                  | `airy_ipc_send`                 | \[SS]        |
-| AIRY\_SCHED\_AGENT | `airy_sched_agent_[action]`          | `airy_sched_agent_submit`       | \[SS]        |
+| AIRY\_STC\_POLICY  | `airy_sched_agent_[action]`          | `airy_sched_agent_submit`       | \[SS]        |
 | 多智能体               | `mac_[action]` / `airy_mac_[action]` | `mac_framework_create`          | \[SS]        |
 
 ### 结构体命名

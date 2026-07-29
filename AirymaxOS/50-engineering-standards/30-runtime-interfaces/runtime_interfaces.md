@@ -1746,7 +1746,7 @@ agentrt-linux（AirymaxOS）使用统一的错误码体系，确保错误信息�
 
 #### 4.2 错误码定义规范
 
-> **SSoT 对齐说明**：以下错误码值已对齐方案 A（POSIX errno 负值），与 `120-cross-project-code-sharing.md` §2.5 唯一 SSoT 一致。原方案 B（-1/-2/-11 自定义序列）已废弃。
+> **SSoT 对齐说明**：以下错误码值已对齐方案 A（POSIX errno 负值），与 `120-cross-project-code-sharing.md` §2.4 唯一 SSoT 一致。原方案 B（-1/-2/-11 自定义序列）已废弃。
 
 ```c
 /**

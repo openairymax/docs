@@ -216,6 +216,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-IRON-013 | 8 子仓独立 git 仓库 + submodule                                                            | 04 §13                                   | S-2       |
 | OS-IRON-014 | \[SC] 共享契约层 10 个核心头文件单一数据源（禁止物理副本）——10 个 [SC] 头文件物理宿主在 `kernel/include/uapi/linux/airymax/`，其他子仓通过 -I 引用（bpf\_struct\_ops.h 为补充共享文件，非 [SC] 核心）                   | 120 跨项目代码共享                              | E-7       |
 | OS-IRON-015 | 编号管理元规则——OS-KER / OS-STD / OS-OBS / OS-DRV 等所有规则编号一经分配不得复用；废弃规则标记 `DEPRECATED` 但保留编号 | 90-observability/02-ebpf-probes.md §14.2 | S-1       |
+| OS-IRON-016 | UAPI 头文件编译器无关原则——`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C 标准（C11），避免直接使用 `__attribute__`/`__builtin_*`/`__asm__`/`__sync_*`/`__atomic_*`/`typeof` 等编译器扩展。唯一例外：结构体缓存行对齐必须通过 `AIRY_ALIGNED(N)` 宏（定义于 `uapi_compat.h`）实现，因 C11 `_Alignas` 不能用于结构体类型定义后的对齐指定。`AIRY_ALIGNED(N)` 是 OS-IRON-016 的 sanctioned exception，所有其他 `__attribute__` 用途仍被禁止 | 04-engineering-philosophy.md §2.4        | K-2 / E-7 |
 
 ### 2.1 ES-SEL4 编号范围声明
 

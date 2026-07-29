@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：`docs/AirymaxRT/10-architecture/00-architectural-principles.md`（五维正交 24 原则）+ agentrt 17 类规则编号体系（IRON-9 v3 同源且部分代码共享）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + Airymax 体系并行论（Multibody Cybernetic Intelligent System）\
-> **SSoT 声明**：OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（15 条铁律，含 OS-IRON-015 编号管理元规则，2026-07-15 提升）。本文档第 5-10 章中标注的历史 OS-IRON-003~006 编号与 SSoT 存在语义偏移（详见下方 §0 对齐映射表）。正文中保留的历史编号仅作章节内引用，**规则定义以 SSoT 为准**；本文档与 SSoT 的任何冲突，以 SSoT 为准。
+> **SSoT 声明**：OS-IRON 铁律编号的唯一权威来源为 [09-ssot-registry.md §2](./09-ssot-registry.md)（16 条铁律，含 OS-IRON-015 编号管理元规则 2026-07-15 提升、OS-IRON-016 UAPI 编译器无关原则 2026-07-29 登记）。本文档第 5-10 章中标注的历史 OS-IRON-003~006 编号与 SSoT 存在语义偏移（详见下方 §0 对齐映射表）。正文中保留的历史编号仅作章节内引用，**规则定义以 SSoT 为准**；本文档与 SSoT 的任何冲突，以 SSoT 为准。
 
 ---
 
@@ -29,7 +29,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 0. IRON 铁律编号 SSoT 对齐映射表
 
-> 本文档历史上的 OS-IRON-003~006 标签与 SSoT（[09-ssot-registry.md §2](./09-ssot-registry.md) 15 条铁律）存在语义偏移：§3-§4 的章节内容与 SSoT 的 IRON-003/004 一致但缺少铁律标签；§5-§10 的铁律标签比 SSoT 偏移 2-3 位。正文中所有 IRON 标签已对齐至 SSoT 定义，下表作为历史映射记录保留。
+> 本文档历史上的 OS-IRON-003~006 标签与 SSoT（[09-ssot-registry.md §2](./09-ssot-registry.md) 16 条铁律）存在语义偏移：§3-§4 的章节内容与 SSoT 的 IRON-003/004 一致但缺少铁律标签；§5-§10 的铁律标签比 SSoT 偏移 2-3 位。正文中所有 IRON 标签已对齐至 SSoT 定义，下表作为历史映射记录保留。
 
 ### 0.1 编号对齐映射
 
@@ -56,9 +56,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | §9 | OS-IRON-005（历史） | 不破坏用户空间 | OS-IRON-006 | 已改标为 OS-IRON-006 |
 | §10 | OS-IRON-006（历史） | 决策者承认无能前置 | 无直接对应（管理哲学，非铁律） | 已降级（移除 IRON 标签，注明为管理哲学准则） |
 
-### 0.3 完整 IRON 铁律索引（SSoT 14 条）
+### 0.3 完整 IRON 铁律索引（SSoT 16 条）
 
-完整的 14 条 OS-IRON 铁律定义见 [09-ssot-registry.md §2](./09-ssot-registry.md)。本文档作为公开工程思想文档，覆盖其中 IRON-001~007 的哲学阐述；IRON-008~014 涉及工程规范委员会专属工程决策（[SC] 共享契约层、代码共享边界、双源声明、seL4 借鉴范围、8 子仓管理），其哲学阐述分散于本文档 §9（[SC] 层）、§12（工程取向）等章节，但不赋予独立 IRON 编号以避免与 SSoT 冲突。
+完整的 16 条 OS-IRON 铁律定义见 [09-ssot-registry.md §2](./09-ssot-registry.md)。本文档作为公开工程思想文档，覆盖其中 IRON-001~007 的哲学阐述以及 IRON-016（§2.4 UAPI 编译器无关原则）；IRON-008~014 涉及工程规范委员会专属工程决策（[SC] 共享契约层、代码共享边界、双源声明、seL4 借鉴范围、8 子仓管理），IRON-015 为编号管理元规则，其哲学阐述分散于本文档 §9（[SC] 层）、§12（工程取向）等章节，但不赋予独立 IRON 编号以避免与 SSoT 冲突。
 
 ---
 
@@ -162,7 +162,7 @@ agentrt-linux 在 Linux 双层稳定性（用户 ABI 稳定 / 内部 API 可变�
 
 ### 2.4 UAPI 头文件编译器无关原则
 
-**OS-IRON-016: `include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C 标准（C11），避免使用编译器扩展，以保证可被任意 C 标准编译器消费。**
+**OS-IRON-016: `include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C 标准（C11），避免直接使用编译器扩展，以保证可被任意 C 标准编译器消费。**
 
 此铁律源于 seL4 工程哲学——seL4 在 `include/assert.h` 中明确声明：
 
@@ -172,8 +172,8 @@ agentrt-linux 作为 Linux 6.6 内核衍生工程，内核态代码使用 GCC/Cl
 
 **具体要求**：
 
-1. **禁止在 `include/uapi/linux/airymax/` 头文件中使用**：
-   - `__attribute__((...))` —— 改用 C11 `_Alignas` / `_Noreturn` 等标准等价物
+1. **禁止在 `include/uapi/linux/airymax/` 头文件中直接使用**：
+   - `__attribute__((...))` —— 改用 C11 `_Alignas` / `_Noreturn` 等标准等价物，或通过 `AIRY_ALIGNED(N)` 宏（见下方例外）
    - `__builtin_*` —— 改用标准库函数或内联汇编包装
    - `__asm__` / `asm()` —— 内联汇编不应出现在 UAPI 头文件中
    - `__sync_*` / `__atomic_*` —— 改用 C11 `<stdatomic.h>`
@@ -183,10 +183,24 @@ agentrt-linux 作为 Linux 6.6 内核衍生工程，内核态代码使用 GCC/Cl
    - C11 标准特性（`_Static_assert`、`_Noreturn`、`_Alignas`、`_Atomic`、`_Generic`）
    - 标准类型（`<stdint.h>` 的 `uint32_t` 等）
    - 标准宏（`NULL`、`offsetof`、`size_t`）
+   - `AIRY_ALIGNED(N)` 宏（定义于 `uapi_compat.h`，见下方例外）
 
-3. **内核内部头文件不受此约束**：`include/airymax/` 下的内核内部头文件可自由使用 GCC/Clang 扩展，因为内核仅由 GCC/Clang 编译。
+3. **结构体对齐例外（sanctioned exception）**：
+   C11 标准的 `_Alignas` 仅能用于变量声明，不能用于结构体类型定义后的对齐指定（`struct foo { ... } _Alignas(64);` 是非法的）。因此，结构体缓存行对齐必须通过 `AIRY_ALIGNED(N)` 宏实现，该宏定义于 `uapi_compat.h`，内部根据编译器选择合适的扩展（GCC/Clang 用 `__attribute__((aligned(N)))`，MSVC 用 `__declspec(align(N))`，C11 回退用 `_Alignas(N)`）。
+   
+   `uapi_compat.h` 是唯一允许包含 `__attribute__` 的 UAPI 头文件（仅用于 `AIRY_ALIGNED` 宏定义）。所有其他 UAPI 头文件必须通过 `#include <linux/airymax/uapi_compat.h>` 获取此宏，不得直接使用 `__attribute__`。
+   
+   使用示例：
+   ```c
+   struct airy_ipc_msg_hdr {
+       __u32   magic;
+       /* ... fields ... */
+   } AIRY_ALIGNED(64);
+   ```
 
-**工程价值**：此原则确保 Agent 应用开发者可以使用任意 C11 标准编译器（GCC、Clang、MSVC、ICC 等）消费 UAPI 头文件，而不会被锁定到特定编译器生态。这与 OS-IRON-001（用户空间 ABI 永不破坏）共同构成 L1 接口的稳定性基石——ABI 语义稳定 + 编译器无关。
+4. **内核内部头文件不受此约束**：`include/airymax/` 下的内核内部头文件可自由使用 GCC/Clang 扩展，因为内核仅由 GCC/Clang 编译。
+
+**工程价值**：此原则确保 Agent 应用开发者可以使用任意 C11 标准编译器（GCC、Clang、MSVC、ICC 等）消费 UAPI 头文件，而不会被锁定到特定编译器生态。这与 OS-IRON-001（用户空间 ABI 永不破坏）共同构成 L1 接口的稳定性基石——ABI 语义稳定 + 编译器无关。`AIRY_ALIGNED(N)` 宏作为唯一 sanctioned exception，在保证编译器无关性的同时解决了 C11 标准的结构体对齐缺陷。
 
 ---
 
@@ -619,7 +633,7 @@ agentrt-linux 作为一个新建的智能体操作系统发行版，其工程组
 | OS-IRON-013 | §13 | 8 子仓独立 git 仓库 + submodule 管理 |
 | OS-IRON-014 | 120 §SC | [SC] 共享契约层 10 个 [SC] 核心头文件单一数据源（禁止物理副本） |
 | OS-IRON-015 | 90-obs/02 §14.2 | 编号管理元规则——编号一经分配不得复用 |
-| OS-IRON-016 | §2.4 | UAPI 头文件编译器无关原则（C11 标准，禁止编译器扩展） |
+| OS-IRON-016 | §2.4 | UAPI 头文件编译器无关原则（C11 标准，禁止编译器扩展；唯一例外：结构体缓存行对齐通过 `AIRY_ALIGNED(N)` 宏实现，定义于 `uapi_compat.h`） |
 | OS-KER-060 | §2.2 | API 改动者必须修复所有调用点 |
 | OS-KER-061 | §3.2 | 内核不内置策略（IRON-003 子规则） |
 | OS-KER-062 | §4.3 | 补丁序列中点可编译（IRON-004 子规则） |
