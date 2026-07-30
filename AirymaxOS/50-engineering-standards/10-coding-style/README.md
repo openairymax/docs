@@ -108,7 +108,7 @@ agentrt-linux（AirymaxOS）编码规范与 agentrt 编码规范遵循 **IRON-9 
 
 | IRON-9 v3 层级 | 定义 | 编码规范关系 | 示例 |
 |---------------|------|-------------|------|
-| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/uapi/linux/airymax/` 10 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
+| **[SC] 共享契约层** | 代码完全共享 | 共享 `include/uapi/linux/airymax/` 10 个头文件（`syscalls.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`sched.h`/`ipc.h`/`error.h`/`log_types.h`/`uapi_compat.h`/`lsm_types.h`）中的类型定义、常量、宏 | `AIRY_IPC_MAGIC`、`syscalls.h` |
 | **[SS] 语义同源层** | 高层 API 语义同源，签名独立演进 | 共享命名约定（`airy_` 前缀）、错误码体系、注释风格；但 C 内核态用 kernel-doc，Rust 用户态用 rustdoc | SDK 层 `airy_ipc_send()` 签名同源（同一份源码两端编译），其他层语义同源 |
 | **[IND] 完全独立层** | 完全独立 | 各自独立的编码规范——agentrt-linux（AirymaxOS）覆盖内核态 C 和内核模块 Rust，agentrt 覆盖用户态 Python/TS/Rust | agentrt-linux 专属：goto 集中出口模式、kmalloc/kfree 惯用法、内核锁规范 |
 
@@ -232,6 +232,10 @@ graph LR
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式 | 完全共享，双向同步 | 阶段变更需兼容性评估 |
 | `sched.h` | sched_tac 调度类约束 + 任务描述符 + vtime 衰减 | 完全共享，双向同步 | 调度语义变更需评审 |
 | `ipc.h` | IPC magic + 128B 消息头结构 + SQE/CQE 操作码 | 完全共享，双向同步 | ABI 变更需评审 |
+| `error.h` | A-UEF 统一错误码（AIRY_E\* POSIX 负值 + AIRY_FAULT_\* 故障码） | 完全共享，双向同步 | 错误码变更需兼容性评估 |
+| `log_types.h` | A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举） | 完全共享，双向同步 | 日志格式变更需评审 |
+| `uapi_compat.h` | 三路类型桥接（\_\_u32 ↔ uint32_t），确保跨平台编译一致 | 完全共享，双向同步 | 类型桥接变更需两端 CI 验证 |
+| `lsm_types.h` | 纯 C LSM 模块类型定义（airy_lsm_blob + capability_check 回调） | 完全共享，双向同步 | 安全审查强制 |
 
 [SC] 层编码规范核心约束：
 - **零内核依赖**：不能 `#include` 任何 Linux 内核头文件

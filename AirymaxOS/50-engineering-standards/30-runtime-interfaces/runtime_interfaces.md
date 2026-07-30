@@ -835,125 +835,107 @@ AgentsIPC 是 agentrt-linux（AirymaxOS）的进程间通信协议族，其核�
 
 #### 2.1 消息头布局
 
+AgentsIPC 128 字节定长消息头 SSoT 为 `struct airy_ipc_msg_hdr`（Layout C v4），
+物理宿主 `include/uapi/linux/airymax/ipc.h`，[SC] 共享契约层。
+
 ```c
-/**
- * are_ipc_msg_header_t - AgentsIPC 128 字节定长消息头
- *
- * 字节布局 (128 bytes total):
- *   [0-3]    - magic: 0x41524531 ('ARE1')
- *   [4-5]    - version: 协议版本 (major << 8 | minor)
- *   [6-7]    - flags: 标志位
- *   [8-23]   - trace_id: 分布式追踪 ID (UUID-128)
- *   [24-25]  - correlation_id: 关联 ID (大端序)
- *   [26-27]  - source: 源端点 ID
- *   [28-29]  - target: 目标端点 ID
- *   [30-31]  - payload_type: 载荷协议类型
- *   [32-35]  - payload_length: 载荷长度 (字节)
- *   [36-39]  - reserved: 预留字段
- *   [40-59]  - source_namespace: 源命名空间 (20 字节，null-terminated)
- *   [60-79]  - target_namespace: 目标命名空间 (20 字节，null-terminated)
- *   [80-83]  - timestamp_sec: 消息时间戳 (秒)
- *   [84-87]  - timestamp_nsec: 消息时间戳 (纳秒)
- *   [88-89]  - priority: 消息优先级 (0-255，0 最高)
- *   [90-127] - extension: 扩展字段 (38 字节，按需使用)
- *
- * 对齐要求: 128 字节对齐
- */
-typedef struct __attribute__((aligned(128))) {
-    uint32_t magic;                    /* [0-3]   0x41524531 */
-    uint16_t version;                  /* [4-5]   协议版本 */
-    uint16_t flags;                    /* [6-7]   标志位 */
-    uint8_t  trace_id[16];            /* [8-23]  分布式追踪 ID */
-    uint16_t correlation_id;          /* [24-25] 关联 ID */
-    uint16_t source;                  /* [26-27] 源端点 */
-    uint16_t target;                  /* [28-29] 目标端点 */
-    uint16_t payload_type;            /* [30-31] 载荷类型 */
-    uint32_t payload_length;          /* [32-35] 载荷长度 */
-    uint32_t reserved;                /* [36-39] 预留 */
-    char     source_namespace[20];    /* [40-59] 源命名空间 */
-    char     target_namespace[20];    /* [60-79] 目标命名空间 */
-    uint32_t timestamp_sec;           /* [80-83] 时间戳秒 */
-    uint32_t timestamp_nsec;          /* [84-87] 时间戳纳秒 */
-    uint16_t priority;                /* [88-89] 优先级 */
-    uint8_t  extension[38];           /* [90-127] 扩展字段 */
-} are_ipc_msg_header_t;
+/* SSoT: include/uapi/linux/airymax/ipc.h — struct airy_ipc_msg_hdr (Layout C v4) */
+struct airy_ipc_msg_hdr {
+    __u32   magic;             /* offset 0:  AIRY_IPC_MAGIC (0x41524531 'ARE1') */
+    __u16   opcode;            /* offset 4:  IPC opcode */
+    __u16   flags;             /* offset 6:  message flags */
+    __u64   trace_id;          /* offset 8:  distributed trace ID */
+    __u64   timestamp_ns;      /* offset 16: monotonic ns timestamp */
+    __u64   src_task;          /* offset 24: source task identifier */
+    __u64   dst_task;          /* offset 32: destination task identifier */
+    __u64   capability_badge;  /* offset 40: Capability Folding badge (64-bit) */
+    __u32   payload_len;       /* offset 48: payload length in bytes */
+    __u32   crc32;             /* offset 52: CRC32 of payload */
+    __u8    reserved[72];      /* offset 56: reserved for future use */
+} AIRY_ALIGNED(64);
 ```
 
-> **SSoT 声明**：`are_ipc_msg_header_t` 是 L2 服务协议层的**扩展布局**（含 source_namespace/target_namespace/correlation_id 等 L2 语义字段），与 [SC] 共享契约层的基础消息头 `struct airy_ipc_msg_hdr`（Layout C，物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）不同。基础 128B 消息头以 `include/uapi/linux/airymax/ipc.h` 为单一数据源；本 L2 扩展布局在 magic（`0x41524531` 'ARE1'）与 trace_id 语义上与 Layout C 保持同源，其余字段为 L2 服务协议专属。
+> **SSoT 声明**：以上 `struct airy_ipc_msg_hdr` 为 [SC] 共享契约层唯一数据源
+> （物理宿主 `include/uapi/linux/airymax/ipc.h`，详见
+> `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）。
+> 本文档不定义任何独立的消息头结构体；所有消息头字段语义以 SSoT 为准。
 
-#### 2.2 字段详细说明
+L2 服务协议层（[SS] 语义同源层）在 SSoT 基础之上扩展以下语义，但**不定义独立结构体**：
 
-##### magic（4 字节）
-- 值: `0x41524531`（ASCII 字符 'ARE1' 的大端表示）
+- **payload_type**：载荷协议类型（JSON-RPC 2.0 / MCP / A2A / OpenAI / Protobuf / FlatBuffers / Custom），通过 reserved 区域或协议协商确定
+- **source_namespace / target_namespace**：命名空间标识（各 ≤20 字节，null-terminated），用于服务路由，通过 reserved 区域或扩展段承载
+- **correlation_id**：关联 ID，同一 trace 下区分请求/响应，由发起点递增分配
+- **priority**：消息优先级（0-255，0 最高），通过 reserved 区域承载
+
+#### 2.2 字段详细说明（SSoT）
+
+##### magic（offset 0，__u32）
+- 值: `0x41524531`（'ARE1'）
 - 用途: 消息完整性校验，区分 AgentsIPC 消息与其他数据
-- 处理: 接收方必须校验 magic，不匹配则丢弃消息并记录安全事件
+- 处理: 接收方必须校验 magic，不匹配则丢弃并记录安全事件
 
-##### version（2 字节）
-- 高字节: 主版本号
-- 低字节: 次版本号
-- 当前版本: 0x0101（v1.0.1）
-- 兼容性: 主版本不同 = 不兼容；次版本不同 = 向后兼容
+##### opcode（offset 4，__u16）
+IPC 操作码枚举：
 
-##### flags（2 字节）
-标志位按位定义：
+| 值 | 名称 | 含义 |
+|----|------|------|
+| 0x0001 | `AIRY_IPC_OP_SEND` | 单播发送 |
+| 0x0002 | `AIRY_IPC_OP_RECV` | 单播接收 |
+| 0x0003 | `AIRY_IPC_OP_SEND_BATCH` | 批量发送 |
+| 0x0004 | `AIRY_IPC_OP_CANCEL` | 取消待处理操作 |
+| 0x0005 | `AIRY_IPC_OP_FREEZE` | 冻结 IPC 环 |
+| 0x0010 | `AIRY_IPC_OP_CAP_REQUEST` | 能力请求（bootstrap） |
+| 0x0011 | `AIRY_IPC_OP_CAP_RESPONSE` | 能力响应 |
+
+##### flags（offset 6，__u16）
+标志位按位定义（bits 0-4 为活跃标志，bits 5-15 保留必须为 0）：
 
 | 位 | 名称 | 含义 |
 |----|------|------|
-| 0 | `ARE_FLAG_REQ` | 请求消息 |
-| 1 | `ARE_FLAG_RESP` | 响应消息 |
-| 2 | `ARE_FLAG_ERR` | 错误响应 |
-| 3 | `ARE_FLAG_NOTIFY` | 通知（无响应） |
-| 4 | `ARE_FLAG_COMPRESS` | 载荷已压缩 |
-| 5 | `ARE_FLAG_ENCRYPT` | 载荷已加密 |
-| 6-15 | 预留 | 必须为 0 |
+| 0 | `AIRY_IPC_FLAG_ZEROCOPY` | 零拷贝路径 |
+| 1 | `AIRY_IPC_FLAG_CAP_CARRY` | 携带能力 |
+| 2 | `AIRY_IPC_FLAG_ENCRYPT` | 载荷已加密（预留，0.1.1 未激活） |
+| 3 | `AIRY_IPC_FLAG_COMPRESS` | 载荷已压缩（预留，0.1.1 未激活） |
+| 4 | `AIRY_IPC_FLAG_BATCH_TAIL` | 批量操作中的最后一个 SQE |
+| 5-15 | — | 保留，必须为 0（C-S10 校验 `AIRY_IPC_FLAG_RESERVED` 掩码） |
 
-##### trace_id（16 字节）
-- 格式: UUID v4（128 位随机）
-- 用途: 分布式追踪，贯穿整个请求链
+##### trace_id（offset 8，__u64）
+- 用途: 分布式追踪 ID，贯穿整个请求链
 - 生成: 由发起点生成，所有后续消息沿用同一 trace_id
 - 贯穿要求: 所有中间服务不得修改 trace_id，必须在日志中输出
 
-##### correlation_id（2 字节）
-- 用途: 关联同一 trace 下的不同请求/响应
-- 生成: 由发起点递增分配，每次新请求递增
+##### timestamp_ns（offset 16，__u64）
+- 用途: 单调纳秒时间戳，用于延迟测量和排序
+- 生成: 消息构造时由发送方填充
 
-##### source / target（各 2 字节）
-- 用途: 端点标识，唯一标识消息的发送方和接收方
-- 分配: 由服务发现系统分配，全局唯一
-- 安全: 接收方必须校验 source 端点是否拥有发送权限
+##### src_task / dst_task（offset 24/32，各 __u64）
+- 用途: 源/目标任务标识符，唯一标识消息的发送方和接收方
+- 安全: 接收方必须校验 src_task 是否拥有发送权限
 
-##### payload_type（2 字节）
-载荷协议类型枚举：
+##### capability_badge（offset 40，__u64）
+- 用途: Capability Folding 能力徽章（64 位原生字）
+- 布局: Epoch(48-63) | RandomTag(16-47) | Perms(0-15)
+- 权限位: SEND/RECV/CALL/GRANT/REVOKE/FREEZE/BATCH（7 位）
 
-| 类型值 | 协议 | 描述 |
-|--------|------|------|
-| 0x0001 | JSON-RPC 2.0 | JSON-RPC 2.0 请求/响应 |
-| 0x0002 | MCP | Model Context Protocol |
-| 0x0003 | A2A | Agent-to-Agent 协议 |
-| 0x0004 | OpenAI | OpenAI API 兼容格式 |
-| 0x0005 | Custom | 自定义二进制协议 |
-| 0x0006 | Protobuf | Protocol Buffers |
-| 0x0007 | FlatBuffers | FlatBuffers 零拷贝 |
-| 0x0008-0xFFFF | 预留 | 未来扩展 |
+##### payload_len（offset 48，__u32）
+- 载荷长度（字节），0 表示无载荷（纯通知消息）
 
-##### payload_length（4 字节）
-- 载荷长度（字节），最大 4GB
-- 0 表示无载荷（纯通知消息）
+##### crc32（offset 52，__u32）
+- 载荷 CRC32 校验和，用于完整性校验
 
-##### source_namespace / target_namespace（各 20 字节）
-- 命名空间标识，用于服务路由
-- 格式: 以 null 结尾的字符串
-- 详见 §4 OS 层 daemon 命名空间
+##### reserved（offset 56，__u8[72]）
+- 预留字段，必须为零填充
 
 #### 2.3 消息完整性校验
 
 接收方必须执行以下校验流程：
 
 1. **magic 校验**: 检查 magic 是否为 `0x41524531`，不匹配则丢弃
-2. **版本兼容性**: 检查主版本号是否匹配，不匹配则返回错误
-3. **长度校验**: 检查 payload_length 是否与实际数据长度一致
-4. **命名空间校验**: 检查 target_namespace 是否匹配本服务注册的命名空间
-5. **权限校验**: 检查 source 端点是否有权限向 target_namespace 发送消息
+2. **opcode 校验**: 检查 opcode 是否为已知有效操作码
+3. **flags 校验**: 检查 bits 5-15 是否为零（`AIRY_IPC_FLAG_RESERVED` 掩码）
+4. **长度校验**: 检查 payload_len 是否与实际数据长度一致
+5. **CRC32 校验**: 检查 crc32 是否与载荷 CRC32 一致
+6. **能力校验**: 若 `AIRY_IPC_FLAG_CAP_CARRY` 置位，校验 capability_badge 权限
 
 ---
 
@@ -1331,7 +1313,7 @@ agentrt 和 agentrt-linux 在 [SC] 层完全共享基础 128B 消息头 `struct 
 - 消息头字段顺序、偏移量、大小完全一致
 - magic 编号 `0x41524531` 在两端具有相同的语义
 
-> **注意**：本文档 2.1 节的 `are_ipc_msg_header_t` 是 L2 服务协议层的扩展布局，属于 [SS] 语义同源层，非 [SC] 共享契约层的基础消息头。基础消息头以 `struct airy_ipc_msg_hdr`（Layout C）为 SSoT。
+> **注意**：本文档 2.1 节直接引用 [SC] 共享契约层 SSoT `struct airy_ipc_msg_hdr`（Layout C），L2 服务协议层（[SS] 语义同源层）的扩展字段（payload_type、source_namespace、target_namespace、correlation_id、priority）通过 reserved 区域或协议协商承载，不定义独立结构体。
 
 #### 9.2 [SS] 层语义同源
 

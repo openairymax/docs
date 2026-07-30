@@ -237,19 +237,21 @@ graph TD
 
 ```c
 /**
- * cap_t — Capability 引用（句柄）类型 [SC]
+ * cap_idx_t — Capability 节点索引类型 [SC]（ARCH-1 落地）
  *
- * cap_t 是 capability 的轻量引用/句柄，用于 syscall 参数传递和 IPC 消息
- * 中的 capability 标识。与 seL4 中 seL4_CPtr (= seL4_Word = uint64_t) 的
- * 设计一致：64-bit 整数句柄，标识 CNode 中某个 capability slot，轻量、可在
- * 用户态/内核态间零拷贝传递。
+ * cap_idx_t 是 capability 的轻量索引引用，用于 syscall 参数传递和 IPC 消息
+ * 中的 capability 标识。ARCH-1 从原 cap_t（uint64_t 不透明句柄）重构为
+ * cap_idx_t（uint32_t 索引）+ cap_node_t.generation 组合，检测悬垂引用。
+ * O(1) 查找 agent_caps[1024] 静态数组槽位，cap_t 保留为 cap_idx_t 别名。
  *
- * v1.0.1 Capability Folding 后，cap_t 物理指向 agent_caps[1024] 静态数组中的
+ * v1.0.1 Capability Folding 后，cap_idx_t 物理指向 agent_caps[1024] 静态数组中的
  * 某个 slot（slot 内嵌 Badge 64-bit Native Word 自包含权限与派生信息）。
  * 派生模型语义（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate 7 操作）在 [SC]
  * 层与 agentrt 共享；物理实现属 [IND] 独立层（详见 §4.1 v1.1 表格）。
  */
-typedef uint64_t cap_t;
+typedef uint32_t cap_idx_t;
+#define CAP_IDX_INVALID  0xFFFFFFFFU
+typedef cap_idx_t cap_t;  /* 向后兼容别名 */
 
 /**
  * airy_cap_id_t / airy_cap_op_t — capability 语义模型 [SC]

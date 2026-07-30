@@ -145,4 +145,4 @@ agentrt-linux v1.0 驱动模型在内核调度、IPC 传输、安全钩子、内
 
 ---
 
-> **文档结束** | agentrt-linux 驱动模型设计 v1.0 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."
+> **文档结束** | agentrt-linux 驱动模型设计 v1.0.1 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."

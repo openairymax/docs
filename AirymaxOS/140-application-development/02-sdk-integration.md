@@ -666,7 +666,7 @@ go test -race ./...
 - `140-application-development/01-agent-lifecycle.md`（Agent 生命周期管理）
 - `30-interfaces/02-ipc-protocol.md`（AgentsIPC 协议详细规范）
 - `30-interfaces/03-sdk-api.md`（SDK API 接口设计）
-- `160-compatibility/04-sdk-compatibility.md`（SDK 跨版本兼容性）
+- `160-compatibility/04-ipc-versioning.md`（IPC 跨版本兼容性）
 
 ---
 
@@ -681,5 +681,5 @@ go test -race ./...
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）SDK 集成设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）SDK 集成设计 v1.0.1
 > 遵循 IRON-9 v3 [SC] 共享契约层 + [SS] 语义同源层与 agentrt SDK 同源

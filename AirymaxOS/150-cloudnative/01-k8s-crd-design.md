@@ -714,5 +714,5 @@ spec:
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）K8s CRD 设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）K8s CRD 设计 v1.0.1
 > 遵循 IRON-9 v3 [IND] 完全独立层（agentrt-linux 云原生专属）

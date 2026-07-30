@@ -2446,16 +2446,15 @@ Cognition（认知）→ Planning（规划）→ Action（执行）
 
 | Daemon 名 | 完整名称 | 职责描述 |
 |-----------|---------|---------|
-| `gateway_d` | Gateway Daemon | 外部请求入口，协议适配，认证鉴权，速率限制 |
+| `gateway_d` | Gateway Daemon | 外部请求入口，协议适配，认证鉴权，速率限制，Agent/Skill 注册市场 |
 | `cogn_d` | Cognition Daemon | LLM 推理调度，模型路由，Token 管理，流式输出 |
 | `dev_d` | Device Daemon | 工具调用管理，工具注册表，执行沙箱，结果校验 |
 | `sched_d` | Scheduler Daemon | 任务调度引擎，优先级队列，资源分配，负载均衡 |
 | `mem_d` | Memory Daemon | 信息聚合服务，知识检索，上下文注入，数据转换 |
 | `logger_d` | Logger Daemon | 可观测性服务，Metrics 采集，Tracing，健康检查 |
 | `audit_d` | Audit Daemon | 监控告警服务，阈值检测，告警路由，自愈策略 |
-| `gateway_d` | Gateway Daemon | 能力市场，计费计量，配额管理 |
 | `net_d` | Network Daemon | 通道管理服务，长连接管理，流式通道，会话保持 |
-| `sec_d` | Security Daemon | 通知推送服务，消息推送，多渠道分发，投递保证 |
+| `sec_d` | Security Daemon | 安全策略守护进程（Cupolas 用户态策略），capability 权限管理 |
 
 #### 2.2 Daemon 命名规则
 

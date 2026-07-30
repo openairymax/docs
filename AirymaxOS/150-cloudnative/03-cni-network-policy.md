@@ -252,7 +252,7 @@ func main() {
 		Add:   cmdAdd,
 		Check: cmdCheck,
 		Del:   cmdDel,
-	}, version.All, "airymaxos-cni v0.1.1")
+	}, version.All, "airymaxos-cni v1.0.1")
 }
 
 /* cmdAdd CNI ADD 命令：创建容器网络接口 */
@@ -623,5 +623,5 @@ cat /var/lib/agentrt/memoryrovol/cupolas-audit/last_record
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）CNI 网络策略设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）CNI 网络策略设计 v1.0.1
 > 遵循 IRON-9 v3 [SS] Cupolas 安全模型同源 + [IND] CNI 实现独立

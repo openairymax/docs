@@ -83,9 +83,9 @@ MemoryRovol API 在 v1.0.1 中采用 **Capability Folding 架构**——所有 M
  *
  * @since v1.0.1
  */
-AIRY_API int airy_sys_rovol_ctl(uint32_t op,
-                                uint32_t agent_id,
-                                uint64_t arg);
+AIRY_API int airy_sys_rovol_ctl(__u32 op,
+                                __u32 pid,
+                                __u64 arg);
 ```
 
 **op 码分派表**：
@@ -477,7 +477,7 @@ stateDiagram-v2
  * - 大快照（~1GB）：< 500ms（COW 延迟复制）
  * - 超大快照（> 10GB）：分块 + preemption point
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 **参数语义**：
@@ -526,7 +526,7 @@ stateDiagram-v2
  * 若快照数超过 in_out_count 容量，返回实际填充数，
  * 应用可再次调用获取剩余快照（无需偏移参数，因按 ID 排序）。
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 
 typedef struct __attribute__((aligned(8))) airy_rovol_list_args {
     uint32_t size;                                  /* 结构体大小 */
@@ -566,7 +566,7 @@ typedef struct __attribute__((aligned(8))) airy_rovol_list_args {
  * 删除后 L1 原始卷也回收（除非快照标记了 AIRY_ROVOL_FLAG_CHECKPOINT）。
  * CHECKPOINT 快照的 L1 保留，可重新提取特征。
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ---
@@ -612,7 +612,7 @@ typedef struct __attribute__((aligned(8))) airy_rovol_list_args {
  * - 冷页访问延迟： < 5ms（userfaultfd 缺页处理）
  * - 完整恢复：后台异步，不阻塞应用
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ### 5.2 恢复与时间旅行
@@ -710,7 +710,7 @@ typedef struct __attribute__((aligned(8))) airy_migrate_args {
  * - 热迁移停顿： < 100ms（仅最终切换）
  * - 增量迁移： < 1s（仅传输 dirty pages）
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ### 6.2 迁移数据流
@@ -784,7 +784,7 @@ typedef struct __attribute__((aligned(8))) airy_cxl_tier_args {
     airy_cxl_tier_policy_t policy;          /* 分层策略 */
     uint64_t reserved2[2];
 } airy_cxl_tier_args_t;
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ### 7.2 `airy_sys_rovol_ctl(AIRY_ROVOL_TIER_GET)`（编号 549, op=TIER_GET）
@@ -803,7 +803,7 @@ typedef struct __attribute__((aligned(8))) airy_cxl_tier_args {
  * @par 借鉴来源:
  * - Linux 6.6 `sysfs` 接口——配置查询模式
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ---
@@ -845,7 +845,7 @@ typedef struct __attribute__((aligned(8))) airy_cxl_tier_args {
  * - eviction（min_seq++）：对应 L2/L3 遗忘（老特征被驱逐）
  * - tier 调整：对应 weight 衰减（基于访问频次）
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ---
@@ -901,7 +901,7 @@ weight(t) = initial_weight * exp(-λ * t / 3600)
  * - AIRY_DECAY_LINEAR (1.0)：线性衰减（更快遗忘）
  * - AIRY_DECAY_AGGRESSIVE (0.25)：激进衰减（用于内存压力场景）
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ### 9.3 `airy_sys_rovol_ctl(AIRY_ROVOL_PROMOTE)`（编号 549, op=PROMOTE）
@@ -934,7 +934,7 @@ weight(t) = initial_weight * exp(-λ * t / 3600)
  * promote 操作将 weight 重置为 initial_weight（1.0 Q16.16），
  * 相当于"重新学习"该记忆。
  */
-/* 入口签名见 §2.1：airy_sys_rovol_ctl(uint32_t op, uint32_t agent_id, uint64_t arg); */
+/* 入口签名见 §2.1：airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg); */
 ```
 
 ### 9.4 层级迁移状态机

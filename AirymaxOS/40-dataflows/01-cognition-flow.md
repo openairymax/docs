@@ -91,15 +91,15 @@ flowchart TD
 
 ## 4. CoreLoopThree kthread 数据流
 
-CoreLoopThree kthread 是认知循环的内核态驱动器（FR-041），同源 agentrt coreloopthree。它在内核态以 SCHED_AGENT 策略运行，避免用户态 ↔ 内核态上下文切换开销。
+CoreLoopThree kthread 是认知循环的内核态驱动器（FR-041），同源 agentrt coreloopthree。它在内核态以 sched_tac 策略（SCHED_FIFO 调度类）运行，避免用户态 ↔ 内核态上下文切换开销。
 
 ### 4.1 三个 kthread 分工
 
 | kthread | 职责 | 调度优先级 | 同源 |
 |---|---|---|---|
-| `coreloop_cognition_kthread` | 认知层：理解意图 + 生成 DAG | SCHED_AGENT 高优先级 | coreloopthree cognition |
-| `coreloop_execution_kthread` | 执行层：调度执行单元 + 补偿事务 | SCHED_AGENT 中优先级 | coreloopthree execution |
-| `coreloop_memory_kthread` | 记忆层：L1→L4 卷载 + 反馈 | SCHED_AGENT 低优先级 | coreloopthree memory |
+| `coreloop_cognition_kthread` | 认知层：理解意图 + 生成 DAG | SCHED_FIFO 高优先级 | coreloopthree cognition |
+| `coreloop_execution_kthread` | 执行层：调度执行单元 + 补偿事务 | SCHED_FIFO 中优先级 | coreloopthree execution |
+| `coreloop_memory_kthread` | 记忆层：L1→L4 卷载 + 反馈 | SCHED_FIFO 低优先级 | coreloopthree memory |
 
 ### 4.2 kthread 间数据传递
 
@@ -433,7 +433,7 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 
 - [数据流程设计概览](README.md)：4 大数据流分类
 - [记忆卷载数据流](02-memory-flow.md)：L1→L4 四层递进
-- [调度数据流](04-scheduling-flow.md)：EEVDF + SCHED_AGENT
+- [调度数据流](04-scheduling-flow.md)：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF）
 - [认知模块设计](../20-modules/05-cognition.md)：CoreLoopThree + Wasm + LLM 调度
 - [IPC 协议](../30-interfaces/02-ipc-protocol.md)：128B 消息头结构
 - [系统调用](../30-interfaces/01-syscalls.md)：airy_sys_call（统一 capability invocation）

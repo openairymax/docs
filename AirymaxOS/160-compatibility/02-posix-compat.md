@@ -417,5 +417,5 @@ result = client.process("hello")
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）POSIX 兼容性设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）POSIX 兼容性设计 v1.0.1
 > 遵循 IRON-9 v3 [IND] 完全独立层（POSIX 兼容性为 agentrt-linux 专属设计）

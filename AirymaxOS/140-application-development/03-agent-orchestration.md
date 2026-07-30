@@ -619,5 +619,5 @@ result = mac.execute(workflow=research_dag,
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）Agent 编排设计 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）Agent 编排设计 v1.0.1
 > 遵循 IRON-9 v3 [SS] 语义同源层与 agentrt MAC/TaskFlow 同源

@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS）ALK-6.6（AirymaxOS Linux Kernel 6.6）内核总体架构的唯一权威定义文档。本文件定义 ALK-6.6 的物理形态、内核基线、改造点清单、技术支柱、syscall 架构、子系统概要与微内核化改造路径。所有涉及 ALK-6.6 内核架构的文档必须以本文件为准\
 > **文档版本**：v1.0.1（v3.1 重建）\
-> **最后更新**：2026-07-23\
+> **最后更新**：2026-07-30\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 LTS 内核基线 + seL4 微内核工程思想（ADR-014）\
 > **编号权威**：[09-ssot-registry.md §3](../50-engineering-standards/09-ssot-registry.md)\
@@ -83,19 +83,20 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 1. **LTS 长期支持**：Linux 6.6 是 LTS 版本，维护周期至 2026 年底+，适合生产就绪目标
 2. **io\_uring 成熟**：6.6 的 io\_uring 子系统已成熟，支持 `IORING_OP_URING_CMD` + registered buffer + SQPOLL
-3. **sched\_ext 已 backport**：OLK 6.6 backport 了 sched\_ext，但 agentrt-linux **选择不使用** sched\_ext（H5 纯 C LSM 约束，sched\_ext 依赖 BPF\_SYSCALL/BPF\_JIT/DEBUG\_INFO\_BTF）
+3. **sched\_ext 不在 6.6 基线**：sched\_ext 于 Linux 6.12 合入主线，6.6 LTS 基线（vanilla）不含 sched\_ext。agentrt-linux 锁定 6.6 基线自然不依赖 sched\_ext；即便未来升级基线，仍坚持 sched\_tac 路线（H5 纯 C LSM 约束，sched\_ext 依赖 BPF\_SYSCALL/BPF\_JIT/DEBUG\_INFO\_BTF）
 4. **Landlock 纯 C 实现**：6.6 的 Landlock 是纯 C 实现，使用专用 syscall 而非 BPF 程序，符合 H5 约束
 5. **EEVDF 调度器**：6.6 引入 EEVDF（Earliest Eligible Virtual Deadline First）调度类，sched\_tac 可组合使用
 
 ### 2.3 不使用 sched\_ext 的理由
 
+> **前瞻性约束**：6.6 LTS 基线不含 sched\_ext（sched\_ext 于 6.12 合入主线）。以下为即便未来升级基线也拒绝采纳 sched\_ext 的设计理由，sched\_tac 路线不可妥协。
+
 | # | 理由                                                       | 代码证据                                                                 |
 | - | -------------------------------------------------------- | -------------------------------------------------------------------- |
-| 1 | sched\_ext 依赖 `BPF_SYSCALL && BPF_JIT && DEBUG_INFO_BTF` | `kernel/Kconfig.preempt:138`                                         |
+| 1 | sched\_ext 依赖 `BPF_SYSCALL && BPF_JIT && DEBUG_INFO_BTF` | Linux 6.12+ `kernel/Kconfig.preempt` CONFIG\_SCHED\_EXT              |
 | 2 | 与 H5 纯 C LSM 硬约束冲突                                       | [03-capability-model.md §13](../110-security/03-capability-model.md) |
-| 3 | x86 默认禁用 sched\_ext（KABI 考量）                             | `include/linux/sched.h:1663-1667` 注释                                 |
-| 4 | BPF verifier 在调度路径的语义不确定性影响形式化验证                         | [03-microkernel-strategy.md §7](03-microkernel-strategy.md)          |
-| 5 | sched\_ext 的 BPF struct\_ops 模型与纯 C 体系不一致                | [01-lsm-framework.md §7](../110-security/01-lsm-framework.md)        |
+| 3 | BPF verifier 在调度路径的语义不确定性影响形式化验证                         | [03-microkernel-strategy.md §7](03-microkernel-strategy.md)          |
+| 4 | sched\_ext 的 BPF struct\_ops 模型与纯 C 体系不一致                | [01-lsm-framework.md §7](../110-security/01-lsm-framework.md)        |
 
 ***
 
@@ -104,8 +105,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ### 3.1 ALK-6.6 等式
 
 ```
-ALK-6.6 = Linux 6.6 LTS (vanilla)
-         + agentrt-linux 微内核化改造补丁（≤ 2 万行）
+ALK-6.6 = Linux 6.6 LTS (vanilla)                       [IRON-7 基线]
+         + 国产硬件驱动层（LAYER 方案，架构可选）           [硬件适配层，非核心子系统]
+         + agentrt-linux 微内核化改造补丁（≤ 2 万行）        [核心子系统改造]
          + [SC] 共享契约层（10 个头文件）
          + 4 核心 syscall（548-551）+ op-dispatch
          + io_uring 数据面（IORING_OP_URING_CMD）
@@ -113,6 +115,8 @@ ALK-6.6 = Linux 6.6 LTS (vanilla)
          + Micro-Supervisor（kernel/superv/，4 个 .c）
          + Capability 静态数组（agent_caps[1024]，128KB）
 ```
+
+> **层序说明**：国产硬件驱动层与微内核化改造补丁相互正交——驱动层仅触及 `drivers/`、`arch/` 硬件适配，不触及调度/安全/IPC/内存核心子系统；微内核化改造不依赖驱动层，两者可独立构建。核心子系统基线纯净性由 IRON-7 保障（详见 §3.5）。
 
 ### 3.2 内核目录结构概要
 
@@ -194,6 +198,55 @@ ALK-6.6 的 6 大技术支柱：
 | 4 | **地址空间管理**          | VSpace + Page Table             | Linux mm/（保留原生）                                                         | —     |
 | 5 | **中断/异常处理**         | Interrupt 对象 + fault handler    | Linux IRQ + fault handler（保留原生）                                         | —     |
 | 6 | **内存 Retype**       | Untyped → Typed 转换              | buddy allocator + Retype 层（新增）                                          | —     |
+
+### 3.5 国产硬件驱动层（LAYER 方案）
+
+#### 3.5.1 定位
+
+ALK-6.6 在 vanilla 基线之上叠加**国产硬件驱动层**，以广泛兼容国产主流硬件（鲲鹏/飞腾/海光/申威/昇腾）。驱动层与微内核化改造正交，仅触及 `drivers/`、`arch/` 硬件适配，**不触及调度/安全/IPC/内存核心子系统**，核心子系统基线纯净性由 IRON-7 保障。对齐语境详见 [README.md 参考声明](../README.md)。
+
+#### 3.5.2 物理布局
+
+```
+kernel/                          # ALK-6.6 源码树
+├── arch/sw_64/                  # 申威 SW_64 架构（vanilla 不含，完整导入）
+├── patches/hw-vendor/           # 国产硬件驱动补丁（LAYER 提取，按架构组织）
+│   ├── x86/                     # x86 厂商驱动（海光/阿里等）
+│   ├── arm64/                   # arm64 厂商驱动（鲲鹏/飞腾等）
+│   └── sw_64/                   # sw_64 厂商驱动（申威）
+└── configs/
+    ├── hw-vendor_x86.config     # x86 硬件 CONFIG 碎片
+    ├── hw-vendor_arm64.config   # arm64 硬件 CONFIG 碎片
+    └── hw-vendor_sw64.config    # sw_64 硬件 CONFIG 碎片
+```
+
+#### 3.5.3 提取边界
+
+| 类别 | 提取 | 说明 |
+|------|------|------|
+| 厂商 NIC 驱动 | 是 | 鲲鹏 hns3、华为 hinic3 等 |
+| 厂商 PMU 驱动 | 是 | 海思 PMU、阿里 DRW PMU 等 |
+| 厂商 cpufreq 驱动 | 是 | 申威 sunway-cpufreq 等 |
+| 总线/检测驱动 | 是 | UnifiedBus、ROH、CPU SDC 检测、XCU 等 |
+| Vendor Hooks | 是（仅硬件相关） | `drivers/hooks/` 中硬件相关 tracepoint 钩子 |
+| 完整架构 | 是 | `arch/sw_64/`（vanilla 不含） |
+
+#### 3.5.4 排除清单（核心子系统纯净性保障）
+
+| 排除项 | 原因 |
+|--------|------|
+| QoS 网格调度（grid）+ soft\_domain + smt\_qos + bpf\_sched | 与 sched\_tac 冲突，不可共存 |
+| security/ 全部修改 | Airymax 采用 vanilla security + airy\_lsm（H5 纯 C LSM） |
+| 上游 LTS 变种的版本构建系统（Makefile.oever 类） | Airymax 自有 airy\_defconfig + configs/defconfig\{,-agent,-embedded\} |
+| KABI 兼容标记 | 保持 vanilla 头文件洁净，Airymax 无 KABI 约束 |
+| sched\_ext | 6.6 基线不含；H5 纯 C 约束禁止（详见 §2.3） |
+
+#### 3.5.5 一致性约束
+
+1. **IRON-7 不变**：驱动层为硬件适配附加层，vanilla linux-stable 6.6.145 仍为唯一核心基线
+2. **正交性**：驱动层补丁不得修改 `kernel/sched/`、`security/`、`kernel/corekern/`、`kernel/superv/`、`include/uapi/linux/airymax/` 任何文件
+3. **可剥离**：驱动层为架构可选项，不应用驱动层时 ALK-6.6 仍可在 vanilla 支持的架构上构建运行
+4. **闭源依据**：驱动层提取的逐文件差异数据属内部参考，不进入开源文档（BAN-INTERNAL-002）
 
 ***
 
@@ -505,7 +558,7 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 | 版本           | 日期             | 主要变更                                                                                                                                                                                                  |
 | ------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v1.0.0       | 2026-07-10     | 初版 ALK-6.6 总体架构文档，基于 Linux 6.6 + seL4 微内核化改造路线                                                                                                                                                        |
+| v1.0.1       | 2026-07-10     | 初版 ALK-6.6 总体架构文档，基于 Linux 6.6 + seL4 微内核化改造路线                                                                                                                                                        |
 | v1.0.1       | 2026-07-18     | Capability Folding 单平面架构落地；syscall 12→4 精简（编号 548-551）；fastpath C-S9 Badge 内联校验；H1-H6 硬约束建立；纯 C LSM（H5）确认                                                                                             |
 | v1.0.1       | 2026-07-22     | P0-014 修复：syscall 编号统一为 548-551（避开 x86\_64 x32 历史遗留区域 512-547）；codegen 管道 + ABI 检查工具落地                                                                                                                |
 | **v3.1（重建）** | **2026-07-23** | **文档完全重建（原文件被意外清空）。基于当前整体方案重写，对齐 v1.0.1 Capability Folding 架构、548-551 syscall 编号、纯 C LSM（H5）、sched\_tac 调度框架。修复 P0-K02（eBPF kfunc → 纯 C LSM）。新增 §2.3 不使用 sched\_ext 的理由、§9.3 fastpath/slowpath 严格分工** |

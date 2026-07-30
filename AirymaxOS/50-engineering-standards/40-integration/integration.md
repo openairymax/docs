@@ -131,7 +131,7 @@ agentrt 在 agentrt-linux 上有两种运行模式：
 | 模式 | 说明 | 同源红利 |
 |------|------|----------|
 | **标准模式** | 作为普通用户态应用运行，使用标准 libc/POSIX 接口 | 天然更稳健（设计假设一致） |
-| **增强模式** | 可选使用 agentrt-linux 原生能力（SCHED_AGENT、io_uring IPC 等） | 获得 OS 级性能优化 + 同源语义 |
+| **增强模式** | 可选使用 agentrt-linux 原生能力（sched_tac 调度策略、io_uring IPC 等） | 获得 OS 级性能优化 + 同源语义 |
 
 ```
 agentrt 在 agentrt-linux 上的运行示意：
@@ -328,7 +328,7 @@ typedef enum {
  *       以下为集成场景扩展视图，含 version/deadline_ns/reserved 等扩展字段
  * @note IRON-9 v3 [SC] 共享契约层：核心字段同源，扩展字段各自独立
  */
-struct __attribute__((aligned(64))) airy_task_desc {
+struct AIRY_ALIGNED(64) airy_task_desc {
     /* [SC] 共享契约层字段（SSoT：120-cross-project-code-sharing.md §2.6） */
     uint32_t      magic;      /* AIRY_TASK_MAGIC (0x41475453) — [SC] 同源 */
     uint16_t      prio;       /* 优先级 0-139 — [SC] 同源 */

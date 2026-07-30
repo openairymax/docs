@@ -1324,7 +1324,7 @@ sc-dual-ci:
 | 3 | `ipc.h` | A-IPC | `0x41524531` ('ARE1') | `kernel/include/uapi/linux/airymax/ipc.h` | IPC 消息头（128B `struct airy_ipc_msg_hdr`，11 字段，D-9 修复后 `__attribute__((aligned(64)))`（移除 packed），`_Static_assert(sizeof==128)` + `_Static_assert(offsetof(capability_badge)==40)`）+ SQE/CQE 操作码与标志位 + Ring 常量（DEF=256, MAX=32768） |
 | 4 | `sched.h` | A-ULS | `0x41475453` ('AGTS') | `kernel/include/uapi/linux/airymax/sched.h` | 任务描述符（magic/prio/_pad/vtime）+ `airy_vtime_decay()` inline + AIRY_CAP_MAX_AGENTS=1024 + AIRY_SLICE_DFL=20 + 优先级 0-139 + 权重 1-10000 |
 | 5 | `memory_types.h` | MemoryRovol | — | `kernel/include/uapi/linux/airymax/memory_types.h` | L1-L4 enum（HOT/WARM/COLD/PMEM）+ GFP 掩码语义（AIRY_GFP_HOT/WARM/COLD/PMEM） |
-| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `uint64_t` |
+| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `cap_idx_t`(`uint32_t` 索引，ARCH-1) |
 | 7 | `cognition_types.h` | A-UCS | — | `kernel/include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t`（= `__s32`，Q16.16 定点数，因 -mno-80387 禁 FPU）+ `enum airy_cog_phase`（PERCEPT/THINK/ACT）+ `enum airy_think_mode`（FAST/SLOW） |
 | 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.0.1: 4 核心系统调用（AIRY_SYS_CALL=548 ... AIRY_SYS_CLT_NOTIFY=551）+ 20 预留（552-571）= 24 槽位 |
 | 9 | `uapi_compat.h` | 桥接 | — | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`），确保 [SC] 头文件跨平台逐字节相同编译 |
@@ -1902,17 +1902,17 @@ agentrt/          agentrt-linux/
 | dev_d | 6 | dev_d.c / dev_drv.c / dev_tool.c / dev_plugin.c / dev_discover.c / dev_d.h |
 | **合计** | **74** | — |
 
-## 附录 C：v1.1 系统调用清单（[SC] syscalls.h，4 核心 + 20 预留 = 24 槽位）
+## 附录 C：v1.0.1 系统调用清单（[SC] syscalls.h，4 核心 + 20 预留 = 24 槽位）
 
-> **v1.0.1 Capability Folding 决策**：8 个 seL4 风格 IPC 原语（SEND/RECV/NBSEND/NBRECV/REPLYRECV/YIELD/REPLY/NOTIFY）已全部移除，IPC 数据面完全由 io_uring `IORING_OP_URING_CMD` 承载（零 syscall）。
+> **v1.0.1 Capability Folding 决策**：8 个 seL4 风格 IPC 原语（SEND/RECV/NBSEND/NBRECV/REPLYRECV/YIELD/REPLY/NOTIFY）已全部移除，IPC 数据面完全由 io_uring `IORING_OP_URING_CMD` 承载（零 syscall）。编号起始 548 避开 x86_64 x32 历史遗留区域（512-547），确保跨架构二进制兼容。
 
 | # | 系统调用 | 编号 | 类别 | 说明 |
 |---|---------|------|------|------|
-| 1 | `AIRY_SYS_CALL` | 512 | Capability Invocation | sec_d 专属管理入口（Badge 编译/撤销 + LSM_ctl + Wasm_load） |
-| 2 | `AIRY_SYS_ROVOL_CTL` | 513 | 控制原语 | MemoryRovol 记忆卷载控制 |
-| 3 | `AIRY_SYS_SCHED_CTL` | 514 | 控制原语 | 调度策略配置 |
-| 4 | `AIRY_SYS_CLT_NOTIFY` | 515 | 控制原语 | CoreLoopThree 通知 + kthread 注册 |
-| 5-24 | 预留 | 516-535 | 预留 | 20 个预留槽位（未来扩展） |
+| 1 | `AIRY_SYS_CALL` | 548 | Capability Invocation | sec_d 专属管理入口（Badge 编译/撤销 + LSM_ctl + Wasm_load） |
+| 2 | `AIRY_SYS_ROVOL_CTL` | 549 | 控制原语 | MemoryRovol 记忆卷载控制 |
+| 3 | `AIRY_SYS_SCHED_CTL` | 550 | 控制原语 | 调度策略配置 |
+| 4 | `AIRY_SYS_CLT_NOTIFY` | 551 | 控制原语 | CoreLoopThree 通知 + kthread 注册 |
+| 5-24 | 预留 | 552-571 | 预留 | 20 个预留槽位（未来扩展） |
 
 **废弃 syscall 清单**（v1.0 → v1.0.1 移除）：
 

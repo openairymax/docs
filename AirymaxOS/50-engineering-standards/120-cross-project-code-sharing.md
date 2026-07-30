@@ -76,9 +76,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 3  | `ipc.h`             | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码与标志位                 | `0x41524531` ('ARE1') | `include/uapi/linux/airymax/ipc.h`             |
 | 4  | `sched.h`           | sched_tac 调度约束（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 类型与衰减公式 + 优先级范围 + SLICE\_DFL | `0x41475453` ('AGTS') | `include/uapi/linux/airymax/sched.h`           |
 | 5  | `memory_types.h`    | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口                                                          | —                     | `include/uapi/linux/airymax/memory_types.h`    |
-| 6  | `security_types.h`  | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树）+ **capability 引用类型（`cap_t` = `uint64_t`）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/uapi/linux/airymax/security_types.h`  |
+| 6  | `security_types.h`  | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID + Cupolas blob 布局 + capability 派生模型（`airy_capability_t` 结构体 + MDB 派生树 `cap_node_t` + `generation` 世代计数）+ **capability 引用类型（`cap_idx_t` = `uint32_t` 索引，`cap_t` 为向后兼容别名）**+ Vault backend + 策略裁决 4 值枚举 | —                     | `include/uapi/linux/airymax/security_types.h`  |
 | 7  | `cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 阶段枚举（`airy_cog_phase`）+ Thinkdual 模式枚举（`airy_think_mode`） | —                     | `include/uapi/linux/airymax/cognition_types.h` |
-| 8  | `syscalls.h`        | Syscall 编号体系（v1.1 唯一基线: 4 核心 + 20 预留 = 24 槽位，v4.3 锁定）                                                                     | —                     | `include/uapi/linux/airymax/syscalls.h`        |
+| 8  | `syscalls.h`        | Syscall 编号体系（v1.0.1 唯一基线: 4 核心 + 20 预留 = 24 槽位，v4.3 锁定）                                                                     | —                     | `include/uapi/linux/airymax/syscalls.h`        |
 | 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/uapi/linux/airymax/uapi_compat.h`    |
 | 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/uapi/linux/airymax/lsm_types.h`       |
 
@@ -443,7 +443,8 @@ extern "C" {
  *   - No __attribute__((packed)); all __u64 fields 8-byte aligned naturally.
  *   - capability_badge moved to offset 40 (was 44 in v0.1.1 draft) to
  *     restore 8-byte natural alignment; payload_len shifted to offset 48.
- *   - struct uses __attribute__((aligned(64))) to guarantee 2 cache lines.
+ *   - struct uses AIRY_ALIGNED(64) to guarantee 2 cache lines
+ *     (OS-IRON-016 sanctioned exception, defined in uapi_compat.h).
  *   - 128B = 2 cache lines (x86_64/aarch64 64B/line).
  */
 struct airy_ipc_msg_hdr {
@@ -458,7 +459,7 @@ struct airy_ipc_msg_hdr {
 	__u32	payload_len;		/* offset 48, payload length (excluding header) */
 	__u32	crc32;			/* offset 52, CRC32 over header[0:52) + payload */
 	__u8	reserved[72];		/* offset 56, must be zero (CL1 [56:64) + CL2 [64:128)) */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 
 _Static_assert(sizeof(struct airy_ipc_msg_hdr) == AIRY_IPC_HDR_SIZE,
 	"airy_ipc_msg_hdr must be exactly 128 bytes");
@@ -907,6 +908,8 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 | ---------- | ----- | ---------------------------------------------- | ------------ |
 | 2026-07-09 | 0.1.1 | 初始创建，定义 IRON-9 v3 四层模型 + 10 个 \[SC] 头文件 + 双向 CI | SPHARX 工程标准组 |
 | 2026-07-17 | v1.0  | 升级为 IRON-9 v3 四层模型（[SC]+[SS]+[IND]+[DSL]）；新增 §3 [DSL] 降级生存层（引用 11-degraded-survival-layer.md）；[IND] 层补充 io_uring + IORING_OP_URING_CMD、alloc_pages + mmap、纯 C LSM；§2.1 头文件清单与 06-iron9-shared-model.md §2.2 对齐；§7.5 新增 magic 值 CI 校验表（含 AGTS 0x41475453）；上级文档改为 10-unify-design.md | SPHARX 工程标准组 |
+| 2026-07-21 | v1.0.1 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） | SPHARX 工程标准组 |
+| 2026-07-29 | v1.0.1-fix | **P0-NEW-10/11 修复**：§2.9 与 §11 示例代码中残留的 `__attribute__((aligned(64)))` 修正为 `AIRY_ALIGNED(64)`（OS-IRON-016 sanctioned exception，定义于 uapi_compat.h） | SPHARX 工程标准组 |
 
 ## 11. KABI 机制借鉴（OLK 6.6）
 
@@ -927,7 +930,7 @@ struct airy_ipc_msg_hdr {
     __u32 payload_len;        /* offset 48 */
     __u32 crc32;              /* offset 52 */
     __u8  reserved[72];       /* offset 56, KABI 预留（CL1 [56:64) + CL2 [64:128)) */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 ```
 
 72 字节的 `reserved` 字段即为 KABI 预留空间，确保 0.1.1 → 1.0.1 演进时 ABI 兼容。

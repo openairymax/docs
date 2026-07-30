@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **[SC] 类型桥接规范** 的唯一权威源。类型桥接模型（`#ifdef __linux__` / `#else` 二路判定）、`uapi_compat.h` 设计、物理宿主 `kernel/include/uapi/linux/airymax/uapi_compat.h`、CI 二路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
+> **单一权威源声明**：本文件是 **[SC] 类型桥接规范** 的唯一权威源。类型桥接模型（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else` 三路判定）、`uapi_compat.h` 设计、物理宿主 `kernel/include/uapi/linux/airymax/uapi_compat.h`、CI 三路编译校验均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 [SC] 头文件跨环境编译兼容策略。
 >
 > 技术选型声明：整体遵循 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）+ alloc_pages + mmap（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 >
@@ -24,7 +24,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **目标读者**：内核开发者、用户态开发者、跨平台集成工程师、CI 维护者
 - **前置知识**：理解 [10-unify-design.md](../10-architecture/10-unify-design.md) [SC] 共享契约层、[06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) IRON-9 v3 [SC]/[SS]/[IND] 三层模型、C 预处理器条件编译
 - **预计阅读时间**：25 分钟
-- **核心概念**：类型桥接、`#ifdef __linux__`、`uapi_compat.h`、编译兼容、CI 二路编译
+- **核心概念**：类型桥接、`#ifdef __KERNEL__` / `#elif defined(__linux__)`、`uapi_compat.h`、编译兼容、CI 三路编译
 - **复杂度标识**：中级
 
 ---
@@ -33,7 +33,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 问题背景
 
-[SC] 共享契约头文件（物理宿主 `kernel/include/uapi/linux/airymax/`，共 12 个）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
+[SC] 共享契约头文件（物理宿主 `kernel/include/uapi/linux/airymax/`，共 12 个文件：10 个 [SC] 核心 + bpf_struct_ops.h 补充 + syscall.h codegen 产物）由 agentrt（用户态 SDK）与 agentrt-linux（内核态实现）双端逐字节共享。但两端运行在不同编译环境：
 
 | 环境 | 编译器 | 类型系统 | 头文件依赖 |
 |------|--------|---------|-----------|
@@ -61,19 +61,23 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## §2 类型桥接模型
 
-### 2.1 二路条件编译模型
+### 2.1 三路条件编译模型
 
-`uapi_compat.h` 使用**二路条件编译**（基于 `__linux__` 宏），根据编译平台选择对应类型来源。**不使用 `__KERNEL__` 宏**——因为 Linux 平台无论内核态还是用户态，`<linux/types.h>` 都提供 `__u8/__u16/__u32/__u64` 定义：
+`uapi_compat.h` 使用**三路条件编译**（基于 `__KERNEL__` 与 `__linux__` 宏），根据编译环境选择对应类型来源。三路判定区分内核态、Linux 用户态、非 Linux 用户态：
 
 ```c
-/* uapi_compat.h 二路类型桥接模型 */
-#ifdef __linux__
-    /* 路径一：Linux 平台（内核态 + 用户态）
+/* uapi_compat.h 三路类型桥接模型 */
+#ifdef __KERNEL__
+    /* 路径一：内核态（Linux 内核构建）
      * <linux/types.h> 由内核 UAPI 提供，定义 __u8/__u16/__u32/__u64 等 */
     #include <linux/types.h>
-    /* 直接使用系统定义，无需 typedef */
+#elif defined(__linux__)
+    /* 路径二：Linux 用户态
+     * <linux/types.h> 同样提供 __u8/__u16/__u32/__u64 定义
+     * 直接复用系统定义，避免 typedef 与系统定义冲突 */
+    #include <linux/types.h>
 #else
-    /* 路径二：第三方平台（macOS/Windows 等）
+    /* 路径三：第三方平台（macOS/Windows 等）
      * 通过 typedef 将 stdint.h 类型映射为 __u8/__u16/__u32/__u64 */
     #include <stdint.h>
     typedef uint8_t  __u8;
@@ -89,27 +93,30 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.2 类型映射表
 
-| 类型语义 | Linux 平台（`__linux__`） | 第三方平台（`#else`） |
-|---------|--------------------------|---------------------|
-| 8位无符号 | `__u8`（`<linux/types.h>` 提供） | `typedef uint8_t __u8` |
-| 16位无符号 | `__u16`（`<linux/types.h>` 提供） | `typedef uint16_t __u16` |
-| 32位无符号 | `__u32`（`<linux/types.h>` 提供） | `typedef uint32_t __u32` |
-| 64位无符号 | `__u64`（`<linux/types.h>` 提供） | `typedef uint64_t __u64` |
-| 8位有符号 | `__s8`（`<linux/types.h>` 提供） | `typedef int8_t __s8` |
-| 16位有符号 | `__s16`（`<linux/types.h>` 提供） | `typedef int16_t __s16` |
-| 32位有符号 | `__s32`（`<linux/types.h>` 提供） | `typedef int32_t __s32` |
-| 64位有符号 | `__s64`（`<linux/types.h>` 提供） | `typedef int64_t __s64` |
+| 类型语义 | 内核态（`__KERNEL__`） | Linux 用户态（`__linux__`） | 第三方平台（`#else`） |
+|---------|------------------------|----------------------------|---------------------|
+| 8位无符号 | `__u8`（`<linux/types.h>` 提供） | `__u8`（`<linux/types.h>` 提供） | `typedef uint8_t __u8` |
+| 16位无符号 | `__u16`（`<linux/types.h>` 提供） | `__u16`（`<linux/types.h>` 提供） | `typedef uint16_t __u16` |
+| 32位无符号 | `__u32`（`<linux/types.h>` 提供） | `__u32`（`<linux/types.h>` 提供） | `typedef uint32_t __u32` |
+| 64位无符号 | `__u64`（`<linux/types.h>` 提供） | `__u64`（`<linux/types.h>` 提供） | `typedef uint64_t __u64` |
+| 8位有符号 | `__s8`（`<linux/types.h>` 提供） | `__s8`（`<linux/types.h>` 提供） | `typedef int8_t __s8` |
+| 16位有符号 | `__s16`（`<linux/types.h>` 提供） | `__s16`（`<linux/types.h>` 提供） | `typedef int16_t __s16` |
+| 32位有符号 | `__s32`（`<linux/types.h>` 提供） | `__s32`（`<linux/types.h>` 提供） | `typedef int32_t __s32` |
+| 64位有符号 | `__s64`（`<linux/types.h>` 提供） | `__s64`（`<linux/types.h>` 提供） | `typedef int64_t __s64` |
+
+> **说明**：内核态与 Linux 用户态的类型来源相同（`<linux/types.h>`），但分为两路判定以保持编译环境语义清晰——内核构建通过 `__KERNEL__` 宏触发，用户态构建通过 `__linux__` 宏触发。二者类型定义路径相同，但条件编译入口不同。
 
 ### 2.3 预处理器宏判定逻辑
 
-条件编译的判定基于编译器预定义宏 `__linux__`：
+条件编译的判定基于编译器预定义宏 `__KERNEL__` 与 `__linux__`，形成三路判定：
 
 | 宏 | 定义者 | 含义 | 示例环境 |
 |----|--------|------|---------|
-| `__linux__` | GCC/Clang 预定义 | Linux 平台（内核态 + 用户态） | 内核构建 / 用户态 GCC |
-| （无 `__linux__`） | — | 第三方平台 | macOS / Windows 等 |
+| `__KERNEL__` | 内核 Kbuild 构建 | 内核态编译 | `make` 内核构建 |
+| `__linux__`（无 `__KERNEL__`） | GCC/Clang 预定义 | Linux 用户态编译 | 用户态 GCC/Clang |
+| （无 `__linux__`、无 `__KERNEL__`） | — | 第三方平台 | macOS / Windows 等 |
 
-**为何不使用 `__KERNEL__` 宏？** Linux 平台上，`<linux/types.h>` 在内核态和用户态都提供 `__u8/__u16/__u32/__u64` 定义（通过 `<asm/types.h>`）。因此无需区分内核态与用户态——只要 `__linux__` 定义，统一 `#include <linux/types.h>` 即可。这避免了三路条件编译的复杂度，也避免了在 Linux 平台上 `typedef` 与系统定义冲突的问题。
+**为何使用三路判定（含 `__KERNEL__`）？** 虽然内核态与 Linux 用户态都通过 `<linux/types.h>` 获取 `__u8/__u16/__u32/__u64` 定义，但使用 `__KERNEL__` 宏区分内核态有两大优势：(1) 语义清晰——CI 可独立验证内核态编译路径，而非假设"用户态通过即代表内核态通过"；(2) 可扩展性——未来若内核态需要额外的类型处理（如内核特有的 `__bitwise__` 类型属性），三路结构可直接扩展而无需重构条件编译骨架。第三方平台通过 `#else` 走 `typedef` 映射路径，与 Linux 平台完全隔离。
 
 ### 2.4 类型使用示例
 
@@ -131,7 +138,7 @@ struct airy_log_record {
     __u32   payload_len;        /* offset 20: actual payload length */
     __u8    payload[96];        /* offset 24: log message payload */
     __u8    reserved[8];        /* offset 120: reserved */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 
 _Static_assert(sizeof(struct airy_log_record) == 128,
 	       "airy_log_record must be exactly 128 bytes");
@@ -375,36 +382,50 @@ error: conflicting types for '__u64'
 
 ---
 
-## §5 CI 校验：二路编译测试
+## §5 CI 校验：三路编译测试
 
-### 5.1 二路编译测试矩阵
+### 5.1 三路编译测试矩阵
 
-CI 对每个 [SC] 头文件执行二路编译测试，确保 Linux 平台与第三方平台均编译通过。由于 `uapi_compat.h` 使用 `#ifdef __linux__` 二路判定，CI 无需区分内核态与用户态：
+CI 对每个 [SC] 头文件执行三路编译测试，确保内核态、Linux 用户态、第三方平台均编译通过。由于 `uapi_compat.h` 使用 `#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else` 三路判定，CI 需分别验证三条编译路径：
 
 | 编译路径 | 编译环境 | 编译器 | 包含宏 | 验证目标 |
 |---------|---------|--------|--------|---------|
-| 路径一（Linux 平台） | 用户态 Linux 构建 | GCC/Clang | `__linux__`（预定义） | `<linux/types.h>` 提供 `__u32` 等定义 |
-| 路径二（第三方平台） | 模拟非 Linux 环境 | GCC（`-U__linux__`） | （无 `__linux__`） | `typedef uint32_t __u32` 等映射生效 |
+| 路径一（内核态） | 内核 Kbuild 构建 | GCC（内核构建） | `__KERNEL__` + `__linux__` | `<linux/types.h>` 提供 `__u32` 等定义（内核路径） |
+| 路径二（Linux 用户态） | 用户态 Linux 构建 | GCC/Clang | `__linux__`（预定义，无 `__KERNEL__`） | `<linux/types.h>` 提供 `__u32` 等定义（用户态路径） |
+| 路径三（第三方平台） | 模拟非 Linux 环境 | GCC（`-U__linux__`） | （无 `__linux__`、无 `__KERNEL__`） | `typedef uint32_t __u32` 等映射生效 |
 
-> **内核态编译说明**：内核构建由 `kernel` 子仓的 Kbuild 系统处理，不在 [SC] 双端 CI 范围内。由于 Linux 平台无论内核态还是用户态都 `#include <linux/types.h>`，用户态 Linux 编译通过即代表内核态编译通过（类型定义路径相同）。
+> **内核态编译说明**：内核构建由 `kernel` 子仓的 Kbuild 系统处理。CI 通过 `make C=2` 或独立内核模块编译验证 `__KERNEL__` 路径，确保 [SC] 头文件在内核构建环境下编译通过。这与用户态 Linux 编译路径（路径二）形成互补——二者虽类型来源相同（`<linux/types.h>`），但条件编译入口不同，需独立验证。
 
 ### 5.2 CI 脚本示例
 
 ```yaml
-# .github/workflows/sc-tri-compile-ci.yml —— 二路编译 CI
-name: [SC] Dual-Compile CI
+# .github/workflows/sc-tri-compile-ci.yml —— 三路编译 CI
+name: [SC] Tri-Compile CI
 on: [pull_request]
 
 jobs:
-  linux-compile:
-    name: Linux path (__linux__)
+  kernel-compile:
+    name: Kernel path (__KERNEL__)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile as Linux (userspace)
+      - name: Compile as kernel-space
         run: |
-          # Linux 平台编译：__linux__ 由 GCC 预定义
-          # 验证 <linux/types.h> 提供 __u32 等定义，无需 typedef
+          # 内核态编译：__KERNEL__ 由 Kbuild 定义
+          # 验证 <linux/types.h> 在内核构建下提供 __u32 等定义
+          gcc -D__KERNEL__ -D__linux__ \
+              -Ikernel/include -Ikernel/include/uapi \
+              -c kernel/include/uapi/linux/airymax/*.h -o /dev/null
+
+  linux-userspace-compile:
+    name: Linux userspace path (__linux__)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile as Linux userspace
+        run: |
+          # Linux 用户态编译：__linux__ 由 GCC 预定义，无 __KERNEL__
+          # 验证 <linux/types.h> 在用户态下提供 __u32 等定义
           gcc -Ikernel/include -c \
               kernel/include/uapi/linux/airymax/*.h -o /dev/null
 
@@ -428,7 +449,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify type sizes
         run: |
-          # 验证 __u32 在二路环境都是 4 字节
+          # 验证 __u32 在三路环境都是 4 字节
           cat > /tmp/check.c << 'EOF'
           #include "airymax/uapi_compat.h"
           #include <assert.h>
@@ -442,19 +463,20 @@ jobs:
               return 0;
           }
           EOF
-          # 二路编译并运行
+          # 三路编译并运行
+          gcc -D__KERNEL__ -D__linux__ -Ikernel/include /tmp/check.c -o /tmp/check_kernel
           gcc -Ikernel/include /tmp/check.c -o /tmp/check_linux
           gcc -U__linux__ -std=c99 -Ikernel/include /tmp/check.c -o /tmp/check_3rd
-          /tmp/check_linux && /tmp/check_3rd
+          /tmp/check_kernel && /tmp/check_linux && /tmp/check_3rd
 ```
 
 ### 5.3 CI 校验清单
 
 | 校验项 | 校验内容 | 失败处理 |
 |--------|---------|---------|
-| 二路编译通过 | Linux + 第三方均无编译错误 | 阻止 PR 合并 |
-| 类型大小一致 | `__u32/__u64` 二路环境大小相同 | 阻止 PR 合并 |
-| 字段偏移一致 | 结构体字段偏移二路环境相同 | 阻止 PR 合并 |
+| 三路编译通过 | 内核态 + Linux 用户态 + 第三方均无编译错误 | 阻止 PR 合并 |
+| 类型大小一致 | `__u32/__u64` 三路环境大小相同 | 阻止 PR 合并 |
+| 字段偏移一致 | 结构体字段偏移三路环境相同 | 阻止 PR 合并 |
 | 逐字节对比 | agentrt 与 agentrt-linux 一致 | 阻止 PR 合并 |
 
 ---
@@ -474,10 +496,11 @@ jobs:
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
-| v1.0 | 2026-07-17 | 初始版本：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#ifdef __linux__` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
+| v1.0 | 2026-07-17 | 初始版本：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1 |
-| v1.0.1-fix | 2026-07-26 | **文档-代码策略对立修复**（v3.5 审查 P0）：重写为反映 uapi_compat.h 实际策略——二路条件编译（`#ifdef __linux__` / `#else`，非三路 `__KERNEL__`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 改为二路编译（Linux + 第三方） |
+| v1.0.1-fix | 2026-07-26 | **文档-代码策略对立修复**（v3.5 审查 P0）：反映 uapi_compat.h 实际策略——三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 三路编译（内核态 + Linux 用户态 + 第三方） |
 | v1.0.2 | 2026-07-26 | **02-P0-17 SSoT 冲突修复**（v4.0 审查）：§4.1/§4.2 头文件分类修正——原表将 12 个文件统称 "[SC] 头文件" 与 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014 "10 个核心 + bpf_struct_ops.h 补充"）冲突。已修正为三类分类：10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件（文件头自声明非核心）+ syscall.h codegen 产物（@generated 标记，非 [SC] 契约）。§4.3 CI 校验项 "12 头文件" → "10+1 头文件"。 |
+| v1.0.3 | 2026-07-29 | **P0-NEW-04/05/06/07/16 修复**：§2.1/§2.2/§2.3/§5/SSoT 声明由错误的"二路条件编译（不使用 `__KERNEL__`）"修正为与实际 `uapi_compat.h` 代码一致的"三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）"；§5 CI 由二路编译改为三路编译（增加内核态 `__KERNEL__` 路径）；§1.1 头文件计数由"共 12 个"细化为"10 个 [SC] 核心 + bpf_struct_ops.h 补充 + syscall.h codegen"；v1.0.1-fix 版本笔记描述由"二路"修正为"三路"。 |
 
 ---
 

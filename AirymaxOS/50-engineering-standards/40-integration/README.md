@@ -131,7 +131,7 @@ graph TD
     end
 
     subgraph "agentrt-linux（AirymaxOS）"
-        OS1["SCHED_AGENT<br/>调度类"]
+        OS1["sched_tac<br/>调度类"]
         OS2["128B IPC<br/>io_uring 子系统"]
         OS3["capability<br/>+ LSM 安全"]
         OS4["L1-L4 记忆<br/>CXL + MGLRU"]

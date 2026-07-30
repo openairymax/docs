@@ -38,7 +38,7 @@ agentrt-linux（AirymaxOS）IPC 协议与 agentrt AgentsIPC 同源，保留 128 
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 ```
 
-> **SSoT 声明**：本契约不再就地重定义 IPC 128B 消息头，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `__attribute__((aligned(64)))` 对齐（移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型；字段顺序为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。下方字段语义表以 SSoT Layout C v4 为准。
+> **SSoT 声明**：本契约不再就地重定义 IPC 128B 消息头，以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C）为单一数据源。结构体名称为 `struct airy_ipc_msg_hdr`，D-9 修复后使用 `AIRY_ALIGNED(64)` 对齐（OS-IRON-016 sanctioned exception，定义于 `uapi_compat.h`；移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐）与 `__u32`/`__u16`/`__u64`/`__u8` UAPI 类型；字段顺序为 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。下方字段语义表以 SSoT Layout C v4 为准。
 
 #### 2.2 字段语义表
 
@@ -92,21 +92,31 @@ block-beta
     block:row2:16
         columns 16
         m6["dst_task 8B"]:8
-        m7["payload_len 4B"]:4
-        m8["reserved 4B"]:4
+        m7["capability_badge 8B"]:8
     end
 
     block:row3:16
         columns 16
-        m9["reserved 80B"]:16
+        m8["payload_len 4B"]:4
+        m9["crc32 4B"]:4
+        m10["reserved 8B"]:8
+    end
+
+    block:row4:16
+        columns 16
+        m11["reserved 64B"]:16
     end
 
     style m0 fill:#e1f5fe,stroke:#0288d1
     style m1 fill:#fff3e0,stroke:#e65100
     style m2 fill:#c8e6c9,stroke:#2e7d32
+    style m7 fill:#f3e5f5,stroke:#7b1fa2
+    style m9 fill:#fff9c4,stroke:#f57f17
+    style m10 fill:#f5f5f5,stroke:#9e9e9e
+    style m11 fill:#f5f5f5,stroke:#9e9e9e
 ```
 
-**图 1**：AgentsIPC 128B 消息头布局（SSoT Layout C，`struct airy_ipc_msg_hdr`）。magic 用于协议识别（蓝色），opcode+flags 控制传输行为与标志位（橙色/绿色），trace_id+timestamp_ns 提供可观测性，src_task/dst_task 标识通信双方任务，payload_len 标识 payload 长度，reserved 84B 预留未来扩展。布局与 agentrt AgentsIPC 128B 消息头逐字节相同（[SC] 共享契约层）。
+**图 1**：AgentsIPC 128B 消息头布局（SSoT Layout C，`struct airy_ipc_msg_hdr`）。magic 用于协议识别（蓝色），opcode+flags 控制传输行为与标志位（橙色/绿色），trace_id+timestamp_ns 提供可观测性，src_task/dst_task 标识通信双方任务，capability_badge 携带 Capability Folding 徽章（紫色，offset 40），payload_len 标识 payload 长度，crc32 提供完整性校验（黄色），reserved 72B 预留未来扩展。布局与 agentrt AgentsIPC 128B 消息头逐字节相同（[SC] 共享契约层）。
 
 ---
 

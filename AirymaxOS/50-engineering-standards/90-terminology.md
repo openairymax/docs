@@ -136,8 +136,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 术语               | 标准名称                            | 说明                  |
 | ---------------- | ------------------------------- | ------------------- |
-| 内核基线             | Linux 6.6 LTS                   | 1.x.x 版本锁定（ADR-013） |
-| 未来基线             | Linux 7.1                       | 2.x.x 版本规划          |
+| 内核基线             | Linux 6.6 LTS                   | 1.0.1 版本锁定（ADR-013） |
+| 未来基线             | Linux 7.1                       | 后续版本规划（遵循 IRON-7） |
 | 内核 fork 模型       | 模型 A（完整 Linux 6.6 fork）         | 直接写入上游源码树           |
 | 许可证（内核）          | GPL-2.0-only                    | kernel 子仓           |
 | 许可证（开源核心）        | AGPL-3.0-or-later OR Apache-2.0 | 双许可证，用户二选一          |

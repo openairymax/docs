@@ -637,7 +637,7 @@ agentrt-linux 总维护者承担 BDFL（Benevolent Dictator For Life）角色。
 
 > **说明**（2026-07-12 SSoT 重新设计）：以下本地章节已废除，统一由 [09-ssot-registry.md](./09-ssot-registry.md) 承载，消除三层镜像重复：
 >
-> - 原 §10.1 OS-IRON 编号汇总（14 条完整表格）→ 见 09 §2
+> - 原 §10.1 OS-IRON 编号汇总（16 条完整表格）→ 见 09 §2
 > - 原 §10.2 OS-STD 编号汇总（CODE/FMT/STY/GOV/通用/DOC/CHK 全部子节）→ 见 09 §4
 > - 原 §10.3 OS-KER 编号汇总 → 见 09 §3
 > - 原 §10.4 OS-BAN 编号汇总（11 条）→ 见 09 §5

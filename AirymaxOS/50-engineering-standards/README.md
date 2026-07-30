@@ -43,34 +43,34 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | # | 文档 | 核心内容 | 版本 | 状态 |
 |---|------|---------|------|------|
-| 1 | [00-engineering-standards-handbook.md](00-engineering-standards-handbook.md) | 工程标准规范手册（SSoT 索引 + IRON 铁律 + 合规禁词 + 美学审查） | v1.0 | 维护中 |
-| 2 | [01-coding-standards.md](01-coding-standards.md) | 代码规范合集（6 Parts：语义+格式+风格+Checkpatch+kernel-doc+clang-format） | v1.0 | 维护中 |
-| 3 | [04-engineering-philosophy.md](04-engineering-philosophy.md) | 工程思想（双层稳定性/策略机制分离/渐进式/审查优先） | v1.0 | 维护中 |
-| 4 | [05-development-process.md](05-development-process.md) | 开发流程合集（4 Parts：流程+工具链+合规检查+SPDX 许可证） | v1.0 | 维护中 |
-| 5 | [07-maintainers-and-governance.md](07-maintainers-and-governance.md) | 维护者制度与治理（MAINTAINERS/层级/成熟度模型/DCO/CODEOWNERS） | v1.0 | 维护中 |
-| 6 | [09-ssot-registry.md](09-ssot-registry.md) | **SSoT v2 全局规则编号注册表**（唯一权威，所有编号登记于此） | v2.0 | 维护中 |
-| 7 | [11-sc-header-type-bridging.md](11-sc-header-type-bridging.md) | **[SC] 类型桥接**（[SC] 层内部，通过 uapi_compat.h 实现：C↔Rust FFI + 内核态↔用户态类型映射 + errno 跨语言映射） | v1.0 | 维护中 |
-| 8 | [90-terminology.md](90-terminology.md) | 术语表 SSoT | v1.0 | 维护中 |
-| 9 | [120-cross-project-code-sharing.md](120-cross-project-code-sharing.md) | 跨项目代码共享（IRON-9 v3 [SC]/[SS]/[IND]/[DSL] 四层模型） | v1.0 | 维护中 |
+| 1 | [00-engineering-standards-handbook.md](00-engineering-standards-handbook.md) | 工程标准规范手册（SSoT 索引 + IRON 铁律 + 合规禁词 + 美学审查） | v1.0.1 | 维护中 |
+| 2 | [01-coding-standards.md](01-coding-standards.md) | 代码规范合集（6 Parts：语义+格式+风格+Checkpatch+kernel-doc+clang-format） | v1.0.1 | 维护中 |
+| 3 | [04-engineering-philosophy.md](04-engineering-philosophy.md) | 工程思想（双层稳定性/策略机制分离/渐进式/审查优先） | v1.0.1 | 维护中 |
+| 4 | [05-development-process.md](05-development-process.md) | 开发流程合集（4 Parts：流程+工具链+合规检查+SPDX 许可证） | v1.0.1 | 维护中 |
+| 5 | [07-maintainers-and-governance.md](07-maintainers-and-governance.md) | 维护者制度与治理（MAINTAINERS/层级/成熟度模型/DCO/CODEOWNERS） | v1.0.1 | 维护中 |
+| 6 | [09-ssot-registry.md](09-ssot-registry.md) | **SSoT 全局规则编号注册表**（唯一权威，所有编号登记于此） | v1.0.1 | 维护中 |
+| 7 | [11-sc-header-type-bridging.md](11-sc-header-type-bridging.md) | **[SC] 类型桥接**（[SC] 层内部，通过 uapi_compat.h 实现：C↔Rust FFI + 内核态↔用户态类型映射 + errno 跨语言映射） | v1.0.1 | 维护中 |
+| 8 | [90-terminology.md](90-terminology.md) | 术语表 SSoT | v1.0.1 | 维护中 |
+| 9 | [120-cross-project-code-sharing.md](120-cross-project-code-sharing.md) | 跨项目代码共享（IRON-9 v3 [SC]/[SS]/[IND]/[DSL] 四层模型） | v1.0.1 | 维护中 |
 
 ### 3.2 子目录文档（5 目录 = 14 文档）
 
 | 子目录 | 文档 | 核心内容 | 版本 |
 |--------|------|---------|------|
-| [10-coding-style/](10-coding-style/README.md) | README.md | 编码规范总览与导航 | v1.0 |
-| | C_Cpp_coding_style.md | C/C++ 编码风格规范（Part I-IV：内核 C 风格+补充+C++ 风格+安全编码） | v1.0 |
-| | Rust_coding_style.md | Rust 编码风格规范（Part I-II：风格+安全编码） | v1.0 |
-| | Go_coding_style.md | Go 编码风格规范（Part I-II：风格+安全编码） | v1.0 |
-| | scripting_coding_style.md | 脚本语言规范（Part I-III：Python+JavaScript/TS+Java） | v1.0 |
-| | coding_conventions.md | 通用编码约定（Part I-V：注释+命名+日志+前缀+安全设计） | v1.0 |
-| [20-contracts/](20-contracts/README.md) | README.md | 契约规范总览与导航 | v1.0 |
-| | contracts.md | 契约规范合集（A-IPC IPC 协议+日志+系统调用 API 契约） | v1.0 |
-| [30-runtime-interfaces/](30-runtime-interfaces/README.md) | README.md | 运行时接口总览与导航 | v1.0 |
-| | runtime_interfaces.md | 运行时接口合集（L1 运行时接口+L2 服务协议+L3 安全治理） | v1.0 |
-| [40-integration/](40-integration/README.md) | README.md | 集成规范总览与导航 | v1.0 |
-| | integration.md | 集成标准合集（agentrt 集成+生态伙伴+配置集成+标准贡献） | v1.0 |
-| [50-project-erp/](50-project-erp/README.md) | README.md | 项目工程管理总览与导航 | v1.0 |
-| | project_erp.md | 项目管理规范合集（SBOM+错误码+模块需求+资源管理） | v1.0 |
+| [10-coding-style/](10-coding-style/README.md) | README.md | 编码规范总览与导航 | v1.0.1 |
+| | C_Cpp_coding_style.md | C/C++ 编码风格规范（Part I-IV：内核 C 风格+补充+C++ 风格+安全编码） | v1.0.1 |
+| | Rust_coding_style.md | Rust 编码风格规范（Part I-II：风格+安全编码） | v1.0.1 |
+| | Go_coding_style.md | Go 编码风格规范（Part I-II：风格+安全编码） | v1.0.1 |
+| | scripting_coding_style.md | 脚本语言规范（Part I-III：Python+JavaScript/TS+Java） | v1.0.1 |
+| | coding_conventions.md | 通用编码约定（Part I-V：注释+命名+日志+前缀+安全设计） | v1.0.1 |
+| [20-contracts/](20-contracts/README.md) | README.md | 契约规范总览与导航 | v1.0.1 |
+| | contracts.md | 契约规范合集（A-IPC IPC 协议+日志+系统调用 API 契约） | v1.0.1 |
+| [30-runtime-interfaces/](30-runtime-interfaces/README.md) | README.md | 运行时接口总览与导航 | v1.0.1 |
+| | runtime_interfaces.md | 运行时接口合集（L1 运行时接口+L2 服务协议+L3 安全治理） | v1.0.1 |
+| [40-integration/](40-integration/README.md) | README.md | 集成规范总览与导航 | v1.0.1 |
+| | integration.md | 集成标准合集（agentrt 集成+生态伙伴+配置集成+标准贡献） | v1.0.1 |
+| [50-project-erp/](50-project-erp/README.md) | README.md | 项目工程管理总览与导航 | v1.0.1 |
+| | project_erp.md | 项目管理规范合集（SBOM+错误码+模块需求+资源管理） | v1.0.1 |
 
 ### 3.3 目录结构
 
@@ -237,7 +237,7 @@ agentrt-linux 在 agentrt 17 类规则编号体系基础上，新增 OS 专属�
 
 ### 9.2 agentrt-linux 设计文档
 
-- [agentrt-linux 总览](../README.md)：v1.0 设计文档体系总览与技术选型声明
+- [agentrt-linux 总览](../README.md)：v1.0.1 设计文档体系总览与技术选型声明
 - [架构设计](../10-architecture/README.md)：系统架构 + Unify Design 总纲 + IRON-9 v3 + [DSL] 降级层
 - [模块设计](../20-modules/README.md)：8 子仓 + A-ULS/A-ULP/A-UCS + [SC] 10 头文件
 - [数据流程设计](../40-dataflows/README.md)：A-UEF/A-IPC/A-ULS/A-ULP 数据流路径
@@ -259,11 +259,11 @@ agentrt-linux 在 agentrt 17 类规则编号体系基础上，新增 OS 专属�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.3 | 2026-07-13 | 50-engineering-standards 精简合并 53→23 文档 |
-| v1.4 | 2026-07-13 | D 类 OLK-6.6 工程标准 8 项差距移交 1.0.1 M1+；修正子目录文档计数 |
+| v1.3 | 2026-07-13 | 50-engineering-standards 精简合并 53→23 文档（已废弃，按 IRON-7 重置为 0.1.1 奠基→v1.0.1 演进路径） |
+| v1.4 | 2026-07-13 | D 类 OLK-6.6 工程标准 8 项差距移交 1.0.1 M1+；修正子目录文档计数（已废弃，按 IRON-7 重置） |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v2 升级为 v3 四层模型（新增 [DSL] 降级生存层）；新增 `11-sc-header-type-bridging.md`（[SC] 类型桥接文档）；SSoT 升级为 v2（`09-ssot-registry.md`）；`120-cross-project-code-sharing.md` 升级为 IRON-9 v3 四层模型；新增 Airymax Unify Design 五模块工程标准映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---
 
-> **文档结束** | 共 24 文档（含本 README + 顶层 9 文档 + [SC] 类型桥接 1 文档 + 5 子目录 14 文档）| v1.0 | 2026-07-17
+> **文档结束** | 共 24 文档（含本 README + 顶层 9 文档 + [SC] 类型桥接 1 文档 + 5 子目录 14 文档）| v1.0.1 | 2026-07-29

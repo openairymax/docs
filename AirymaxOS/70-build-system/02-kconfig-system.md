@@ -84,8 +84,8 @@ config AIRY_IPC
 
 字段含义：`config <NAME>` 声明选项（名字大写下划线）；`bool`/`tristate`/`int`/`hex`/`string` 声明类型；`prompt`（紧跟类型的字符串）是菜单显示文本；`depends on` 声明前置依赖；`default` 声明默认值；`help` 是帮助文本（即文档，对齐 E-7 文档即代码）。
 
-- **OS-STD-143**（沿用 50 卷）：新增 `CONFIG_*` 选项默认 `off`（`default n` 或省略），仅安全核心可 `default y`；默认开启需经安全评审。
-- **OS-STD-144**（沿用 50 卷）：新增 `CONFIG_*` 选项必须有 `help` 文本，说明用途、依赖与风险。
+- **OS-STD-303**（沿用 50 卷 §9.2 检查清单 6）：新增 `CONFIG_*` 选项默认 `off`（`default n` 或省略），仅安全核心可 `default y`；默认开启需经安全评审。
+- **OS-STD-304**（沿用 50 卷 §9.2 检查清单 7）：新增 `CONFIG_*` 选项必须有 `help` 文本，说明用途、依赖与风险。
 - **OS-KER-155**：`config` 名字必须以 `AIRY_` 或所属子系统前缀开头（如 `AIRY_IPC_`），禁止与上游 `CONFIG_*` 名字冲突（对齐 IRON-9 独立性）。
 
 ### 2.2 menuconfig：可展开子菜单
@@ -582,8 +582,8 @@ graph LR
 | OS-KER-028 | 新 choice/menuconfig 须用工具实际验证 | MUST |
 | OS-KER-029 | airymaxos-base.config 变更经评审 | MUST |
 | OS-KER-030 | 内核态配置以 Kconfig 为唯一手段 | MUST |
-| OS-STD-143 | 新 CONFIG 选项默认 off（沿用） | MUST |
-| OS-STD-144 | 新 CONFIG 选项有 help 文本（沿用） | MUST |
+| OS-STD-303 | 新 CONFIG 选项默认 off（沿用 50 卷 §9.2 检查清单 6） | MUST |
+| OS-STD-304 | 新 CONFIG 选项有 help 文本（沿用 50 卷 §9.2 检查清单 7） | MUST |
 | OS-STD-145 | 相关选项 menuconfig+if 分组（沿用） | MUST |
 | OS-STD-146 | select 仅用于强约束（沿用） | MUST |
 | OS-STD-147 | C 侧经 #ifdef 引用 CONFIG（沿用） | MUST |
@@ -611,7 +611,7 @@ graph LR
 
 ### 11.2 上游与跨卷文档
 
-- `50-engineering-standards/06-toolchain-and-automation.md`（OS-STD-032 CI 矩阵、OS-STD-143/144/145/146/147/148 Kconfig 规则来源）
+- `50-engineering-standards/05-development-process.md`（OS-STD-032 CI 矩阵、OS-STD-303/304 检查清单 Kconfig 规则来源；OS-STD-145/146/147/148 沿用）
 - `50-engineering-standards/04-engineering-philosophy.md`（IRON-9 同源且部分代码共享（IRON-9 v3）原则定义）
 - `10-architecture/02-five-dimensional-principles.md`（五维正交 24 原则定义）
 - `20-modules/01-kernel.md`（kernel 子仓配置）

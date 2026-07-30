@@ -1357,7 +1357,7 @@ static void airy_superv_watchdog_fn(struct timer_list *t)
         airy_dsl_enter(AIRY_DSL_REASON_SUPERV_DEAD);
 
         /* 4. 内核直接重启 Macro-Supervisor（通过 systemd 通知）
-         * v1.1.1: 原 force 系列 API 已废弃（OLK 6.6 中不存在），
+         * v1.0.1: 原 force 系列 API 已废弃（OLK 6.6 中不存在），
          * 改用标准 API orderly_poweroff(force=true)
          */
         orderly_poweroff(true);

@@ -1484,6 +1484,10 @@ kfree(old);
 - `cognition_types.h`：CoreLoopThree 阶段枚举、Thinkdual 模式枚举、LLM 推理阶段枚举、Token 能效指标、GPU/NPU 能力描述符
 - `sched.h`：sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）、任务描述符（magic 0x41475453 'AGTS'）、vtime 衰减公式、优先级 0-139、AIRY_SLICE_DFL（20ms）
 - `ipc.h`：IPC magic（0x41524531 'ARE1'）、128B 消息头结构（struct airy_ipc_msg_hdr）、SQE/CQE 操作码与标志位
+- `error.h`：A-UEF 统一错误码体系（AIRY_E\* POSIX 负值 + AIRY_FAULT_\* 0x1000+ 故障码）+ [DSL] 降级块定义
+- `log_types.h`：A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射）
+- `uapi_compat.h`：三路类型桥接（内核态 \_\_u32 ↔ 用户态 Linux uint32_t ↔ 第三方 uint32_t with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译
+- `lsm_types.h`：纯 C LSM 模块类型定义（struct airy_lsm_blob + airy_capability_check() 回调原型 + Capability 缓存结构）
 
 #### 10.2 [SC] 层代码编写规则（OS-KER-021）
 
@@ -1502,7 +1506,7 @@ kfree(old);
 /* IRON-9 v3: [SC] 共享契约层 — 此头文件与 agentrt 完全共享 */
 /* 版本: 0.1.1 */
 
-#include <stdint.h>  /* C99 标准头文件，非内核头文件 */
+#include <airymax/uapi_compat.h>  /* [SC] 类型桥接：__u32/__u16/__u64/__u8 跨平台 */
 
 #define AIRY_IPC_HDR_SIZE  128
 #define AIRY_IPC_MSG_BODY_MAX  4096
@@ -1513,10 +1517,22 @@ enum airy_ipc_msg_type {
         AIRY_IPC_MSG_EVENT = 2,
 };
 
-/* IPC 128B 消息头定义见 [SC] 共享契约层（SSoT），不就地重定义 */
-#include <airymax/ipc.h>
-/* 结构体名称：struct airy_ipc_msg_hdr（Layout C，物理宿主见
- * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
+/* IPC 128B 消息头（Layout C，物理宿主见
+ * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C）
+ * UAPI 字段必须使用 __u32/__u16/__u64/__u8，仅 uapi_compat.h 例外 */
+struct airy_ipc_msg_hdr {
+        __u32   magic;            /* offset  0, 'ARE1' 0x41524531 */
+        __u16   opcode;           /* offset  4, see AIRY_IPC_OP_* */
+        __u16   flags;            /* offset  6, see AIRY_IPC_FLAG_* */
+        __u64   trace_id;         /* offset  8, OpenTelemetry trace ID */
+        __u64   timestamp_ns;     /* offset 16, CLOCK_REALTIME nanoseconds */
+        __u64   src_task;         /* offset 24, source Agent/daemon task_id */
+        __u64   dst_task;         /* offset 32, destination task_id */
+        __u64   capability_badge; /* offset 40, [SS] agentrt-linux uses */
+        __u32   payload_len;      /* offset 48, payload length */
+        __u32   crc32;            /* offset 52, CRC32 over header[0:52)+payload */
+        __u8    reserved[72];     /* offset 56, must be zero */
+};
 
 #endif /* _AIRY_IPC_MSG_H */
 ```

@@ -644,5 +644,5 @@ agentrt-linux 采用以下版本号格式：
 
 ---
 
-> **文档结束** | agentrt-linux（AirymaxOS）上游追踪策略 v0.1.1
+> **文档结束** | agentrt-linux（AirymaxOS）上游追踪策略 v1.0.1
 > 遵循 IRON-9 v3 [IND] 完全独立层（上游追踪为 agentrt-linux 专属维护策略）

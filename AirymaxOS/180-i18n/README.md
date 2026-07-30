@@ -46,12 +46,12 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 
 ```
 180-i18n/
-├── README.md                       # 本文件 — 国际化主索引（v1.0）
-├── 01-locale-design.md             # Locale 区域设置设计 + 环境变量（v1.0）
-├── 02-encoding-spec.md             # 字符编码规范 + UTF-8 处理 + 编码转换（v1.0）
-├── 03-error-message-i18n.md        # 错误消息国际化 + 错误码注册表 SSoT（v1.0）
-├── 04-cjk-support.md              # CJK 中文/日文/韩文显示与输入支持（v1.0）
-└── 05-doc-i18n.md                 # 文档国际化 + 中英双语同步 + 术语表治理（v1.0）
+├── README.md                       # 本文件 — 国际化主索引（v1.0.1）
+├── 01-locale-design.md             # Locale 区域设置设计 + 环境变量（v1.0.1）
+├── 02-encoding-spec.md             # 字符编码规范 + UTF-8 处理 + 编码转换（v1.0.1）
+├── 03-error-message-i18n.md        # 错误消息国际化 + 错误码注册表 SSoT（v1.0.1）
+├── 04-cjk-support.md              # CJK 中文/日文/韩文显示与输入支持（v1.0.1）
+└── 05-doc-i18n.md                 # 文档国际化 + 中英双语同步 + 术语表治理（v1.0.1）
 ```
 
 ### 3.1 各文档定位
@@ -142,7 +142,7 @@ A-ULP 的 128B 日志记录采用**payload 与格式化分离**设计——内�
 ## 5. 相关文档
 
 ### 5.1 上级与架构文档
-- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0）
+- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0.1）
 - [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) —— Airymax Unify Design 总纲（五模块 SSoT）
 - [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) —— IRON-9 v3 四层模型
 
@@ -175,4 +175,4 @@ A-ULP 的 128B 日志记录采用**payload 与格式化分离**设计——内�
 
 ---
 
-> **文档结束** | 国际化模块 v1.0 | 共 6 文档 | 维护者：开源极境工程与规范委员会 | 系统界面必须支持多语言
+> **文档结束** | 国际化模块 v1.0.1 | 共 6 文档 | 维护者：开源极境工程与规范委员会 | 系统界面必须支持多语言

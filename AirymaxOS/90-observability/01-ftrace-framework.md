@@ -1104,4 +1104,4 @@ enum print_line_t {
 
 ---
 
-> **文档结束** | agentrt-linux ftrace 框架详解 v0.1.1 / 1.0.1
+> **文档结束** | agentrt-linux ftrace 框架详解 v1.0.1

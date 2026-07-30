@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **最后更新**： 2026-07-22\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **理论根基**：STRIDE 威胁建模方法论 + seL4 capability 安全模型（ADR-014）+ Linux 6.6 LSM/Landlock/capability\
-> **版本基线**：1.x.x 锁定 Linux 6.6 LTS / 2.x.x 锁定 Linux 7.1（ADR-013）\
+> **版本基线**：1.x.x 锁定 Linux 6.6 LTS / 2.x.x 锁定 Linux 7.1（ADR-016）\
 > **SSoT 依赖声明**：本文档涉及的所有安全规则编号（OS-SEC-001\~299、OS-STD-SEC-010\~011、OS-IRON-001/014 等）的**唯一权威来源**为 [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)。本文档不是规则编号 SSoT，仅作为威胁模型与防护设计的技术阐述载体。当本文档与 SSoT 注册表冲突时，以 SSoT 注册表为准。
 
 ***

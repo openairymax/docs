@@ -444,9 +444,8 @@ pub unsafe extern "C" fn airy_ipc_channel_create(
 //!
 //! Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
-use kernel::prelude::*;
+use kernel::prelude::*;  // Vec 已在 prelude 导出（pub use alloc::vec::Vec）
 use kernel::sync::{Arc, Mutex};
-use kernel::alloc::KVec;
 use kernel::str::CString;
 use kernel::error::code::*;
 
@@ -461,7 +460,7 @@ module! {
 /// IPC 通道内部状态。
 struct ChannelInner {
     name: CString,
-    pending_msgs: KVec<AgentrtIpcMsg>,
+    pending_msgs: Vec<AgentrtIpcMsg>,
     max_msgs: usize,
 }
 
@@ -475,7 +474,7 @@ impl AgentrtIpcChannel {
     pub fn create(name: &str, max_msgs: usize) -> Result<Arc<Self>> {
         let inner = ChannelInner {
             name: CString::try_from(name)?,
-            pending_msgs: KVec::new(),
+            pending_msgs: Vec::new(),
             max_msgs,
         };
         Ok(Arc::new(Self {
@@ -489,14 +488,14 @@ impl AgentrtIpcChannel {
         if guard.pending_msgs.len() >= guard.max_msgs {
             return Err(EAGAIN);
         }
-        guard.pending_msgs.push(msg)?;
+        guard.pending_msgs.push(msg);
         Ok(())
     }
 
     /// 接收消息（非阻塞）。
     pub fn recv(&self) -> Option<AgentrtIpcMsg> {
         let mut guard = self.inner.lock();
-        guard.pending_msgs.pop_front()
+        guard.pending_msgs.pop()
     }
 }
 ```
@@ -525,7 +524,7 @@ graph TD
         end
 
         subgraph "[SC] 共享契约层"
-            SC_HDR["include/uapi/linux/airymax/<br/>syscalls.h / memory_types.h<br/>security_types.h / cognition_types.h<br/>sched.h / ipc.h"]
+            SC_HDR["include/uapi/linux/airymax/<br/>syscalls.h / memory_types.h<br/>security_types.h / cognition_types.h<br/>sched.h / ipc.h<br/>error.h / log_types.h<br/>uapi_compat.h / lsm_types.h"]
         end
     end
 
@@ -892,7 +891,7 @@ pub fn airy_ipc_send_rs(channel: u32, msg: &[u8]) -> i32 {
 
 #### 5.2 类型布局兼容性（OS-SEC-241）
 
-> **OS-SEC-241**：FFI 边界上的结构体必须使用 `#[repr(C, align(64))]` 确保与 C 的布局兼容。Rust 默认布局（`repr(Rust)`）不保证字段顺序和填充，不能用于 FFI。IRON-9 v3 [SC] 共享契约层的结构体（如 `AirymaxIpcMsgHdr`）在 agentrt 和 agentrt-linux（AirymaxOS）两端必须位级兼容，`#[repr(C, align(64))]` 是保证这一兼容性的前提（对齐 Layout C SSoT 的 `__attribute__((aligned(64)))`，D-9 修复后禁用 `__attribute__((packed))`）。
+> **OS-SEC-241**：FFI 边界上的结构体必须使用 `#[repr(C, align(64))]` 确保与 C 的布局兼容。Rust 默认布局（`repr(Rust)`）不保证字段顺序和填充，不能用于 FFI。IRON-9 v3 [SC] 共享契约层的结构体（如 `AirymaxIpcMsgHdr`）在 agentrt 和 agentrt-linux（AirymaxOS）两端必须位级兼容，`#[repr(C, align(64))]` 是保证这一兼容性的前提（对齐 Layout C SSoT 的 `AIRY_ALIGNED(64)`，OS-IRON-016 sanctioned exception，定义于 `uapi_compat.h`；D-9 修复后禁用 `__attribute__((packed))`）。
 
 ```rust
 /// [SC] 共享契约层：IPC 消息头，与 C 结构体 struct airy_ipc_msg_hdr 完全一致。

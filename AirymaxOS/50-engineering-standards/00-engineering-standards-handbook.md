@@ -115,7 +115,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 
 本章不再镜像 09-ssot-registry.md 的完整内容（2026-07-12 SSoT 重新设计：取消三层镜像，消除 ~200 行重复）。请直接查阅 [09-ssot-registry.md](./09-ssot-registry.md) 获取：
 
-- §2 OS-IRON 工程铁律（15 条）
+- §2 OS-IRON 工程铁律（16 条）
 - §3 OS-KER 内核工程规则（001-155 + 211/221）
 - §4 OS-STD 标准规则（CODE/FMT/STY/GOV/DOC/CHK 子域）
 - §5 OS-BAN 禁止规则（11 条）

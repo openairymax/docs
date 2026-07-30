@@ -83,24 +83,24 @@ agentrt-linux 开发流程遵循 SSoT v2（Single Source of Truth v2）单一权
 
 ## 3. 文档索引
 
-本目录现有文档（v1.0 范围）：
+本目录现有文档（v1.0.1 范围）：
 
 ```
 120-development-process/
-├── README.md                       # 本文件（v1.0）
+├── README.md                       # 本文件（v1.0.1）
 ├── 01-patch-lifecycle.md           # 补丁生命周期 6 阶段 + CI 强制校验
 └── 02-maintainer-hierarchy.md      # 维护者层级制度 + 跨端同源 API 评审
 ```
 
 | # | 文档 | 版本 | 内容概要 |
 |---|------|------|---------|
-| — | [README.md](README.md) | v1.0 | 开发流程主索引（本文件，含 SSoT v2 单一权威源模型） |
-| 1 | [01-patch-lifecycle.md](01-patch-lifecycle.md) | v1.0 | 补丁生命周期 6 阶段（Design → Early review → Wider review → Mainline → Stable release → LTS）、PR 拆分原则、commit 格式、审查流程、CI 强制校验（`sc-dual-ci.yml` + `ssot-validate.yml` + 五大技术选型回归） |
-| 2 | [02-maintainer-hierarchy.md](02-maintainer-hierarchy.md) | v1.0 | 维护者层级制度（Lieutenant System）、CODEOWNERS、DCO bot、8 子仓协同开发、agentrt ↔ agentrt-linux 同源 API 季度评审 |
+| — | [README.md](README.md) | v1.0.1 | 开发流程主索引（本文件，含 SSoT v2 单一权威源模型） |
+| 1 | [01-patch-lifecycle.md](01-patch-lifecycle.md) | v1.0.1 | 补丁生命周期 6 阶段（Design → Early review → Wider review → Mainline → Stable release → LTS）、PR 拆分原则、commit 格式、审查流程、CI 强制校验（`sc-dual-ci.yml` + `ssot-validate.yml` + 五大技术选型回归） |
+| 2 | [02-maintainer-hierarchy.md](02-maintainer-hierarchy.md) | v1.0.1 | 维护者层级制度（Lieutenant System）、CODEOWNERS、DCO bot、8 子仓协同开发、agentrt ↔ agentrt-linux 同源 API 季度评审 |
 
 ### 3.1 后续规划文档（1.0.1 版本）
 
-以下文档在 1.0.1 版本完成，不在 v1.0 范围内：
+以下文档在 1.0.1 版本完成，不在当前目录现有文档范围内：
 
 - `03-pull-requests.md`：PR 提交规范（详细）
 - `04-code-review.md`：代码审查流程（详细）
@@ -174,4 +174,4 @@ agentrt-linux 开发流程遵循 SSoT v2（Single Source of Truth v2）单一权
 
 ---
 
-> **文档结束** | agentrt-linux 开发流程设计 v1.0 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."
+> **文档结束** | agentrt-linux 开发流程设计 v1.0.1 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."

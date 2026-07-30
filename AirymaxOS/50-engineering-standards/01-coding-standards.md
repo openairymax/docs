@@ -3258,7 +3258,7 @@ struct airy_ipc_msg_hdr {
 	__u64	dst_task;		/* offset 32, 8 bytes */
 	__u32	payload_len;		/* offset 40, 4 bytes */
 	__u8	reserved[84];		/* offset 44, 84 bytes */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 
 #endif /* _AIRY_IPC_H */
 ```
@@ -3858,9 +3858,9 @@ merge allowed
 | `BreakBeforeBraces` | Custom | `.clang-format:48` | OS-STD-CODE-022 |
 | `PointerAlignment` | Right | `.clang-format:668` | OS-STD-CODE-026 |
 | `SpaceBeforeParens` | ControlStatementsExceptForEachMacros | `.clang-format:677` | OS-STD-CODE-021 |
-| `SortIncludes` | false | `.clang-format:670` | OS-STD-CODE-038 |
+| `SortIncludes` | false | `.clang-format:670` | OS-BAN-008 |
 | `AllowShortFunctionsOnASingleLine` | None | `.clang-format:22` | OS-STD-CODE-022 |
-| `ReflowComments` | false | `.clang-format:669` | OS-STD-CODE-036 |
+| `ReflowComments` | false | `.clang-format:669` | OS-STD-FMT-031 |
 | `BreakStringLiterals` | false | `.clang-format:54` | OS-STD-FMT-002 |
 
 ---

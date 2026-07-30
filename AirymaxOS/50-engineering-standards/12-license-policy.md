@@ -1,8 +1,8 @@
 # Airymax 许可证策略规范（SSoT）
 
 > **文档定位**: Airymax 工程标准 / 许可证治理
-> **版本**: v1.0
-> **最后更新**: 2026-07-21
+> **版本**: v1.0.1
+> **最后更新**: 2026-07-29
 > **SPDX-License-Identifier**: CC-BY-NC-4.0
 > **状态**: 正式生效（取代历史"三许可证体系"和"双许可证体系"的所有遗留描述）
 
@@ -313,6 +313,7 @@ Airymax 采用 **Open Core + Fair Source** 分层许可模式，按内容性质�
 | `docs/` 下的源代码（若有） | `CC-BY-NC-4.0` |
 | `agentrt/`, `sdk/`, `ecosystem/`, `products/{docker,desktop}/`, `devtools/` 下 | `AGPL-3.0-or-later OR Apache-2.0` |
 | `agentrt-linux/kernel/` 下 | `GPL-2.0-only` |
+| `agentrt-linux/kernel/include/uapi/` 下 UAPI 头文件（Linux syscall-note 例外） | `GPL-2.0-only WITH Linux-syscall-note` |
 | `agentrt-linux/{其他子仓}` 用户态代码 | `AGPL-3.0-or-later OR Apache-2.0` |
 | `agentrt-linux/{其他子仓}` 内核模块代码（含 `#include <linux/module.h>`） | `GPL-2.0-only` |
 | `products/memoryrovol/` 下 | `LicenseRef-SPHARX-MemoryRovol-EULA-1.0` |
@@ -512,6 +513,7 @@ set(PROJECT_LICENSE "AGPL-3.0-or-later OR Apache-2.0")
 
 **变更记录**:
 - v1.0 (2026-07-18): 初版，确立 5 层许可证分层策略
+- v1.0.1 (2026-07-29): 版本号统一（按 IRON-7 铁律）；§5.3 SPDX 表新增 UAPI 头文件例外行——`agentrt-linux/kernel/include/uapi/` 下 UAPI 头文件使用 `GPL-2.0-only WITH Linux-syscall-note`（Linux 内核 UAPI 惯例，允许用户态程序 sysctl 包含）
 
 ---
 

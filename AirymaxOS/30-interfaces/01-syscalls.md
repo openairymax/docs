@@ -356,7 +356,7 @@ Capability Folding 决策将 0.1.1 的 12 核心 syscall 精简为 v1.0.1 的 4 
 #endif
 ```
 
-> **类型说明**：下述 syscall 签名中的 `cap_t` 为 capability 引用句柄类型（`typedef uint64_t cap_t`），定义于 [SC] 共享头文件 `include/uapi/linux/airymax/security_types.h`。详见 [20-modules/03-security.md §4.1](../20-modules/03-security.md)。
+> **类型说明**：下述 syscall 签名中的 `cap_t` 为 capability 引用句柄类型（ARCH-1: `typedef uint32_t cap_idx_t; typedef cap_idx_t cap_t;`），定义于 [SC] 共享头文件 `include/uapi/linux/airymax/security_types.h`。详见 [20-modules/03-security.md §4.1](../20-modules/03-security.md)。
 
 ### 3.2 Capability Invocation（1 个）
 
@@ -405,8 +405,8 @@ AIRY_API int airy_sys_call(cap_t cap,
  *
  * @since 1.0.1
  */
-AIRY_API int airy_sys_rovol_ctl(uint32_t op, uint32_t pid,
-                                      uint64_t arg);
+AIRY_API int airy_sys_rovol_ctl(__u32 op, __u32 pid,
+                                      __u64 arg);
 
 /**
  * airy_sys_sched_ctl - Scheduling policy configuration
@@ -420,7 +420,7 @@ AIRY_API int airy_sys_rovol_ctl(uint32_t op, uint32_t pid,
  *
  * @since 1.0.1
  */
-AIRY_API int airy_sys_sched_ctl(uint32_t op,
+AIRY_API int airy_sys_sched_ctl(__u32 op,
                                       const char *cgroup_path,
                                       const char *policy);
 
@@ -436,7 +436,7 @@ AIRY_API int airy_sys_sched_ctl(uint32_t op,
  *
  * @since 1.0.1
  */
-AIRY_API int airy_sys_clt_notify(int task_id, uint32_t phase);
+AIRY_API int airy_sys_clt_notify(int task_id, __u32 phase);
 ```
 
 ---
@@ -682,9 +682,9 @@ if (ret < 0) {
 | agentrt 用户态（syscalls.h） | agentrt-linux 内核（SYSCALL_DEFINE） | 同源签名 | 实现差异 |
 |------------------------------|--------------------------------------|---------|---------|
 | `airy_sys_call()` | `SYSCALL_DEFINE2(airy_sys_call, ...)` | `(cap_t, const struct airy_ipc_msg_hdr *) -> int` | 用户态 libc syscall() vs 内核 capability dispatch；v1.0.1：agentrt 用户态 `capability_badge=0`，agentrt-linux 内核由 sec_d 编译 Badge（H3/H4） |
-| `airy_sys_rovol_ctl()` | `SYSCALL_DEFINE3(airy_sys_rovol_ctl, ...)` | `(uint32_t, uint32_t, uint64_t) -> int` | 用户态 mmap+msync vs 内核 PMEM |
-| `airy_sys_sched_ctl()` | `SYSCALL_DEFINE3(airy_sys_sched_ctl, ...)` | `(uint32_t, const char *, const char *) -> int` | 用户态 cgroup fs vs 内核 sched_tac 策略 |
-| `airy_sys_clt_notify()` | `SYSCALL_DEFINE2(airy_sys_clt_notify, ...)` | `(int, uint32_t) -> int` | 用户态 event loop vs 内核 kthread |
+| `airy_sys_rovol_ctl()` | `SYSCALL_DEFINE3(airy_sys_rovol_ctl, ...)` | `(__u32, __u32, __u64) -> int` | 用户态 mmap+msync vs 内核 PMEM |
+| `airy_sys_sched_ctl()` | `SYSCALL_DEFINE3(airy_sys_sched_ctl, ...)` | `(__u32, const char *, const char *) -> int` | 用户态 cgroup fs vs 内核 sched_tac 策略 |
+| `airy_sys_clt_notify()` | `SYSCALL_DEFINE2(airy_sys_clt_notify, ...)` | `(int, __u32) -> int` | 用户态 event loop vs 内核 kthread |
 
 > **v1.0.1 移除的 [SS] 映射**：`airy_sys_send/recv/nbsend/nbrecv/reply_recv/yield/reply/notify` 共 8 个 IPC 原语在 agentrt 用户态仍保留为 libc 包装函数（内部调用 io_uring `IORING_OP_URING_CMD`），但在 agentrt-linux 内核侧不再注册为独立 syscall。这种"用户态包装存在、内核 syscall 不存在"的不对称是 IRON-9 v3 [IND] 完全独立层的合法形态。
 

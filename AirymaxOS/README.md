@@ -228,7 +228,7 @@ Unify Design 的总纲文档为 [`10-architecture/10-unify-design.md`](10-archit
 | Wasm 3.0（安全沙箱运行时）                                       | cognition                    |
 | CXL（内存分层与池化）                                            | memory                       |
 
-> **参考声明**：agentrt-linux 的微内核设计思想**唯一来源为 seL4**，工程实现标准完全对齐 Linux 6.6 内核基线。agentrt-linux 不移植 openEuler 特有特性，与 openEuler 的关系仅限于技术参考，不共享代码。
+> **参考声明**：agentrt-linux 的微内核设计思想**唯一来源为 seL4**，工程实现标准完全对齐 Linux 6.6 内核基线。agentrt-linux 的内核基线为 Linux 官方 stable（kernel.org），**特别是在硬件驱动的适配上移植 openEuler 特有特性**，对 openEuler 的代码工程实现标准和规范进行全面对齐和参考，从而广泛兼容国产主流硬件（鲲鹏/飞腾/海光/申威/昇腾）。内核核心子系统（调度/安全/IPC/内存）不移植 openEuler 修改，保持 vanilla 基线纯净。
 
 ***
 
@@ -273,5 +273,5 @@ agentrt（AirymaxAgentRT，跨平台用户态运行时）
 
 ***
 
-> **文档结束** | agentrt-linux v1.0 设计文档体系 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."
+> **文档结束** | agentrt-linux v1.0.1 设计文档体系 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."
 

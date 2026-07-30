@@ -158,7 +158,7 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 
 ### 4.3 airy_sys_rovol_ctl op-dispatch（MemoryRovol 控制）
 
-`airy_sys_rovol_ctl(uint32_t op, uint32_t pid, uint64_t arg)` 通过 `op` 分派：
+`airy_sys_rovol_ctl(__u32 op, __u32 pid, __u64 arg)` 通过 `op` 分派：
 
 | op 码 | 操作名 | 功能 | 0.1.1 对应 syscall |
 |-------|--------|------|-------------------|
@@ -175,7 +175,7 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 
 ### 4.4 airy_sys_sched_ctl op-dispatch（调度控制）
 
-`airy_sys_sched_ctl(uint32_t op, uint32_t agent_id, uint64_t arg)` 通过 `op` 分派：
+`airy_sys_sched_ctl(__u32 op, const char *cgroup_path, const char *policy)` 通过 `op` 分派：
 
 | op 码 | 操作名 | 功能 | 0.1.1 对应 syscall |
 |-------|--------|------|-------------------|
@@ -189,7 +189,7 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 
 ### 4.5 airy_sys_clt_notify op-dispatch（认知循环控制）
 
-`airy_sys_clt_notify(int task_id, uint32_t op)` 通过 `op` 分派：
+`airy_sys_clt_notify(int task_id, __u32 phase)` 通过 `op` 分派：
 
 | op 码 | 操作名 | 功能 | 0.1.1 对应 syscall |
 |-------|--------|------|-------------------|

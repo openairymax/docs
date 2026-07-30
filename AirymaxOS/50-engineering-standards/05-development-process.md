@@ -1210,16 +1210,16 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 
 | # | 检查项 | OS-STD |
 |---|--------|--------|
-| 1 | 使用的设施必须 `#include` 其定义头文件，不依赖间接包含 | OS-STD-141 |
+| 1 | 使用的设施必须 `#include` 其定义头文件，不依赖间接包含 | OS-STD-301 |
 | 2a | 在 `=y` / `=m` / `=n` 配置下编译无 gcc/linker 警告错误 | OS-STD-CODE-004 |
 | 2b | 通过 `allnoconfig` / `allmodconfig` | OS-STD-072 |
 | 2c | 使用 `O=builddir` 构建成功 | OS-STD-072 |
-| 2d | Documentation/ 改动通过 `make htmldocs` 构建 | OS-STD-142 |
+| 2d | Documentation/ 改动通过 `make htmldocs` 构建 | OS-STD-302 |
 | 3 | 在多 CPU 架构上交叉编译通过 | OS-STD-073 |
 | 4 | ppc64 推荐用于交叉编译检查 | OS-STD-074 |
 | 5 | 通过 `scripts/checkpatch.pl` 风格检查 | OS-STD-101 |
-| 6 | 新增/修改的 CONFIG 选项不破坏配置菜单，默认 off | OS-STD-143 |
-| 7 | 所有新 Kconfig 选项有帮助文本 | OS-STD-144 |
+| 6 | 新增/修改的 CONFIG 选项不破坏配置菜单，默认 off | OS-STD-303 |
+| 7 | 所有新 Kconfig 选项有帮助文本 | OS-STD-304 |
 | 8 | 相关 Kconfig 组合已仔细审查 | OS-STD-145 |
 | 9 | 通过 sparse 检查 | OS-STD-081 |
 | 10 | `make checkstack` 检查，超 512 字节栈的函数需修改 | OS-STD-146 |
@@ -1228,13 +1228,13 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | 13 | 在 SMP/PREEMPT 开关下构建与运行测试 | OS-STD-149 |
 | 14 | 所有代码路径在 lockdep 全功能启用下验证 | OS-STD-095 |
 | 15 | 新增 `/proc` 条目在 `Documentation/` 下文档化 | OS-STD-150 |
-| 16 | 新增内核启动参数在 kernel-parameters.rst 文档化 | OS-STD-151 |
-| 17 | 新增模块参数用 `MODULE_PARM_DESC()` 文档化 | OS-STD-152 |
-| 18 | 新增用户空间接口在 `Documentation/ABI/` 文档化 | OS-STD-153 |
+| 16 | 新增内核启动参数在 kernel-parameters.rst 文档化 | OS-STD-305 |
+| 17 | 新增模块参数用 `MODULE_PARM_DESC()` 文档化 | OS-STD-306 |
+| 18 | 新增用户空间接口在 `Documentation/ABI/` 文档化 | OS-STD-307 |
 | 19 | 至少 slab/page 分配失败注入测试 | OS-STD-114 |
 | 20 | 新增代码用 `gcc -W`（`make KCFLAGS=-W`）编译 | OS-STD-071 |
-| 21 | 合并入 develop 后通过跨子系统联调测试 | OS-STD-154 |
-| 22 | 所有内存屏障（barrier/rmb/wmb）有注释说明逻辑 | OS-STD-155 |
+| 21 | 合并入 develop 后通过跨子系统联调测试 | OS-STD-308 |
+| 22 | 所有内存屏障（barrier/rmb/wmb）有注释说明逻辑 | OS-STD-309 |
 | 23 | 新增 ioctl 更新 ioctl-number.rst | OS-STD-156 |
 | 24 | 相关 Kconfig 符号禁用/`=m` 组合下多次构建测试 | OS-STD-157 |
 
@@ -1264,7 +1264,7 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | **E-1 安全内生** | 安全是设计内生的，不是附加的 | 模块签名（OS-STD-062）、KFENCE 生产部署（OS-STD-092）、安全路径 100% 覆盖（OS-STD-124） |
 | **E-2 可观测性** | 系统行为可观测 | 覆盖率报告发布到 GitHub Pages（OS-STD-123）、CI 全流程可追溯 |
 | **E-6 错误可追溯** | 错误可溯源、可追踪 | 静态分析基线（OS-STD-TOOL-011）、Smatch 基线（OS-STD-082）、checkpatch ERROR 禁止（OS-STD-101） |
-| **E-7 文档即代码** | 文档与代码同源同审 | `make htmldocs` 构建（OS-STD-142）、kernel-doc 强制（OS-STD-147）、ABI 文档化（OS-STD-153） |
+| **E-7 文档即代码** | 文档与代码同源同审 | `make htmldocs` 构建（OS-STD-302）、kernel-doc 强制（OS-STD-147）、ABI 文档化（OS-STD-307） |
 | **E-8 可测试性** | 系统可测试 | KUnit + kselftest + fault injection + 模糊测试构成完整测试矩阵 |
 | **A-1 极简主义** | 反过度抽象 | checkpatch 严格模式（OS-STD-101）、clippy 0 警告（OS-STD-085） |
 | **A-2 细节关注** | 行尾禁止空白、函数原型元素顺序 | format-check 强制（OS-STD-107）、checkpatch CHECK 级检查 |
@@ -1338,24 +1338,38 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | OS-STD-134 | nightly 覆盖 9 矩阵 + 全动态分析 | MUST |
 | OS-STD-135 | nightly 失败 24 小时修复 | MUST |
 | OS-STD-136 | release pipeline 在 7 层验证后签名 | MUST |
-| OS-STD-141 | 设施 #include 其定义头文件 | MUST |
-| OS-STD-142 | Documentation 通过 make htmldocs | MUST |
-| OS-STD-143 | 新 CONFIG 选项默认 off | MUST |
-| OS-STD-144 | 新 Kconfig 有帮助文本 | MUST |
+| OS-STD-141 | 单 PR 最多 15 个 commit（§4 PR/commit 规模） | MUST |
+| OS-STD-142 | 单 commit diff ≤1000 行（§4 commit 规模） | MUST |
+| OS-STD-143 | 补丁序列中点可编译（bisect 友好，§4） | MUST |
+| OS-STD-144 | 移动代码与修改代码分属不同 commit（§4） | MUST |
 | OS-STD-145 | Kconfig 组合审查 | MUST |
 | OS-STD-146 | 栈 >512 字节函数需修改 | SHOULD |
 | OS-STD-147 | 全局 API 含 kernel-doc | MUST |
 | OS-STD-148 | DEBUG 选项同时启用测试 | MUST |
 | OS-STD-149 | SMP/PREEMPT 开关测试 | MUST |
 | OS-STD-150 | /proc 条目文档化 | MUST |
-| OS-STD-151 | 内核启动参数文档化 | MUST |
-| OS-STD-152 | 模块参数 MODULE_PARM_DESC | MUST |
-| OS-STD-153 | 用户空间接口 Documentation/ABI 文档化 | MUST |
-| OS-STD-154 | 合并 develop 后跨子系统联调 | MUST |
-| OS-STD-155 | 内存屏障有逻辑注释 | MUST |
+| OS-STD-151 | Subject 行格式（§4 PR/commit 格式） | MUST |
+| OS-STD-152 | 描述正文行宽 75 列（§4） | MUST |
+| OS-STD-153 | Subject 与正文空行分隔（§4） | MUST |
+| OS-STD-154 | `---` 分隔符分隔 changelog 与 diffstat（§4） | MUST |
+| OS-STD-155 | 禁止 MIME 附件（§4） | MUST |
 | OS-STD-156 | 新增 ioctl 更新 ioctl-number.rst | MUST |
 | OS-STD-157 | Kconfig 禁用/`=m` 组合构建测试 | MUST |
 | OS-STD-158 | 多语言文档同步 | MUST |
+| OS-STD-161 | DCO 签名强制（§4 描述规范） | MUST |
+| OS-STD-162 | 审查标签本人添加（§4 描述规范） | MUST |
+| OS-STD-163 | 补丁描述自包含（§4 描述规范） | MUST |
+| OS-STD-301 | 设施 #include 其定义头文件（§9.2 检查清单 1） | MUST |
+| OS-STD-302 | Documentation 通过 make htmldocs（§9.2 检查清单 2d） | MUST |
+| OS-STD-303 | 新 CONFIG 选项默认 off（§9.2 检查清单 6） | MUST |
+| OS-STD-304 | 新 Kconfig 有帮助文本（§9.2 检查清单 7） | MUST |
+| OS-STD-305 | 内核启动参数文档化（§9.2 检查清单 16） | MUST |
+| OS-STD-306 | 模块参数 MODULE_PARM_DESC（§9.2 检查清单 17） | MUST |
+| OS-STD-307 | 用户空间接口 Documentation/ABI 文档化（§9.2 检查清单 18） | MUST |
+| OS-STD-308 | 合并 develop 后跨子系统联调（§9.2 检查清单 21） | MUST |
+| OS-STD-309 | 内存屏障有逻辑注释（§9.2 检查清单 22） | MUST |
+| OS-STD-311 | 工具链版本固定于 toolchain-versions.txt（§12.2） | MUST |
+| OS-STD-312 | 工具链版本升级经专门 PR 评审（§12.2） | MUST |
 
 ---
 
@@ -1380,8 +1394,8 @@ agentrt-linux 的工具链配置以代码形式存放在仓库中，确保所有
 
 ### 12.2 工具链版本固定
 
-- **OS-STD-161**：所有工具链版本（gcc / clang / rustc / sparse / Smatch）必须在 `toolchain-versions.txt` 中固定，CI 与本地开发使用同一版本。
-- **OS-STD-162**：工具链版本升级必须经过专门 PR 评审，验证不引入新警告或破坏现有检查。
+- **OS-STD-311**：所有工具链版本（gcc / clang / rustc / sparse / Smatch）必须在 `toolchain-versions.txt` 中固定，CI 与本地开发使用同一版本。
+- **OS-STD-312**：工具链版本升级必须经过专门 PR 评审，验证不引入新警告或破坏现有检查。
 
 ---
 
@@ -1544,12 +1558,16 @@ done
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
-| 1 | `include/uapi/linux/airymax/syscalls.h` | SYS | v1.1: 4 核心 syscall 编号 + 20 预留槽位 |
+| 1 | `include/uapi/linux/airymax/syscalls.h` | SYS | v1.0.1: 4 核心 syscall 编号 + 20 预留槽位 |
 | 2 | `include/uapi/linux/airymax/memory_types.h` | 记忆 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口 |
 | 3 | `include/uapi/linux/airymax/security_types.h` | 安全 | capability 44 ID（41 POSIX + 3 Airymax 扩展） + LSM 250 ID + Cupolas blob + 派生模型 + Vault + 裁决 4 值 |
 | 4 | `include/uapi/linux/airymax/cognition_types.h` | 认知 | CoreLoopThree 阶段 + Thinkdual 模式 + LLM 推理阶段 + 上下文 + 能效 + GPU/NPU |
 | 5 | `include/uapi/linux/airymax/sched.h` | 调度 | sched_tac 调度类约束 + 任务描述符（'AGTS'）+ vtime + 优先级 + SLICE_DFL |
 | 6 | `include/uapi/linux/airymax/ipc.h` | IPC | IPC magic（'ARE1'）+ 128B 消息头 + SQE/CQE 操作码 |
+| 7 | `include/uapi/linux/airymax/error.h` | 错误 | A-UEF 统一错误码（AIRY_E\* POSIX 负值 + AIRY_FAULT_\* 故障码）+ [DSL] 降级块 |
+| 8 | `include/uapi/linux/airymax/log_types.h` | 日志 | A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射） |
+| 9 | `include/uapi/linux/airymax/uapi_compat.h` | 兼容 | 三路类型桥接（\_\_u32 ↔ uint32_t ↔ 第三方 uint32_t），确保 [SC] 头文件跨平台逐字节相同 |
+| 10 | `include/uapi/linux/airymax/lsm_types.h` | 安全 | 纯 C LSM 模块类型定义（airy_lsm_blob + capability_check 回调 + Capability 缓存） |
 
 **检查方法**：grep `include/uapi/linux/airymax/` 引用，核对是否与上述 10 个头文件一致。
 
@@ -1585,6 +1603,13 @@ find docs/AirymaxOS/ -name "*.md" -exec grep -oP '\[.*?\]\((?!http|#|mailto)([^)
 | 工程标准文档（50-engineering-standards/） | 500-1000 | 1200 | 400 |
 | 内部源码映射 | 600-1200 | 1500 | 500 |
 | 内部技术规范 | 700-1000 | 1200 | 600 |
+
+> **例外（OS-CHK-DOC-06-EX1）**：50-engineering-standards/ 下的综合参考文档
+>（01-coding-standards.md、05-development-process.md、09-ssot-registry.md、
+> 90-terminology.md、10-coding-style/\*.md、20-contracts/contracts.md、
+> 50-project-erp/project_erp.md）作为完整工程参考手册，上限放宽至 5000 行。
+> 超过 5000 行时必须按主题拆分为子文档，并在父文档保留索引。当前最大文件
+> coding_conventions.md 为 4484 行，仍在豁免范围内。
 
 ### 2.7 Mermaid 图表检查
 

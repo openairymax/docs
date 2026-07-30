@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # seL4 风格 Capability 安全模型
 > **文档定位**：agentrt-linux（AirymaxOS）Capability 安全模型的完整工程契约，定义 CNode/MDB 数据模型、派生算法、POSIX capability 集成、令牌生命周期、Cupolas blob 布局、策略裁决与 Vault backend 抽象；并落地 A-IPC Capability Folding 单平面架构下的 Badge 64-bit Native Word 模型与 fastpath C-S9 内联校验\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-28\
+> **最后更新**： 2026-07-30\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：seL4 `src/object/cnode.c`（CNode 操作）+ `src/object/cnode.c:cteRevoke`（递归撤销）+ Linux 6.6 `security/commoncap.c`（POSIX capability）+ agentrt Cupolas 权限模型\
 > **文档性质**：实现方案文档（非设计文档）。本契约在 [01-lsm-framework.md](01-lsm-framework.md) 第 7 章 LSM 与 capability 共存的基础上，补充完整的 capability 数据模型、派生算法、生命周期与接口定义\
@@ -71,6 +71,43 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
 
 ```c
 /**
+ * cap_idx_t — capability 节点索引类型 [SC]
+ *
+ * 替代原 cap_t（uint64_t 不透明句柄），改为 uint32_t 索引，O(1) 查找
+ * agent_caps[1024] 静态数组中的 cap_node_t 槽位。索引 + generation
+ * 组合检测悬垂引用，无需 64-bit 全局唯一 ID。
+ *
+ * 向后兼容：cap_t 保留为 cap_idx_t 的别名（typedef cap_idx_t cap_t）。
+ */
+typedef uint32_t cap_idx_t;
+#define CAP_IDX_INVALID  0xFFFFFFFFU
+
+typedef cap_idx_t cap_t;  /* 向后兼容别名，逐步迁移至 cap_idx_t */
+
+/**
+ * struct cap_node_t - MDB 派生树节点（capability 拓扑结构）
+ *
+ * @parent:      父节点索引，根节点为 CAP_IDX_INVALID
+ * @children:    子节点链表头（MDB 派生链）
+ * @sibling:     兄弟节点链表（同一父节点的子节点）
+ * @generation:  世代计数器（节点释放后递增，检测悬垂引用）
+ *
+ * 借鉴 seL4 src/kernel/mdb.c 的 MDB（Mask Domain Database）派生链设计。
+ * cap_node_t 仅维护派生树拓扑，与 airy_cnode 负载分离——派生树遍历
+ *（revoke/recall）无需加载完整 cnode 负载，提升缓存局部性。
+ *
+ * generation 计数器对齐 seL4 cte_t 的 generation 字段：节点 slot 复用
+ * 时 generation 递增，持有旧 generation 的 cap_idx_t 引用被判定为悬垂，
+ * 防止 use-after-free（约束 I6，详见附录 A.3）。
+ */
+struct cap_node_t {
+    cap_idx_t       parent;
+    struct list_head children;
+    struct list_head sibling;
+    uint32_t        generation;
+};
+
+/**
  * struct airy_cnode - Capability Node（单个 capability 槽位）
  *
  * @cap_type:    capability 类型（AIRY_CAP_TYPE_*）
@@ -79,8 +116,7 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
  *               （Epoch<<48 | RandomTag<<16 | Perms），详见 §2.5
  * @randtag:     per-Agent 随机标签（32 位，sec_d 编译时生成，防伪造）
  * @owner_agent:  持有此 capability 的 Agent ID
- * @parent:      父 capability ID（派生链，MDB）
- * @children:     子 capability 列表头（MDB 派生链）
+ * @mdb_node:    MDB 派生树节点（parent/children/sibling/generation）
  * @state:       capability 状态（ACTIVE/REVOKED/EXPIRED）
  * @refcount:    引用计数
  * @expires_ns:  过期时间戳（0 = 永不过期）
@@ -91,6 +127,10 @@ agentrt-linux 采用 **seL4 风格 + POSIX 混合** capability 模型：
  * v1.0.1 变更：新增 @randtag 字段，作为 Capability Folding Badge 64-bit
  * Native Word 的防伪造组件。fastpath C-S9 校验时通过 READ_ONCE() 读取
  * 此字段与消息头 capability_badge 中的 Random Tag 比对。
+ *
+ * ARCH-1 变更：MDB 派生树拓扑从分散字段（parent/children/sibling）重构为
+ * 内嵌 struct cap_node_t，新增 generation 世代计数器。拓扑与负载分离对齐
+ * seL4 mdb.c 设计，派生树遍历无需加载完整 cnode 负载。
  */
 struct airy_cnode {
     uint8_t  cap_type;
@@ -98,9 +138,7 @@ struct airy_cnode {
     uint64_t badge;                /* v1.0.1: 64-bit Native Word（Epoch|RandTag|Perms）*/
     uint32_t randtag;              /* v1.0.1 新增：per-Agent 随机标签，sec_d 编译生成 */
     uint32_t owner_agent;
-    uint32_t parent;
-    struct list_head children;      /* MDB 派生链 */
-    struct list_head sibling;      /* 兄弟节点 */
+    struct cap_node_t mdb_node;    /* ARCH-1: MDB 派生树节点（替代分散的 parent/children/sibling）*/
     uint8_t  state;
     atomic_t refcount;
     uint64_t expires_ns;
@@ -599,19 +637,18 @@ agentrt-linux 借鉴 seL4 的 7 种核心 CNode 派生操作（`src/object/cnode
 
 | seL4 操作 | agentrt-linux 映射 | 状态 | 说明 |
 |-----------|-------------------|------|------|
-| **Copy** | `airy_cap_copy()` | v1.0.1 | 复制 capability（新 badge ≤ 旧 badge） |
-| **Mint** | `airy_cap_mint()` | v1.0.1 | 铸造 capability（可附加新 badge 数据） |
-| **Move** | `airy_cap_move()` | 1.0.1 | 移动 capability（改变 CNode 位置，badge 不变） |
-| **Mutate** | `airy_cap_mutate()` | 1.0.1 | 变异 capability（修改权限位，不重新生成 RandomTag） |
-| **Revoke** | `airy_cap_derive(AIRY_CAP_OP_REVOKE)` | v1.0.1 | 递归撤销 capability（per-agent epoch bump，O(1) 定向撤销） |
-| **Delete** | `airy_cap_delete()` | 1.0.1 | 删除单个 capability（不影响派生树） |
+| **Copy** | `airy_cap_derive(...,AIRY_CAP_OP_COPY,new_perms)` | v1.0.1 | 复制 capability；`new_perms==0` 原样克隆，`new_perms!=0` 权限降级（`perms = new_perms & src.perms`，对齐 seL4 `maskCapRights`） |
+| **Mint** | `airy_cap_derive(...,AIRY_CAP_OP_MINT,new_perms)` | v1.0.1 | 铸造 capability（始终降级 `perms = new_perms & src.perms`） |
+| **Move** | `airy_cap_derive(...,AIRY_CAP_OP_MOVE,0)` | 1.0.1 | 移动 capability（改变 CNode 位置，badge 不变，先 unlink 再 link 维护 MDB 树） |
+| **Mutate** | `airy_cap_derive(...,AIRY_CAP_OP_MUTATE,new_perms)` | 1.0.1 | 变异 capability（修改权限位，不重新生成 RandomTag） |
+| **Revoke** | `airy_cap_derive(src,0,AIRY_CAP_OP_REVOKE,0)` | v1.0.1 | **递归级联撤销**：沿 MDB 派生树递归失效所有 `revocable` 后代（epoch bump + randtag 清零，对齐 seL4 `cteRevoke`），O(N) 子树规模 |
+| **Delete** | `airy_cap_derive(...,AIRY_CAP_OP_DELETE,0)` | 1.0.1 | 删除单个 capability（unlink 出 MDB 树，不级联） |
 | **Rotate** | `airy_cap_rotate()` | v1.0.1 | 轮换 Badge（重新生成 RandomTag，保留 Epoch 和 Perms） |
 
-**Rotate vs Revoke 区别**：
-- `Revoke`：递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch++`），仅使该 Agent 的 Badge 失效，不影响其他 Agent
-- `Rotate`：重新生成目标 Agent 的 RandomTag（`agent_caps[agent_id].randtag = get_random_u32()`），同样仅影响该 Agent
-- 使用场景：Revoke 用于安全事件（Badge 泄漏，需立即失效），Rotate 用于定期轮换（降低 Badge 暴力破解风险）
-- **注**：v1.0.1 已从全局 epoch（`airy_cap_global_epoch`）改为 per-agent epoch，撤销爆炸半径从 1024 个 Agent 收窄到单个 Agent
+**Revoke vs Rotate 区别**：
+- `Revoke`：沿 MDB 派生树**递归级联**，对每个 `revocable` 后代执行 `epoch=new_epoch` + `randtag=0`，使整棵子树的 Badge 立即失效（对齐 seL4 `cteRevoke`）。复杂度 O(N)，N=子树节点数，典型深度 ≤3
+- `Rotate`：仅重新生成目标 Agent 的 RandomTag（`agent_caps[agent_id].randtag = get_random_u32()`），不级联，不影响后代
+- 使用场景：Revoke 用于 Agent 终止时清理整棵派生树（seL4 语义），Rotate 用于定期轮换降低单 Agent Badge 暴力破解风险
 
 ### 3.2 Mint 操作（缩减权限派生）
 
@@ -627,6 +664,16 @@ agentrt-linux 借鉴 seL4 的 7 种核心 CNode 派生操作（`src/object/cnode
  *
  * 借鉴 seL4 cnode.c 的 mint 操作。
  * 源 capability 保留不变，生成新的派生 capability。
+ *
+ * ARCH-2 形式化验证注解（seL4 l4v 风格，用于 Isabelle/HOL 证明）：
+ * MODIFIES: *new_cap_out, agent_caps[*], mdb_node.children[src_cap]
+ * FNSPEC: airy_cap_mint_spec:
+ *   "∀s. Γ ⊢ {s ∧ valid_cap(src_cap) ∧ caller_owns(src_cap)}
+ *        Call airy_cap_mint(src_cap, mask, new_cap_out)
+ *        {r. r = 0 ⟶ (*new_cap_out ↦ new_cap ∧
+ *                      badge(new_cap) = badge(src_cap) ∧ mask ∧
+ *                      mdb_parent(new_cap) = src_cap ∧
+ *                      generation(new_cap) = generation(src_cap) + 1)}"
  */
 int airy_cap_mint(uint32_t src_cap, uint64_t mask, uint32_t *new_cap_out);
 ```
@@ -671,39 +718,49 @@ int airy_cap_derive(uint32_t src_cap, uint32_t dest_agent,
 
 ### 3.5 Revoke 操作（递归级联撤销）
 
-借鉴 seL4 `cteRevoke()` 的递归级联撤销算法，对齐 [01-agent-lifecycle.md](../140-application-development/01-agent-lifecycle.md) 第 5.2 节：
+借鉴 seL4 `cteRevoke()` 的递归级联撤销算法，对齐 [01-agent-lifecycle.md](../140-application-development/01-agent-lifecycle.md) 第 5.2 节。实现位于 `security/airy/airy_cap_derive.c:airy_cap_revoke_subtree()`。
 
 ```c
 /**
- * airy_cap_derive(AIRY_CAP_OP_REVOKE) - 递归撤销所有派生 capability
- * @src_agent: 源 Agent ID
+ * airy_cap_revoke_subtree - 递归级联撤销（K9-1 fix, seL4 CNode 对齐）
+ * @agent_id:   子树根 Agent ID
+ * @new_epoch:  新 epoch 值（失效所有旧 Badge）
  *
- * 返回: 0 成功，-AIRY_EINVAL 源 cap 无效
+ * 沿 MDB 派生树（左孩子右兄弟表示）递归遍历，对每个
+ * revocable 后代执行：
+ *   - epoch   = new_epoch   （使旧 Badge 校验失败）
+ *   - randtag = 0           （彻底防伪造）
  *
- * 借鉴 seL4 cnode.c:528-550 的 cteRevoke 算法。
+ * 复杂度: O(N)，N = 子树节点数，典型深度 ≤ 3。
+ * 全程持有 airy_cap_derive_lock 自旋锁，无 preemptionPoint
+ *（子树规模受 AIRY_CAP_MAX_AGENTS=1024 上界约束，最坏 1024 节点）。
  *
- * v1.0.1 实现：递增目标 Agent 的 per-agent epoch
- *（`agent_caps[agent_id].epoch++`），使该 Agent 所有已分发
- * Badge 立即失效。撤销爆炸半径从全局 1024 个 Agent 收窄到
- * 单个 Agent。
+ * 对齐 seL4 src/object/cnode.c cteRevoke：seL4 递归遍历 CNode
+ * 子树并 cteDelete 每个后代；agentrt-linux 用 epoch+randtag 失效
+ * 替代物理删除，语义等价且可恢复（重新 mint 即可）。
  *
- * 递归撤销算法（MDB 链表遍历 + preemptionPoint）:
- *   while (还有派生 capability) {
- *       cap = 获取下一个派生 capability;
- *       if (cap 是 Endpoint 类型) {
- *           取消 badge 上所有待发消息;
- *       }
- *       cap_delete(cap);          // 标记 Zombie 或直接删除
- *       preemption_point();        // 允许调度器干预
- *       if (错误 != SUCCESS) return 错误;
- *   }
- *
- * @since 1.0.1
+ * @since 1.0.1（P1-2 重构：从 per-agent epoch O(1) 改为 MDB 级联 O(N)）
  */
-/* 实际签名：airy_cap_derive(src_agent, dst_agent, AIRY_CAP_OP_REVOKE, 0) */
+static void airy_cap_revoke_subtree(__u32 agent_id, __u16 new_epoch)
+{
+    struct airy_cap_slot *slot = &agent_caps[agent_id];
+    __u32 child = READ_ONCE(slot->first_child);
+
+    WRITE_ONCE(slot->epoch, new_epoch);
+    WRITE_ONCE(slot->randtag, 0);
+
+    while (child != 0) {
+        struct airy_cap_slot *child_slot = &agent_caps[child];
+        if (READ_ONCE(child_slot->revocable))
+            airy_cap_revoke_subtree(child, new_epoch);
+        child = READ_ONCE(child_slot->next_sibling);
+    }
+}
 ```
 
-**preemptionPoint 设计**：借鉴 seL4 的抢占点模式，长时间撤销操作分块可抢占。每撤销 N 个 capability（默认 N=64）插入一次抢占点，允许调度器响应更高优先级任务。
+**MDB 派生树表示（左孩子右兄弟）**：`airy_cap_slot` 含 `parent_agent` / `first_child` / `next_sibling` / `generation` / `revocable` 五字段（定义于 [SC] `lsm_types.h`）。COPY/MINT 派生时由 `airy_cap_mdb_link_child()` 链接；DELETE/MOVE 时由 `airy_cap_mdb_unlink_child()` 摘除。`revocable` 字段控制 REVOKE 是否级联到该节点（默认 1，可由 MINT 时置 0 实现不可撤销派生）。
+
+**与早期设计差异（一致性修正）**：早期文档描述 Revoke 为"per-agent epoch bump，O(1) 定向撤销，爆炸半径收窄到单个 Agent"——此为 P1-2 重构前的旧实现。P1-2 起改为 seL4 `cteRevoke` 对齐的 MDB 递归级联，撤销影响整棵派生子树（语义正确：Agent 终止时其派生出的所有子 Agent capability 应一并失效）。
 
 ---
 
@@ -849,6 +906,14 @@ cap_pass:
  *   1. 若 cap_id > 0，检查 seL4 风格 capability 令牌
  *   2. 若 posix_cap >= 0，检查 POSIX capability 位图
  *   3. 两者都通过才允许
+ *
+ * ARCH-2 形式化验证注解（seL4 l4v 风格，用于 Isabelle/HOL 证明）：
+ * MODIFIES: (无全局状态修改 — 纯检查函数)
+ * FNSPEC: airy_cap_check_spec:
+ *   "∀s. Γ ⊢ {s}
+ *        Call airy_cap_check(agent_id, cap_id, posix_cap, resource)
+ *        {r. r = 0 ⟶ has_capability(agent_id, cap_id) ∧
+ *                     has_posix_cap(agent_id, posix_cap)}"
  */
 int airy_cap_check(uint32_t agent_id, uint32_t cap_id,
                      int posix_cap, const char *resource);
@@ -1347,8 +1412,11 @@ static struct security_hook_list capability_hooks[] __lsm_ro_after_init = {
 | 路径 | v1.0 守卫模式 | v1.0.1 守卫模式 |
 |------|--------------|--------------|
 | A-IPC 消息投递 | `AIRY_CAP_GUARD` 前置申请 → `airy_sys_ipc_send` → `AIRY_CAP_GUARD_END` 撤销（3 步） | fastpath C-S9 内联 Badge 校验（1 步，~10ns） |
-| 文件访问（LSM 钩子） | `AIRY_CAP_GUARD` 前置申请 → 操作 → 撤销 | 保留 v1.0 模式（slowpath `airy_cap_check()`） |
+| 信号发送（`task_kill` 钩子） | `AIRY_CAP_GUARD` 前置申请 → 操作 → 撤销 | **入口对称 Badge 校验**：`airy_lsm.task_kill` → `airy_cap_badge_ok(AIRY_CAP_PERM_KILL)`，对称于 uring_cmd（P0-3） |
+| 文件访问（`file_open` 钩子） | `AIRY_CAP_GUARD` 前置申请 → 操作 → 撤销 | **入口对称 Badge 校验**：`airy_lsm.file_open` → `airy_cap_badge_ok(AIRY_CAP_PERM_FILE_OPEN)`，对称于 uring_cmd（P0-3） |
 | 内存映射（LSM 钩子） | `AIRY_CAP_GUARD` 前置申请 → 操作 → 撤销 | 保留 v1.0 模式（slowpath `airy_cap_check()`） |
+
+**入口对称性（P0-3，airy_lsm 5 钩子）**：airy_lsm 注册 5 个 LSM 钩子——`uring_cmd`（IPC 数据面）、`task_alloc`/`task_free`（Agent 生命周期）、`task_kill`（信号）、`file_open`（文件）。其中 `uring_cmd` / `task_kill` / `file_open` 三个**安全入口**均走 `airy_cap_badge_ok()` Badge 校验，形成入口对称（语义一致：任何安全敏感操作均需 Badge 授权）。`agent_id == 0`（未注册的 init/kernel 线程）跳过 Badge 校验以保持向后兼容。实现见 `security/airy/airy_lsm.c`。
 
 ### 11.2 A-IPC 路径的 fastpath C-S9 守卫（v1.0.1 新增）
 
@@ -2458,7 +2526,23 @@ v0.1.1 §2.3 MDB 派生链仅描述 parent/children 指针关系，未定义完�
 - **约束 I3（撤销原子性）**：revoke 递归撤销时，要么全部子 capability 撤销成功，要么回滚至撤销前状态（对齐 §3.5 preemptionPoint 分块撤销的原子语义）
 - **约束 I4（refcount 一致性）**：capability 的 refcount 必须 = MDB 子树中引用此 cap 的节点数；revoke 后 refcount 归零方可物理删除
 - **约束 I5（哈希链完整性）**：MDB 派生链维护 Merkle 哈希链，每个节点的哈希 = SHA-256(自身 cap_id + badge + 子节点哈希)；reconciliation 时整链哈希校验，检测任何篡改
-- **CI 校验**：KUnit 测试覆盖 5 项约束（§14.1），违反任一约束的 revoke/mint 操作必须返回 `AIRY_EINVAL`
+- **约束 I6（generation 世代检测）**：`cap_node_t.generation` 在节点释放时递增；`cap_idx_t` 引用访问时必须比对 generation，不匹配返回 `AIRY_ESTALE`，防止 use-after-free（ARCH-1 落地）
+- **CI 校验**：KUnit 测试覆盖 6 项约束（§14.1），违反任一约束的 revoke/mint 操作必须返回 `AIRY_EINVAL`（I6 返回 `AIRY_ESTALE`）
+
+---
+
+### A.4 ARCH-2 形式化验证注解（seL4 l4v 风格）
+
+对齐 seL4 l4v（L4.verified）框架，关键 capability 函数添加 MODIFIES/FNSPEC 注解，用于 Isabelle/HOL 自动证明：
+
+- **MODIFIES**：声明函数可修改的全局状态（纯检查函数标注"无全局状态修改"）
+- **FNSPEC**：函数功能规约（Hoare 三元组：前置条件 → 函数调用 → 后置条件）
+
+已注解函数：
+1. `airy_cap_mint()` (§3.2) — 派生 capability，修改 agent_caps + MDB children 链
+2. `airy_cap_check()` (§4.1) — 纯检查函数，不修改全局状态
+
+后续扩展：`airy_cap_revoke` / `airy_ipc_validate` / `airy_vtime_decay` 等关键路径函数将逐步添加注解，对齐 [80-testing/10-formal-verification.md](../80-testing/10-formal-verification.md) §3 Coq/Isabelle 证明目标。
 
 ---
 
