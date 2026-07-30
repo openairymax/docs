@@ -154,6 +154,27 @@ agentrt-linux 的 12 daemon 完整名单（与 [10-user-supervisor-daemon.md](10
 
 > **v1.0.1 Capability Folding 后**：IPC 数据传递完全由 io_uring IORING_OP_URING_CMD 承载，不存在独立 ipc daemon；Badge 编译由 `sec_d` 承担，跨节点 IPC 由 `gateway_d` 承担。
 
+### 8.1 12 daemon 权限校验细节
+
+每个 daemon 接收 IPC 消息时，fastpath C-S9 内联校验 `capability_badge`（~10ns），校验维度包括 Epoch、RandomTag、Perms 与 Ring 冻结状态。下表列出各 daemon 所需的 Badge Perms 位与校验失败行为：
+
+| # | Daemon | 所需 Perms 位 | 校验失败返回 | 特殊权限 |
+|---|--------|-------------|------------|---------|
+| 1 | `sec_d` | `ADMIN`(0x8000) | `AIRY_ECAP_PERM`(-81) | 唯一 Badge 写者；令牌桶限流 100 req/s，超限返回 `AIRY_ESEC_D_THROTTLED`(-83) |
+| 2 | `cogn_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | CoreLoopThree kthread 注册需 `CALL`(0x0004) |
+| 3 | `mem_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | 快照/恢复操作需 `GRANT`(0x0008) |
+| 4 | `gateway_d` | `SEND`(0x0001) + `RECV`(0x0002) + `GRANT`(0x0008) | `AIRY_ECAP_PERM`(-81) | 入站消息重新编译 Badge；跨节点 mTLS 双向认证 |
+| 5 | `logger_d` | `SEND`(0x0001) | `AIRY_ECAP_PERM`(-81) | Ring Buffer 消费端只读；审计哈希链追加需 `sec_d` Ed25519 签名 |
+| 6 | `macro_d` | `ADMIN`(0x8000) | `AIRY_ECAP_PERM`(-81) | 12 daemon 生命周期管理；冻结/解冻 Ring 需 `FREEZE`(0x0020) |
+| 7 | `audit_d` | `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | 审计日志只读；哈希链校验 `airy_audit_chain_verify()` 为纯本地操作 |
+| 8 | `sched_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | 调度参数注入需 `CALL`(0x0004)；sched_tac 策略配置 |
+| 9 | `dev_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | 设备 DMA 操作需 `CALL`(0x0004)；VFIO 设备直通 |
+| 10 | `net_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | XDP/DPDK 数据面操作；跨节点需 `gateway_d` 转发 |
+| 11 | `vfs_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | 文件操作需 `GRANT`(0x0008)；Landlock 沙箱文件访问控制 |
+| 12 | `config_d` | `SEND`(0x0001) + `RECV`(0x0002) | `AIRY_ECAP_PERM`(-81) | sysctl/JSON 配置读写；RCU 指针切换需 `CALL`(0x0004) |
+
+> **权限校验流程**：每个 daemon 的 IPC 消息经过 fastpath C-S0（Ring 冻结检查）→ C-S1（magic 校验）→ C-S9（Badge 校验：Epoch + RandomTag + Perms）→ 通过后投递。slowpath 仅在 C-S9 失败时进入 `airy_lsm` LSM 钩子做策略裁决。Badge 撤销通过 `airy_cap_epoch_bump(agent_id)` O(1) 立即失效（K9-1 主要机制），详见 [10-user-supervisor-daemon.md](10-user-supervisor-daemon.md) §4.4。
+
 ---
 
 ## 9. v1.0.1 Capability Folding 单平面架构
@@ -366,6 +387,21 @@ agentrt-linux 与 agentrt（AirymaxAgentRT）共享设计理念，每个子仓�
 | system → services/security/memory | 配置 | sysctl/procfs（A-UCS） | systemd unit、sysctl 配置（`/etc/agentrt/` 命名空间） |
 | tests → 全部子仓 | 验证 | 测试框架 | 单元/集成/形式化/Soak/混沌 |
 
+### 14.1 跨模块协作逻辑
+
+agentrt-linux 的 8 子仓与 Unify Design 五模块通过以下 6 条关键协作路径实现端到端功能闭环：
+
+| 协作路径 | 参与模块 | 数据流 | 关键机制 |
+|---------|---------|--------|---------|
+| **Agent 启动** | kernel + services + security | macro_d 拉起 daemon → sec_d 编译 Badge → agent_caps[] 写入 → cogn_d 注册 kthread | systemd unit 依赖顺序 + `AIRY_IPC_OP_CAP_REQUEST` + `airy_sys_clt_notify` |
+| **IPC 消息传递** | kernel + services + security | 发送方 IORING_OP_URING_CMD → fastpath C-S0~C-S12 校验链 → kfifo 投递 → 接收方 CQE | agent_caps[1024] 静态数组 + C-S9 Badge 内联校验（~10ns）+ io_uring 零拷贝 |
+| **故障检测与恢复** | kernel + services + security | Micro-Supervisor 检测异常 → 冻结 Ring → eventfd 通知 macro_d → macro_d 裁决（警告/降级/暂停/终止） | 双 Supervisor 模型（内核冷酷执法 + 用户温情裁决）+ sec_d 5 阶段恢复流程 |
+| **审计日志** | kernel + services + security | printk → printk-bridge → Ring Buffer → logger_d 消费 → SHA3-256 哈希链 → sec_d Ed25519 签名 → TPM 2.0 度量 | 三层审计保护（哈希链 + 签名 + TPM）+ audit_d 完整性校验 |
+| **认知循环** | kernel + cognition + services + memory | CoreLoopThree kthread PERCEPT → THINK → ACT → MemoryRovol 记忆写入 | sched_tac 策略调度 + Wasm 3.0 沙箱 + alloc_pages + mmap |
+| **配置管理** | system + kernel + services | config_d 接收配置变更 → sysctl/JSON 热重载 → RCU 指针切换 → 各 daemon 读取新配置 | A-UCS 统一配置 + `airy_defconfig` + `/etc/agentrt/` 命名空间 |
+
+> **协作原则**：所有跨模块协作遵循 K-2 接口契约化原则——模块间通过标准化接口交互，禁止模块间直接共享全局变量或内部数据结构。跨节点协作由 `gateway_d` 承载（gRPC over QUIC/TCP + mTLS），入站时重新编译 Badge，不污染单节点 fastpath C-S9。
+
 ---
 
 ## 15. 扩展错误码体系
@@ -404,7 +440,8 @@ agentrt-linux v1.0.1 扩展错误码体系（权威源 [30-interfaces/08-sc-erro
 | 0.1.1 | 2026-07-06 | 初始版本，8 子仓模块设计 |
 | 0.1.1 | 2026-07-13 | [SC] 头文件 Tab 8 缩进验证通过；Fastpath 语义分层澄清 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增 sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型；新增 A-ULS 模块（`09-kernel-agent-supervisor.md` + `10-user-supervisor-daemon.md`）、A-ULP 模块（`12-logger-daemon-module.md` + `13-printk-bridge.md`）、A-UCS 模块（`11-unified-config.md`）；[SC] 头文件清单补全为完整 10 个列表；模块文档数 8 → 13 |
-| v1.1 | 2026-07-19 | 升级为 v1.0.1：声明极境内核标准（对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造）；新增 v1.0.1 Capability Folding 单平面架构章节（agent_caps[1024] 静态数组 + Badge 64-bit 布局 + O(1) 撤销 + fastpath C-S9 内联校验 + sec_d 串行化 Badge 编译）；新增 12 daemon 完整名单章节（sec_d/cogn_d/mem_d/gateway_d/logger_d/macro_d/audit_d/sched_d/dev_d/net_d/vfs_d/config_d）；新增审计哈希链完整性保护章节（SHA3-256 + Ed25519 + TPM 2.0，引用 40-dataflows/06-logger-daemon-design.md §5.5）；新增扩展错误码体系章节（`AIRY_ECAP_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_URING_MALFORMED`/`AIRY_FAULT_AUDIT_TAMPER`）；引用 ADR-012 + ADR-014；A-UEF 映射修正（错误码部分映射至 30-interfaces/08-sc-error-contract.md）；文档索引补全为 14 个（01-13 + README）；`__aligned(64)` 替换 packed 属性；配置路径统一为 `/etc/agentrt/` |
+| v1.0.1 | 2026-07-19 | 升级为 v1.0.1：声明极境内核标准（对 Linux 6.6 进行 seL4 思想借鉴的微内核化改造）；新增 v1.0.1 Capability Folding 单平面架构章节（agent_caps[1024] 静态数组 + Badge 64-bit 布局 + O(1) 撤销 + fastpath C-S9 内联校验 + sec_d 串行化 Badge 编译）；新增 12 daemon 完整名单章节（sec_d/cogn_d/mem_d/gateway_d/logger_d/macro_d/audit_d/sched_d/dev_d/net_d/vfs_d/config_d）；新增审计哈希链完整性保护章节（SHA3-256 + Ed25519 + TPM 2.0，引用 40-dataflows/06-logger-daemon-design.md §5.5）；新增扩展错误码体系章节（`AIRY_ECAP_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_URING_MALFORMED`/`AIRY_FAULT_AUDIT_TAMPER`）；引用 ADR-012 + ADR-014；A-UEF 映射修正（错误码部分映射至 30-interfaces/08-sc-error-contract.md）；文档索引补全为 14 个（01-13 + README）；`__aligned(64)` 替换 packed 属性；配置路径统一为 `/etc/agentrt/` |
+| v1.0.1 | 2026-07-30 | 版本号修复：修正版本历史中 v1.1→v1.0.1（IRON-7 合规）；新增 §8.1 12 daemon 权限校验细节（Badge Perms 位 + 校验失败行为）；新增 §14.1 跨模块协作逻辑（6 条关键协作路径：Agent 启动/IPC 消息传递/故障检测与恢复/审计日志/认知循环/配置管理） |
 
 ---
 

@@ -270,6 +270,7 @@ agentrt（AirymaxAgentRT，跨平台用户态运行时）
 | 0.1.1 | 2026-07-13 | 新增 07-directory-structure.md，\[SC] 头文件 Tab 8 缩进验证                                                                                                                                                                                                          |
 | v1.0  | 2026-07-17 | 升级为 v1.0：新增sched\_tac 技术选型声明（不使用 sched\_ext）、IORING\_OP\_URING\_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc\_pages + mmap（不使用 DMA 一致性内存）、IRON-9 v3 四层模型（新增 \[DSL] 降级生存层）；新增 Airymax Unify Design 五模块映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）；文档索引更新为 20 子目录 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-30 | 全面审查与完善：修复 20-modules/README.md 版本号不一致（v1.1→v1.0.1）；确认 60-190 全部 README 版本号一致；确认 30-interfaces/01-syscalls.md 552-571 描述正确；更新版本历史 |
 
 ***
 
