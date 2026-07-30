@@ -289,7 +289,7 @@ agentrt-linux 新增 syscall 在 Linux 内核 `arch/x86/entry/syscalls/syscall_6
 | 1 | `AIRY_SYS_ROVOL_CTL` | 549 | `549  common  airy_sys_rovol_ctl sys_airy_sys_rovol_ctl` |
 | 2 | `AIRY_SYS_SCHED_CTL` | 550 | `550  common  airy_sys_sched_ctl sys_airy_sys_sched_ctl` |
 | 3 | `AIRY_SYS_CLT_NOTIFY` | 551 | `551  common  airy_sys_clt_notify sys_airy_sys_clt_notify` |
-| 4-23 | 预留 | 552-571 | 预留（`552-571 common airy_sys_reserved_*`） |
+| 4-23 | 预留 | 552-571 | 预留槽须在 `syscall_64.tbl` 中逐行登记为 `sys_ni_syscall`（返回 `-ENOSYS`），禁止使用不存在的 `airy_sys_reserved_*` 符号。当前代码仅登记 548-551，552-571 缺失（P0-1，见 [09-known-caveats.md §8.4](../10-architecture/09-known-caveats.md)） |
 
 > **映射原则**：内部编号（0-3）仅用于文档和 ABI 头文件中的符号常量定义；Linux 注册号（548-551）用于 `syscall_64.tbl` 注册。两者之间为固定偏移 `+548` 关系，由 `syscalls.h` [SC] 头文件通过 `#define __NR_airy_sys_call 548` 锁定。
 

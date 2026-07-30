@@ -693,12 +693,14 @@ IPC 性能约束对齐非功能性需求 NFR-P-002（详见 [00-requirements/03-
 | `ipc.h` 定义项 | 在协议中的角色 | 消费方 |
 |---------------|---------------|--------|
 | `AIRY_IPC_MAGIC` 0x41524531 'ARE1' | 协议识别魔数，消息头首 4 字节 | agentrt AgentsIPC / agentrt-linux io-uring-ipc |
-| `struct airy_ipc_msg_hdr` 128B 定长头（Layout C v4） | 自然对齐消息头结构（D-9 修复后移除 packed，使用 `__attribute__((aligned(64)))`，字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]） | send/recv 路径 |
+| `struct airy_ipc_msg_hdr` 128B 定长头（Layout C v4） | 自然对齐消息头结构（D-9 修复后移除 packed，使用 `AIRY_ALIGNED(64)` 宏——定义于 `uapi_compat.h`，跨编译器可移植，详见 [C_Cpp_coding_style.md §6.5.1](../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) OS-IRON-016；字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]） | send/recv 路径 |
 | `AIRY_IPC_OP_*` opcode | SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE 操作码 | io_uring `cmd_op` 路由 |
 | `AIRY_IPC_FLAG_*` flags 位 | ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL 标志位 | 消息处理 |
 | `AIRY_IPC_TYPE_*` 5 种 payload | REQUEST/RESPONSE/EVENT/STREAM/CONTROL 类型枚举 | payload 解码 |
 | `AIRY_BADGE_*` 位布局宏 | Epoch/RandomTag/Perms 提取与编译宏 | Badge 校验与编译 |
 | `AIRY_CAP_PERM_*` 权限位 | SEND/RECV/CALL/GRANT/REVOKE/FREEZE/BATCH 权限位 | C-S9 权限校验 |
+
+> **cancelBadgedSends（P1-8，M2 规划）**：seL4 在 `endpoint.c:476-489` 提供 `cancelBadgedSends(ep, badge)` 操作，撤销指定 endpoint 上匹配 badge 的所有待发送消息。agentrt-linux v1.0.1 尚未实现此操作（grep `cancelBadgedSends`/`cancel_badged_sends` 零匹配）。M2 阶段须在 `AIRY_IPC_OP_*` opcode 体系中新增 `AIRY_IPC_OP_CANCEL_BADGED`，由 sec_d（唯一持有 `AIRY_CAP_PERM_REVOKE` 的 Agent）调用，扫描目标 ring 的 kfifo 待发送队列并移除匹配 badge 的消息。详见 [09-known-caveats.md §8.4 P1-8](../10-architecture/09-known-caveats.md)。
 
 ### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux IPC API 映射
 

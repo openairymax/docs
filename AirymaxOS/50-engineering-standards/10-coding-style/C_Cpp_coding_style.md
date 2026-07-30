@@ -460,6 +460,10 @@ agentrt-linux 内核态代码直接复用 Linux 6.6 内核基线的 GCC 属性�
 
 **理由**：直接复用 Linux 内核属性宏可避免双轨制命名空间冲突，且与 Linux 6.6 内核基线的 `sparse`/`checkpatch`/`clang-format` 工具链原生兼容。
 
+**例外：[SC] 共享契约层结构体对齐（OS-IRON-016）**：`include/uapi/linux/airymax/` 下的 [SC] 共享契约层头文件中的结构体对齐，**必须使用 `AIRY_ALIGNED(n)` 宏**（定义于 `uapi_compat.h`），而非 `__aligned(n)` 或 `__attribute__((aligned(n)))`。原因：[SC] 头文件被用户态消费方（含非 GCC 编译器如 MSVC）引用，`AIRY_ALIGNED(n)` 抽象了 GCC `__attribute__((aligned(n)))`、C11 `_Alignas(n)`、MSVC `__declspec(align(n))` 三种实现，保证跨编译器可移植性。已使用 `AIRY_ALIGNED(64)` 的 [SC] 结构体：`airy_cap_slot`、`airy_ipc_msg_hdr`、`airy_task_desc`、`airy_log_record`、`airy_bpf_struct_ops` 等。内核内部（非 [SC]）结构体仍使用 `__aligned(n)`。
+
+> **P1-5 修复要求**：`airy_ipc_capability.c` 中 `__airymax_cap_table` 当前使用 `__aligned(64)`，须改为 `AIRY_ALIGNED(64)`（详见 [09-known-caveats.md §8.4](../../10-architecture/09-known-caveats.md)）。
+
 #### 6.5.2 形式化验证注释规范（agentrt-linux 专属）
 
 **不引入 seL4 形式化验证注释**：seL4 在源码中使用 `/** MODIFIES: */`、`/** DONT_TRANSLATE */`、`/** FNSPEC ... */` 等形式化验证辅助注释，服务于 Isabelle/HOL 的 l4v 工具链（C parser → Simpl → Isar）。agentrt-linux 的形式化验证路径与 seL4 不同——内核态使用 Isabelle/HOL 的 AutoCorres（不经过 C parser），Rust 子模块使用 Kani，因此**不引入 seL4 风格的形式化验证注释**。
