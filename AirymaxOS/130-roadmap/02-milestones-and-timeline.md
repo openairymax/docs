@@ -133,6 +133,79 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 
 **验收标准**: 10 文档完成 + 7 层验证中测试层就位 + 覆盖率门槛（单元 ≥80% / 集成 ≥70%）定义完成。
 
+#### 3.3.1 CBS 准入算法（runtime governance 补强）
+
+> **背景**：v3.6 评审 §1.1 主要差距第 4 点指出"CBS 带宽准入……均未实现（M2-M5 项）"，[08-closure-summary-v3.6.md](../../../docs-closed/agentrt-linux/00-reviews/_review_v3.6/08-closure-summary-v3.6.md) §4.3 列为 P2-1。本小节补齐 CBS 准入的技术细节。
+
+**目标**：在 sched_tac 之上为 Agent 提供利用率上界（utilization bound）保证与可预测的补充周期（replenishment period），杜绝过载时的带宽倾斜与活锁。
+
+**关键算法与数据结构**：
+
+| 维度 | 设计 |
+|------|------|
+| 准入闸门位置 | `airy/sched` 入口（`kernel/kernel/superv/airy_sched.c`），在 `sched_setattr(SCHED_DEADLINE)` 前置 `airy_cbs_admit()` 检查 |
+| 利用率上界 | 单 CPU `Σ(runtime_ns/period_ns) ≤ AIRY_CBS_UTIL_MAX`（默认 0.85，对齐 Linux `sched_rt_runtime` 比例上界；保留 15% 给系统/中断/daemon） |
+| 补充周期 | 复用 `sched_attr.sched_period`（对齐 seL4 `scPeriod`），sporadic server 语义——CBS 在 `sched_dl_entity.runtime` 耗尽时 throttle 而非降级，下一个 `period` 起点由 `dl_timer` 补充（对齐 [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) §5.2 CBS refill 模拟 MCS refill 循环缓冲） |
+| 与 CFS/SC 的交互 | DEADLINE Agent 受 CBS 管制；FIFO/EEVDF/BESTEFFORT Agent 走 CFS，通过 cpuset 与 DEADLINE 队列隔离；SC 捐赠期间被捐赠方临时获得 donor 配额（见 §3.4.1），捐赠撤销后 CBS 重新核算利用率 |
+| 关键数据结构 | `struct airy_cbs_entry { u64 runtime_ns; u64 deadline_ns; u64 period_ns; airy_q16_t utilization_q16; u32 agent_id; u8 sched_policy; }`——per-agent，红黑树按 `deadline_ns` 排序，对齐 Linux `sched_dl_entity` |
+| [DSL] 降级 | `AIRY_SC_FALLBACK` 下准入闸门退化为 `runtime_ns ≤ period_ns` 单点校验，不维护利用率上界 |
+
+**交付物**：
+
+1. `kernel/kernel/superv/airy_cbs.c` + `airy_cbs.h`——准入闸门实现（< 300 行）
+2. `airy/sched` 入口接线——`airy_agent_set_deadline()` 在调用 `sched_setattr()` 前调用 `airy_cbs_admit()`
+3. KUnit 用例：`tests-linux/kernel/airy_cbs_test.c`——利用率上界 / 超载拒绝 / 补充时序
+4. debugfs 接口：`/sys/kernel/debug/airy/cbs`——per-agent utilization、admission 决策日志
+
+**验收标准**：
+
+- 单 CPU 上 DEADLINE Agent 总利用率 ≤ 0.85 时全部准入，> 0.85 时拒绝并返回 `-AIRY_EBUSY`
+- 补充周期与 `sched_period` 一致（抖动 ≤ 1%），无 starvation
+- 撤销后释放的带宽立即可被新 Agent 重新申请
+- 与既有 sched_tac 调度类组合（SCHED_DEADLINE / SCHED_FIFO / EEVDF）协同工作，无回归
+
+**与既有 airy 模块依赖**：
+
+- A-ULS 模块（[10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md)）——`struct airy_task_desc` + Agent 8 态
+- 微内核策略（[03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) §4.5）——seL4 MCS 映射
+- Linux 6.6 `kernel/sched/deadline.c`——`sched_dl_entity` 与 `dl_timer`
+
+#### 3.3.2 Budget 入口检查（budget guard）
+
+> **背景**：v3.6 评审 §1.1 第 4 点"budget 入口检查"缺失，08 闭环 §4.3 列为 P2-2。本小节定义 budget guard 在调度入口与 IPC 入口的双重检查机制。
+
+**目标**：在每个调度入口与 IPC 入口检查 Agent 剩余 budget（runtime_ns），耗尽时 throttle 或转入 SC 捐赠路径，避免单 Agent 突发性消耗拖垮系统。
+
+**关键算法与数据结构**：
+
+| 维度 | 设计 |
+|------|------|
+| 检查点 | (1) `airy/sched` 入口：`airy_sched_tick()` 每次时钟中断检查 `sched_dl_entity.runtime ≤ 0` → throttle（CBS 自然完成）<br>(2) IPC 入口：`airy_uring_cmd_check()` 在 fastpath C-S9 后追加 `airy_budget_guard()`，剩余 budget < `AIRY_BUDGET_GUARD_MIN_NS`（默认 100µs）时拒绝本次 IPC 并通知 Macro-Supervisor |
+| 耗尽响应 | DEADLINE Agent：CBS throttle 至下个 `period` 补充点；FIFO Agent：降级为 BESTEFFORT；BESTEFFORT Agent：直接 `TASK_INTERRUPTIBLE` 让出 CPU |
+| 捐赠分支 | 若 IPC 目标已绑定 donor（见 §3.4.1），耗尽时优先尝试 `airy_sc_donate_try()` 借用 donor budget，借用成功则放行；失败再 throttle |
+| 关键数据结构 | `struct airy_budget_state { atomic64_t remaining_ns; u64 period_ns; u64 last_replenish_ns; }`——per-agent，与 `sched_dl_entity.runtime` 字段同义，但用 atomic64 以便 IPC fastpath 无锁读取 |
+| 与 Token Budget 的边界 | Token 预算（[04-token-budget.md](../140-application-development/04-token-budget.md)）是用户态认知预算；本 budget guard 是内核态 CPU 预算，两者独立不耦合 |
+
+**交付物**：
+
+1. `kernel/kernel/superv/airy_budget.c`——budget guard 实现
+2. `airy_uring_cmd_check()` 钩子接入——在 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.3 Phase 4 后追加 budget guard
+3. KUnit 用例：budget 耗尽 throttle / 捐赠分支借用 / 补充时序
+4. ftrace 事件：`airy:budget_throttle`、`airy:budget_donate_try`
+
+**验收标准**：
+
+- IPC 入口 budget guard 延迟 ≤ 5ns（无锁 atomic 读取）
+- budget 耗尽 + 非捐赠路径下 100µs 内 throttle 生效
+- budget 耗尽 + 捐赠路径下 ≤ 1µs 内完成借用决策
+- 与 CBS 准入（§3.3.1）协同：补充点恢复 budget 自动 unthrottle
+
+**与既有 airy 模块依赖**：
+
+- 纯 C LSM 模块（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.3）——`airy_uring_cmd_check()` 钩子挂载点
+- A-ULS 模块——Agent 8 态迁移（throttle → BLOCKED）
+- Token Budget 契约（[04-token-budget.md](../140-application-development/04-token-budget.md)）——边界划分（用户态 vs 内核态）
+
 ### 3.4 Day 43-63: M3 可观测性与运维（与 M2 并行，依赖 M1）
 
 | 维度 | 内容 |
@@ -149,6 +222,46 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 - Day 57-63: `100-operations/` 运维体系（部署 + 升级 + 回滚 + 灾备）
 
 **验收标准**: 19 文档完成 + eBPF 可观测性探针（kfunc + dynamic pointer，非核心架构，H5 约束）+ 4 层文件系统接口（debugfs/tracefs/proc/sysfs）定义完成。
+
+#### 3.4.1 SC 捐赠协议（SC donation）
+
+> **背景**：v3.6 评审 §1.1 主要差距第 4 点指出"SC 捐赠……均未实现（M2-M5 项）"，08 闭环 §4.3 列为 P2-3。本小节补齐 SC 捐赠协议技术细节，对齐 seL4 MCS ES-SEL4-15 SchedContext 捐赠语义。
+
+**目标**：在 IPC 服务端为客户端代理执行的场景下，将客户端的调度预算（SchedContext）临时捐赠给服务端，确保服务端用客户端预算完成工作并保持客户端的截止时间保证。
+
+**关键算法与数据结构**：
+
+| 维度 | 设计 |
+|------|------|
+| 捐赠方/接收方握手 | (1) donor（client）发起 IPC call，在 `airy_ipc_msg_hdr.flags` 置 `AIRY_IPC_FLAG_SC_DONATE`<br>(2) receiver（server）在 `airy_uring_cmd_check()` 中识别该 flag，调用 `airy_sc_donate_accept()`<br>(3) 双方通过原子交换 `airy_sc_donation_token`（u64，含 donor agent_id + epoch + budget_ns）完成握手 |
+| 捐赠内容 | donor 当前 `sched_dl_entity.runtime` 的剩余部分（不预借未补充的预算），临时附加到 receiver 的 `runtime` 字段 |
+| 优先级传递 | donor 的 `sched_attr.sched_priority`（FIFO）或 `sched_deadline`（DEADLINE）通过 `airy_sc_inherit_prio()` 传递给 receiver，对齐 sched_tac 优先级继承（[03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) §4.5） |
+| 与 Badge 的关系 | 捐赠 token 复用 Badge 的 64-bit 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`），但 Perms 字段重定义为 `AIRY_SC_PERM_DONATE`（0x4000）；sec_d 仍是 token 的唯一写者（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.5） |
+| 撤销条件 | (1) IPC 返回（reply 完成）→ 自动撤销<br>(2) donor 主动 `airy_sc_donate_revoke()`<br>(3) donor budget 耗尽且无补充 → 强制撤销<br>(4) donor 进入 STOPPING/DEAD 态 → 强制撤销 |
+| 关键数据结构 | `struct airy_sc_donation { u64 token; u32 donor_id; u32 receiver_id; atomic64_t donated_ns; u64 revoke_deadline_ns; }`——per-donor 链表，由 `airy_sc_lock` 保护 |
+| [DSL] 降级 | `AIRY_SC_FALLBACK` 下 SC 捐赠退化为优先级继承（仅传递 priority，不传递 budget），保证最小可用 |
+
+**交付物**：
+
+1. `kernel/kernel/superv/airy_sc_donate.c` + `airy_sc_donate.h`——捐赠协议实现
+2. IPC fastpath 接入——`AIRY_IPC_FLAG_SC_DONATE` 在 `airy_ipc_msg_hdr.flags` 中分配（与 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) §3 opcode 表同步）
+3. KUnit 用例：握手 / 撤销 / 强制撤销 / 并发捐赠
+4. ftrace 事件：`airy:sc_donate_accept`、`airy:sc_donate_revoke`、`airy:sc_donate_force_revoke`
+
+**验收标准**：
+
+- 捐赠握手延迟 ≤ 200ns（fastpath 内联）
+- 捐赠期间 receiver 使用 donor budget 执行，donor 的 `sched_deadline` 不变（截止时间保证保持）
+- 4 种撤销条件均在 ≤ 1µs 内完成（含 budget 归还）
+- 捐赠 token 不可伪造（C-S9.RANDTAG 校验同样适用）
+- 与 CBS 准入协同：捐赠的 budget 不计入 receiver 的利用率上界，仅计入 donor
+
+**与既有 airy 模块依赖**：
+
+- A-IPC 模块（[07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)）——fastpath C-S9 校验 + flag 扩展
+- A-ULS 模块——Agent 8 态触发强制撤销
+- 纯 C LSM 模块（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.5）——sec_d token 编译 + Badge 校验
+- 微内核策略 §4.5——seL4 MCS SchedContext 捐赠语义对齐
 
 ### 3.5 Day 64-84: M4 安全加固（依赖 M1）
 
@@ -167,6 +280,47 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 
 **验收标准**: 9 文档完成 + capability 安全模型与 Cupolas 同源映射 + LSM 多 LSM 并存策略明确。
 
+#### 3.5.1 Lockdown 分阶段策略（early/late lockdown）
+
+> **背景**：v3.6 评审 §1.1 主要差距第 4 点指出"lockdown……均未实现（M2-M5 项）"，08 闭环 §4.3 列为 P2-4。本小节定义 AirymaxOS 在 Linux 6.6 内置 lockdown LSM 之上的分阶段锁定策略，与 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §2.2 `CONFIG_LSM` 默认值中的 `lockdown` 协同。
+
+**目标**：在系统启动、Macro-Supervisor 就绪、关键配置冻结三个时点分阶段收敛可写接口，杜绝运行时被篡改风险，对齐 Linux 6.6 `Documentation/admin-guide/lockdown.rst` 的 integrity/confidentiality 两阶段语义并扩展为 AirymaxOS 三阶段。
+
+**关键算法与数据结构**：
+
+| 维度 | 设计 |
+|------|------|
+| 阶段划分 | (1) **early lockdown**（boot 阶段）：`early_security_init()` 中由 `DEFINE_EARLY_LSM(airy_lockdown)` 注册，禁止 `/dev/mem`、`kexec_load`、`bpf()` 非特权调用、模块签名未通过的 `init_module`，对齐 Linux lockdown `integrity` 模式<br>(2) **late lockdown**（Macro-Supervisor 就绪后）：Macro-Supervisor 通过 `airy_sys_admin(AIRY_ADMIN_LOCKDOWN_LATE)` 触发，追加禁止 `ptrace` 跨 Agent 附加、`userfaultfd` 非特权注册、`/sys/kernel/debug/airy/cbs` 写入、未签名 Agent 二进制 `execve`<br>(3) **full lockdown**（配置冻结后）：`AIRY_ADMIN_LOCKDOWN_FULL` 触发，所有 `airy_sys_admin` 写接口、`sched_setattr` 跨 Agent 修改、`airy_sys_rovol_ctl` 的 TIER_SET/MGLRU_CONFIG 全部转只读 |
+| 接口收敛机制 | `airy_lockdown_state`（atomic_t，0=none/1=early/2=late/3=full），每个可写内核接口入口检查 `airy_lockdown_gate(level)`——当前 lockdown 等级 ≥ 接口要求等级时返回 `-AIRY_ELOCKDOWN`（-90） |
+| 与 airy_lsm 联动 | lockdown 检查在 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.3 `airy_uring_cmd_check()` 钩子中作为 Phase 0 前置：lockdown 等级不满足时直接返回 `-AIRY_ELOCKDOWN`，不进入 fastpath C-S9 Badge 校验，不触发 Fault（区分"策略拒绝"与"安全违规"） |
+| 与 Linux lockdown 的关系 | AirymaxOS lockdown 是 Linux 6.6 内置 lockdown LSM 的扩展：Linux lockdown 仅覆盖 integrity/confidentiality 两阶段内核接口，AirymaxOS lockdown 追加 Airymax 专属接口（`airy_sys_admin` / `airy_sys_rovol_ctl` / `sched_setattr` 跨 Agent）的收敛，两者并存且不冲突 |
+| 关键数据结构 | `struct airy_lockdown_rule { const char *interface; u8 required_level; u32 flags; }`——静态规则表 `airy_lockdown_rules[]`，编译期生成，运行时只读 |
+| [DSL] 降级 | `AIRY_SC_FALLBACK` 下 lockdown 退化为仅 early lockdown（Linux lockdown integrity 模式），late/full 阶段不触发，保证最小可用 |
+
+**交付物**：
+
+1. `kernel/security/airy/airy_lockdown.c` + `airy_lockdown.h`——分阶段 lockdown 实现
+2. `airy_sys_admin` 扩展——新增 `AIRY_ADMIN_LOCKDOWN_LATE` / `AIRY_ADMIN_LOCKDOWN_FULL` op 码
+3. `airy_lockdown_gate()` 接入所有可写 Airymax 接口入口（`airy_sys_admin` / `airy_sys_rovol_ctl` 写操作 / `sched_setattr` 跨 Agent）
+4. KUnit 用例：阶段切换 / 接口收敛 / 与 airy_lsm 协同 / DSL 降级
+5. ftrace 事件：`airy:lockdown_early`、`airy:lockdown_late`、`airy:lockdown_full`、`airy:lockdown_reject`
+
+**验收标准**：
+
+- early lockdown 在 `early_security_init()` 完成前生效，`/dev/mem` 打开返回 `-EPERM`
+- late lockdown 触发后 ≤ 1ms 内所有 late 阶段接口返回 `-AIRY_ELOCKDOWN`
+- lockdown 等级单调递增（不可降级），杜绝运行时放松约束的攻击面
+- lockdown 拒绝路径不触发 `airy_fault_enforce()`（区分策略拒绝与安全违规）
+- 与既有 Linux lockdown LSM 共存，无语义冲突
+- 与 CBS 准入（§3.3.1）/ SC 捐赠（§3.4.1）协同：full lockdown 后 `sched_setattr` 跨 Agent 修改被拒绝，但已准入 Agent 的 CBS throttle / SC 捐赠仍正常工作（只读路径不受影响）
+
+**与既有 airy 模块依赖**：
+
+- 纯 C LSM 模块（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §2.2 / §3.3）——`CONFIG_LSM` 共存 + `airy_uring_cmd_check()` Phase 0 前置
+- LSM 框架（[01-lsm-framework.md](../110-security/01-lsm-framework.md) §5）——`DEFINE_EARLY_LSM` + `early_security_init()` 注册点
+- 威胁模型（[08-threat-model.md](../10-architecture/08-threat-model.md)）——锁定对象与攻击面对齐
+- A-ULS 模块——`sched_setattr` 跨 Agent 接口收敛点
+
 ### 3.6 Day 64-77: M5 开发流程与治理（依赖 M0）
 
 | 维度 | 内容 |
@@ -182,6 +336,57 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 - Day 71-77: 6 级成熟度模型 + 治理流程（RFC → 评审 → ACC 验收）
 
 **验收标准**: 9 文档完成 + MAINTAINERS 文件范本 + 6 级成熟度模型（Experimental → LTS）定义完成 + DCO bot 集成方案就位。
+
+#### 3.6.1 MemoryRovol 完整 API 落地（revoke/evolve/restore 语义）
+
+> **背景**：v3.6 评审 §1.1 主要差距第 4 点指出"MemoryRovol 仅作为 M2-M5 行项列出，无技术细节"，08 闭环 §4.3 列为 P2-5。API 契约已在 [05-memory-rovol-api.md](../140-application-development/05-memory-rovol-api.md) 完整定义（10 个 op-dispatch 操作），本小节补齐 M5 阶段的落地实施细节：revoke/evolve/restore 三组语义的内核实现、与 capability 派生树的联动、回收时序、与 IPC ring 取消的协同。
+
+**目标**：在 M5 阶段完成 `airy_sys_rovol_ctl` (549) 10 个 op 码的内核态实现，重点打通三组核心语义：(1) **revoke**（撤销/销毁）—— DELETE 操作的资源回收；(2) **evolve**（演化）—— DEMOTE/PROMOTE 的层级迁移；(3) **restore**（恢复）—— RESTORE 的时间旅行式恢复，并确保与 capability 派生树、IPC ring 取消机制的时序协同。
+
+**关键算法与数据结构**：
+
+| 维度 | 设计 |
+|------|------|
+| revoke 语义实现 | `AIRY_ROVOL_DELETE` 采用 seL4 `cteDelete()` 两阶段删除：(1) 同步阶段快照状态 `ACTIVE → DELETING`，阻止新访问；(2) 异步阶段内核工作队列回收 PMEM/CXL 内存，每 64MB 插入 `preemption_point()` 避免阻塞调度器，状态 `DELETING → DELETED`。L1 原始卷在 `AIRY_ROVOL_FLAG_CHECKPOINT` 标记时保留，否则一并回收 |
+| evolve 语义实现 | `AIRY_ROVOL_DEMOTE` / `AIRY_ROVOL_PROMOTE` 基于艾宾浩斯遗忘曲线 `weight(t) = initial * exp(-λ * t / 3600)`：weight < 0.1（`0x1999` Q16.16）触发 demote（L1→L2→L3→L4），重新访问触发 promote（L4→L3→L2）。`decay_factor` 字段（`airy_q16_t`）支持 `AIRY_DECAY_EBBINGHAUS` (0.5) / `AIRY_DECAY_LINEAR` (1.0) / `AIRY_DECAY_AGGRESSIVE` (0.25) 三种策略。L1→L2 不可逆（特征提取有损），其他层级可逆 |
+| restore 语义实现 | `AIRY_ROVOL_RESTORE` 采用 `mmap()` + `userfaultfd()` 按需加载：(1) mmap 占位 VMA；(2) 注册 userfaultfd 缺页处理；(3) 后台按 L1→L2→L3→L4 加载热页；(4) 冷页访问触发 userfaultfd 从快照加载。同一快照可恢复到多个目标 Agent（时间旅行式调试，对齐 Git branch 语义） |
+| 与 capability 派生树联动 | 每个 snapshot 关联一个 capability 节点（`AIRY_CAP_ROVOL_SNAPSHOT` 派生自 `AIRY_CAP_ROVOL_ADMIN`），存入 `airy_cap_node_t` MDB 派生树（[03-capability-model.md](../110-security/03-capability-model.md) §4）。DELETE 操作时调用 `airy_cap_revoke()` 递归级联撤销该快照派生的所有子 capability（对齐 seL4 MDB `derive_tree`）。Agent 终止时其名下所有 snapshot 的 capability 节点由 `airy_cap_revoke_all(agent_id)` 批量撤销 |
+| 回收时序 | (1) 用户调用 `DELETE` → capability 节点标记 `REVOKING`<br>(2) IPC ring 取消：调用 `airy_ipc_cancel_badged_sends(snapshot_cap_badge)` 取消所有使用该 badge 的在途 IPC（对齐 [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) §6.4 `cancelBadgedSends`）<br>(3) PMEM/CXL 内存回收（异步，分块 + preemption point）<br>(4) capability 节点从 MDB 树摘除，状态 `DELETED`<br>(5) 通知 Macro-Supervisor（eventfd_signal）|
+| 与 IPC ring 取消协同 | DELETE/MIGRATE 操作前必须等待该 Agent 的 IPC ring 中所有引用目标 snapshot badge 的在途消息完成或取消。`airy_ipc_cancel_badged_sends()` 遍历 ring，对匹配 badge 的 SQE 设置 `AIRY_EIPC_FROZEN` (-53)，CQE 携带 `-EINTR` 通知提交方。对齐 `AIRY_EIPC_FROZEN` 唯一值 -53（不与 `AIRY_EIPC_FLAGS` -46 别名，IRON-9）|
+| 关键数据结构 | `struct airy_rovol_snapshot { u64 snapshot_id; u32 agent_id; u8 state; u8 layer_mask; u8 flags; struct airy_cap_node *cap_node; struct list_head migrate_list; atomic64_t refcount; }`——per-agent 红黑树按 `snapshot_id` 排序，`airy_rovol_lock` 读写锁保护（读操作 LIST/TIER_GET 共享锁，写操作 SNAPSHOT/RESTORE/MIGRATE/DELETE 排他锁） |
+| [DSL] 降级 | `AIRY_SC_FALLBACK` 下 MemoryRovol 退化为仅 SNAPSHOT/RESTORE/DELETE 三操作（fork+COW + mmap + 同步删除），MIGRATE/TIER_SET/MGLRU_CONFIG/DEMOTE/PROMOTE 返回 `-AIRY_ENOSYS`，保证最小可用 |
+
+**交付物**：
+
+1. `kernel/mm/rovol/airy_rovol.c` + `airy_rovol.h`——op-dispatch 主入口 + 10 个 op 码实现
+2. `kernel/mm/rovol/airy_rovol_snapshot.c`——SNAPSHOT/LIST/DELETE 三操作 + 两阶段删除
+3. `kernel/mm/rovol/airy_rovol_restore.c`——RESTORE + userfaultfd 缺页处理
+4. `kernel/mm/rovol/airy_rovol_migrate.c`——MIGRATE + CXL post-copy 8 步协议
+5. `kernel/mm/rovol/airy_rovol_tier.c`——TIER_SET/TIER_GET/MGLRU_CONFIG/DEMOTE/PROMOTE
+6. `airy_ipc_cancel_badged_sends()` 接入 IPC ring 取消路径
+7. KUnit 用例：revoke 两阶段删除 / evolve 层级迁移 / restore 时间旅行 / capability 级联撤销 / IPC ring 取消协同 / DSL 降级
+8. ftrace 事件：`airy:rovol_snapshot`、`airy:rovol_delete`、`airy:rovol_demote`、`airy:rovol_restore`、`airy:rovol_migrate`、`airy:rovol_cancel_badged`
+
+**验收标准**：
+
+- 10 个 op 码全部通过 capability 守卫（[16.1 capability 表](../140-application-development/05-memory-rovol-api.md) §16.1）
+- revoke（DELETE）两阶段删除在 ≤ 1ms 内完成同步阶段（状态转 DELETING），异步阶段大快照（> 1GB）≤ 1s 完成回收
+- evolve（DEMOTE/PROMOTE）层级迁移在 ≤ 100ms（DEMOTE）/ ≤ 50ms（PROMOTE）内完成
+- restore（RESTORE）首次恢复 ≤ 100ms，冷页访问 ≤ 5ms（userfaultfd 缺页）
+- capability 级联撤销：DELETE 一个有 N 个子派生 capability 的快照时，所有子 capability 在 ≤ 10µs 内全部撤销
+- IPC ring 取消协同：DELETE/MIGRATE 触发 `airy_ipc_cancel_badged_sends()` 后，所有在途匹配 badge 的 IPC 在 ≤ 100µs 内完成取消（CQE 返回 `-EINTR`）
+- DSL 降级下仅 SNAPSHOT/RESTORE/DELETE 可用，其余 op 返回 `-AIRY_ENOSYS`
+- 与 CBS 准入（§3.3.1）/ lockdown（§3.5.1）协同：full lockdown 后 TIER_SET/MGLRU_CONFIG 返回 `-AIRY_ELOCKDOWN`，但 SNAPSHOT/RESTORE/DELETE 不受影响
+
+**与既有 airy 模块依赖**：
+
+- MemoryRovol API 契约（[05-memory-rovol-api.md](../140-application-development/05-memory-rovol-api.md)）——10 个 op 码签名的 SSoT
+- Capability 模型（[03-capability-model.md](../110-security/03-capability-model.md) §4）——MDB 派生树 + `airy_cap_revoke()` 级联撤销
+- 纯 C LSM 模块（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.3）——`airy_uring_cmd_check()` capability 守卫挂载点
+- 内核 Agent 监督模块（[09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) §6.4）——`airy_ipc_cancel_badged_sends()` + `AIRY_EIPC_FROZEN` (-53)
+- 记忆数据流（[02-memory-flow.md](../40-dataflows/02-memory-flow.md)）——L1-L4 四层数据结构与 MGLRU 集成
+- Lockdown 策略（§3.5.1）——full lockdown 下写操作收敛
+- Linux 6.6 `mm/vmscan.c`（MGLRU aging/eviction）+ `mm/userfaultfd.c`（缺页迁移）+ `mm/memory-tiers.c`（CXL 分层）
 
 ### 3.7 Day 85-91: M6 路线图（依赖 M0-M5）
 
