@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # 上游追踪策略
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性体系核心子文档，定义追踪 Linux 6.6 上游 stable 补丁、merge window 策略与 CVE backport 流程\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-31\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 LTS 内核维护流程（IRON-9 v3 [IND] 完全独立层，上游追踪为 agentrt-linux 专属策略）\
 > **理论根基**：Linux 6.6 内核基线工程思想 + seL4 微内核设计思想 + Airymax 体系并行论\
@@ -123,6 +123,23 @@ echo "安全补丁: $(wc -l < patches-security.txt)"
 echo "缺陷修复: $(wc -l < patches-fix.txt)"
 echo "其他补丁: $(wc -l < patches-other.txt)"
 ```
+
+### 2.4 openEuler OLK-6.6 硬件适配层同步
+
+agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配层。同步策略如下：
+
+| 维度 | 策略 |
+|------|------|
+| 同步源 | https://atomgit.com/openeuler/kernel.git（分支 OLK-6.6） |
+| 同步频率 | 跟随 openEuler LTS 节奏（约每月一次） |
+| 同步范围 | 仅 `drivers/`、`arch/` 硬件适配层（排除 `kernel/sched/`、`security/` 核心子系统修改） |
+| 版本对齐 | openEuler OLK-6.6 当前同步到 6.6.144，与 AirymaxOS vanilla 6.6.144 在 `6.6.0-144` 段完全对齐 |
+| IRON-7 保障 | openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值 |
+| KABI 标记剥离 | openeuler_defconfig 中引用 `__KABI_*` 宏的 CONFIG 剥离后保留功能、去除 KABI 占位 |
+
+**与 §2.1 Linux 6.6 stable 补丁追踪的关系**：Linux 6.6 stable 补丁追踪（§2.1-2.3）针对 vanilla 内核基线的安全/缺陷修复；本节（§2.4）针对 openEuler 硬件适配层的同步。两者正交，不冲突——stable 补丁修复内核核心，LAYER 同步扩展硬件兼容。
+
+> 详细 LAYER 可行性论证见闭源文档 [11-layer-feasibility-study.md](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/11-layer-feasibility-study.md)。
 
 ---
 

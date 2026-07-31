@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS）工程基线（Engineering Baseline）的完整定义与落地规范\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-31\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ***
@@ -109,6 +109,7 @@ agentrt-linux 工程基线支持以下 CPU 架构：
 | ARM       | 鲲鹏 / 飞腾 / Ampere | 1.0.1 优先支持 |
 | RISC-V    | 通用 RISC-V        | 后续扩展       |
 | LoongArch | 龙芯               | 后续扩展       |
+| sw_64     | 申威               | 1.0.1 优先支持（LAYER 复用 openEuler 申威架构适配，详见 ADR-018） |
 
 ### 3.2 异构内存支持
 

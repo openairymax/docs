@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）驱动模型设计
 > **文档定位**：agentrt-linux（AirymaxOS）驱动子系统工程设计主索引（设备驱动管理 + VFIO 直通 + DMA 安全规范）\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-31\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt `daemons`（用户态服务）+ Linux 6.6 `drivers/base/`\
 > **理论根基**：Linux device/driver/bus 三元组解耦 + Airymax K-3 服务隔离
@@ -55,6 +55,19 @@ agentrt-linux v1.0 驱动模型在内核调度、IPC 传输、安全钩子、内
 | io_uring 设备 DMA 命令 | — | — | ● | — | [02-platform-driver.md](02-platform-driver.md) |
 | 设备 UAPI 类型桥接 | ● | — | — | — | [../50-engineering-standards/11-sc-header-type-bridging.md](../50-engineering-standards/11-sc-header-type-bridging.md) |
 | 设备生命周期语义 | — | ● | — | — | [../20-modules/09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) |
+
+### 2.2 openEuler 硬件驱动 LAYER 复用
+
+agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
+
+- **arch/sw_64/**：完整导入申威架构支持（366 文件），vanilla 6.6.144 不含此架构
+- **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
+- **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
+- **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）
+
+核心子系统（调度/安全/IPC/内存）保持 vanilla 基线纯净，由 `configs/defconfig-agent` IRON-7 覆盖保障。驱动代码通过标准 Linux 驱动模型（device/driver/bus）接入，与核心子系统通过既定接口交互，不改变核心子系统行为。
+
+> 详细设计见闭源文档 [01-openeuler-tech-reference/](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/)。
 
 ---
 
@@ -142,6 +155,7 @@ agentrt-linux v1.0 驱动模型在内核调度、IPC 传输、安全钩子、内
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立 device/driver/bus 三元组核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明；新增 Airymax Unify Design 映射（A-IPC 设备 DMA + A-ULS 设备生命周期）；文档索引对齐实际目录文件 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-31 | 新增 §2.2 openEuler 硬件驱动 LAYER 复用（详见 ADR-018） |
 
 ---
 

@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS）架构决策记录（Architecture Decision Records）\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-31\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **决策者**：OpenAirymax 工程规范委员会
 
@@ -49,6 +49,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ADR-015 | （已撤销——定位调整方向错误）                                                  | Deprecated |
 | ADR-016 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1）        | Accepted |
 | ADR-017 | Capability 派生操作与 IPC Ring Buffer 6 项致命缺陷修复（K9-1 回归 + ARM64 内存序） | Accepted |
+| ADR-018 | openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.144 + openEuler 硬件适配层正交叠加） | Accepted |
 
 ***
 
@@ -1271,6 +1272,83 @@ K9-1 将 Capability 撤销机制从全局 epoch（`airy_cap_global_epoch`）改�
 
 ***
 
+## ADR-018: openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.144 + openEuler 硬件适配层正交叠加）
+
+- **状态**: Accepted
+- **日期**: 2026-07-31
+- **决策者**: 工程规范委员会
+
+### 背景
+
+agentrt-linux 需要广泛兼容国产主流硬件（鲲鹏/飞腾/海光/申威/昇腾）。直接从零适配成本极高，而 openEuler OLK-6.6 已完成企业级硬件兼容性验证。需要在"从零适配硬件"与"复用 openEuler 硬件适配层"之间做出选择。
+
+### 决策
+
+采用 **LAYER 方案**：以 vanilla linux-stable 6.6.144 为唯一核心基线（IRON-7），在其上叠加复用 openEuler 硬件适配层形成的国产硬件驱动层。驱动层与微内核化改造补丁正交，仅触及 `drivers/`、`arch/` 硬件适配，不触及调度/安全/IPC/内存核心子系统。
+
+```
+ALK-6.6 = vanilla 6.6.144 (IRON-7 基线)
+         + openEuler 硬件适配层（LAYER，架构可选）
+         + agentrt-linux 微内核化改造补丁（≤ 2 万行）
+```
+
+具体落地：
+
+| 维度 | 处置 |
+|------|------|
+| `arch/sw_64/`（申威架构，366 文件） | 完整导入（vanilla 6.6.144 不含此架构） |
+| `arch/{x86,arm64}/configs/openeuler_defconfig` | 作为硬件配置底座 |
+| `configs/euler_hw_{x86,arm64,sw64}.config` | 从 openeuler_defconfig 提取的硬件相关 CONFIG 碎片 |
+| `configs/defconfig-agent` | IRON-7 覆盖：将触及核心子系统的 CONFIG 覆盖回 vanilla 默认值 |
+| `drivers/hooks/`（openEuler Vendor Hooks） | 极简导入（仅 bonding 一个具体 hook，不触及 sched/security） |
+| `kernel/sched/`、`security/`（openEuler 修改） | **排除**（保持 vanilla 基线纯净） |
+| KABI 标记（`__KABI_*` 宏） | 剥离（保留功能，去除 KABI 占位） |
+
+### 理由
+
+1. **正交性已验证**：openEuler 对核心子系统（调度/安全）的修改被完全排除，提取的仅是纯硬件驱动与架构代码。驱动代码通过标准 Linux 驱动模型（device/driver/bus）接入，与核心子系统通过既定接口交互，不改变核心子系统行为。
+2. **版本天然对齐**：openEuler OLK-6.6 当前同步到 6.6.144，与 AirymaxOS vanilla 6.6.144 在 `6.6.0-144` 段完全对齐，硬件适配补丁天然适用，无需版本迁移。
+3. **IRON-7 不变**：复用 openEuler 硬件适配层不改变 vanilla 6.6.144 为唯一核心基线的事实——openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值。
+4. **企业级验证**：openEuler 24.03 LTS 已完成企业级硬件兼容性验证，复用其适配层可节省数万人年的硬件适配成本。
+5. **GPL-2.0 兼容**：openEuler 与 Linux 内核同为 GPL-2.0，许可证完全兼容，合规要求明确（版权保留/变更标注/源码公开/DCO 认证）。
+6. **构建链复用**：可同步复用 openEuler 构建体系（airy-kernel.spec / meta-airymax / custom/cfg_airymax / ks-airymax.cfg），不 fork 任何工具代码，仅通过配置覆盖实现定制。
+
+### 影响
+
+| 影响范围 | 描述 |
+|---------|------|
+| kernel | 内核基线保持 vanilla 6.6.144（IRON-7），叠加 openEuler 硬件适配层 |
+| services | 驱动通过标准 Linux 驱动模型接入，不影响服务层 |
+| security | 不移植 openEuler security/ 修改，保持 vanilla + airy_lsm（H5 约束） |
+| 构建系统 | 复用 openEuler 构建工具链（imageTailor/Yocto/Anaconda/OBS），详见 70-build-system/README.md §3.2 |
+| 兼容性 | 新增 sw_64（申威）架构支持，详见 04-engineering-baseline.md §3.1 |
+| 上游跟踪 | 新增 openEuler OLK-6.6 硬件适配层同步策略，详见 160-compatibility/03-upstream-tracking.md §2.4 |
+
+### 替代方案
+
+| 方案 | 优势 | 劣势 | 未采纳原因 |
+|------|------|------|-----------|
+| 从零适配硬件 | 完全自主可控 | 成本极高（数万人年）、周期长 | 不符合 1.0.1 时间窗口 |
+| Fork openEuler 内核 | 完整继承 openEuler 能力 | 引入 openEuler 调度/安全修改，破坏 IRON-7 基线纯净 | 与 ADR-013（sched\_tac）/ ADR-004（capability）冲突 |
+| **LAYER 方案（采纳）** | 硬件兼容 + 核心纯净 + 成本可控 | 需逐文件甄别驱动正交性 | **最优平衡** |
+
+### 后果
+
+**正面后果**：
+
+- 获得 openEuler 企业级硬件兼容性（鲲鹏/飞腾/海光/申威/昇腾）
+- 内核核心子系统保持 vanilla 6.6.144 基线纯净（IRON-7 保障）
+- 复用 openEuler 构建体系，降低工程成本
+- GPL-2.0 完全兼容，无法律障碍
+
+**负面后果**：
+
+- 需维护 openEuler 硬件适配层同步（每季度约 2-5 人日）
+- `drivers/hooks/` Vendor Hooks 需逐个甄别，排除触及 sched/security 的钩子
+- KABI 标记剥离需 CI 门禁保障（`grep -r '__KABI' include/` 零命中）
+
+***
+
 ## IRON-9 v3 四层共享模型汇总
 
 > **OS-ARCH-009**： 17 个 ADR 中涉及 agentrt 同源关系的 6 个核心 ADR（ADR-003 / 004 / 005 / 006 / 007 / 010）遵循 IRON-9 v3 四层共享模型分布——capability / IPC / 认知 / 记忆契约经 \[SC] 共享，8 子仓与 7 模块经 \[SS] 同源，构建与平台适配经 \[IND] 独立，\[SC] 头文件损坏时经 \[DSL] 降级生存层保证最小可运行子集。
@@ -1432,6 +1510,7 @@ graph LR
 | 0.3.0 | 2026-07-19 | ADR-013 重写为调度框架决策（sched\_tac，非 sched\_ext），修正"Linux 6.6 已验证 sched\_ext"事实错误；版本基线锁定战略调整至 ADR-016；新增 ADR-015（已撤销——定位调整方向错误）；ADR-002 标题与内容 sched\_ext → sched\_tac；IRON-9 v3 四层模型汇总（三层 → 四层，6 头文件 → 10 头文件，补全 \[DSL] 降级生存层） |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步验证）                                                          |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-31 | 新增 ADR-018（openEuler 硬件驱动复用 LAYER 决策，vanilla 6.6.144 + openEuler 硬件适配层正交叠加） |
 
 ***
 

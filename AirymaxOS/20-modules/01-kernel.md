@@ -33,8 +33,9 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [14. 与其他子仓的协作](#14-与其他子仓的协作)
 - [15. 里程碑（M0-M8）](#15-里程碑m0-m8)
 - [16. agentrt 一致性检查](#16-agentrt-一致性检查)
-- [17. 相关文档](#17-相关文档)
-- [18. 参考文献](#18-参考文献)
+- [17. openEuler 硬件驱动 LAYER 复用](#17-openeuler-硬件驱动-layer-复用)
+- [18. 相关文档](#18-相关文档)
+- [19. 参考文献](#19-参考文献)
 
 ***
 
@@ -1192,7 +1193,22 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 ***
 
-## 17. 相关文档
+## 17. openEuler 硬件驱动 LAYER 复用
+
+agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
+
+- **arch/sw_64/**：完整导入申威架构支持（366 文件），vanilla 6.6.144 不含此架构
+- **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
+- **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
+- **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）
+
+核心子系统（调度/安全/IPC/内存）保持 vanilla 基线纯净，由 `configs/defconfig-agent` IRON-7 覆盖保障。驱动代码通过标准 Linux 驱动模型（device/driver/bus）接入，与核心子系统通过既定接口交互，不改变核心子系统行为。
+
+> 详细设计见闭源文档 [01-openeuler-tech-reference/](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/)。
+
+***
+
+## 18. 相关文档
 
 - [01-syscalls.md（系统调用接口）](../30-interfaces/01-syscalls.md)
 - [02-ipc-protocol.md（IPC 协议）](../30-interfaces/02-ipc-protocol.md)
@@ -1210,7 +1226,7 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 ***
 
-## 18. 参考文献
+## 19. 参考文献
 
 | 编号     | 文献                                            | 说明                     |
 | ------ | --------------------------------------------- | ---------------------- |

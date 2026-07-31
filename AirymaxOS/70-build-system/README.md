@@ -3,7 +3,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 # agentrt-linux（AirymaxOS）构建系统设计
 > **文档定位**：agentrt-linux（AirymaxOS）构建系统工程设计主索引（Kconfig + Kbuild + CMake + RPM spec + airy_defconfig）\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-31\
 > **上级文档**：[AirymaxOS 总览](../README.md)\
 > **同源映射**：agentrt `cmake/`（伞仓直属 5 模块）+ Linux 6.6 Kbuild 系统\
 > **理论根基**：Linux Kbuild 递归构建 + Airymax E-7 文档即代码 + SSoT v2 单一权威源
@@ -35,7 +35,7 @@ agentrt-linux 构建系统是连接源代码与可分发产物的核心工程基
 
 - **多语言构建**：C（Kbuild）+ Rust（cargo）+ Python（poetry）+ TypeScript（tsc/webpack）
 - **多仓集成**：8 子仓 + agentrt 同源仓库的统一构建入口
-- **多平台目标**：x86_64 / aarch64 / riscv64 + 跨平台用户态（Linux/macOS/Windows）
+- **多平台目标**：x86_64 / aarch64 / riscv64 / sw_64（LAYER 复用 openEuler 申威架构，详见 ADR-018）+ 跨平台用户态（Linux/macOS/Windows）
 - **airy_defconfig 锁定五大技术选型**：sched_ext 关闭、page flipping 关闭、BPF LSM 关闭、DMA 一致性内存关闭、IRON-9 v3 [DSL] 降级生存层开启
 
 ---
@@ -94,6 +94,25 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 - `08-rpm-spec.md`：RPM spec 打包规范
 - `09-build-reproducibility.md`：可重现构建
 
+### 3.2 LAYER 构建链（openEuler 工具链复用）
+
+AirymaxOS 全面复用 openEuler 24.03 LTS 构建体系（LAYER 方案，详见 [ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)），不 fork 任何工具代码，仅通过配置覆盖实现定制：
+
+| 产物 | 路径 | 作用 |
+|------|------|------|
+| airy-kernel.spec | build/airy-kernel.spec | RPM 打包模板（5 包拆分：airy-kernel/devel/headers/modules/debuginfo） |
+| meta-airymax/ | build/meta-airymax/ | Yocto 自定义层（嵌入式镜像） |
+| custom/cfg_airymax/ | build/custom/cfg_airymax/ | imageTailor 配置覆盖（服务器/桌面镜像） |
+| ks-airymax.cfg | build/ks-airymax.cfg | Kickstart 安装脚本 |
+
+**关键约束**：
+
+1. **不 fork 原则**：仅通过配置覆盖实现定制，不 fork openEuler 构建工具链（imageTailor/Yocto/isocut/Anaconda/OBS/dnf）
+2. **版本对齐**：openEuler OLK-6.6 当前同步到 6.6.144，与 AirymaxOS vanilla 6.6.144 在 `6.6.0-144` 段完全对齐，构建工具链无需版本迁移
+3. **IRON-7 不变**：openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值
+
+> 详细构建与烧录策略见闭源文档 [12-build-and-flash-strategy.md](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/12-build-and-flash-strategy.md)。
+
 ---
 
 ## 4. Airymax Unify Design 映射
@@ -151,6 +170,7 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 | 0.1.1 | 2026-07-13 | 初始版本，README + 01 + 02 文档奠基，确立 Kbuild/Kconfig 核心机制 |
 | v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac / IORING_OP_URING_CMD / 纯 C LSM / alloc_pages + mmap / IRON-9 v3 四层模型五大技术选型声明（通过 `airy_defconfig` 编译期锁定）；新增 Airymax Unify Design 映射（A-UCS airy_defconfig 为核心）；文档索引对齐实际目录文件（含 03-ci-cd-pipeline.md） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-07-31 | 新增 sw_64 多平台目标 + §3.2 LAYER 构建链（openEuler 工具链复用，详见 ADR-018） |
 
 ---
 
