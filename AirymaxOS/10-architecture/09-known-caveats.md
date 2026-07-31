@@ -326,6 +326,26 @@ K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch，在 7 �
 
 ***
 
+### 8.5 任务2 实施登记（2026-07-31 openEuler 驱动复用层落地）
+
+**任务**：创建 openEuler 驱动复用层（LAYER 方案），导入 sw_64 架构 + openEuler defconfig 底座 + IRON-7 覆盖 + 构建链产物。
+
+**落地产物**（详见 [12-build-and-flash-strategy.md §11](../../docs-closed/agentrt-linux/01-openeuler-tech-reference/12-build-and-flash-strategy.md)）：
+
+| 仓库 | commit | 内容 |
+|------|--------|------|
+| kernel (ALK-6.6-dev) | `airy/arch: import sw_64 and add LAYER config fragments` | arch/sw_64/（366 文件）+ openeuler_defconfig 底座（x86/arm64）+ euler_hw 硬件碎片 + defconfig-agent IRON-7 覆盖 + Kconfig stale source 修复 |
+| agentrt-linux (main) | `airy/build: add LAYER build artifacts for openEuler toolchain reuse` | build/airy-kernel.spec + meta-airymax/ + custom/cfg_airymax/ + ks-airymax.cfg |
+| docs-closed (main) | `airy/docs: register LAYER implementation progress in build strategy` | 12-build-and-flash-strategy.md §11 实施进度章节 |
+
+**验证**：三架构 `make ARCH={sw_64,x86,arm64} airy_defconfig` 均生成有效 .config（CONFIG_SECURITY_AIRY=y）；x86 `make -j$(nproc)` 编译通过（bzImage ready）；arch/sw_64/ 无 `__KABI`/`Makefile.oever`/`kernel/sched`/`security` 引用。
+
+**附带修复**：commit `1e61116e6153` 删除 `config/Kconfig.alk` 后遗留 stale `source` 行于顶层 Kconfig，导致所有 `make *defconfig` 失败；本次移除该 stale 引用，恢复配置生成能力。
+
+**后续工作**：sw_64 交叉编译链配置、arm64 完整编译验证、drivers/hooks/ Vendor Hooks 甄别、OBS 多架构构建、CI diffconfig 门禁。
+
+***
+
 ## 9. 已知文档问题登记
 
 以下问题已在各子模块文档中登记，此处作为跨子仓索引：
