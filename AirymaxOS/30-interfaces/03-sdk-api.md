@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**：agentrt-linux（AirymaxOS） SDK 的 4 语言矩阵、4 嵌套客户端、代码示例与错误处理策略\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
-> **v3.5 修复说明**：P0-I12~I13——(1) 文档版本 `0.1.1` → `v1.0.1`（对齐 IRON-7）；(2) 错误码值修正：`AIRY_EPERM` -4 → -12、`AIRY_EAGAIN` -6 → -35（对齐 SSoT `error.h` L39/L43）；(3) `AIRY_ETIMEDOUT` → `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间）；(4) "250 LSM 钩子" → "5 LSM 钩子"（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`）；(5) 移除对不存在文件 `00-requirements/03-non-functional-requirements.md` 的引用\
+> **v3.5 修复说明**：P0-I12~I13——(1) 文档版本 `0.1.1` → `v1.0.1`（对齐 IRON-7）；(2) 错误码值修正：`AIRY_EPERM` -4 → -12、`AIRY_EAGAIN` -6 → -35（对齐 SSoT `error.h` L39/L43）；(3) `AIRY_ETIMEDOUT` → `AIRY_ESCHED_DEADLINE`（-123，A-ULS 子空间）；(4) "250 LSM 钩子" → "7 LSM 钩子"（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=7`）；(5) 移除对不存在文件 `00-requirements/03-non-functional-requirements.md` 的引用\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -526,7 +526,7 @@ client = AirymaxClient(
 | `syscalls.h` | 4 核心（v1.0.1） syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ capability invocation 统一入口 | 全部客户端（调用 syscall 接口时） |
 | `sched.h` | `TaskDesc` 任务描述符（magic 0x41475453 'AGTS'）+ 优先级 0-139 + AIRY_CAP_MAX_AGENTS=1024 | CognitionClient.submit_task |
 | `ipc.h` | 128B 消息头（magic 0x41524531 'ARE1'）+ 5 payload type + trace_id | 全部客户端传输层 |
-| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + mint/revoke/derive 签名 + 5 LSM 钩子（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=5`） | SafetyClient.check_capability |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） + mint/revoke/derive 签名 + 7 LSM 钩子（对齐 SSoT `lsm_types.h` `AIRY_LSM_HOOK_IMPLEMENTED=7`） | SafetyClient.check_capability |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + Token 能效 | CognitionClient / ChatClient |
 | `memory_types.h` | MemoryRovol L1-L4 快照结构 | ToolClient（记忆上下文） |
 

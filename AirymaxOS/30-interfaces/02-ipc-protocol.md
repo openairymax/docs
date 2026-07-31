@@ -141,15 +141,15 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 	 (((__u64)(randtag) & 0xFFFFFFFF) << AIRY_BADGE_RANDTAG_SHIFT) | \
 	 (((__u64)(perms)   & 0xFFFF) << AIRY_BADGE_PERMS_SHIFT))
 
-/* Capability 权限位（低 16 位） */
+/* Capability 权限位（低 16 位） — SSoT: security_types.h */
 #define AIRY_CAP_PERM_SEND	0x0001
 #define AIRY_CAP_PERM_RECV	0x0002
-#define AIRY_CAP_PERM_CALL	0x0004  /* airy_sys_call 权限 */
-#define AIRY_CAP_PERM_GRANT	0x0008  /* 派生能力（mint/derive） */
-#define AIRY_CAP_PERM_REVOKE	0x0010  /* 撤销能力（仅 sec_d） */
-#define AIRY_CAP_PERM_FREEZE	0x0020  /* 冻结 ring */
-#define AIRY_CAP_PERM_BATCH	0x0040  /* 批量发送 */
-#define AIRY_CAP_PERM_RESERVED	0xFF80  /* 必须为零 */
+#define AIRY_CAP_PERM_DERIVE	0x0004  /* Capability derivation (MINT/COPY) */
+#define AIRY_CAP_PERM_KILL	0x0008  /* Signal delivery (task_kill hook) */
+#define AIRY_CAP_PERM_FILE_OPEN	0x0010  /* File access (file_open hook) */
+#define AIRY_CAP_PERM_ROTATE	0x0020  /* Badge rotation */
+#define AIRY_CAP_PERM_SUPERVISE	0x0040  /* Micro-Supervisor authority */
+#define AIRY_CAP_PERM_RESERVED	0xFF80  /* Bits 7-15: must be zero */
 
 #ifdef __cplusplus
 }
@@ -698,9 +698,9 @@ IPC 性能约束对齐非功能性需求 NFR-P-002（详见 [00-requirements/03-
 | `AIRY_IPC_FLAG_*` flags 位 | ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL 标志位 | 消息处理 |
 | `AIRY_IPC_TYPE_*` 5 种 payload | REQUEST/RESPONSE/EVENT/STREAM/CONTROL 类型枚举 | payload 解码 |
 | `AIRY_BADGE_*` 位布局宏 | Epoch/RandomTag/Perms 提取与编译宏 | Badge 校验与编译 |
-| `AIRY_CAP_PERM_*` 权限位 | SEND/RECV/CALL/GRANT/REVOKE/FREEZE/BATCH 权限位 | C-S9 权限校验 |
+| `AIRY_CAP_PERM_*` 权限位 | SEND/RECV/DERIVE/KILL/FILE_OPEN/ROTATE/SUPERVISE 权限位 | C-S9 权限校验 |
 
-> **cancelBadgedSends（P1-8，M2 规划）**：seL4 在 `endpoint.c:476-489` 提供 `cancelBadgedSends(ep, badge)` 操作，撤销指定 endpoint 上匹配 badge 的所有待发送消息。agentrt-linux v1.0.1 尚未实现此操作（grep `cancelBadgedSends`/`cancel_badged_sends` 零匹配）。M2 阶段须在 `AIRY_IPC_OP_*` opcode 体系中新增 `AIRY_IPC_OP_CANCEL_BADGED`，由 sec_d（唯一持有 `AIRY_CAP_PERM_REVOKE` 的 Agent）调用，扫描目标 ring 的 kfifo 待发送队列并移除匹配 badge 的消息。详见 [09-known-caveats.md §8.4 P1-8](../10-architecture/09-known-caveats.md)。
+> **cancelBadgedSends（P1-8，M2 规划）**：seL4 在 `endpoint.c:476-489` 提供 `cancelBadgedSends(ep, badge)` 操作，撤销指定 endpoint 上匹配 badge 的所有待发送消息。agentrt-linux v1.0.1 尚未实现此操作（grep `cancelBadgedSends`/`cancel_badged_sends` 零匹配）。M2 阶段须在 `AIRY_IPC_OP_*` opcode 体系中新增 `AIRY_IPC_OP_CANCEL_BADGED`，由 sec_d（唯一持有 `AIRY_CAP_PERM_DERIVE` 的 Agent）调用，扫描目标 ring 的 kfifo 待发送队列并移除匹配 badge 的消息。详见 [09-known-caveats.md §8.4 P1-8](../10-architecture/09-known-caveats.md)。
 
 ### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux IPC API 映射
 

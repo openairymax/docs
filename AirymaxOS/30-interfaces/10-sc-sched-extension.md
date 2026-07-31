@@ -187,15 +187,18 @@ enum airy_agent_state {
 #define AIRY_WEIGHT_MIN         1
 #define AIRY_WEIGHT_MAX         10000
 
-/* ─── vtime: Q16.16 fixed-point for EEVDF virtual time ────────────────── */
+/* ─── vtime: Q16.16 fixed-point for user-space vtime approximation ───── */
 typedef __s32 airy_vtime_t;
 #define AIRY_VTIME_ONE          (1 << 16)  /* 1.0 in Q16.16 */
 
 static inline airy_vtime_t airy_vtime_decay(airy_vtime_t vtime, __u32 weight)
 {
     /*
-     * EEVDF virtual time decay: vtime += slice / weight.
-     * For precomputed tables, approximate as integer math.
+     * User-space vtime approximation (NOT the kernel EEVDF internal
+     * algorithm). The kernel's EEVDF uses vruntime += delta_exec *
+     * NICE_0_LOAD / load_weight with actual execution time delta_exec;
+     * this UAPI helper uses the default slice constant AIRY_SLICE_DFL
+     * for precomputed table consumers that need a static estimate.
      */
     return vtime + (AIRY_SLICE_DFL * AIRY_VTIME_ONE) /
            (weight ? weight : 1);

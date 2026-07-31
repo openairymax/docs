@@ -491,15 +491,15 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 	 (((__u64)(randtag) & 0xFFFFFFFF) << AIRY_BADGE_RANDTAG_SHIFT) | \
 	 (((__u64)(perms)   & 0xFFFF) << AIRY_BADGE_PERMS_SHIFT))
 
-/* Capability 权限位（低 16 位） */
+/* Capability 权限位（低 16 位） — SSoT: security_types.h */
 #define AIRY_CAP_PERM_SEND	0x0001
 #define AIRY_CAP_PERM_RECV	0x0002
-#define AIRY_CAP_PERM_CALL	0x0004  /* airy_sys_call 权限 */
-#define AIRY_CAP_PERM_GRANT	0x0008  /* 派生能力（mint/derive） */
-#define AIRY_CAP_PERM_REVOKE	0x0010  /* 撤销能力（仅 sec_d） */
-#define AIRY_CAP_PERM_FREEZE	0x0020  /* 冻结 ring */
-#define AIRY_CAP_PERM_BATCH	0x0040  /* 批量发送 */
-#define AIRY_CAP_PERM_RESERVED	0xFF80  /* 必须为零 */
+#define AIRY_CAP_PERM_DERIVE	0x0004  /* Capability derivation (MINT/COPY) */
+#define AIRY_CAP_PERM_KILL	0x0008  /* Signal delivery (task_kill hook) */
+#define AIRY_CAP_PERM_FILE_OPEN	0x0010  /* File access (file_open hook) */
+#define AIRY_CAP_PERM_ROTATE	0x0020  /* Badge rotation */
+#define AIRY_CAP_PERM_SUPERVISE	0x0040  /* Micro-Supervisor authority */
+#define AIRY_CAP_PERM_RESERVED	0xFF80  /* Bits 7-15: must be zero */
 
 #ifdef __cplusplus
 }
