@@ -334,13 +334,19 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 | Delete | 删除单个 cap              | 不可逆      |
 | Rotate | 轮换 cap（Badge 刷新）      | 不可逆      |
 
-### 5.4 Badge 撤销机制（O(1) atomic\_inc）
+### 5.4 Badge 撤销机制（三层互补）
 
-**seL4 对比**：seL4 的 `cteRevoke` 需递归遍历 MDB 派生树，复杂度 O(N)。
+agentrt-linux 采用**三层互补**的 Badge/capability 撤销机制，覆盖不同粒度：
 
-**agentrt-linux 创新**：Badge 撤销采用 **1 行** **`airy_cap_epoch_bump(agent_id)`** 立即生效——per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制）递增，该 Agent 旧 Badge 自动失效。复杂度从撤销方的 O(N) 转移到被撤销方的重新申请。UNFREEZE 全局撤销通过 `airy_cap_epoch_bump_all()` 触发补充性 `airy_cap_global_epoch` 自增。
+| 层级 | 机制 | 复杂度 | 触发场景 | 代码位置 |
+|------|------|--------|---------|---------|
+| ① REVOKE CNode 操作 | `airy_cap_revoke_subtree()` 沿 MDB 派生树（左孩子右兄弟）递归撤销子 cap | O(N)（典型深度 ≤3） | 撤销某 cap 的所有派生子 cap | [airy_cap_derive.c:92-117](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L92-L117) |
+| ② per-agent epoch bump | `airy_cap_epoch_bump(agent_id)` 递增 slot_epoch，该 Agent 旧 Badge 立即失效 | O(1) | 撤销某 Agent 的所有 Badge（K9-1 主要撤销机制） | `security/airy/airy_cap_array.c` |
+| ③ cancelBadgedSends | `airy_ipc_cancel_badged_sends(ring, badge)` 扫描 ring 中待发送消息，匹配 badge 者将 magic 置零使其被跳过 | O(N)（N=ring 深度） | 撤销指定 Badge 的待发送 IPC 消息 | [airy_ipc_ring.c:159-207](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c#L159-L207) |
 
-> **详细设计**：详见 [03-capability-model.md](../110-security/03-capability-model.md)。
+**seL4 对比**：seL4 的 `cteRevoke` 需递归遍历 MDB 派生树，复杂度 O(N)；agentrt-linux 的 ②层将复杂度从撤销方的 O(N) 转移到被撤销方的重新申请（O(1)），①层保留 seL4 风格的递归撤销语义，③层补齐 seL4 `endpoint.c:476-489` 的 `cancelBadgedSends` 对等能力。
+
+> **详细设计**：详见 [03-capability-model.md](../110-security/03-capability-model.md) 与 [07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)。
 
 ***
 
