@@ -315,14 +315,16 @@ stateDiagram-v2
 
 ## 第 6 章 LSM 钩子类型
 
-> **实际注册范围声明**（对齐 [SC] `lsm_types.h` SSoT）：Airy M0 基线实际注册 **5 个 LSM 钩子**（`AIRY_LSM_HOOK_IMPLEMENTED = 5`）：
+> **实际注册范围声明**（对齐 [SC] `lsm_types.h` SSoT）：Airy M0 基线实际注册 **7 个 LSM 钩子**（`AIRY_LSM_HOOK_IMPLEMENTED = 7`）：
 > - `security_uring_cmd`（io_uring 命令入口，IPC fastpath slowpath 接管）
 > - `security_task_alloc`（Agent fork/clone 上下文初始化）
 > - `security_task_free`（Agent 上下文清理）
 > - `security_task_kill`（Agent 生命周期终止裁决）
 > - `security_file_open`（Agent 文件访问策略裁决）
+> - `security_inode_alloc_security`（inode blob 分配，初始化 `airy_inode_sec`）
+> - `security_inode_free_security`（inode blob 清理）
 >
-> 以下章节描述 Linux 6.6 LSM 框架提供的钩子类型机制（`inode`/`file`/`task`/`cred`/`sb` 等），用于说明 Cupolas 钩子回调的工作原理与签名约定。**Cupolas 当前仅消费其中的 `task_alloc`/`task_free`/`task_kill`/`file_open` + `uring_cmd` 共 5 个**，其余钩子类型（`inode_alloc_security`/`cred_prepare`/`sb_mount` 等）为 Linux 6.6 LSM 框架原生能力，Cupolas 暂未消费，留待未来版本扩展。
+> 以下章节描述 Linux 6.6 LSM 框架提供的钩子类型机制（`inode`/`file`/`task`/`cred`/`sb` 等），用于说明 Cupolas 钩子回调的工作原理与签名约定。**Cupolas 当前消费其中的 `task_alloc`/`task_free`/`task_kill`/`file_open`/`inode_alloc_security`/`inode_free_security` + `uring_cmd` 共 7 个**，其余钩子类型（`inode_permission`/`cred_prepare`/`sb_mount` 等）为 Linux 6.6 LSM 框架原生能力，Cupolas 暂未消费，留待未来版本扩展。
 
 ### 6.1 inode 钩子
 
@@ -421,20 +423,24 @@ struct lsm_blob_sizes airy_blob_sizes __ro_after_init = {
     .lbs_task  = sizeof(struct airy_task_sec),   /* [SC] lsm_types.h */
     .lbs_inode = sizeof(struct airy_inode_sec),  /* [SC] lsm_types.h */
     /* lbs_cred/lbs_file/lbs_superblock/lbs_ipc/lbs_msg_msg 暂为 0
-     *（M0 基线仅注册 5 钩子：uring_cmd/task_alloc/task_free/task_kill/file_open，
-     *  不消费 cred/file/superblock/ipc blob，对齐 AIRY_LSM_HOOK_IMPLEMENTED=5） */
+     *（M0 基线注册 7 钩子：uring_cmd/task_alloc/task_free/task_kill/file_open
+     *  /inode_alloc_security/inode_free_security，
+     *  不消费 cred/file/superblock/ipc blob，对齐 AIRY_LSM_HOOK_IMPLEMENTED=7） */
 };
 static int __init airy_lsm_init(void) {
-    /* 注册 5 个 LSM 钩子（M0 基线，对齐 [SC] AIRY_LSM_HOOK_IMPLEMENTED=5）：
-     *   - security_uring_cmd    （io_uring 命令入口，IPC fastpath slowpath 接管）
-     *   - security_task_alloc   （Agent fork/clone 上下文初始化）
-     *   - security_task_free    （Agent 上下文清理）
-     *   - security_task_kill    （Agent 生命周期终止裁决）
-     *   - security_file_open    （Agent 文件访问策略裁决）
+    /* 注册 7 个 LSM 钩子（M0 基线，对齐 [SC] AIRY_LSM_HOOK_IMPLEMENTED=7）：
+     *   - security_uring_cmd           （io_uring 命令入口，IPC fastpath slowpath 接管）
+     *   - security_task_alloc          （Agent fork/clone 上下文初始化）
+     *   - security_task_free           （Agent 上下文清理）
+     *   - security_task_kill           （Agent 生命周期终止裁决）
+     *   - security_file_open           （Agent 文件访问策略裁决）
+     *   - security_inode_alloc_security（inode blob 分配，初始化 airy_inode_sec）
+     *   - security_inode_free_security （inode blob 清理）
      */
     airy_add_uring_cmd_hooks();  /* security_uring_cmd */
     airy_add_task_hooks();       /* task_alloc + task_free + task_kill */
     airy_add_file_hooks();       /* file_open */
+    airy_add_inode_hooks();      /* inode_alloc_security + inode_free_security */
     pr_info("Cupolas security dome (airy LSM) up and running.\n");
     return 0;
 }
@@ -550,7 +556,7 @@ IRON-9 v3 将 agentrt Cupolas 与 agentrt-linux LSM 框架的协作划分为四�
 
 | 层次 | 共享程度 | LSM 框架内容 |
 |------|---------|-------------|
-| **[SC] 共享契约层** | 完全共享代码 | `lsm_types.h`：5 钩子常量（`AIRY_LSM_HOOK_IMPLEMENTED=5`）+ `airy_task_sec`/`airy_inode_sec`/`airy_cap_slot` blob 布局 + capability check 回调签名；`security_types.h`：4 值裁决枚举（`airy_verdict`）+ 44 个 cap_id |
+| **[SC] 共享契约层** | 完全共享代码 | `lsm_types.h`：7 钩子常量（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ `airy_task_sec`/`airy_inode_sec`/`airy_cap_slot` blob 布局 + capability check 回调签名；`security_types.h`：4 值裁决枚举（`airy_verdict`）+ 44 个 cap_id |
 | **[SS] 语义同源层** | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | LSM 钩子注册模式、blob 生命周期管理、钩子链遍历模式、拒绝上报通道 |
 | **[IND] 完全独立层** | 完全独立 | RCU 钩子链表实现、kmem_cache blob 分配器、exclusive LSM 互斥逻辑、`CONFIG_LSM` 编译期排序 |
 
@@ -564,7 +570,7 @@ agentrt 用户态 Cupolas 通过这两个 [SC] 头文件解析内核 LSM blob �
 
 ```c
 /* include/uapi/linux/airymax/lsm_types.h —— IRON-9 v3 [SC] 共享契约层（节选） */
-#define AIRY_LSM_HOOK_IMPLEMENTED   5    /* Airy 实际注册的钩子数 */
+#define AIRY_LSM_HOOK_IMPLEMENTED   7    /* Airy 实际注册的钩子数 */
 #define AIRY_LSM_KERNEL_HOOK_TOTAL  250  /* Linux 6.6 LSM 框架可用钩子总数（仅文档用途，非数组尺寸） */
 
 /* task 安全上下文（per-task security blob） */
@@ -614,7 +620,7 @@ enum airy_verdict {
 };
 ```
 
-**OS-IRON-003 约束**：agentrt-linux LSM 与 agentrt Cupolas 共享 `lsm_types.h` 与 `security_types.h`，blob 结构布局（`airy_task_sec`/`airy_inode_sec`/`airy_cap_slot`）与 4 值裁决枚举（`airy_verdict`）两端必须逐字节一致。**Airy 实际注册 5 个 LSM 钩子**（`AIRY_LSM_HOOK_IMPLEMENTED = 5`：`uring_cmd`/`task_alloc`/`task_free`/`task_kill`/`file_open`），并非 250 个——`AIRY_LSM_KERNEL_HOOK_TOTAL = 250` 仅为 Linux 6.6 LSM 框架可用钩子上限的文档用途常量，非数组尺寸。
+**OS-IRON-003 约束**：agentrt-linux LSM 与 agentrt Cupolas 共享 `lsm_types.h` 与 `security_types.h`，blob 结构布局（`airy_task_sec`/`airy_inode_sec`/`airy_cap_slot`）与 4 值裁决枚举（`airy_verdict`）两端必须逐字节一致。**Airy 实际注册 7 个 LSM 钩子**（`AIRY_LSM_HOOK_IMPLEMENTED = 7`：`uring_cmd`/`task_alloc`/`task_free`/`task_kill`/`file_open`/`inode_alloc_security`/`inode_free_security`），并非 250 个——`AIRY_LSM_KERNEL_HOOK_TOTAL = 250` 仅为 Linux 6.6 LSM 框架可用钩子上限的文档用途常量，非数组尺寸。
 
 #### [SS] 语义同源层
 
@@ -661,7 +667,7 @@ LSM 与 Cupolas 集成的目标是将 Cupolas 7 大子系统映射到 LSM 钩子
 
 #### 11.2.1 Cupolas 7 子系统 ↔ LSM 钩子映射表
 
-> **实际注册范围声明**：Airy M0 基线实际注册 **5 个 LSM 钩子**（对齐 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED = 5`）。下表"状态"列标注各钩子的实现状态：✅ = M0 已注册，⏳ = 未来版本扩展。**不存在虚构的 `airy_lsm_hook_id` 250 ID 枚举**——LSM 钩子通过 `LSM_HOOK_INIT` 宏名注册，不通过数字 ID。
+> **实际注册范围声明**：Airy M0 基线实际注册 **7 个 LSM 钩子**（对齐 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED = 7`）。下表"状态"列标注各钩子的实现状态：✅ = M0 已注册，⏳ = 未来版本扩展。**不存在虚构的 `airy_lsm_hook_id` 250 ID 枚举**——LSM 钩子通过 `LSM_HOOK_INIT` 宏名注册，不通过数字 ID。
 
 | Cupolas 子系统 | LSM 钩子名 | 实现状态 | 裁决行为 |
 |----------------|------------|---------|----------|
@@ -669,6 +675,8 @@ LSM 与 Cupolas 集成的目标是将 Cupolas 7 大子系统映射到 LSM 钩子
 | **Guards 守卫** | `security_task_alloc` | ✅ M0 | 初始化 `airy_task_sec`（agent_id/state/budget） |
 | **Guards 守卫** | `security_task_free` | ✅ M0 | 清理 `airy_task_sec` 资源 |
 | **Permission 权限裁决** | `security_file_open` | ✅ M0 | 4 值枚举（`airy_verdict`：ALLOW/DENY/AUDIT/COMPLAIN）裁决 |
+| **Permission 权限裁决** | `security_inode_alloc_security` | ✅ M0 | 分配并初始化 `airy_inode_sec` blob |
+| **Permission 权限裁决** | `security_inode_free_security` | ✅ M0 | 清理 `airy_inode_sec` blob 资源 |
 | **Permission 权限裁决** | `security_inode_permission` | ⏳ 未来 | 4 值枚举裁决（M0 未消费 inode blob 之外的钩子） |
 | **IPC fastpath slowpath 接管** | `security_uring_cmd` | ✅ M0 | Badge 异常冷酷执法（C-S9 失败时冻结 Ring） |
 | **Sanitizer 输入净化** | `security_bpf_check` / `security_socket_sendmsg` | ⏳ 未来 | DENY 时丢弃违规 BPF/socket payload |
@@ -738,7 +746,7 @@ struct airy_ipc_msg_hdr hdr = {
 | OS-SEC-008 | 安全规范 | Cupolas 钩子回调必须返回 [SC] 4 值枚举之一（**ALLOW/DENY/AUDIT/COMPLAIN**，对齐 `airy_verdict`），禁止返回其他值 |
 | OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
 | OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
-| OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=5` 实际注册范围对应，新增子系统必须扩展映射表并明确实现状态（✅/⏳） |
+| OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=7` 实际注册范围对应，新增子系统必须扩展映射表并明确实现状态（✅/⏳） |
 | OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
 | OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
@@ -770,7 +778,7 @@ struct airy_ipc_msg_hdr hdr = {
 | OS-SEC-008 | 安全规范 | Cupolas 钩子回调必须返回 [SC] 4 值枚举之一（ALLOW/DENY/AUDIT/COMPLAIN，对齐 `airy_verdict`） |
 | OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
 | OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
-| OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=5` 实际注册范围对应 |
+| OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=7` 实际注册范围对应 |
 | OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
 | OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
@@ -810,6 +818,7 @@ struct airy_ipc_msg_hdr hdr = {
 - v1.0（2026-07-17）：LSM 框架完整版——钩子链表、blob 分配、排序机制、初始化流程、Cupolas 集成、IRON-9 v3 四层共享模型、Cupolas 7 子系统映射、OS-SEC 规则集、接口契约附录
 - v1.1（2026-07-18）：**Capability Folding 集成版**——① §8.3 AgentsIPC→A-IPC（128B Layout C v4，magic 0x41524531）；② §8.4 新增 fastpath C-S9 与 LSM 钩子职责分割表；③ §11.2.2 修正 4 值枚举（ASK/LOG→AUDIT/COMPLAIN），A-IPC 替代 AgentsIPC；④ §11.2.4 新增 OS-SEC-016/017（fastpath C-S9 内联 Badge 校验 + LSM slowpath 接管，原拟用 OS-SEC-012/013 因与 02-landlock-sandbox.md 冲突而重编号）；⑤ §12 规则编号集补齐 OS-SEC-008~011、OS-SEC-016~017；⑥ §13 相关文档新增 v1.1 引用；⑦ 全文 AgentsIPC→A-IPC（统一术语，对齐 v1.0.1 Capability Folding 单平面架构）
 - v1.0.1-fix（2026-07-26）：**SSoT 对齐修复**（v3.5 审查 P0）：① §6 章首明确 Airy M0 实际注册 5 钩子（`AIRY_LSM_HOOK_IMPLEMENTED=5`：uring_cmd/task_alloc/task_free/task_kill/file_open），`AIRY_LSM_KERNEL_HOOK_TOTAL=250` 仅为文档用途常量；② §8.1 修正 `airy_blob_sizes` 仅设置 `lbs_task`+`lbs_inode`（移除虚构的 cred/file/superblock blob）；③ §11.1 [SC] 共享契约层移除虚构的 `enum airy_lsm_hook_id` 250 ID 枚举、`struct airy_lsm_blob_offsets`、`enum airy_security_verdict`（已在 security_types.h 定义为 `airy_verdict`），替换为 [SC] `lsm_types.h` 实际定义的 `airy_task_sec`/`airy_inode_sec`/`airy_cap_slot`/`airy_capability_check_fn`；④ §11.2.1 映射表移除虚构 `HOOK_*` ID 引用，改为钩子名 + 实现状态（✅/⏳）；⑤ §11.2.3 移除虚构 `struct airy_cupolas_audit_event`，改为通过 A-IPC payload 上报；⑥ 附录 A.1.5/A.2.4/A.3.5 移除虚构 5 blob 结构，替换为 SSoT 实际 2 blob 结构（task+inode）+ airy_cap_slot；⑦ OS-SEC-008/011 规则引用 `airy_verdict`/`AIRY_LSM_HOOK_IMPLEMENTED=5`
+- v1.0.1-fix-v3.6（2026-07-31）：**Hook 计数 SSoT 二轮对齐**（v3.6 审查 P0）：[SC] `lsm_types.h` 已将 `AIRY_LSM_HOOK_IMPLEMENTED` 从 5 升至 7（新增 `inode_alloc_security`/`inode_free_security`，对应 `airy_lsm.c` `airy_hooks[]` 数组实际注册条目）。同步全文 9 处引用：① §6 章首 5→7 并补全 7 钩子清单；② §8.1 `airy_lsm_init()` 伪代码补 `airy_add_inode_hooks()` 调用；③ §11.1 [SC] 共享契约层表 5→7；④ §11.1 `#define AIRY_LSM_HOOK_IMPLEMENTED 5`→`7`；⑤ OS-IRON-003 段落 5→7 并补 2 钩子名；⑥ §11.2.1 映射表新增 `inode_alloc_security`/`inode_free_security` 两行（✅ M0）；⑦ §12 与附录 §12 镜像表 OS-SEC-011 `=5`→`=7`；⑧ 附录 A.3.5 blob 尺寸注释 5→7。修复类提交落款 `lidecheng@spharx.cn`
 
 ---
 
@@ -1199,7 +1208,7 @@ enum lsm_order {
 /**
  * airy blob 尺寸定义（agentrt-linux 专属，模块名 "airy"）
  *
- * M0 基线仅设置 lbs_task + lbs_inode（对齐 AIRY_LSM_HOOK_IMPLEMENTED=5
+ * M0 基线仅设置 lbs_task + lbs_inode（对齐 AIRY_LSM_HOOK_IMPLEMENTED=7
  * 仅消费 task + inode blob）。其余 blob 尺寸为 0，LSM 框架会跳过分配。
  *
  * blob 结构对齐 [SC] lsm_types.h：

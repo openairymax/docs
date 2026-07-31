@@ -306,15 +306,15 @@ K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch，在 7 �
 ### 8.4 v3.6 评审发现登记（2026-07-30 对照代码验证，2026-07-31 二轮验证）
 
 > **验证方法**：逐项对照 `agentrt-linux/kernel/` 实际源代码确认真实性。
-> **结论**：12 项发现中 11 项已在代码中修复（文档同步），1 项存疑（P1-3，待评估）。
-> **v3.6 二轮修复（2026-07-31）**：本轮 15 commits 一次性闭环 P0-1、P1-1、P1-2、P1-5、P1-6、P1-7、P1-8、P1-11，连同前序已修复的 P1-4、P1-9、P1-10，合计 11 项已修复。仅余 P1-3（airy_vtime_decay 注释）待评估。
+> **结论**：12 项发现已全部在代码中修复（文档同步）。
+> **v3.6 二轮修复（2026-07-31）**：本轮 15 commits 一次性闭环 P0-1、P1-1、P1-2、P1-5、P1-6、P1-7、P1-8、P1-11，连同前序已修复的 P1-3、P1-4、P1-9、P1-10，12 项发现已全部修复。其中 P1-3（`airy_vtime_decay` 注释）由 commit `0d5b4b05ce68` 重写为"user-space vtime 近似（NOT 内核 EEVDF 内部算法）"，结束"待评估"状态。
 
 | 编号 | 严重程度 | 发现简述 | 真实性 | 当前状态 | 处置 |
 |------|---------|---------|--------|---------|------|
 | P0-1 | P0 阻塞 | `syscall_64.tbl` 552-571 预留槽未登记 `sys_ni_syscall` | ✅ 已修复 | **✅ 已修复** | commit `de7e4c12a945` 将 552-571 显式登记为 `sys_ni_syscall`（命名 `airy_reserved_4`~`airy_reserved_23`），见 [syscall_64.tbl:395-414](../../agentrt-linux/kernel/arch/x86/entry/syscalls/syscall_64.tbl#L395-L414) |
 | P1-1 | P1 | `stc_dispatch.c` 用 `pr_info` 记录调度映射日志 | ✅ 已修复 | **✅ 已修复** | commit `6d06e2163767` 将 `pr_info` 改为 `pr_debug_ratelimited`（[stc_dispatch.c:152](../../agentrt-linux/kernel/kernel/corekern/sched/stc_dispatch.c#L152)）；注：采用 `pr_debug_ratelimited` 而非 tracepoint，避免高频调度路径日志洪泛且保留可动态调试入口 |
 | P1-2 | P1 | `stc_stats` 统计未暴露 debugfs | ✅ 已修复 | **✅ 已修复** | commit `8a288369a6ef` 新增 `debugfs_create_dir("airy_stc")` 及 per-policy 计数文件，见 [stc_stats.c:79](../../agentrt-linux/kernel/kernel/corekern/sched/stc_stats.c#L79) |
-| P1-3 | P1 | `airy_vtime_decay` 注释声称 EEVDF 实为旧 CFS | ⚠️ 存疑 | **待评估** | 公式 `vtime += slice/weight` 在 EEVDF 与 CFS 中均成立（vruntime 推进公式一致）；EEVDF 区别在 eligibility（lag-based），非基本 vtime 推进。建议补充注释说明此为简化近似 |
+| P1-3 | P1 | `airy_vtime_decay` 注释声称 EEVDF 实为旧 CFS | ✅ 已修复 | **✅ 已修复** | commit `0d5b4b05ce68` ("airy/sched: fix vtime_decay comment and _reserved naming") 重写注释，明确此为 user-space vtime 近似（NOT 内核 EEVDF 内部算法），并指出内核 EEVDF 在 `kernel/sched/fair.c` 使用 `vruntime += delta_exec * NICE_0_LOAD / load_weight` 与实际执行时间，本 UAPI helper 仅供静态估算的预计算表消费者使用。见 [sched.h:42-52](../../agentrt-linux/kernel/include/uapi/linux/airymax/sched.h#L42-L52) |
 | P1-4 | P1 | `task_kill`/`file_open` 仅检查 agent_state 缺 Badge 校验 | ✅ 已修复 | **✅ 已修复** | 代码已新增 Phase 2 Badge 校验（`airy_cap_badge_ok()`），见 [airy_lsm.c:66-129](../../agentrt-linux/kernel/security/airy/airy_lsm.c#L66-L129) |
 | P1-5 | P1 | `airy_ipc_capability.c` 用 `__aligned(64)` 违反 OS-IRON-016 | ✅ 已修复 | **✅ 已修复** | commit `a045bf7f0b21` 将 `__aligned(64)` 改为 `AIRY_ALIGNED(64)`，见 [airy_ipc_capability.c:30](../../agentrt-linux/kernel/kernel/ipc/airy_ipc_capability.c#L30) |
 | P1-6 | P1 | `airy_inode_sec` 未接线 VFS | ✅ 已修复 | **✅ 已修复** | commit `9b7429802898` 将 `.lbs_inode = sizeof(struct airy_inode_sec)` 接入 `airy_blob_sizes`，并注册 `inode_alloc_security`/`inode_free_security` 钩子（[airy_lsm.c:37,133-149,170-171](../../agentrt-linux/kernel/security/airy/airy_lsm.c#L37)） |
@@ -432,6 +432,7 @@ ES-SEL4-3（服务用户态化）的落地风险待 1.0.1 阶段评估：
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 | v1.0.1 | 2026-07-28 | 新增 §8 已修复缺陷登记（K9-1 回归 6 项致命缺陷：CAP-FIX-01~05 + IPC-FIX-01），关联 ADR-017；§8.3 登记 7 项非阻塞设计观察（OBS-01~07）；原 §8-12 顺延为 §9-13 |
 | v1.0.1 | 2026-07-30 | §8.3 OBS-02/OBS-03 标记为已修复（MDB 派生树 + 级联 REVOKE 已在代码实现）；新增 §8.4 v3.6 评审发现登记（12 项逐项对照代码验证：8 项待修复、3 项已修复、1 项存疑） |
+| v1.0.1 | 2026-07-31 | **§8.4 P1-3 闭环**：commit `0d5b4b05ce68` 重写 `airy_vtime_decay` 注释为 user-space vtime 近似（NOT 内核 EEVDF 内部算法），P1-3 由"待评估"转为"✅ 已修复"。§8.4 结论由"11/12 已修复，1 项存疑"更新为"12/12 已全部修复"。修复类提交落款 `lidecheng@spharx.cn` |
 
 ***
 

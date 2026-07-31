@@ -296,13 +296,13 @@ Perms (16 bits):       权限位图，7 个 opcode 对应 7 个权限位
      (((uint64_t)(perms)) & 0xFFFF))
 
 /* Perms 权限位（与 §2.6 opcode 表对齐）*/
-#define AIRY_CAP_PERM_SEND    0x0001
-#define AIRY_CAP_PERM_RECV    0x0002
-#define AIRY_CAP_PERM_CALL    0x0004
-#define AIRY_CAP_PERM_GRANT   0x0008
-#define AIRY_CAP_PERM_REVOKE  0x0010
-#define AIRY_CAP_PERM_FREEZE  0x0020
-#define AIRY_CAP_PERM_BATCH   0x0040
+#define AIRY_CAP_PERM_SEND       0x0001
+#define AIRY_CAP_PERM_RECV       0x0002
+#define AIRY_CAP_PERM_DERIVE     0x0004
+#define AIRY_CAP_PERM_KILL       0x0008
+#define AIRY_CAP_PERM_FILE_OPEN  0x0010
+#define AIRY_CAP_PERM_ROTATE     0x0020
+#define AIRY_CAP_PERM_SUPERVISE  0x0040
 
 /* 权限检查宏——fastpath C-S9 内联使用 */
 static inline bool airy_cap_has_perm(uint16_t perms, uint16_t opcode)
@@ -334,25 +334,26 @@ static inline bool airy_cap_has_perm(uint16_t perms, uint16_t opcode)
 ```c
 /* kernel/security/airy/capability.c —— opcode → required_perms 映射表（SSoT）
  *
- * 设计原则：1 opcode → 1 required_perms 位（严格 1:1 映射）
- *   - SEND         → PERM_SEND     (0x0001)
- *   - RECV         → PERM_RECV     (0x0002)
- *   - SEND_BATCH   → PERM_BATCH    (0x0040)  ← 批量发送独立权限
- *   - CANCEL       → PERM_SEND     (0x0001)  ← 取消复用 SEND 权限
- *   - FREEZE       → PERM_FREEZE   (0x0020)  ← 特权操作
+ * 设计原则：1 opcode → 1 required_perms 位掩码（IPC 类 opcode 复用 SEND/RECV
+ *           两个数据面权限位；特权 opcode FREEZE 复用 SUPERVISE 权限位）
+ *   - SEND         → PERM_SEND       (0x0001)  ← 单播发送
+ *   - RECV         → PERM_RECV       (0x0002)  ← 单播接收
+ *   - SEND_BATCH   → PERM_SEND       (0x0001)  ← 批量发送复用 SEND 权限
+ *   - CANCEL       → PERM_SEND       (0x0001)  ← 取消复用 SEND 权限
+ *   - FREEZE       → PERM_SUPERVISE  (0x0040)  ← 微监督者特权操作
  *   - CAP_REQUEST  → 0（自举路径，无需权限）
  *   - CAP_RESPONSE → 0（sec_d 回复，无需权限）
  *
  * 行业对照：类似 Linux capable(opcode) → capable(CAP_SYS_ADMIN) 的映射，
- *           但 AirymaxOS 采用 1:1 精确映射，避免过度授权。
+ *           但 AirymaxOS 采用精确位掩码映射，避免过度授权。
  */
 
 static const uint16_t airy_op_required_perms_table[8] = {
     /* [0] AIRY_IPC_OP_SEND         0x0001 */ AIRY_CAP_PERM_SEND,
     /* [1] AIRY_IPC_OP_RECV         0x0002 */ AIRY_CAP_PERM_RECV,
-    /* [2] AIRY_IPC_OP_SEND_BATCH   0x0003 */ AIRY_CAP_PERM_BATCH,
+    /* [2] AIRY_IPC_OP_SEND_BATCH   0x0003 */ AIRY_CAP_PERM_SEND,    /* 复用 SEND */
     /* [3] AIRY_IPC_OP_CANCEL       0x0004 */ AIRY_CAP_PERM_SEND,    /* 复用 SEND */
-    /* [4] AIRY_IPC_OP_FREEZE       0x0005 */ AIRY_CAP_PERM_FREEZE,
+    /* [4] AIRY_IPC_OP_FREEZE       0x0005 */ AIRY_CAP_PERM_SUPERVISE,/* 微监督者特权 */
     /* [5] reserved                 0x0006 */ 0xFFFF,                 /* 非法 opcode */
     /* [6] AIRY_IPC_OP_CAP_REQUEST  0x0010 */ 0,                      /* 自举，无需权限 */
     /* [7] AIRY_IPC_OP_CAP_RESPONSE 0x0011 */ 0,                      /* sec_d 回复 */
@@ -462,11 +463,11 @@ int airy_cap_badge_compile(uint32_t agent_id, uint16_t perms)
     /* 1. 参数校验 */
     if (unlikely(agent_id >= AIRY_CAP_MAX_AGENTS))
         return -EINVAL;
-    /* perms 仅允许 AIRY_CAP_PERM_* 位（0x0063 = SEND|RECV|CALL|FREEZE|BATCH）*/
+    /* perms 仅允许 AIRY_CAP_PERM_* 位（0x007F = SEND|RECV|DERIVE|KILL|FILE_OPEN|ROTATE|SUPERVISE）*/
     if (unlikely(perms & ~(AIRY_CAP_PERM_SEND | AIRY_CAP_PERM_RECV |
-                           AIRY_CAP_PERM_CALL | AIRY_CAP_PERM_GRANT |
-                           AIRY_CAP_PERM_REVOKE | AIRY_CAP_PERM_FREEZE |
-                           AIRY_CAP_PERM_BATCH)))
+                           AIRY_CAP_PERM_DERIVE | AIRY_CAP_PERM_KILL |
+                           AIRY_CAP_PERM_FILE_OPEN | AIRY_CAP_PERM_ROTATE |
+                           AIRY_CAP_PERM_SUPERVISE)))
         return -EINVAL;
 
     /* 2. 获取全局 mutex（串行化 Badge 编译，保证 agent_caps[] 写入顺序）*/
@@ -2467,6 +2468,7 @@ K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch 后，7 �
 | 1.0.1 | 2027-XX-XX | 内核实现完成，TPM Vault 封存落地，形式化验证探索 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 | v1.0.1 | 2026-07-28 | §15.2 新增 K9-1 per-agent epoch 回归 6 项致命缺陷修复登记（CAP-FIX-01~05），关联 ADR-017。经 seL4 cteInsert/cteMove/cteRevoke/emptySlot 与 Linux 6.6 prepare_creds/key_revoke 双参考实现交叉验证 |
+| v1.0.1 | 2026-07-31 | **v3.6 Perms 位名 SSoT 对齐**：[SC] `security_types.h` 已删除旧名 `CALL/GRANT/REVOKE/FREEZE/BATCH`，统一为新名 `SEND(0x0001)/RECV(0x0002)/DERIVE(0x0004)/KILL(0x0008)/FILE_OPEN(0x0010)/ROTATE(0x0020)/SUPERVISE(0x0040)`。同步 §2.5 `#define` 块 7 行、§2.6.1 opcode→perms 表（SEND_BATCH 复用 SEND、FREEZE 改用 SUPERVISE）及设计原则注释；§2.6.2 `airy_cap_badge_compile()` 参数校验掩码更新为新 SSoT 全位掩码 `0x007F`。修复类提交落款 `lidecheng@spharx.cn` |
 
 ---
 

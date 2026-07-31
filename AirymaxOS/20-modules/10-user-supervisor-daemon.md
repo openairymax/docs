@@ -314,20 +314,20 @@ static int macro_d_cap_request(__u32 agent_id, __u16 perms)
 
 ### 4.3 v1.0.1 Badge Perms 位掩码（替代 v1.0 Capability 类型）
 
-**v1.0.1 变更**：原 v1.0 的 `IPC_SEND/IPC_RECV/RING_CREATE/CAP_MINT/CAP_REVOKE` 五种 Capability 类型已废弃，改为 Badge Perms 16-bit 位掩码（详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT）。**v1.0.1 修正**：Perms 位命名统一为 `AIRY_CAP_PERM_*`（对齐 SSoT），FREEZE 位编号修正为 bit 5 (0x0020)。
+**v1.0.1 变更**：原 v1.0 的 `IPC_SEND/IPC_RECV/RING_CREATE/CAP_MINT/CAP_REVOKE` 五种 Capability 类型已废弃，改为 Badge Perms 16-bit 位掩码（详见 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT）。**v1.0.1 修正**：Perms 位命名统一为 `AIRY_CAP_PERM_*`（对齐 SSoT），权限位语义对齐 [SC] `security_types.h` 实际定义。
 
 | Perms 位 | 位掩码 | bit | 含义 | 对应 opcode |
 |---------|--------|:---:|------|------------|
-| `AIRY_CAP_PERM_SEND` | 0x0001 | 0 | 允许向 Ring 发送消息 | SEND (0x0001) / CANCEL (0x0004，复用 SEND) |
+| `AIRY_CAP_PERM_SEND` | 0x0001 | 0 | 允许向 Ring 发送消息 | SEND (0x0001) / SEND_BATCH (0x0003，复用 SEND) / CANCEL (0x0004，复用 SEND) |
 | `AIRY_CAP_PERM_RECV` | 0x0002 | 1 | 允许从 Ring 接收消息 | RECV (0x0002) |
-| `AIRY_CAP_PERM_CALL` | 0x0004 | 2 | 允许 RPC 调用 | CALL（保留） |
-| `AIRY_CAP_PERM_GRANT` | 0x0008 | 3 | 允许派生 Badge（mint/mintcopy 等价） | CAP_CARRY 标志 |
-| `AIRY_CAP_PERM_REVOKE` | 0x0010 | 4 | 允许撤销 Badge（`airy_sys_call` + `REVOKE_BADGE`） | sec_d 专属 |
-| `AIRY_CAP_PERM_FREEZE` | 0x0020 | 5 | 允许冻结/解冻 Ring（FREEZE / UNFREEZE opcode） | FREEZE (0x0005) / UNFREEZE |
-| `AIRY_CAP_PERM_BATCH` | 0x0040 | 6 | 允许批量发送（SEND_BATCH opcode） | SEND_BATCH (0x0003) |
+| `AIRY_CAP_PERM_DERIVE` | 0x0004 | 2 | 允许派生 Badge（MINT/COPY） | CAP_CARRY 标志 |
+| `AIRY_CAP_PERM_KILL` | 0x0008 | 3 | 允许信号投递（task_kill 钩子） | sec_d 专属 |
+| `AIRY_CAP_PERM_FILE_OPEN` | 0x0010 | 4 | 允许文件访问（file_open 钩子） | — |
+| `AIRY_CAP_PERM_ROTATE` | 0x0020 | 5 | 允许 Badge 轮换（ROTATE 操作） | — |
+| `AIRY_CAP_PERM_SUPERVISE` | 0x0040 | 6 | 允许微监督者操作（FREEZE / UNFREEZE opcode） | FREEZE (0x0005) / UNFREEZE |
 | `AIRY_CAP_PERM_ADMIN` | 0x8000 | 15 | 管理员权限（包含所有 Perms，仅 sec_d / macro_d） | —（v1.0.1 扩展，非 SSoT） |
 
-> **Perms SSoT 对齐声明**：`AIRY_CAP_PERM_SEND` ~ `AIRY_CAP_PERM_BATCH` 7 个权限位严格对齐 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT。`AIRY_CAP_PERM_ADMIN` (0x8000) 是 Macro-Supervisor 用户态扩展（聚合权限位，非 SSoT 定义）。CAP_REQUEST opcode (0x0010) 是自举路径，**无需权限位**（fastpath C-S9 直接放行，详见 [03-capability-model.md §2.6.1](../110-security/03-capability-model.md)）。
+> **Perms SSoT 对齐声明**：`AIRY_CAP_PERM_SEND` ~ `AIRY_CAP_PERM_SUPERVISE` 7 个权限位严格对齐 [03-capability-model.md §2.5](../110-security/03-capability-model.md) SSoT。`AIRY_CAP_PERM_ADMIN` (0x8000) 是 Macro-Supervisor 用户态扩展（聚合权限位，非 SSoT 定义）。CAP_REQUEST opcode (0x0010) 是自举路径，**无需权限位**（fastpath C-S9 直接放行，详见 [03-capability-model.md §2.6.1](../110-security/03-capability-model.md)）。
 
 ### 4.4 v1.0.1 Badge 撤销（per-agent epoch bump O(1)）
 
