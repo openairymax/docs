@@ -307,7 +307,7 @@ eBPF struct\_ops 扩展，struct\_ops 状态机与 common\_value \[SC] 与 agent
 
 > **v1.0.1 Capability Folding 实现注记**：seL4 风格 CSpace+MDB 派生树的设计语义（ES-SEL4-05\~09 设计溯源）在 v1.0.1 Capability Folding 后工程实现已**简化**为：
 >
-> - **`agent_caps[1024]` 静态数组**（128KB，每槽 128 字节，`__aligned(64)` cacheline 对齐）替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `_pad`(2) + `_reserved[56]` = 80 字节内容，对齐填充至 128 字节。
+> - **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节 = 80 内容 + 对齐填充）替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `epoch`(2) + MDB 派生树字段 `parent_agent`(4) + `first_child`(4) + `next_sibling`(4) + `generation`(2) + `revocable`(2) + `_reserved[40]` = 80 字节内容（K9-1 fix 引入 per-agent `epoch` 字段 + MDB 左孩子右兄弟派生树，从原 `_reserved[56]` 中 carved out 16 字节，UAPI 二进制兼容）。
 > - **Badge 64-bit 编码**：`Epoch<<48 | RandomTag<<16 | Perms`（bits 63:48 为 16 位 Epoch，bits 47:16 为 32 位 RandomTag，bits 15:0 为 16 位 Perms），派生关系隐式编码在 RandomTag 中，无需 MDB 链表维护。
 > - **O(1) 撤销**：`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制），fastpath C-S9 校验路径通过 epoch 比对自动失效该 Agent 的旧 badge；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销（`airy_cap_epoch_bump_all()`）时使用。
 > - **CNode 7 操作语义保留**（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate），但实现路径通过 sec_d 串行化（不暴露并发 CNode 操作 API）。
@@ -421,7 +421,7 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 
 | 维度 | seL4 原始设计（设计溯源） | v1.0.1 Capability Folding 工程实现 | 简化理由 |
 | --- | --- | --- | --- |
-| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 128 字节 `__aligned(64)` cacheline 对齐） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
+| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
 | 写者模型 | 内核态多写者（CNode 操作并发） | **sec_d 唯一写者**（用户态串行化） | 用户态串行化消除内核锁，sec_d 持单写令牌 |
 | Badge 编码 | 64-bit badge 字段（endpoint\_cap/notification\_cap） | **`Epoch<<48 \| RandomTag<<16 \| Perms`** | epoch 位段支持 O(1) 撤销，RandomTag 隐式编码派生关系 |
 | 派生关系 | MDB（Mapping Database）双向链表维护父子 | **RandomTag 隐式编码**（同源派生共享 RandomTag） | 免链表维护，撤销通过 per-agent epoch 递增实现 |
@@ -435,16 +435,22 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 /* v1.0.1 Capability Folding: 静态数组 + Badge 64-bit 编码 */
 #define AIRY_CAP_MAX_AGENTS    1024
 
-/* [SC] lsm_types.h: 每槽 128 字节（80 内容 + aligned(64) 填充至 128） */
+/* [SC] lsm_types.h: 每槽 sizeof=128 字节（80 内容 + AIRY_ALIGNED(64) 对齐填充） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
     __u32   agent_id;         /* Owning agent ID */
     __u32   flags;            /* Slot flags */
     __u32   randtag;          /* Random tag for forgery prevention */
     __u16   perms;            /* Permission bits */
-    __u16   _pad;             /* Alignment */
-    __u8    _reserved[56];    /* Cacheline padding */
-} __attribute__((aligned(64)));
+    __u16   epoch;            /* Per-agent epoch for O(1) targeted revocation (K9-1) */
+    /* ── MDB derivation tree (cascading REVOKE, K9-1 fix) ── */
+    __u32   parent_agent;     /* Derived-from agent ID (0 = root) */
+    __u32   first_child;      /* First child agent ID (0 = leaf) */
+    __u32   next_sibling;     /* Next sibling agent ID (0 = last child) */
+    __u16   generation;       /* Derivation depth (root=0, +1 per MINT/COPY) */
+    __u16   revocable;        /* 1 = parent REVOKE cascades to this slot */
+    __u8    _reserved[40];    /* Cacheline padding (was 56, -16 for MDB) */
+} AIRY_ALIGNED(64);
 
 /* kernel/ipc/airy_ipc_capability.c: 权威定义全局静态数组（128KB），__ro_after_init 指针 */
 static struct airy_cap_slot __airymax_cap_table[AIRY_CAP_MAX_AGENTS] __aligned(64);
@@ -496,7 +502,7 @@ static __always_inline int airy_cap_badge_ok(__u64 badge, __u32 agent_id,
 
 ### 5.1 CTE 与 CSpace 设计
 
-**seL4 capability 即内存**（ES-SEL4-05）：每个 cap 是定长 word（64 位系统为 128 字节），通过 CTE（Capability Table Entry）存储。
+**seL4 capability 即内存**（ES-SEL4-05）：每个 cap 是定长 word（64 位系统为 128 字节，agentrt-linux `airy_cap_slot` sizeof=128 字节与之对齐），通过 CTE（Capability Table Entry）存储。
 
 | 维度         | seL4 实现                     | 代码证据                                    | agentrt-linux 落地                                     |
 | ---------- | --------------------------- | --------------------------------------- | ---------------------------------------------------- |

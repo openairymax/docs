@@ -274,19 +274,25 @@ typedef cap_idx_t cap_t;  /* 向后兼容别名 */
 /* Badge 64-bit Native Word 布局：Epoch<<48 | RandomTag<<16 | Perms
  * - Epoch[48:63]   16 bit：per-agent 代序号，airy_cap_epoch_bump(agent_id) O(1) 定向撤销（K9-1 主要机制）
  * - RandomTag[16:47] 32 bit：派生关系隐式编码（同源派生共享 RandomTag）
- * - Perms[0:15]    16 bit：权限位段（send/recv/cap_request/grant/revoke 等）
+ * - Perms[0:15]    16 bit：权限位段（send/recv/derive/kill/file_open/rotate/supervise）
  */
 
-/* [SC] lsm_types.h: 每槽 128 字节（80 内容 + aligned(64) 填充至 128） */
+/* [SC] lsm_types.h: 每槽 sizeof=128 字节（80 内容 + AIRY_ALIGNED(64) 对齐填充） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
     __u32   agent_id;         /* Owning agent ID */
     __u32   flags;            /* Slot flags */
     __u32   randtag;          /* Random tag for forgery prevention */
     __u16   perms;            /* Permission bits */
-    __u16   _pad;             /* Alignment */
-    __u8    _reserved[56];    /* Cacheline padding */
-} __attribute__((aligned(64)));
+    __u16   epoch;            /* Per-agent epoch for O(1) targeted revocation (K9-1) */
+    /* ── MDB derivation tree (cascading REVOKE, K9-1 fix) ── */
+    __u32   parent_agent;     /* Derived-from agent ID (0 = root) */
+    __u32   first_child;      /* First child agent ID (0 = leaf) */
+    __u32   next_sibling;     /* Next sibling agent ID (0 = last child) */
+    __u16   generation;       /* Derivation depth (root=0, +1 per MINT/COPY) */
+    __u16   revocable;        /* 1 = parent REVOKE cascades to this slot */
+    __u8    _reserved[40];    /* Cacheline padding (was 56, -16 for MDB) */
+} AIRY_ALIGNED(64);
 
 /* kernel/ipc/airy_ipc_capability.c: 权威定义全局静态数组（128KB），__ro_after_init 指针 */
 static struct airy_cap_slot __airymax_cap_table[AIRY_CAP_MAX_AGENTS] __aligned(64);
@@ -303,7 +309,7 @@ extern atomic_t airy_cap_global_epoch;
 
 | 维度 | v1.0 实现（已废弃） | v1.0.1 实现（当前权威） |
 |------|-------------------|---------------------|
-| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 128 字节 cacheline 对齐，sec_d 唯一写者）+ Badge 64-bit Native Word |
+| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节，sec_d 唯一写者）+ Badge 64-bit Native Word |
 | 逻辑视图 | `airy_cspace`（CNode 树） | `airy_cspace` 保留（`slots` 指针指向 `agent_caps[agent_id]`） |
 | 派生关系 | `airy_cap_mdb`（全局 MDB，parent→children 链）+ v1.0 元数据 parent_cap_id 字段 | 不需要——Badge 64-bit Native Word 自包含 Epoch + RandomTag + Perms |
 | 撤销机制 | MDB 递归遍历子树（O(n)） | `airy_cap_epoch_bump(agent_id)` 一行代码 O(1) per-agent 定向撤销 |
@@ -697,11 +703,11 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | 内容                                 | 说明                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------ |
 | `airy_cap_id_t` 枚举                 | POSIX capability 41 个 ID（CAP\_CHOWN=0 ... CAP\_CHECKPOINT\_RESTORE=40）               |
-| `AIRY_LSM_HOOK_IMPLEMENTED` 常量     | Airy 实际注册的 LSM 钩子数（=5：uring_cmd/task_alloc/task_free/task_kill/file_open）        |
+| `AIRY_LSM_HOOK_IMPLEMENTED` 常量     | Airy 实际注册的 LSM 钩子数（=7：uring_cmd/task_alloc/task_free/task_kill/file_open/inode_alloc_security/inode_free_security） |
 | `AIRY_LSM_KERNEL_HOOK_TOTAL` 常量    | Linux 6.6 LSM 框架可用钩子总数（=250，仅文档用途，非数组尺寸）                          |
 | `airy_task_sec` 结构                | task blob 布局（agent_id/cap_space_root/agent_state/fault_count/sched_budget_ns/last_heartbeat/frozen_reason/ipc_ring） |
 | `airy_inode_sec` 结构               | inode blob 布局（cap_required/owner_agent）                                            |
-| `airy_cap_slot` 结构                | capability slot（64 字节缓存行对齐，badge/agent_id/flags/randtag/perms）                 |
+| `airy_cap_slot` 结构                | capability slot（`AIRY_ALIGNED(64)`，sizeof=128 字节；badge/agent_id/flags/randtag/perms/epoch + MDB 派生树 parent_agent/first_child/next_sibling/generation/revocable） |
 | `airy_capability_check_fn` 回调签名  | capability 检查函数指针类型（badge, required_perm, agent_id → __s32）                    |
 | v1.0 capability 元数据语义模型（v1.0 元数据已废弃） | capability 派生模型语义契约（cap\_id/cap\_type/rights/parent\_cap\_id/mint\_depth/mint\_quota + 7 操作 Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）；v1.1 物理存储改用 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（详见 §4.1） |
 | `airy_vault_backend_t` 结构          | Vault backend 抽象（init/seal/unseal/attest）                                            |

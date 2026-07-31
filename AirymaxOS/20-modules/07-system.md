@@ -338,7 +338,7 @@ config_d 是 agentrt-linux 12 daemon 之一（完整名单见 §6.7），负责�
 
 **config_d 与 sec_d 协作**（v1.0.1 Capability Folding）：
 - config_d 加载 `agent_caps[1024]` 容量与 Badge Epoch 步进参数，通过 sysfs 推送至内核。
-- sec_d 读取 sysfs 参数，按配置编译 Badge（`Epoch<<48 | RandomTag<<16 | Perms`）写入 `agent_caps[1024]` 静态数组（128KB，每槽 128 字节 cacheline 对齐）。
+- sec_d 读取 sysfs 参数，按配置编译 Badge（`Epoch<<48 | RandomTag<<16 | Perms`）写入 `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节）。
 - config_d 热重载时通知 sec_d 推进 Epoch，触发 O(1) 撤销旧 Badge。
 - fastpath C-S9 内联校验（~10ns）+ slowpath airy_lsm 钩子（`LSM_ORDER_MUTABLE`）的启用状态由 config_d 控制。
 
