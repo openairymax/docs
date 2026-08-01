@@ -1083,4 +1083,444 @@ CBMC 验证的工程价值：
 
 ---
 
+## 13. IPC Fastpath 形式化验证路径（1.0.1+ 启动）
+
+> **章节定位**：本节在 0.1.1 → 1.0.1 演进窗口（IRON-8）启动 IPC Fastpath 的 Isabelle/HOL 形式化验证路径，作为 v1.0.1+ 版本窗口的第一条证明路径。\
+> **上游依据**：[09-known-caveats.md](../10-architecture/09-known-caveats.md) §1.1 已规划"IPC Fastpath 不变量 — Isabelle/HOL (l4v) — 1.0.1+ — 设计中"；[03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) §1.3 已预留验证注解机制（MODIFIES/FNSPEC 1.0.1 决策项）。\
+> **诚实起点**：本节全部内容为**文档承诺**，源码零落地；本文件是**路线图**而非已完成证明（详见 §13.7）。
+
+### 13.1 验证目标与范围声明（CAVEATS 式诚实声明）
+
+参照 seL4 `CAVEATS.md` 的"Implementation Correctness"章节传统（明确"证了什么、没证什么"），本节显式声明 1.0.1+ 阶段 IPC Fastpath 证明的覆盖范围与不覆盖范围。
+
+#### 验证范围（In-Scope）
+
+| 验证对象 | 具体内容 | 对应源码 |
+|---------|---------|---------|
+| fastpath 冻结门 | `airy_ipc_fastpath_send()` 入口的 frozen 检查：frozen=true 时返回 `-AIRY_EIPC_FROZEN` 且不推进 head | [airy_ipc_fastpath.c:68-91](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_fastpath.c) |
+| SPSC ring 内存序 | `airy_ipc_ring_post()` 的 `smp_store_release` 与 `airy_ipc_ring_consume()` 的 `smp_load_acquire` 配对：head 发布 → consume 看到完整 slot | [airy_ipc_ring.c:94-95,121](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c) |
+| Badge 校验语义 | `airy_cap_badge_ok()` 的 C-S9 三检查（epoch / randtag / perms 子集），3 次 READ_ONCE + 位运算 | [airy_cap.h:75-102](../../agentrt-linux/kernel/security/airy/airy_cap.h) |
+| COPY 权限降级 | `new_perms & src->perms` 交集语义（P1-10 fix，seL4 maskCapRights 对齐） | [airy_cap_derive.c:184-187](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c) |
+| cancelBadgedSends | 取消后匹配 badge 的 slot 不再被 consume 投递（P1-8 fix） | [airy_ipc_ring.c:179-207](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c) |
+
+**证明深度**：以上均为 **C 功能行为层**（functional correctness of C semantics），即"假设 C 程序在顺序一致 / LKMM 内存模型下执行时满足的数学性质"。
+
+#### 不覆盖范围（Out-of-Scope）
+
+仿 [09-known-caveats.md](../10-architecture/09-known-caveats.md) §1.3 既有声明，1.0.1+ 阶段**不证明**以下内容（后续阶段逐步扩展）：
+
+| 不覆盖项 | 说明 |
+|---------|------|
+| 机器码生成 | 依赖 GCC/Clang 编译器正确性，不在证明链内 |
+| 缓存与 TLB 管理 | 硬件级行为，不由本路径建模 |
+| 启动代码（boot / decompressor） | 独立于 IPC fastpath 路径 |
+| SMP 并发 | 本路径证明 SPSC 单生产者/单消费者配对语义，**不覆盖**多核任意交错下的强非干扰性（[09-known-caveats.md](../10-architecture/09-known-caveats.md) §4.2） |
+| MCS（Mixed Criticality Systems） | agentrt-linux 通过 sched_tac 映射实现等价能力，不引入 seL4 MCS 验证 |
+| LSM 5-phase slowpath 整体 | slowpath 调用链（`airy_uring_cmd_check()` [airy_cap_check.c:197-266](../../agentrt-linux/kernel/security/airy/airy_cap_check.c)）仅证明与 fastpath 裁决一致的 C-S9 语义，完整调用链验证延后 |
+
+**声明**：即使 IPC Fastpath 证明完成，也不构成"内核无缺陷"的二进制级保证；生产部署仍须结合运行时不变量检查与回归测试（与 09-known-caveats §1.3 结论一致）。IPC fastpath 性能（~10ns badge 校验、~158ns fastpath）为设计估算、未实测，本路径证明目标为**正确性而非性能**（性能验证见 170-performance 卷）。
+
+本节与 §2 TLA+ 规约互补：TLA+ 覆盖 Agent 8 态生命周期状态机；本节覆盖 IPC fastpath 的 C 功能行为。与 §3 Coq/Isabelle 的关系：§3 证明 capability 位图算法（`cap_isset`/`cap_set`），本节证明 fastpath 状态机 + 内存序 + badge 语义，二者共同构成 Capability/IPC 安全核心的证明面。
+
+### 13.2 形式化模型建立
+
+#### 状态空间与 C 符号映射
+
+| HOL 模型元素 | C 符号 | 源码出处 |
+|-------------|--------|---------|
+| `ring.head / ring.tail / ring.cap / ring.frozen / ring.slots` | `struct airy_ipc_ring {head, tail, mask, frozen, slots}` | [airy_ipc_internal.h:23-29](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_internal.h) |
+| `slot.magic / slot.sl_badge / slot.sl_data` | `struct airy_ipc_msg_hdr {magic, capability_badge, ...}` | [ipc.h:67-79](../../agentrt-linux/kernel/include/uapi/linux/airymax/ipc.h) |
+| `cap_slot.ce / cr / cp` | `struct airy_cap_slot {epoch, randtag, perms}` | [lsm_types.h:60-74](../../agentrt-linux/kernel/include/uapi/linux/airymax/lsm_types.h) |
+| `badge_epoch / badge_randtag / badge_perms` | `AIRY_BADGE_EPOCH/RANDTAG/PERMS`（48/16/0 位移） | [ipc.h:49-64](../../agentrt-linux/kernel/include/uapi/linux/airymax/ipc.h) |
+
+#### Isabelle/HOL datatype / record / locale 骨架
+
+```isabelle
+(* ======================================================================
+ * AiryIPCFastpathModel.thy — IPC Fastpath 形式化模型骨架
+ * 状态：Phase 1 文档级草案；未经 Isabelle 编译验证，需 Phase 2 校正。
+ * 对照源码：kernel/corekern/ipc/airy_ipc_ring.c、
+ *           security/airy/airy_cap.h、include/uapi/linux/airymax/ipc.h
+ * ====================================================================== *)
+theory AiryIPCFastpathModel
+  imports Main "HOL-Word.Word"
+begin
+
+(* ── Badge 64-bit 布局：EPOCH[63:48] | RANDTAG[47:16] | PERMS[15:0] ──
+   对齐 include/uapi/linux/airymax/ipc.h AIRY_BADGE_* 宏。 *)
+type_synonym epoch   = "16 word"
+type_synonym randtag = "32 word"
+type_synonym perms   = "16 word"
+type_synonym badge   = "64 word"
+
+(* AIRY_BADGE_EPOCH(b) = (b & EPOCH_MASK) >> 48 *)
+definition badge_epoch :: "badge ⇒ epoch" where
+  "badge_epoch b ≡ ucast ((b >> 48) && mask 16)"
+
+(* AIRY_BADGE_RANDTAG(b) = (b & RANDTAG_MASK) >> 16 *)
+definition badge_randtag :: "badge ⇒ randtag" where
+  "badge_randtag b ≡ ucast ((b >> 16) && mask 32)"
+
+(* AIRY_BADGE_PERMS(b) = b & PERMS_MASK *)
+definition badge_perms :: "badge ⇒ perms" where
+  "badge_perms b ≡ ucast (b && mask 16)"
+
+(* AIRY_BADGE_COMPILE(epoch, randtag, perms)：编码无损失性见 §13.4 辅助引理 *)
+definition mk_badge :: "epoch ⇒ randtag ⇒ perms ⇒ badge" where
+  "mk_badge e r p ≡ (ucast e << 48) OR (ucast r << 16) OR ucast p"
+
+(* ── 消息槽：magic=0 表示已取消/空槽（cancelBadgedSends 置零语义）── *)
+record slot =
+  magic   :: "nat"
+  sl_badge :: "badge"        (* hdr->capability_badge，offset 40 *)
+  sl_data :: "nat list"      (* 消息体抽象（memcpy 内容） *)
+
+(* ── SPSC ring：head 仅 producer 写，tail 仅 consumer 写 ──
+   cap 对应 C 的 mask（容量-1，容量为 2 的幂）。 *)
+record ring =
+  head   :: "nat"
+  tail   :: "nat"
+  cap    :: "nat"
+  frozen :: "bool"
+  slots  :: "nat ⇒ slot"
+
+(* ── cap_slot：agent_caps[agent_id] 的抽象（epoch/randtag/perms 三字段）── *)
+record cap_slot =
+  ce :: "epoch"
+  cr :: "randtag"
+  cp :: "perms"
+
+(* ── 返回结果 datatype（对应 C 错误码语义）── *)
+datatype post_result = POST_OK | POST_FROZEN | POST_NOSPC | POST_EINVAL
+datatype err = EOK | ECAP_EPOCH | ECAP_FORGED | ECAP_PERM | ECAP_MISSING
+
+(* ── 迁移函数骨架：post（airy_ipc_ring_post L60-97 语义）── *)
+definition post :: "ring ⇒ slot ⇒ post_result × ring" where
+  "post r s ≡
+     if frozen r then (POST_FROZEN, r)
+     else if (head r + 1) mod (cap r + 1) = tail r then (POST_NOSPC, r)
+     else (POST_OK, r⦇ head := (head r + 1) mod (cap r + 1),
+                      slots := (slots r)(head r := s) ⦈)"
+
+(* ── fastpath_send：frozen 检查 + 委托 post（airy_ipc_fastpath.c L84-90）── *)
+definition fastpath_send :: "ring ⇒ slot ⇒ post_result × ring" where
+  "fastpath_send r s ≡ if frozen r then (POST_FROZEN, r) else post r s"
+
+(* ── consume：单消费者推进；magic=0 的槽被跳过（取消语义）。
+   n 为扫描步数上界（≤ 容量，保证良基终止）。── *)
+fun consume :: "nat ⇒ ring ⇒ ring × slot option" where
+  "consume 0 r = (r, None)"
+| "consume (Suc n) r =
+     (if head r = tail r then (r, None)
+      else if magic (slots r (tail r)) = 0
+           then consume n (r⦇ tail := (tail r + 1) mod (cap r + 1) ⦈)
+           else (r⦇ tail := (tail r + 1) mod (cap r + 1) ⦈, Some (slots r (tail r))))"
+
+(* ── 内存序公理容器（骨架）：Phase 3 以 LKMM 模型或 l4v C parser 的
+   内存模型实例化。release/acquire 配对产生 happens-before 边。── *)
+locale spsc_mem_order =
+  fixes hb :: "'e ⇒ 'e ⇒ bool"              (* happens-before *)
+  assumes hb_trans:  "hb a b ⟹ hb b c ⟹ hb a c"
+  assumes hb_irrefl: "¬ hb a a"
+begin
+  (* 配对公理：post 的 release 事件 p 先于 consume 的 acquire 事件 c *)
+  definition i1_pairing :: "'e ⇒ 'e ⇒ bool" where
+    "i1_pairing p c ≡ hb p c"
+end
+
+end
+```
+
+> **骨架声明**：以上记录/函数名与 C 符号一一对应，但属于文档级骨架——word 位运算细节（`ucast`/`mask` 用法）、`consume` 的良基参数化、locale 公理的实例化方式均需 Phase 2/3 落地时校正（见 §13.7）。
+
+### 13.3 核心不变量定义
+
+以下 5 条不变量为本路径的证明核心。定义骨架使用中文注释解释语义，代码为 Isabelle/HOL 语法。
+
+#### I1：SPSC 内存序不变量（head 发布 → consume 看到完整 slot）
+
+```isabelle
+(* slot 内容"完整可见"：magic ≠ 0 表示该槽已完整写入（memcpy 完成） *)
+definition slot_ready :: "slot ⇒ bool" where
+  "slot_ready s ≡ magic s ≠ 0"
+
+(* I1：head 之前的所有槽必须完整可见。
+   C 语义：post 的 smp_store_release(&ring->head, next)（airy_ipc_ring.c L95）
+   与 consume 的 smp_load_acquire(&ring->head)（L121）配对，LKMM 保证
+   "release 发布 head 之前的全部数据写入，对 acquire 读到该 head 的读者可见"。 *)
+definition i1_mem_order :: "ring ⇒ bool" where
+  "i1_mem_order r ≡ ∀i < head r. slot_ready (slots r i)"
+```
+
+#### I2：frozen 不变量（frozen=true 时 post 不推进 head）
+
+```isabelle
+(* I2：frozen=true ⟹ post 返回 POST_FROZEN 且 head 不变。
+   C 双重检查：fastpath_send（L84-85）+ ring_post（L68-69，defence in depth）。 *)
+lemma i2_frozen_stable:
+  assumes "frozen r"
+  shows "post r s = (POST_FROZEN, r)"
+  unfolding post_def using assms by simp
+```
+
+#### I3：Badge 校验不变量（badge_ok 通过 ⟺ 三条件同时成立）
+
+```isabelle
+(* perms 子集：d ⊆ s 当且仅当 d 的置位位全部被 s 覆盖（(d && s) = d） *)
+definition perms_subset :: "perms ⇒ perms ⇒ bool" where
+  "perms_subset d s ≡ (d && s) = d"
+
+(* I3：badge_ok 通过 ⟺ (epoch==slot.epoch ∧ randtag==slot.randtag
+                        ∧ (perms & required)==required)
+   C 语义：airy_cap_badge_ok()（airy_cap.h L75-102）C-S9.1/9.2/9.3。 *)
+definition badge_ok :: "badge ⇒ cap_slot ⇒ perms ⇒ bool" where
+  "badge_ok b sl req ≡ badge_epoch b = ce sl ∧ badge_randtag b = cr sl ∧
+                       perms_subset req (badge_perms b)"
+
+(* 失败分类与错误码一一对应（C-S9.1/9.2/9.3 → -AIRY_ECAP_EPOCH/FORGED/PERM） *)
+definition badge_check :: "badge ⇒ cap_slot ⇒ perms ⇒ err" where
+  "badge_check b sl req ≡ if badge_epoch b ≠ ce sl then ECAP_EPOCH
+                          else if badge_randtag b ≠ cr sl then ECAP_FORGED
+                          else if ¬ perms_subset req (badge_perms b) then ECAP_PERM
+                          else EOK"
+
+lemma i3_check_eq_ok:
+  "badge_check b sl req = EOK ⟷ badge_ok b sl req"
+  unfolding badge_check_def badge_ok_def by simp
+```
+
+#### I4：派生权限不变量（COPY 降级后 dst.perms ⊆ src.perms）
+
+```isabelle
+(* I4：COPY 派生 — seL4 maskCapRights 语义。
+   C 实现：airy_cap_derive.c L184-187（P1-10 fix）——
+   new_perms != 0 时取 new_perms & src->perms 交集；new_perms == 0 时继承 src 全权。 *)
+definition copy_derive :: "cap_slot ⇒ perms ⇒ cap_slot" where
+  "copy_derive src np ≡ if np = 0 then src
+                        else src⦇ cp := cp src && np ⦈"
+
+lemma i4_copy_demotes:
+  "perms_subset (cp (copy_derive src np)) (cp src)"
+  unfolding copy_derive_def perms_subset_def by simp
+```
+
+#### I5：取消不变量（cancelBadgedSends 后匹配 badge 的 slot 不再被 consume）
+
+```isabelle
+(* I5：cancel_badged_sends(b) 将 pending 区 [tail, head) 内 badge 匹配的
+   slot 的 magic 置 0（airy_ipc_ring.c L179-207，对齐 seL4 endpoint.c
+   cancelBadgedSends）；consume 跳过 magic=0 的槽，故匹配消息不再被投递。 *)
+definition cancel_badged :: "ring ⇒ badge ⇒ ring" where
+  "cancel_badged r b ≡ r⦇ slots := (λi. if tail r ≤ i ∧ i < head r ∧
+                                             sl_badge (slots r i) = b
+                                         then (slots r i)⦇ magic := 0 ⦈
+                                         else slots r i) ⦈"
+
+(* 关键引理：取消后匹配槽的 magic 必为 0 *)
+lemma i5_cancelled_magic_zero:
+  assumes "tail r ≤ i" "i < head r" "sl_badge (slots r i) = b"
+  shows "magic (slots (cancel_badged r b) i) = 0"
+  unfolding cancel_badged_def using assms by simp
+```
+
+### 13.4 证明目标（lemmas / theorems）
+
+| 编号 | 定理陈述（中文） | 证明策略 | 证明负担 |
+|------|----------------|---------|---------|
+| G1 | fastpath 冻结门：`frozen r ⟹ fastpath_send r s = (POST_FROZEN, r)` | 直接 `unfolding fastpath_send_def` 化简（由 I2 推出） | 低 |
+| G2 | badge_ok 语义等价：`badge_ok b sl req ⟺ epoch/randtag/perms 三条件`（§13.3 I3） | 抽象层内化简可证；**实现层负担**：经 C parser 证明 `airy_cap_badge_ok()` 的 C 语义蕴含该抽象 | **主要负担（Phase 2）** |
+| G3 | consume 读到完整 slot：`i1_mem_order r ⟹ i < head r ⟹ slot_ready (slots r i)` | 对 head 增量归纳 + release/acquire 配对公理（`i1_pairing`）把写侧可见性传递到读侧 | **主要负担（Phase 3，内存模型公理化）** |
+| G4 | post 后置条件：成功时 head 推进 1 且 `slots(head_old) == s` | 由 `post` 定义直接化简 | 低-中 |
+| G5 | COPY 降级：`perms_subset (cp (copy_derive src np)) (cp src)` | 位运算化简（`&&` 幂等/单调） | 低 |
+| G6 | 取消不投递：cancel 后 `∀n. snd (consume n (cancel_badged r b)) ≠ Some slot_i`（badge 匹配槽） | 对 consume 步数 n 归纳；归纳步用 `i5_cancelled_magic_zero` 归入跳过分支 | 中 |
+
+```isabelle
+(* G1：fastpath 冻结门 *)
+lemma g1_fastpath_frozen:
+  "frozen r ⟹ fastpath_send r s = (POST_FROZEN, r)"
+  unfolding fastpath_send_def by simp
+
+(* G2（主要负担）：badge_ok 与 C 实现 airy_cap_badge_ok() 的精化等价。
+   抽象层定理（Isabelle 内可证）；实现层需 C parser 生成 C 语义 ⟹ 本抽象。 *)
+theorem g2_badge_ok_iff:
+  "badge_ok b sl req ⟷ badge_epoch b = ce sl ∧ badge_randtag b = cr sl ∧
+                        (badge_perms b && req) = req"
+  unfolding badge_ok_def perms_subset_def by simp
+
+(* G3（主要负担）：consume 读到完整 slot（内存序）。
+   策略：对 head 增量归纳；每步注入 release/acquire 配对公理（locale 实例）。 *)
+lemma g3_consume_gets_complete_slot:
+  assumes "i1_mem_order r" "i < head r"
+  shows "slot_ready (slots r i)"
+  using assms unfolding i1_mem_order_def by blast
+
+(* G4：post 后置条件 *)
+lemma g4_post_advances_head:
+  assumes "¬ frozen r" "(head r + 1) mod (cap r + 1) ≠ tail r"
+  shows "head (snd (post r s)) = (head r + 1) mod (cap r + 1)
+       ∧ slots (snd (post r s)) (head r) = s"
+  unfolding post_def using assms by (simp split: if_splits)
+
+(* G6：取消后匹配 badge 的消息不被投递（骨架：证明策略见上表） *)
+lemma g6_cancelled_not_delivered:
+  assumes "tail r ≤ i" "i < head r" "sl_badge (slots r i) = b"
+  shows "∀n. snd (consume n (cancel_badged r b)) ≠ Some (slots (cancel_badged r b) i)"
+  using assms
+  (* 骨架：对 n 归纳；归纳步结合 i5_cancelled_magic_zero 化简跳过分支 *)
+  oops
+
+(* 辅助：badge 编码-解码往返（AIRY_BADGE_COMPILE 无损性，对齐 §9.4 P2.1） *)
+lemma badge_roundtrip:
+  "badge_epoch (mk_badge e r p) = e ∧
+   badge_randtag (mk_badge e r p) = r ∧
+   badge_perms (mk_badge e r p) = p"
+  unfolding mk_badge_def badge_epoch_def badge_randtag_def badge_perms_def
+  (* 骨架：需按实际 word 引理（ucast/移位）校正 *)
+  oops
+```
+
+> 主要证明负担集中在 **G2（badge_ok 的 C 语义精化）** 与 **G3（SPSC 内存序公理化）**：前者依赖 C parser / 手工精化链，后者依赖对 LKMM release/acquire 语义在 ring 模型上的投影建模。G1/G4/G5 为定义级化简，G6 为常规归纳。
+
+### 13.5 验证工具链与配置锁存（seL4 四件套映射）
+
+seL4 形式化验证四件套（见 22 号工程思想报告 v3.6c）在 Airymax 侧的映射如下：
+
+#### (a) AIRY_COMPILE_ASSERT 双模式宏（uapi_compat.h 落点，v3.6c E1）
+
+seL4 对照（`include/assert.h` L45-69）：`CONFIG_VERIFICATION_BUILD` 下用 typedef 数组技巧（负长度数组编译报错），否则用 `_Static_assert`——因为 l4v 的 C parser 不支持 `_Static_assert` 语法。Airymax 等价物规划落点 [uapi_compat.h](../../agentrt-linux/kernel/include/uapi/linux/airymax/uapi_compat.h)（三态类型桥接头，内核/用户态/非 Linux 三端共享）：
+
+```c
+/* ─── AIRY_COMPILE_ASSERT：双模式编译期断言（1.0.1+ 引入，v3.6c E1）──
+ *
+ * 常规构建（默认）：C11 _Static_assert，零开销、报错信息友好。
+ * AIRY_VERIFICATION_BUILD：typedef 数组技巧，为 Phase 3 起引入 C parser
+ *   预留（与 seL4 assert.h 双模式同源）。
+ *
+ * 注：09-known-caveats §1.2 声明当前形式化路径不经过 C parser；本宏的
+ * VERIFICATION_BUILD 分支是"预留"，启用前须同步修订该声明。默认路径
+ * （_Static_assert）与现状一致，不与 §1.2 冲突。
+ */
+#ifdef AIRY_VERIFICATION_BUILD
+#define AIRY_COMPILE_ASSERT(name, cond) \
+	typedef char airy_compile_assert_##name[(cond) ? 1 : -1]
+#else
+#define AIRY_COMPILE_ASSERT(name, cond) _Static_assert((cond), #name)
+#endif
+```
+
+落地时须同步修订 [09-known-caveats.md](../10-architecture/09-known-caveats.md) §1.1 中 OS-KER-229 声称"编译期断言已落地"但源码零命中的状态记录。
+
+#### (b) 验证注解 MODIFIES / FNSPEC（airy_cap.h + airy_ipc_fastpath.c，v3.6c E2）
+
+对应 [03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) §1.3 的 1.0.1 决策项（MODIFIES/FNSPEC 引入），落点与 v3.6c 审查建议一致：
+
+```c
+/* airy_cap.h：airy_cap_badge_ok 的验证注解（对应 airy_cap.h L75-102） */
+/**
+ * MODIFIES: 无（纯读：agent_caps[agent_id].epoch/.randtag，3 次 READ_ONCE）
+ * GHOSTUPD: 无                                  [2.x 评估]
+ * FNSPEC:
+ *   requires: agent_id < AIRY_CAP_MAX_AGENTS
+ *   ensures:  ret == 0 ⟺  EPOCH(badge)  == agent_caps[agent_id].epoch
+ *                       ∧ RANDTAG(badge) == agent_caps[agent_id].randtag
+ *                       ∧ (PERMS(badge) & required_perms) == required_perms
+ *   ensures:  ret == -AIRY_ECAP_EPOCH  ⟹ EPOCH(badge)  != agent_caps[agent_id].epoch
+ *   ensures:  ret == -AIRY_ECAP_FORGED ⟹ RANDTAG(badge) != agent_caps[agent_id].randtag
+ *   ensures:  ret == -AIRY_ECAP_PERM   ⟹ (PERMS(badge) & required_perms) != required_perms
+ */
+```
+
+```c
+/* airy_ipc_fastpath.c：airy_ipc_fastpath_send 的验证注解（对应 L68-91） */
+/**
+ * MODIFIES: ring->head, ring->slots[ring->head]（仅非 frozen 时）
+ * FNSPEC:
+ *   requires: ring != NULL ∧ hdr != NULL ∧ hdr->magic == AIRY_IPC_MAGIC
+ *   ensures:  READ_ONCE(ring->frozen) == 1
+ *             ⟹ ret == -AIRY_EIPC_FROZEN ∧ ring->head 不变
+ *   ensures:  READ_ONCE(ring->frozen) == 0 ∧ ring 非满
+ *             ⟹ ret == 0 ∧ ring->head' == (ring->head + 1) & ring->mask
+ *                  ∧ slots[old_head] 内容 == *hdr
+ *   ensures:  ring 满 ⟹ ret == -ENOSPC ∧ ring->head 不变
+ */
+```
+
+#### (c) 验证配置锁存（configs/airymax_verified.cmake 等价物，v3.6c E3）
+
+seL4 对照：`configs/` 目录 40+ 个 `*_verified.cmake` 将验证符号（`CONFIG_VERIFICATION_BUILD`、CSPEC 符号等）与代码变体锁进独立配置，`proof.yml` 的 `proof-test` label 触发证明进 CI。Airymax 内核为 Kbuild 体系，等价物声明为 Kconfig + defconfig 组合：
+
+```text
+# 1.0.1+ 验证配置锁存（E3，规划）
+#
+# init/Kconfig 或 kernel/corekern/ipc/Kconfig：
+#   config AIRY_VERIFICATION
+#       bool "Airymax IPC fastpath verification build"
+#       depends on AIRY_COREKERN
+#       select AIRY_VERIFICATION_BUILD
+#       help
+#         启用验证构建：AIRY_COMPILE_ASSERT 切换为 typedef 数组模式；
+#         源码验证注解（MODIFIES/FNSPEC）进入 C parser 处理范围。
+#
+# arch/x86/configs/airy_verified_defconfig：
+#   基于 airy_defconfig + CONFIG_AIRY_VERIFICATION=y
+#
+# CI 门禁：
+#   1) 每个 PR 验证 airy_verified_defconfig 可生成 .config 且可编译；
+#   2) Kconfig 变更不得破坏该配置的锁存性（diffconfig 比对，IRON-7 覆盖）；
+#   3) 已验证配置与默认配置的差异必须可审计（无隐性符号漂移）。
+```
+
+#### (d) CI 集成（proof.yml 类比）
+
+seL4 对照：`proof.yml` 中 PR 打 `proof-test` label 触发 Isabelle/HOL 证明任务。Airymax 等价物：
+
+```yaml
+# .github/workflows/proof.yml（规划，seL4 proof.yml 类比）
+name: airy-proof
+on:
+  pull_request:
+    types: [labeled, synchronize]
+    paths:
+      - 'formal/ipc_fastpath/**'
+      - 'kernel/corekern/ipc/**'
+      - 'security/airy/airy_cap.h'
+jobs:
+  isabelle-ipc-fastpath:
+    if: contains(github.event.pull_request.labels.*.name, 'proof-test')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Isabelle
+        run: |
+          wget -q https://isabelle.in.tum.de/website-Isabelle2023/dist/Isabelle2023_linux.tar.gz
+          tar xzf Isabelle2023_linux.tar.gz
+      - name: Build formal session (Phase 2+)
+        run: |
+          export ISABELLE_HOME="$(pwd)/Isabelle2023"
+          isabelle build -D formal/ipc_fastpath -b AiryIPCFastpath
+      - name: Gate on proof success
+        run: |
+          test ! -f formal/ipc_fastpath/FAILED && echo "proof OK"
+```
+
+### 13.6 实施路线图（1.0.1+）
+
+| Phase | 内容 | 交付物 | 验收标准 |
+|-------|------|--------|---------|
+| **Phase 1**（1.0.1+ 早期） | 模型 + 不变量定义（文档级） | 本节 §13.2/§13.3 骨架定稿；`formal/ipc_fastpath/AiryIPCFastpathModel.thy` 建立 | 骨架与源码逐符号映射评审通过（epoch/randtag/perms/head/tail/mask 与 UAPI、内核头文件一致）；09-known-caveats §1.1 状态同步 |
+| **Phase 2** | badge_ok 语义证明 + Isabelle 环境搭建 | Isabelle 工具链入 CI；badge 系列定理（G2/G5 + `badge_roundtrip`）编译通过 | `g2_badge_ok_iff`/`i3_check_eq_ok` 在 Isabelle 中 `by simp` 级证明完成；`airy_cap_badge_ok()`（airy_cap.h L75-102）C 语义一致性评审 |
+| **Phase 3** | ring 内存序证明 | I1/I2 + G3/G4 证明；LKMM 或 l4v C parser 内存模型实例化评估 | `g3_consume_gets_complete_slot` 完成；`smp_store_release`/`smp_load_acquire` 配对语义在模型内闭合；SPSC 单生产者/单消费者前提显式化 |
+| **Phase 4** | fastpath 整体集成证明 + CAVEATS 更新 | `fastpath_send` 精化证明（含 I5 取消语义）；AIRY_COMPILE_ASSERT 落地（uapi_compat.h）；09-known-caveats §1.1 状态"设计中"→"已证明" | 全部定理进 proof.yml CI；CAVEATS 更新"证了什么、没证什么"（§13.1 范围声明冻结为正式范围） |
+
+**关联规划**：本路径 Phase 3/4 的 ring 模型可作为 M5 前置形式化时序图的基础——06-memory-version-governance 报告 §7.4 要求 M5 实现 MemoryRovol（内存卷轮换）前先写形式化时序图，覆盖"零拷贝映射进行中 + 卷轮换并发"场景；SPSC 内存序模型为该时序图的传递闭包语义提供形式化底座。
+
+### 13.7 诚实声明
+
+1. **当前全部为文档承诺，源码零落地**。03-microkernel-strategy.md §1.3（L103-104）宣称"1.0.1 阶段引入（决策项）"验证注解，但源码中无 MODIFIES/FNSPEC 落地；09-known-caveats §1.1 宣称"编译期断言已落地（OS-KER-229）"，但 fastpath/badge 路径源码零命中编译期断言。v3.6c 三轮审查（23-improvement-closure-v3.6c 报告）将"可验证性预留"评为 68 分（D+），且明确——**"文档不能替代实现"**（报告 L192）。
+2. **本文件是路线图，不是已完成证明**。任何将本节内容引用为"IPC Fastpath 已形式化验证"的做法均不成立；在 Phase 2 定理实际编译通过之前，本节仅表达证明意图与范围。
+3. **全部 Isabelle/HOL 骨架未经 Isabelle 编译验证**。word 位运算细节、record 字段命名、locale 公理实例化、`consume` 良基参数化与 `oops` 挂起引理均需 Phase 2 落地时校正；骨架中的 `by simp`/`by blast` 仅示意证明方向。
+4. **范围限制重申**：即使 Phase 4 完成，也不覆盖机器码/编译器/缓存/TLB/boot/SMP/MCS（§13.1 Out-of-Scope），不构成二进制级无缺陷保证；IPC fastpath 性能为设计估算，本路径证明正确性而非性能。
+
+---
+
 > **文档结束** | agentrt-linux 测试工程体系 v1.0.1 第 10 卷 | 维护者：开源极境工程与规范委员会 | "From data intelligence emerges."
