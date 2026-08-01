@@ -18,17 +18,17 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 >
 > **子主题权威源引用（免责声明）**：本文件作为总体架构入口，对子主题仅提供概述。以下子主题以各自 SSoT 文档为唯一权威，本文件概述如与子 SSoT 冲突，以子 SSoT 为准：
 >
-> | 子主题                   | 唯一权威 SSoT 文档                                                                                          |
-> | --------------------- | ----------------------------------------------------------------------------------------------------- |
-> | Agent 8 态生命周期         | [10-sc-sched-extension.md §2](../30-interfaces/10-sc-sched-extension.md)                              |
-> | syscall 编号与 op-dispatch | [07-syscall-registry.md](../140-application-development/07-syscall-registry.md)                       |
-> | LSM 框架与排序             | [01-lsm-framework.md](../110-security/01-lsm-framework.md)                                            |
-> | Capability 安全模型       | [03-capability-model.md](../110-security/03-capability-model.md)                                      |
-> | IPC 协议与 fastpath      | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)                                             |
-> | 微内核化改造路径              | [03-microkernel-strategy.md](03-microkernel-strategy.md)                                              |
-> | 内核目录结构详细              | [07-directory-structure.md §9](07-directory-structure.md)                                             |
-> | 内核子仓详细设计              | [20-modules/01-kernel.md](../20-modules/01-kernel.md)                                                 |
-> | 规则编号注册                | [09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)                                |
+> | 子主题                     | 唯一权威 SSoT 文档                                                                    |
+> | ----------------------- | ------------------------------------------------------------------------------- |
+> | Agent 8 态生命周期           | [10-sc-sched-extension.md §2](../30-interfaces/10-sc-sched-extension.md)        |
+> | syscall 编号与 op-dispatch | [07-syscall-registry.md](../140-application-development/07-syscall-registry.md) |
+> | LSM 框架与排序               | [01-lsm-framework.md](../110-security/01-lsm-framework.md)                      |
+> | Capability 安全模型         | [03-capability-model.md](../110-security/03-capability-model.md)                |
+> | IPC 协议与 fastpath        | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)                       |
+> | 微内核化改造路径                | [03-microkernel-strategy.md](03-microkernel-strategy.md)                        |
+> | 内核目录结构详细                | [07-directory-structure.md §9](07-directory-structure.md)                       |
+> | 内核子仓详细设计                | [20-modules/01-kernel.md](../20-modules/01-kernel.md)                           |
+> | 规则编号注册                  | [09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)          |
 
 ***
 
@@ -73,7 +73,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 维度        | 值                                       | 决策依据    |
 | --------- | --------------------------------------- | ------- |
-| 内核版本      | Linux 6.6 LTS                           | ADR-013 |
+| 内核版本      | Linux 6.6.y LTS                         | ADR-013 |
 | 基线类型      | **vanilla**（非变种）                        | ADR-013 |
 | 版本锁定策略    | 1.x.x 锁定 Linux 6.6 / 2.x.x 锁定 Linux 7.1 | ADR-016 |
 | seL4 理论基础 | seL4 微内核工程思想                            | ADR-014 |
@@ -222,28 +222,28 @@ kernel/                          # ALK-6.6 源码树
 
 #### 3.5.3 提取边界
 
-| 类别 | 提取 | 说明 |
-|------|------|------|
-| 厂商 NIC 驱动 | 是 | 鲲鹏 hns3、华为 hinic3 等 |
-| 厂商 PMU 驱动 | 是 | 海思 PMU、阿里 DRW PMU 等 |
-| 厂商 cpufreq 驱动 | 是 | 申威 sunway-cpufreq 等 |
-| 总线/检测驱动 | 是 | UnifiedBus、ROH、CPU SDC 检测、XCU 等 |
-| Vendor Hooks | 是（仅硬件相关） | `drivers/hooks/` 中硬件相关 tracepoint 钩子 |
-| 完整架构 | 是 | `arch/sw_64/`（vanilla 不含） |
+| 类别            | 提取       | 说明                                   |
+| ------------- | -------- | ------------------------------------ |
+| 厂商 NIC 驱动     | 是        | 鲲鹏 hns3、华为 hinic3 等                  |
+| 厂商 PMU 驱动     | 是        | 海思 PMU、阿里 DRW PMU 等                  |
+| 厂商 cpufreq 驱动 | 是        | 申威 sunway-cpufreq 等                  |
+| 总线/检测驱动       | 是        | UnifiedBus、ROH、CPU SDC 检测、XCU 等      |
+| Vendor Hooks  | 是（仅硬件相关） | `drivers/hooks/` 中硬件相关 tracepoint 钩子 |
+| 完整架构          | 是        | `arch/sw_64/`（vanilla 不含）            |
 
 #### 3.5.4 排除清单（核心子系统纯净性保障）
 
-| 排除项 | 原因 |
-|--------|------|
-| QoS 网格调度（grid）+ soft\_domain + smt\_qos + bpf\_sched | 与 sched\_tac 冲突，不可共存 |
-| security/ 全部修改 | Airymax 采用 vanilla security + airy\_lsm（H5 纯 C LSM） |
-| 上游 LTS 变种的版本构建系统（Makefile.oever 类） | Airymax 自有 airy\_defconfig + configs/defconfig\{,-agent,-embedded\} |
-| KABI 兼容标记 | 保持 vanilla 头文件洁净，Airymax 无 KABI 约束 |
-| sched\_ext | 6.6 基线不含；H5 纯 C 约束禁止（详见 §2.3） |
+| 排除项                                                  | 原因                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| QoS 网格调度（grid）+ soft\_domain + smt\_qos + bpf\_sched | 与 sched\_tac 冲突，不可共存                                              |
+| security/ 全部修改                                       | Airymax 采用 vanilla security + airy\_lsm（H5 纯 C LSM）               |
+| 上游 LTS 变种的版本构建系统（Makefile.oever 类）                   | Airymax 自有 airy\_defconfig + configs/defconfig{,-agent,-embedded} |
+| KABI 兼容标记                                            | 保持 vanilla 头文件洁净，Airymax 无 KABI 约束                                |
+| sched\_ext                                           | 6.6 基线不含；H5 纯 C 约束禁止（详见 §2.3）                                     |
 
 #### 3.5.5 一致性约束
 
-1. **IRON-7 不变**：驱动层为硬件适配附加层，vanilla linux-stable 6.6.145 仍为唯一核心基线
+1. **IRON-7 不变**：驱动层为硬件适配附加层，vanilla linux-stable 6.6.y 仍为唯一核心基线
 2. **正交性**：驱动层补丁不得修改 `kernel/sched/`、`security/`、`kernel/corekern/`、`kernel/superv/`、`include/uapi/linux/airymax/` 任何文件
 3. **可剥离**：驱动层为架构可选项，不应用驱动层时 ALK-6.6 仍可在 vanilla 支持的架构上构建运行
 4. **开源披露政策**：硬件适配语境下允许在开源文档中明确表述"复用openEuler的硬件适配能力"（BAN-INTERNAL-002 硬件适配语境豁免）；驱动层提取的逐文件差异数据仍属内部参考，不进入开源文档
@@ -257,22 +257,48 @@ kernel/                          # ALK-6.6 源码树
 v1.0.1 采用 **Capability Folding 单平面架构**——控制面仅保留 4 个低频管理 syscall，IPC 数据传递与能力校验全部折叠到 io\_uring 数据面 fastpath：
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    v1.0.1 Capability Folding                     │
-├──────────────────────┬──────────────────────────────────────────┤
-│    控制面（4 syscall）  │      数据面（io_uring，零 syscall）        │
-│                      │                                          │
-│  548 airy_sys_call   │  IORING_OP_URING_CMD                     │
-│      (sec_d 专属管理)  │    ├── AIRY_URING_CMD_IPC_SEND           │
-│  549 airy_sys_rovol_ctl│    ├── AIRY_URING_CMD_IPC_RECV           │
-│      (记忆卷载控制)     │    ├── AIRY_URING_CMD_IPC_SEND_BATCH     │
-│  550 airy_sys_sched_ctl│    ├── AIRY_URING_CMD_IPC_CANCEL         │
-│      (调度策略配置)     │    ├── AIRY_URING_CMD_IPC_FREEZE         │
-│  551 airy_sys_clt_notify│    ├── AIRY_URING_CMD_IPC_CAP_REQUEST   │
-│      (阶段通知+kthread)│    └── AIRY_URING_CMD_IPC_CAP_RESPONSE   │
-│                      │                                          │
-│  op-dispatch 分派     │  fastpath C-S9 Badge 内联校验（~10ns）    │
-└──────────────────────┴──────────────────────────────────────────┘
+┌──────────────────────────────────────┬────────────────────────────────────────────┐
+│                       v1.0.1 Capability Folding 单平面架构                          │
+├──────────────────────────────────────┼────────────────────────────────────────────┤
+│        控制面（Control Plane）         │        数据面（Data Plane）                 │
+│        4 个低频管理 syscall            │        io_uring，零 syscall                │
+│                                      │                                            │
+│  548  AIRY_SYS_CALL                  │  IORING_OP_URING_CMD                       │
+│       Capability Invocation          │    ├─ AIRY_URING_CMD_IPC_SEND              │
+│       sec_d 专属管理入口               │    ├─ AIRY_URING_CMD_IPC_RECV              │
+│       ├─ COMPILE_BADGE               │    ├─ AIRY_URING_CMD_IPC_SEND_BATCH        │
+│       ├─ REVOKE_BADGE                │    ├─ AIRY_URING_CMD_IPC_CANCEL            │
+│       ├─ LSM_CTL / WASM_LOAD         │    ├─ AIRY_URING_CMD_IPC_FREEZE            │
+│       ├─ LSM_AUDIT_QUERY             │    ├─ AIRY_URING_CMD_IPC_CAP_REQUEST       │
+│       └─ CAP_INSPECT / CAP_TRANSFER  │    └─ AIRY_URING_CMD_IPC_CAP_RESPONSE      │
+│                                      │                                            │
+│  549  AIRY_SYS_ROVOL_CTL             │  fastpath C-S9 Badge 内联校验               │
+│       记忆卷载控制（MemoryRovol）       │    airy_cap_badge_ok()，延迟 ~10ns          │
+│       ├─ SNAPSHOT / RESTORE          │    3×READ_ONCE + 位运算 + 比较               │
+│       ├─ MIGRATE / TIER_SET/GET      │    EPOCH 校验：per-agent slot_epoch         │
+│       ├─ MGLRU_CONFIG / LIST         │    Badge = Epoch<<48|Tag<<16|Perms         │
+│       └─ DELETE / DEMOTE/PROMOTE     │                                            │
+│                                      │  registered buffer 零拷贝传输                │
+│  550  AIRY_SYS_SCHED_CTL             │  opcode 白名单：                            │
+│       sched_tac 调度策略配置           │    ├─ IORING_OP_URING_CMD                  │
+│       ├─ SET_POLICY / GET_POLICY     │    └─ IORING_OP_NOP                        │
+│       ├─ REGISTER_BPF / GET_LATENCY  │                                            │
+│       ├─ SET_PRIORITY / GET_VTIME    │  三级紧急刹车（sysctl 控制）：                 │
+│       └─ YIELD                       │    0 = 可用                                 │
+│                                      │    1 = 仅 CAP_SYS_ADMIN                     │
+│  551  AIRY_SYS_CLT_NOTIFY            │    2 = 完全禁用                              │
+│       CoreLoopThree 阶段通知+kthread  │                                             │
+│       ├─ PHASE_NOTIFY                │  消息载体：128B 定长消息头                     │
+│       ├─ REGISTER/UNREGISTER_KTHREAD │    Layout C v4（magic 0x41524531）          │
+│       ├─ SET_MODE / GET_METRICS      │    capability_badge @ offset 40-47          │
+│       └─ WASM_LOAD/UNLOAD/INVOKE     │  ipc ring：SQ/CQ 异步消息队列                 │
+│                                      │  快/慢路径单快照语义（禁重复校验）               │
+│  op-dispatch 分派                     │                                            │
+│  慢路径 slowpath：LSM 策略裁决          │                                            │
+├──────────────────────────────────────┴────────────────────────────────────────────┤
+│  载体：syscall_64.tbl 新增段 548-551（arch/x86）+ unistd.h __NR_airy_*               │
+│  编号权威：07-syscall-registry.md（syscall 编号 SSoT）                               │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 4.2 4 核心 syscall（编号 548-551）
@@ -338,11 +364,11 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 
 agentrt-linux 采用**三层互补**的 Badge/capability 撤销机制，覆盖不同粒度：
 
-| 层级 | 机制 | 复杂度 | 触发场景 | 代码位置 |
-|------|------|--------|---------|---------|
-| ① REVOKE CNode 操作 | `airy_cap_revoke_subtree()` 沿 MDB 派生树（左孩子右兄弟）递归撤销子 cap | O(N)（典型深度 ≤3） | 撤销某 cap 的所有派生子 cap | [airy_cap_derive.c:92-117](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L92-L117) |
-| ② per-agent epoch bump | `airy_cap_epoch_bump(agent_id)` 递增 slot_epoch，该 Agent 旧 Badge 立即失效 | O(1) | 撤销某 Agent 的所有 Badge（K9-1 主要撤销机制） | `security/airy/airy_cap_array.c` |
-| ③ cancelBadgedSends | `airy_ipc_cancel_badged_sends(ring, badge)` 扫描 ring 中待发送消息，匹配 badge 者将 magic 置零使其被跳过 | O(N)（N=ring 深度） | 撤销指定 Badge 的待发送 IPC 消息 | [airy_ipc_ring.c:159-207](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c#L159-L207) |
+| 层级                     | 机制                                                                                   | 复杂度             | 触发场景                             | 代码位置                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------ | --------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| ① REVOKE CNode 操作      | `airy_cap_revoke_subtree()` 沿 MDB 派生树（左孩子右兄弟）递归撤销子 cap                               | O(N)（典型深度 ≤3）   | 撤销某 cap 的所有派生子 cap               | [airy\_cap\_derive.c:92-117](../../agentrt-linux/kernel/security/airy/airy_cap_derive.c#L92-L117)     |
+| ② per-agent epoch bump | `airy_cap_epoch_bump(agent_id)` 递增 slot\_epoch，该 Agent 旧 Badge 立即失效                  | O(1)            | 撤销某 Agent 的所有 Badge（K9-1 主要撤销机制） | `security/airy/airy_cap_array.c`                                                                      |
+| ③ cancelBadgedSends    | `airy_ipc_cancel_badged_sends(ring, badge)` 扫描 ring 中待发送消息，匹配 badge 者将 magic 置零使其被跳过 | O(N)（N=ring 深度） | 撤销指定 Badge 的待发送 IPC 消息           | [airy\_ipc\_ring.c:159-207](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_ipc_ring.c#L159-L207) |
 
 **seL4 对比**：seL4 的 `cteRevoke` 需递归遍历 MDB 派生树，复杂度 O(N)；agentrt-linux 的 ②层将复杂度从撤销方的 O(N) 转移到被撤销方的重新申请（O(1)），①层保留 seL4 风格的递归撤销语义，③层补齐 seL4 `endpoint.c:476-489` 的 `cancelBadgedSends` 对等能力。
 
@@ -385,7 +411,7 @@ offset 52-55:  crc32 (32-bit)
 offset 56-127: reserved[72]
 ```
 
-> **SSoT**：字段布局以 [SC] `include/uapi/linux/airymax/ipc.h` 中 `struct airy_ipc_msg_hdr` 为权威源。详细设计见 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)。
+> **SSoT**：字段布局以 \[SC] `include/uapi/linux/airymax/ipc.h` 中 `struct airy_ipc_msg_hdr` 为权威源。详细设计见 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)。
 
 ***
 
@@ -407,18 +433,18 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 > **SSoT 对齐**：本节为概述，Agent 8 态生命周期的唯一权威源为 [10-sc-sched-extension.md §2](../30-interfaces/10-sc-sched-extension.md)。本节枚举与状态迁移必须与 SSoT 保持一致，任何变更必须先在 SSoT 中执行。
 
-| 状态         | 说明                  | Linux 进程状态                | 调度策略                | 触发者                                  |
-| ------------ | ------------------- | ------------------------ | ------------------- | ------------------------------------ |
-| INACTIVE     | 进程不存在，等待 fork       | —                        | —                   | Macro-Supervisor `fork()`            |
-| SPAWNING     | fork/exec 中，未就绪     | TASK_RUNNING（过渡）         | SCHED_NORMAL        | exec 完成 → READY                      |
-| READY        | 在运行队列等待，可被调度        | TASK_RUNNING             | SCHED_DEADLINE      | Macro-Supervisor `sched_setattr()`   |
-| RUNNING      | 正在 CPU 执行           | TASK_RUNNING             | SCHED_DEADLINE      | 调度器挑选                                |
-| BLOCKED      | 等待 IPC/IO           | TASK_INTERRUPTIBLE       | —                   | IPC/IO 等待                            |
-| STOPPING     | SIGSTOP 发送中，正在冻结 IPC | 过渡态                      | —                   | Micro-Supervisor `kill(SIGSTOP)`     |
-| STOPPED      | 已冻结，待裁决             | TASK_STOPPED             | —                   | SIGSTOP 生效                           |
-| DEAD         | 等待 waitpid 回收       | EXIT_ZOMBIE              | —                   | `exit()` / `kill(SIGKILL)`           |
+| 状态       | 说明                   | Linux 进程状态          | 调度策略            | 触发者                                |
+| -------- | -------------------- | ------------------- | --------------- | ---------------------------------- |
+| INACTIVE | 进程不存在，等待 fork        | —                   | —               | Macro-Supervisor `fork()`          |
+| SPAWNING | fork/exec 中，未就绪      | TASK\_RUNNING（过渡）   | SCHED\_NORMAL   | exec 完成 → READY                    |
+| READY    | 在运行队列等待，可被调度         | TASK\_RUNNING       | SCHED\_DEADLINE | Macro-Supervisor `sched_setattr()` |
+| RUNNING  | 正在 CPU 执行            | TASK\_RUNNING       | SCHED\_DEADLINE | 调度器挑选                              |
+| BLOCKED  | 等待 IPC/IO            | TASK\_INTERRUPTIBLE | —               | IPC/IO 等待                          |
+| STOPPING | SIGSTOP 发送中，正在冻结 IPC | 过渡态                 | —               | Micro-Supervisor `kill(SIGSTOP)`   |
+| STOPPED  | 已冻结，待裁决              | TASK\_STOPPED       | —               | SIGSTOP 生效                         |
+| DEAD     | 等待 waitpid 回收        | EXIT\_ZOMBIE        | —               | `exit()` / `kill(SIGKILL)`         |
 
-> **设计要点**：sched_tac 核心成果——8 态与 Linux 进程状态天然映射，无需新增内核调度器状态，仅复用 SCHED_DEADLINE/SCHED_FIFO/EEVDF。状态迁移由 Macro-Supervisor 驱动，Micro-Supervisor 仅在检测到异常时触发 RUNNING → STOPPING 的强制迁移。
+> **设计要点**：sched\_tac 核心成果——8 态与 Linux 进程状态天然映射，无需新增内核调度器状态，仅复用 SCHED\_DEADLINE/SCHED\_FIFO/EEVDF。状态迁移由 Macro-Supervisor 驱动，Micro-Supervisor 仅在检测到异常时触发 RUNNING → STOPPING 的强制迁移。
 
 > **详细设计**：详见 [10-sc-sched-extension.md §2](../30-interfaces/10-sc-sched-extension.md)（SSoT）与 [20-modules/01-kernel.md §7](../20-modules/01-kernel.md)。
 
@@ -453,13 +479,13 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 ### 9.1 安全体系分层
 
-| 层级     | 类型                        | 机制                      | 优先级                   |
-| ------ | ------------------------- | ----------------------- | --------------------- |
-| L1     | LSM 框架                    | `security_hook_heads`   | —                     |
-| L2     | Landlock                  | 用户态沙箱                   | after L3              |
-| **L3** | **capability（airy\_lsm）** | **seL4 风格 + POSIX，纯 C** | **LSM\_ORDER\_MUTABLE**（CONFIG\_LSM 置于 capability 之后第一位） |
-| L4     | 代码完整性验证                  | 编译期校验 + CBMC 形式化验证（H5，不依赖 BPF） | 独立                    |
-| L7     | Cupolas                   | Agent 行为约束              | 基于 capability         |
+| 层级     | 类型                        | 机制                             | 优先级                                                      |
+| ------ | ------------------------- | ------------------------------ | -------------------------------------------------------- |
+| L1     | LSM 框架                    | `security_hook_heads`          | —                                                        |
+| L2     | Landlock                  | 用户态沙箱                          | after L3                                                 |
+| **L3** | **capability（airy\_lsm）** | **seL4 风格 + POSIX，纯 C**        | **LSM\_ORDER\_MUTABLE**（CONFIG\_LSM 置于 capability 之后第一位） |
+| L4     | 代码完整性验证                   | 编译期校验 + CBMC 形式化验证（H5，不依赖 BPF） | 独立                                                       |
+| L7     | Cupolas                   | Agent 行为约束                     | 基于 capability                                            |
 
 ### 9.2 H5 纯 C LSM 硬约束
 
@@ -490,27 +516,27 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 ### 10.1 四层模型
 
-| 层次               | 共享程度             | 内核内容                                         | 物理宿主                          |
-| ---------------- | ---------------- | -------------------------------------------- | ----------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码           | 10 个头文件                                      | `include/uapi/linux/airymax/` |
+| 层次               | 共享程度             | 内核内容                                                            | 物理宿主                          |
+| ---------------- | ---------------- | --------------------------------------------------------------- | ----------------------------- |
+| **\[SC] 共享契约层**  | 完全共享代码           | 10 个头文件                                                         | `include/uapi/linux/airymax/` |
 | **\[SS] 语义同源层**  | 高层 API 语义同源      | sched\_tac / io\_uring 等 30+ 项（struct\_ops 仅用于可观测性，非核心架构，H5 约束） | 各自独立实现                        |
-| **\[IND] 完全独立层** | 完全独立             | syscall 表注册 / LSM 钩子 / KABI / Kbuild         | 内核态专属                         |
-| **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集 | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块 | 自包含                           |
+| **\[IND] 完全独立层** | 完全独立             | syscall 表注册 / LSM 钩子 / KABI / Kbuild                            | 内核态专属                         |
+| **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集 | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块                    | 自包含                           |
 
 ### 10.2 \[SC] 10 头文件清单
 
-| #  | 头文件                 | 职责           | magic / 关键定义                    |
-| -- | ------------------- | ------------ | ------------------------------- |
-| 1  | `error.h`           | A-UEF 统一错误码  | 38 POSIX 码 + `AIRY_ECFGVERSION` |
-| 2  | `log_types.h`       | A-ULP 统一日志类型 | 128B 固定记录 + 5 级日志               |
-| 3  | `ipc.h`             | IPC 协议       | magic `0x41524531` + 128B 消息头   |
-| 4  | `sched.h`           | 调度约束         | magic `0x41475453` + 任务描述符      |
-| 5  | `memory_types.h`    | 内存类型         | MemoryRovol L1-L4               |
+| #  | 头文件                 | 职责           | magic / 关键定义                            |
+| -- | ------------------- | ------------ | --------------------------------------- |
+| 1  | `error.h`           | A-UEF 统一错误码  | 38 POSIX 码 + `AIRY_ECFGVERSION`         |
+| 2  | `log_types.h`       | A-ULP 统一日志类型 | 128B 固定记录 + 5 级日志                       |
+| 3  | `ipc.h`             | IPC 协议       | magic `0x41524531` + 128B 消息头           |
+| 4  | `sched.h`           | 调度约束         | magic `0x41475453` + 任务描述符              |
+| 5  | `memory_types.h`    | 内存类型         | MemoryRovol L1-L4                       |
 | 6  | `security_types.h`  | 安全类型         | 44 cap（41 POSIX + 3 Airymax）+ Badge 访问宏 |
-| 7  | `cognition_types.h` | 认知类型         | 三阶段枚举                           |
-| 8  | `syscalls.h`        | Syscall 编号   | 4 核心（548-551）                   |
-| 9  | `uapi_compat.h`     | UAPI 兼容      | `__KERNEL__` / `__linux__` 桥接   |
-| 10 | `lsm_types.h`       | LSM 类型       | `DEFINE_LSM(airy)` 骨架           |
+| 7  | `cognition_types.h` | 认知类型         | 三阶段枚举                                   |
+| 8  | `syscalls.h`        | Syscall 编号   | 4 核心（548-551）                           |
+| 9  | `uapi_compat.h`     | UAPI 兼容      | `__KERNEL__` / `__linux__` 桥接           |
+| 10 | `lsm_types.h`       | LSM 类型       | `DEFINE_LSM(airy)` 骨架                   |
 
 > **详细设计**：详见 [06-iron9-shared-model.md](06-iron9-shared-model.md) 与 [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md)。
 
@@ -540,21 +566,21 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 ### 12.1 三阶段改造
 
-| 阶段   | 版本     | 改造内容                                                             | seL4 借鉴                         |
-| ---- | ------ | ---------------------------------------------------------------- | ------------------------------- |
-| 阶段 1 | 1.x.x  | sched\_tac 调度框架 + io\_uring IPC + 纯 C LSM capability 层引入（H5）     | capability 单一模型（ES-SEL4-05\~09） |
+| 阶段   | 版本          | 改造内容                                                             | seL4 借鉴                         |
+| ---- | ----------- | ---------------------------------------------------------------- | ------------------------------- |
+| 阶段 1 | 1.x.x       | sched\_tac 调度框架 + io\_uring IPC + 纯 C LSM capability 层引入（H5）     | capability 单一模型（ES-SEL4-05\~09） |
 | 阶段 2 | 1.0.1 后续小版本 | VFS 部分用户态化 + 网络栈部分用户态化（DPDK / AF\_XDP）+ 驱动框架用户态化（VFIO / libvfio） | 服务用户态化（ES-SEL4-29\~31）          |
-| 阶段 3 | 2.x.x  | 大部分系统服务用户态化 + 完整 capability 安全模型 + 形式化验证（部分核心模块）+ Linux 7.1 基线升级 | 形式化验证预留（ES-SEL4-16\~20）         |
+| 阶段 3 | 2.x.x       | 大部分系统服务用户态化 + 完整 capability 安全模型 + 形式化验证（部分核心模块）+ Linux 7.1 基线升级 | 形式化验证预留（ES-SEL4-16\~20）         |
 
 ### 12.2 下沉到用户态的 Linux 子系统
 
-| Linux 子系统   | 下沉策略                    | 用户态服务                               | 迁移阶段   |
-| ----------- | ----------------------- | ----------------------------------- | ------ |
+| Linux 子系统   | 下沉策略                    | 用户态服务                               | 迁移阶段        |
+| ----------- | ----------------------- | ----------------------------------- | ----------- |
 | VFS（具体文件系统） | 保留 VFS 框架在内核，具体 FS 下沉   | services VFS server                 | 1.0.1 后续小版本 |
 | 网络栈（TCP/IP） | 保留 socket 层在内核，协议栈下沉    | services net server（DPDK / AF\_XDP） | 1.0.1 后续小版本 |
 | 设备驱动        | 通过 VFIO / libvfio 下沉    | services driver server              | 1.0.1 后续小版本 |
-| POSIX 接口    | 通过用户态 POSIX server 兼容   | services POSIX server               | 2.x.x  |
-| 信号管道        | eventfd / signalfd 等效替代 | services signal server              | 2.x.x  |
+| POSIX 接口    | 通过用户态 POSIX server 兼容   | services POSIX server               | 2.x.x       |
+| 信号管道        | eventfd / signalfd 等效替代 | services signal server              | 2.x.x       |
 
 > **详细设计**：详见 [03-microkernel-strategy.md §9](03-microkernel-strategy.md)。
 
