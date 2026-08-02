@@ -42,6 +42,44 @@ agentrt <command> <subcommand> [options] [arguments]
 
 ---
 
+## 1.1 交互式产品 CLI（airy_cli）
+
+> **新增**（0.1.1 框架化改造）：`airy_cli` 是 AgentRT 的**交互式产品入口**，实现"用户自然语言大任务指令 → GCCP 意图完备确认 → 工作大厅 → agent_d 驱动真实 agent"的完整产品闭环。由 `agentrt/tools/airy_cli` 构建，CMake 选项 `BUILD_CLI`（默认 ON）。
+
+### 用法
+
+```bash
+# 启动交互式 CLI
+/path/to/agentrt-build/tools/airy_cli/airy_cli
+
+# 输入大任务自然语言指令，例如：
+为项目实现登录模块，包含前端页面、后端接口与单元测试
+
+# 输入 quit 或 exit 退出
+```
+
+### 交互流程
+
+```
+用户自然语言大任务指令
+  → GCCP 意图完备确认（推理 + 向用户询问四问：终点/起点/卡点/受众）
+  → 认知管线规划（Phase 0-1）
+  → Plan → TaskFlow DAG 适配
+  → 工作大厅提交 / 看板轮询 / 结果获取
+  → agent_d 驱动 ecosystem/agents 真实执行
+```
+
+### 降级行为
+
+| 依赖 | 不可用时的行为 |
+|------|---------------|
+| `llm_d` 守护进程 | GCCP 降级为启发式确认（固定四问，`status=DEGRADED`） |
+| `agent_d` 守护进程 | 工作大厅返回 `AIRY_EUNAVAILABLE`，任务图走降级路径 |
+
+**机制/策略分离**：CLI 是产品层（交互策略），agentrt 是机制层。
+
+---
+
 ## 2. 环境变量
 
 以下环境变量会影响 CLI 的行为：

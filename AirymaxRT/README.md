@@ -29,6 +29,8 @@ agentrt 的设计哲学、架构原则与核心组件设计：
 
 - [**架构原则**](10-architecture/) — 五维正交 24 原则、微核心架构设计
 - [**CoreLoopThree**](10-architecture/) — 认知→执行→记忆三阶段循环
+- [**GCCP 目标完备确认**](10-architecture/07-gccp.md) — 用户意图完备确认协议（五问模型）
+- [**工作大厅 (Work Hall)**](10-architecture/08-work-hall.md) — 任务图注册/状态看板/取消
 - [**MemoryRovol**](10-architecture/) — L1→L2→L3→L4 四层记忆卷载
 - [**IPC 通信**](10-architecture/) — 进程间通信架构
 - [**Syscall 架构**](10-architecture/) — 用户态/内核态统一接口

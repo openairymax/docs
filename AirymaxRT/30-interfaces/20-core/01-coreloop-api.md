@@ -469,6 +469,72 @@ void airy_cognition_set_memory(
 
 ---
 
+## 🆕 0.1.1 框架化 API（GCCP / 工作大厅 / DAG）
+
+0.1.1 框架化改造新增以下 API 组，完整设计见 [GCCP 架构](../../10-architecture/07-gccp.md)、[工作大厅架构](../../10-architecture/08-work-hall.md) 与 [DAG 集成指南](../../140-application-development/26-coreloopthree-dag-integration.md)。
+
+### GCCP 目标完备确认（gccp.h）
+
+```c
+airy_err_t airy_gccp_probe(llm_svc_adapter_t *adapter, llm_service_t *svc,
+                           const char *input, size_t input_len,
+                           airy_gccp_probe_t **out_probe);
+airy_err_t airy_gccp_confirm(llm_svc_adapter_t *adapter, llm_service_t *svc,
+                             const char *input, size_t input_len,
+                             const char *answers_json, airy_gccp_goal_t **out_goal);
+void airy_gccp_probe_free(airy_gccp_probe_t *probe);
+void airy_gccp_goal_free(airy_gccp_goal_t *goal);
+airy_err_t airy_gccp_goal_to_json(const airy_gccp_goal_t *goal, char **out_json);
+```
+
+**认知引擎 setter**（`cognition.h`）：
+
+```c
+void airy_cognition_set_gccp_enabled(airy_cognition_engine_t *engine, int enabled);
+void airy_cognition_set_gccp_interact(airy_cognition_engine_t *engine,
+                                      airy_gccp_interact_cb_t cb, void *user_data);
+void airy_cognition_set_tc3_models(airy_cognition_engine_t *engine,
+                                   const char *s2, const char *verify, const char *expert);
+```
+
+- `set_gccp_enabled` — 在 Phase 0 拆解后启用/禁用 GCCP 意图完备确认阶段。
+- `set_gccp_interact` — 注入产品层交互回调（询问四问：终点/起点/卡点/受众，返回回答 JSON）。
+- `set_tc3_models` — 双思考 TC3 三独立模型注入（t2 主思考 / t1-f 快思考-事实 / t1-p 快思考-专业）；TC3 成功后自动激活 `dual_coordinate` 双模型交叉验证。
+
+### 工作大厅 Work Hall（work_hall.h）
+
+```c
+airy_err_t airy_work_hall_create(const airy_work_hall_config_t *config,
+                                 airy_core_loop_t *loop, airy_work_hall_t **out_hall);
+airy_err_t airy_work_hall_submit(airy_work_hall_t *hall,
+                                 const taskflow_workflow_t *workflow,
+                                 const char *input_json, char **out_execution_id);
+airy_err_t airy_work_hall_status(airy_work_hall_t *hall, const char *execution_id,
+                                 airy_work_hall_entry_t **out_entry);
+airy_err_t airy_work_hall_list(airy_work_hall_t *hall,
+                               airy_work_hall_entry_t ***out_entries, size_t *out_count);
+airy_err_t airy_work_hall_cancel(airy_work_hall_t *hall, const char *execution_id);
+airy_err_t airy_work_hall_wait(airy_work_hall_t *hall, const char *execution_id,
+                               uint32_t timeout_ms, char **out_result_json);
+const airy_orch_ops_t *airy_work_hall_bind_ops(airy_work_hall_t *hall);
+```
+
+### Plan→TaskFlow DAG 适配（plan_to_dag.h）
+
+```c
+airy_err_t airy_plan_to_workflow(const airy_task_plan_t *plan,
+                                 taskflow_workflow_t **out_workflow);
+void airy_workflow_free(taskflow_workflow_t *workflow);
+```
+
+### DAG 取消（loop.h）
+
+```c
+airy_err_t airy_loop_dag_cancel(airy_core_loop_t *loop, const char *execution_id);
+```
+
+---
+
 ## ⚡ 执行引擎 API
 
 ### 数据结构
@@ -981,6 +1047,7 @@ switch (err) {
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| v0.1.1 | 2026-08-02 | 框架化改造：GCCP / 工作大厅 / Plan→DAG 适配 / `airy_loop_dag_cancel` / TC3 三模型 setter |
 | v0.0.4 | 2026-04-28 | Foundation Release - 完整API文档 |
 | v0.0.3 | 2026-04-25 | 双思考系统集成 |
 | v0.0.2 | 2026-04-20 | 三层架构实现 |

@@ -34,6 +34,8 @@ agentrt 的设计哲学、架构原则与核心组件设计：
 - [**架构设计原则**](10-architecture/00-architectural-principles.md) — S/K/C/E/A 五维正交 24 原则
 - [**系统总览**](10-architecture/01-system-architecture.md) — 分层架构与组件总览
 - [**CoreLoopThree**](10-architecture/02-coreloopthree.md) — 认知→执行→记忆三阶段循环
+- [**GCCP 目标完备确认**](10-architecture/07-gccp.md) — 用户意图完备确认协议（五问模型）
+- [**工作大厅 (Work Hall)**](10-architecture/08-work-hall.md) — 任务图注册/状态看板/取消
 - [**MemoryRovol**](10-architecture/03-memoryrovol.md) — L1→L2→L3→L4 四层记忆卷载
 - [**MicroCoreRT**](10-architecture/04-microcorert.md) — 微核心架构（K-1~K-4 原则）
 - [**Syscall 架构**](10-architecture/05-syscall.md) — 用户态/内核态统一接口

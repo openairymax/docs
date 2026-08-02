@@ -62,6 +62,15 @@ airy_err_t airy_loop_dag_status(airy_core_loop_t *loop,
 
 获取 DAG 工作流执行状态。`out_state` 返回状态字符串（"pending"/"running"/"completed"/"failed"/"canceled" 等），`out_progress` 返回 0.0~1.0 进度。
 
+### 1.5 airy_loop_dag_cancel
+
+```c
+airy_err_t airy_loop_dag_cancel(airy_core_loop_t *loop,
+                                         const char *execution_id);
+```
+
+取消 DAG 工作流执行。内部调用 `taskflow_engine_cancel()`，供工作大厅的 `airy_work_hall_cancel()` 取消执行实例（0.1.1 框架化改造新增）。
+
 ---
 
 ## 二、taskflow_task_handler_t 回调签名
@@ -230,7 +239,62 @@ Release 构建定义 `NDEBUG`，`assert(expr)` 展开为 `((void)0)`，导致 `e
 
 ---
 
-## 六、集成测试参考
+## 六、工作大厅与 Plan→DAG 适配（0.1.1 框架化改造）
+
+工作大厅（Work Hall）将上述 DAG API 封装为**任务图宿主 + 状态看板**，供产品层（如 `airy_cli`）完成"意图 → 计划 → DAG → 执行"的完整闭环。
+
+### 6.1 Plan→TaskFlow 适配层
+
+```c
+airy_err_t airy_plan_to_workflow(const airy_task_plan_t *plan,
+                                 taskflow_workflow_t **out_workflow);
+void airy_workflow_free(taskflow_workflow_t *workflow);
+```
+
+转换规则：
+
+- 计划节点 → 工作流节点（`type=TASK`，`handler=task_node_handler_name`）
+- 节点依赖（`depends_on`）→ 工作流边（source=依赖 ID，target=节点 ID）
+- 入口点（`entry_points`）→ `initial_node_id`
+- **handler 规范化**：节点 handler 无 `agent:` 前缀时自动补全，确保被工作大厅的 agent 路由 handler 接管
+
+### 6.2 工作大厅 API
+
+```c
+airy_err_t airy_work_hall_create(const airy_work_hall_config_t *config,
+                                 airy_core_loop_t *loop,
+                                 airy_work_hall_t **out_hall);
+airy_err_t airy_work_hall_submit(airy_work_hall_t *hall,
+                                 const taskflow_workflow_t *workflow,
+                                 const char *input_json, char **out_execution_id);
+airy_err_t airy_work_hall_status(airy_work_hall_t *hall, const char *execution_id,
+                                 airy_work_hall_entry_t **out_entry);
+airy_err_t airy_work_hall_cancel(airy_work_hall_t *hall, const char *execution_id);
+airy_err_t airy_work_hall_wait(airy_work_hall_t *hall, const char *execution_id,
+                               uint32_t timeout_ms, char **out_result_json);
+const airy_orch_ops_t *airy_work_hall_bind_ops(airy_work_hall_t *hall);
+```
+
+- `airy_work_hall_submit` 提交前遍历 workflow 节点，为未注册 handler 自动绑定 agent 路由 handler（`user_data` 含 role 上下文），驱动 `ecosystem/agents` 真实执行。
+- `airy_work_hall_bind_ops` 实现 `airy_orch_ops_t`（schedule/cancel/list/get_status/wait）并注入全局 ops_injection 表。
+- 提交成功后 workflow 资源由大厅/引擎持有；失败时由调用方释放（与 4.1 所有权规则一致）。
+
+### 6.3 完整闭环（产品层形态）
+
+```
+用户自然语言大任务指令
+  → GCCP 意图完备确认（airy_gccp_probe → 交互回调 → airy_gccp_confirm）
+  → 认知管线规划（airy_cognition_process → airy_task_plan_t）
+  → airy_plan_to_workflow（Plan→DAG 适配）
+  → airy_work_hall_submit / 看板轮询 / wait
+  → agent_d 驱动 ecosystem/agents 真实执行
+```
+
+完整实现见 `agentrt/tools/airy_cli/main.c`。
+
+---
+
+## 七、集成测试参考
 
 完整的集成测试位于 `agentrt/atoms/coreloopthree/tests/unit/test_dag_integration.c`，包含 4 个测试用例：
 
@@ -249,22 +313,31 @@ ctest --test-dir build -R cl3_dag_integration --output-on-failure
 
 ---
 
-## 七、相关文件
+## 八、相关文件
 
 | 文件 | 说明 |
 |------|------|
-| `agentrt/atoms/coreloopthree/include/loop.h` | DAG API 声明（4 个函数） |
+| `agentrt/atoms/coreloopthree/include/loop.h` | DAG API 声明（4 个函数 + `airy_loop_dag_cancel`） |
 | `agentrt/atoms/coreloopthree/src/loop.c` | DAG API 实现 + engine 生命周期 |
+| `agentrt/atoms/coreloopthree/include/work_hall.h` | 工作大厅 API（0.1.1 新增） |
+| `agentrt/atoms/coreloopthree/src/work_hall.c` | 工作大厅实现（agent 路由 handler / ops 注入） |
+| `agentrt/atoms/coreloopthree/include/plan_to_dag.h` | Plan→TaskFlow DAG 适配层（0.1.1 新增） |
+| `agentrt/atoms/coreloopthree/src/plan_to_dag.c` | 适配层实现 |
+| `agentrt/atoms/coreloopthree/include/gccp.h` | GCCP 目标完备确认协议（0.1.1 新增） |
+| `agentrt/atoms/coreloopthree/src/cognition/gccp.c` | GCCP 实现（LLM 驱动 + 启发式降级） |
 | `agentrt/atoms/taskflow/include/taskflow_advanced.h` | taskflow 类型定义 |
 | `agentrt/atoms/taskflow/src/taskflow_advanced.c` | taskflow 引擎实现 |
 | `agentrt/atoms/coreloopthree/tests/unit/test_dag_integration.c` | W18.3 集成测试 |
+| `agentrt/atoms/coreloopthree/tests/unit/test_gccp_workhall.c` | GCCP + 工作大厅测试（6/6） |
+| `agentrt/tools/airy_cli/main.c` | 产品化交互式 CLI（完整闭环） |
 | `agentrt/atoms/coreloopthree/CMakeLists.txt` | 编译配置（链接 airy_taskflow） |
 | `agentrt/daemons/common/CMakeLists.txt` | svc_common include taskflow 路径 |
 
 ---
 
-## 八、版本历史
+## 九、版本历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.1.1 | 2026-08-02 | 框架化改造：工作大厅 + Plan→DAG 适配 + GCCP 前置确认 + `airy_loop_dag_cancel` |
 | 0.1.1 | 2026-07-04 | W18 初始实现：4 个 DAG API + 集成测试 + 文档 |

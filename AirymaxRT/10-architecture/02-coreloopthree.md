@@ -277,6 +277,7 @@ typedef struct airy_intent {
     size_t intent_goal_len;         // 目标长度
     uint32_t intent_flags;          // 标志位（紧急、复杂等）
     void* intent_context;           // 附加上下文
+    airy_gccp_goal_t* intent_gccp_goal; // GCCP 目标完备确认结果（OWNER，由 airy_intent_free 释放）
 } airy_intent_t;
 ```
 
@@ -355,14 +356,27 @@ typedef airy_err_t (*airy_dispatch_func_t)(
    ↓
 [意图解析] → airy_intent_t
    ↓
+[Phase 0 拆解] → subtasks
+   ↓
+[GCCP 意图完备确认] → airy_gccp_goal_t（五问 + 置信度）★ 07-gccp.md
+   ↓
 [规划策略] → airy_task_plan_t (DAG)
    ↓
 [协同策略] → 多模型协调
    ↓
 [调度策略] → 选择最佳 Agent
    ↓
-行动层
+[Plan→DAG 适配 + 工作大厅] → 看板/执行/取消 ★ 08-work-hall.md
+   ↓
+行动层（agent_d 驱动 ecosystem/agents）
 ```
+
+> **新增阶段说明**（0.1.1 框架化改造）：
+>
+> - **GCCP 意图完备确认**：插入在 Phase 0 拆解之后、Phase 1 规划之前。对不完备的大任务集指令向用户询问四问（终点/起点/卡点/受众），融合回答补全可验证目标（Q5 完成判据）。LLM 不可用时启发式降级。详见 [目标完备确认协议 (GCCP)](07-gccp.md)。
+> - **GRAD 计划级批判循环**：插入在 Phase 1 规划之后、Phase 2 执行之前。以 GCCP 目标 G 为锚，对 DAG 计划执行确定性四验（E-01 因果/E-02 死锁/E-03 资源/E-04 目的漂移）+ 语境终裁 + 增量修正，差分熵削减 O(M×N)→O(N+M·Δ)。GRAD 启用时替代 Phase 2 文本级批判循环。详见 [基于目标的相对逻辑准确判定协议 (GRAD)](09-grad.md)。
+> - **工作大厅**：规划产出的 `airy_task_plan_t` 经 Plan→TaskFlow DAG 适配层转换为工作流，在大厅中注册、提交、看板轮询、取消；节点 handler 路由到 `agent_d` 驱动真实 agent 执行。详见 [工作大厅 (Work Hall)](08-work-hall.md)。
+> - **双思考三模型激活**：Thinkdual TC3 支持 t2（主思考）/ t1-f（快思考-事实）/ t1-p（快思考-专业）三独立模型注入（`airy_cognition_set_tc3_models`）；TC3 成功后激活 `dual_coordinate` 双模型交叉验证，结果写入 working memory（`dual_coordinate`）供 Phase 3 审计与 Phase 4 对齐读取。
 
 ### 3.3 API 接口
 
@@ -850,6 +864,11 @@ void airy_sys_init(void* cognition, void* execution, void* memory) {
 - ✅ 规划策略接口
 - ✅ 协同策略接口
 - ✅ 调度策略接口
+- ✅ GCCP 目标完备确认协议（五问模型 + LLM 驱动 + 启发式降级）
+- ✅ 工作大厅（任务图注册 / 看板 / 取消 / ops 注入）
+- ✅ Plan→TaskFlow DAG 适配层（依赖关系真实执行）
+- ✅ 双思考 TC3 三独立模型激活（t2/t1-f/t1-p）+ dual_coordinate 交叉验证
+- ✅ 产品化交互式 CLI（airy_cli：GCCP 四问 + 工作大厅闭环）
 - 🔲 强化学习决策优化（规划中）
 
 #### 行动层 (85%)
