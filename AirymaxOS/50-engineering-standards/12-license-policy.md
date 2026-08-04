@@ -111,7 +111,7 @@ Airymax 采用 **Open Core + Fair Source** 分层许可模式，按内容性质�
 
 **商业使用申请**:
 - 联系 SPHARX Ltd. 获取商业文档许可证
-- 邮箱: licensing@spharx.example.com（占位符，请替换为真实邮箱）
+- 邮箱: business@spharx.cn
 
 ---
 
@@ -446,7 +446,7 @@ set(PROJECT_LICENSE "AGPL-3.0-or-later OR Apache-2.0")
 
 ### 8.3 商标授权申请
 
-联系邮箱: licensing@spharx.example.com（占位符，请替换为真实邮箱）
+联系邮箱: business@spharx.cn
 
 ---
 
@@ -508,7 +508,7 @@ set(PROJECT_LICENSE "AGPL-3.0-or-later OR Apache-2.0")
 ## 十二、联系与反馈
 
 **文档维护者**: SPHARX Ltd. - Airymax Team
-**许可证申请**: licensing@spharx.example.com（占位符，请替换为真实邮箱）
+**许可证申请**: business@spharx.cn
 **问题反馈**: 通过 GitHub Issues 提交
 
 **变更记录**:
