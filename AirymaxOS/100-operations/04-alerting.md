@@ -142,7 +142,7 @@ net_d 通过 `/proc/net/` 与 daemon 内埋点采集：
 sec_d 通过纯 C LSM hook 采集安全事件，是唯一可绕过用户态直接产生告警的源：
 
 - **LSM hook 命中**：进程越权、文件非法访问等，按 1 秒窗口计数，>10 触发 CRITICAL。
-- **密钥访问异常**：未授权进程访问 `/etc/airy/keys/` 立即触发 CRITICAL。
+- **密钥访问异常**：未授权进程访问 `/etc/agentrt/keys/` 立即触发 CRITICAL。
 - **能力变更**：进程 capability 集合异常扩展触发 WARNING。
 - **审计日志篡改**：检测到 `/var/log/airy/` 下文件被非 audit_d 进程修改，触发 CRITICAL。
 
@@ -274,19 +274,19 @@ RPC 通道默认启用 mTLS，证书由 sec_d 颁发，订阅者需提供客户�
 | 渠道 | 默认级别 | 用途 | 延迟 | 配置 |
 |------|----------|------|------|------|
 | systemd notify | CRITICAL/WARNING | systemd 单元状态 | <5ms | 自动 |
-| /dev/airy_alert | 全部 | 内核态 + 用户态订阅 | <1ms | `/etc/airy/alert/channels.conf` |
+| /dev/airy_alert | 全部 | 内核态 + 用户态订阅 | <1ms | `/etc/agentrt/alert/channels.conf` |
 | systemd journal | 全部 | 持久化归档 | <10ms | 自动 |
 | RPC push | 全部 | devstation / 远端监管 | <50ms | mTLS 证书 |
 | Email | CRITICAL | 人工通知 | <60s | SMTP 配置（可选） |
 | Webhook | CRITICAL/WARNING | 外部系统集成 | <1s | URL 配置（可选） |
 | SMS | CRITICAL | 紧急人工通知 | <30s | 网关配置（可选） |
 
-Email/Webhook/SMS 默认关闭，需在 `/etc/airy/alert/channels.conf` 显式启用。
+Email/Webhook/SMS 默认关闭，需在 `/etc/agentrt/alert/channels.conf` 显式启用。
 
 ### 5.2 渠道配置示例
 
 ```ini
-# /etc/airy/alert/channels.conf
+# /etc/agentrt/alert/channels.conf
 
 [systemd_notify]
 enabled = true
@@ -306,9 +306,9 @@ facility = LOCAL4
 enabled = true
 min_severity = INFO
 listen = 0.0.0.0:7463
-mtls_ca = /etc/airy/keys/ca.pem
-mtls_cert = /etc/airy/keys/audit_d.pem
-mtls_key = /etc/airy/keys/audit_d.key
+mtls_ca = /etc/agentrt/keys/ca.pem
+mtls_cert = /etc/agentrt/keys/audit_d.pem
+mtls_key = /etc/agentrt/keys/audit_d.key
 
 [email]
 enabled = false
@@ -343,7 +343,7 @@ recipients = +8613800000001,+8613800000002
 
 ### 6.1 告警抑制
 
-告警抑制（Suppression）用于避免告警风暴，规则定义在 `/etc/airy/alert/suppression.yaml`：
+告警抑制（Suppression）用于避免告警风暴，规则定义在 `/etc/agentrt/alert/suppression.yaml`：
 
 ```yaml
 suppressions:
@@ -686,8 +686,8 @@ Remediation 动作通过以下组件协同执行：
 
 | 组件 | 职责 | 配置位置 |
 |------|------|---------|
-| **Prometheus** | 采集 `/metrics`，执行 alerting rules（阈值判定） | `/etc/airy/observability/prometheus.yml` |
-| **Alertmanager** | 路由告警，触发 webhook 至 `airy-remediation.service` | `/etc/airy/alert/alertmanager.yml` |
+| **Prometheus** | 采集 `/metrics`，执行 alerting rules（阈值判定） | `/etc/agentrt/observability/prometheus.yml` |
+| **Alertmanager** | 路由告警，触发 webhook 至 `airy-remediation.service` | `/etc/agentrt/alert/alertmanager.yml` |
 | **systemd timer `airy-remediation.timer`** | 周期调度（默认 10s），检查待执行 remediation 队列 | `/etc/systemd/system/airy-remediation.timer` |
 | **`airy-remediation.service`** | 执行 remediation 动作，调用 `airyctl` CLI | `/etc/systemd/system/airy-remediation.service` |
 | **macro_d** | 接收 remediation 完成回调，更新 Agent 状态 | 内置 |
@@ -695,7 +695,7 @@ Remediation 动作通过以下组件协同执行：
 **alertmanager webhook 配置示例**：
 
 ```yaml
-# /etc/airy/alert/alertmanager.yml（R2 补强新增 remediation webhook）
+# /etc/agentrt/alert/alertmanager.yml（R2 补强新增 remediation webhook）
 route:
   receiver: 'remediation-webhook'
   group_by: ['alertname', 'agent_id']

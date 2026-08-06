@@ -58,7 +58,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ----------- | --------- | --------------------- | --------------------- |
 | 内核核心代码      | \~1.44 万行 | 5-10 万行（含 agent 调度原语） | 每新增子系统需论证"无法在用户态安全实现" |
 | 微内核化改造补丁    | —         | 控制在 2 万行以内            | VFS / 网络栈 / 驱动用户态化补丁  |
-| \[SC] 共享契约层 | —         | 10 个头文件（IRON-9 v3）     | 单一物理宿主，禁止重复定义         |
+| \[SC] 共享契约层 | —         | 12 个头文件（IRON-9 v3）     | 单一物理宿主，禁止重复定义         |
 
 ### 1.2 Capability-First 设计
 
@@ -72,7 +72,7 @@ seL4 的核心设计决策是 **capability 单一安全模型**（ES-SEL4-05 至
 | cap 存储  | CTE（Capability Table Entry）= cap + mdb\_node                 | `include/object/structures.h`                   |
 | cap 寻址  | CNode 树形寻址（guard + radix）                                    | `src/kernel/cspace.c:resolveAddressBits`（193 行） |
 | cap 派生  | MDB（Memory Disclosure Base）双向链表派生树                           | `src/object/cnode.c:410-443`（934 行）             |
-| cap 操作  | 7 种原语：Insert / Move / Copy / Mint / Mutate / Revoke / Delete | `src/object/cnode.c`                            |
+| cap 操作  | 7 种原语：Copy / Mint / Move / Mutate / Revoke / Delete / Rotate | `src/object/cnode.c`（agentrt-linux 落地，对齐 [SC] security_types.h `enum airy_cap_op`，无 Insert；seL4 原始 7 操作为 cteInsert/cteMove/cteCopy/cteMint/cteMutate/cteRevoke/cteDelete，agentrt 以 Rotate 取代 Insert） |
 | cap 身份  | 64 bit Badge 标识来源                                            | `src/object/cnode.c:798-819`                    |
 | cap 即内存 | CTE 直接内嵌在 TCB 中，cap 本身就是内存                                   | `include/object/structures.h`                   |
 
@@ -219,17 +219,17 @@ seL4 的 capability 派生通过 MDB（Memory Disclosure Base）双向链表实�
 | 最终判定 | isFinalCapability 检查是否最后一个 cap          | `cnode.c`              |
 | 删除   | Delete 删除单个 cap（不影响子 cap）               | `cnode.c:cteDeleteOne` |
 
-**7 种 CNode 操作原语**：
+**7 种 CNode 操作原语**（对齐 [SC] security_types.h `enum airy_cap_op`，无 Insert）：
 
 | 操作     | 语义                    | 可撤销性     |
 | ------ | --------------------- | -------- |
-| Insert | 插入空槽位                 | 可 Delete |
-| Move   | 移动 cap（源→目标）          | 不可逆      |
 | Copy   | 复制 cap（父子派生）          | 可 Revoke |
 | Mint   | 派生 cap（可限制权限 + badge） | 可 Revoke |
+| Move   | 移动 cap（源→目标）          | 不可逆      |
 | Mutate | 修改 cap（权限 + badge）    | 不可逆      |
 | Revoke | 递归撤销子 cap             | 不可逆      |
 | Delete | 删除单个 cap              | 不可逆      |
+| Rotate | 轮换 cap（Badge 刷新）      | 不可逆      |
 
 **agentrt-linux 的 Agent 沙箱应用**：当一个 Agent 被终止时，通过 Revoke 一键撤销该 Agent 持有的所有 capability 派生，确保资源不泄漏。
 
@@ -376,7 +376,7 @@ seL4 使用 `.bf`（BitField）文件声明位域结构体（ES-SEL4-25, 26）�
 | Prune 机制（ES-SEL4-27） | 生成时自动剪除未使用字段，减小代码体积                   |
 | 单文件编译（ES-SEL4-28）    | 每个 `.bf` 生成独立 `.c` 文件，支持单文件编译         |
 
-**agentrt-linux 适配**（R-02）：为 \[SC] 共享契约层 10 个头文件引入 structures.bf 式 bitfield codegen，自动生成位域结构体与访问函数。
+**agentrt-linux 适配**（R-02）：为 \[SC] 共享契约层 12 个头文件引入 structures.bf 式 bitfield codegen，自动生成位域结构体与访问函数。
 
 ### 5.4 多语言绑定
 
@@ -548,7 +548,7 @@ agentrt-linux 不从零开发微内核（ADR-012），而是基于 Linux 6.6 进
 | 维度       | 策略               | 说明                              |
 | -------- | ---------------- | ------------------------------- |
 | POSIX 兼容 | 用户态 POSIX server | 现有 Linux 应用通过 POSIX server 兼容运行 |
-| ABI 稳定性  | \[SC] 共享契约层      | 10 个头文件保证内核-用户态 ABI 稳定           |
+| ABI 稳定性  | \[SC] 共享契约层      | 12 个头文件保证内核-用户态 ABI 稳定           |
 | 硬件支持     | 保留 Linux 驱动生态    | Linux 6.6 / 7.1 的 30 年硬件积累      |
 | 包管理      | RPM + dnf        | 兼容企业级 Linux 生态                  |
 | 性能权衡     | io\_uring 零拷贝    | 微内核 IPC 接近原生 syscall 性能         |
@@ -592,12 +592,12 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 
 | 层次               | 共享程度                                   | seL4 思想分布                                                                                            |
 | ---------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                                 | capability 模型（`security_types.h` 41 cap + 250 LSM）+ IPC 契约（`ipc.h` magic 0x41524531 'ARE1' + 128B 头） |
+| **\[SC] 共享契约层**  | 完全共享代码                                 | capability 模型（`security_types.h` 44 cap + 250 LSM）+ IPC 契约（`ipc.h` magic 0x41524531 'ARE1' + 128B 头） |
 | **\[SS] 语义同源层**  | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | IPC 消息传递 API（agentrt POSIX MQ ↔ agentrt-linux io\_uring）+ capability 4 项 API 同源                      |
 | **\[IND] 完全独立层** | 完全独立                                   | 形式化验证框架（tests-linux seL4 风格）+ 内核态调度（sched\_tac）+ 纯 C LSM（airy\_lsm，H5）                                              |
 | **\[DSL] 降级生存层** | [SC] 损坏时最小可运行子集                          | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
 
-### \[SC] 共享契约层——10 个头文件在微内核策略中的角色
+### \[SC] 共享契约层——12 个头文件在微内核策略中的角色
 
 | 头文件                 | seL4 对应概念            | 在微内核策略中的角色                                                                       | 消费方                |
 | ------------------- | -------------------- | -------------------------------------------------------------------------------- | ------------------ |

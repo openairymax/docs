@@ -20,10 +20,10 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - [2. 同源关系（IRON-9 v3 四层共享模型）](#2-同源关系iron-9-v3-四层共享模型)
 - [3. 目录结构](#3-目录结构)
 - [4. 核心特性](#4-核心特性)
-  - [4.10 sec_d 运行时设计（v1.0.1 Capability Folding 核心枢纽）](#410-sec_d-运行时设计v11-capability-folding-核心枢纽)
+  - [4.10 sec_d 运行时设计（v1.0.1 Capability Folding 核心枢纽）](#410-sec_d-运行时设计v101-capability-folding-核心枢纽)
   - [4.11 OLK 6.6 io_uring 安全](#411-olk-66-io_uring-安全)
   - [4.12 错误码与 magic 一致性](#412-错误码与-magic-一致性)
-  - [4.13 ADR 引用（v1.0.1 Capability Folding 决策溯源）](#413-adr-引用v11-capability-folding-决策溯源)
+  - [4.13 ADR 引用（v1.0.1 Capability Folding 决策溯源）](#413-adr-引用v101-capability-folding-决策溯源)
 - [5. 微内核思想体现](#5-微内核思想体现)
 - [6. IRON-9 v3 四层共享模型落地](#6-iron-9-v3-四层共享模型落地)
 - [7. agentrt-linux 工程基线](#7-agentrt-linux-工程基线)
@@ -237,30 +237,25 @@ graph TD
 
 ```c
 /**
- * cap_idx_t — Capability 节点索引类型 [SC]（ARCH-1 落地）
+ * cap_t — Capability 类型 [SC]（security_types.h 权威，v1.0.1 无 cap_idx_t）
  *
- * cap_idx_t 是 capability 的轻量索引引用，用于 syscall 参数传递和 IPC 消息
- * 中的 capability 标识。ARCH-1 从原 cap_t（uint64_t 不透明句柄）重构为
- * cap_idx_t（uint32_t 索引）+ cap_node_t.generation 组合，检测悬垂引用。
- * O(1) 查找 agent_caps[1024] 静态数组槽位，cap_t 保留为 cap_idx_t 别名。
- *
- * v1.0.1 Capability Folding 后，cap_idx_t 物理指向 agent_caps[1024] 静态数组中的
- * 某个 slot（slot 内嵌 Badge 64-bit Native Word 自包含权限与派生信息）。
+ * typedef __u64 cap_t：64-bit 不透明 capability 值。v1.0.1 Capability Folding
+ * 后 cap_t 承载 Badge 64-bit Native Word（Epoch<<48 | RandomTag<<16 | Perms），
+ * 物理指向 agent_caps[1024] 静态数组中的某个 slot。
  * 派生模型语义（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate 7 操作）在 [SC]
- * 层与 agentrt 共享；物理实现属 [IND] 独立层（详见 §4.1 v1.1 表格）。
+ * 层与 agentrt 共享；物理实现属 [IND] 独立层（详见 §4.1 v1.0.1 表格）。
  */
-typedef uint32_t cap_idx_t;
-#define CAP_IDX_INVALID  0xFFFFFFFFU
-typedef cap_idx_t cap_t;  /* 向后兼容别名 */
+typedef __u64 cap_t;
+#define AIRY_CAP_NULL  0x0ULL
 
 /**
  * airy_cap_id_t / airy_cap_op_t — capability 语义模型 [SC]
  *
- * 仅描述语义契约（ID 枚举 + 7 派生操作），不描述物理存储。物理存储由 v1.1
+ * 仅描述语义契约（ID 枚举 + 7 派生操作），不描述物理存储。物理存储由 v1.0.1
  * Capability Folding 改用 agent_caps[1024] 静态数组 + Badge 64-bit Native
- * Word（详见 §4.1 v1.1 表格与下方代码）。
+ * Word（详见 §4.1 v1.0.1 表格与下方代码）。
  */
-/* typedef uint32_t airy_cap_id_t;        -- 44 个 cap ID 枚举（41 POSIX 0-40 + 3 Airymax 41-43） */
+/* typedef __u32 airy_cap_id_t;        -- 44 个 cap ID 枚举（41 POSIX 0-40 + 3 Airymax 41-43） */
 /* typedef enum { CAP_OP_COPY, CAP_OP_MINT, CAP_OP_MOVE, CAP_OP_MUTATE,
  *                CAP_OP_REVOKE, CAP_OP_DELETE, CAP_OP_ROTATE } airy_cap_op_t; */
 ```
@@ -277,7 +272,7 @@ typedef cap_idx_t cap_t;  /* 向后兼容别名 */
  * - Perms[0:15]    16 bit：权限位段（send/recv/derive/kill/file_open/rotate/supervise）
  */
 
-/* [SC] lsm_types.h: 每槽 sizeof=128 字节（80 内容 + AIRY_ALIGNED(64) 对齐填充） */
+/* [SC] lsm_types.h: 每槽 sizeof=80 字节（24 base + 16 MDB + 40 reserved，AIRY_ALIGNED(64)） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
     __u32   agent_id;         /* Owning agent ID */
@@ -294,7 +289,7 @@ struct airy_cap_slot {
     __u8    _reserved[40];    /* Cacheline padding (was 56, -16 for MDB) */
 } AIRY_ALIGNED(64);
 
-/* kernel/ipc/airy_ipc_capability.c: 权威定义全局静态数组（128KB），__ro_after_init 指针 */
+/* kernel/kernel/ipc/airy_ipc_capability.c: 权威定义全局静态数组（128KB），__ro_after_init 指针 */
 static struct airy_cap_slot __airymax_cap_table[AIRY_CAP_MAX_AGENTS] __aligned(64);
 struct airy_cap_slot *agent_caps __ro_after_init = __airymax_cap_table;
 
@@ -309,7 +304,7 @@ extern atomic_t airy_cap_global_epoch;
 
 | 维度 | v1.0 实现（已废弃） | v1.0.1 实现（当前权威） |
 |------|-------------------|---------------------|
-| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节，sec_d 唯一写者）+ Badge 64-bit Native Word |
+| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节，sec_d 唯一写者）+ Badge 64-bit Native Word |
 | 逻辑视图 | `airy_cspace`（CNode 树） | `airy_cspace` 保留（`slots` 指针指向 `agent_caps[agent_id]`） |
 | 派生关系 | `airy_cap_mdb`（全局 MDB，parent→children 链）+ v1.0 元数据 parent_cap_id 字段 | 不需要——Badge 64-bit Native Word 自包含 Epoch + RandomTag + Perms |
 | 撤销机制 | MDB 递归遍历子树（O(n)） | `airy_cap_epoch_bump(agent_id)` 一行代码 O(1) per-agent 定向撤销 |
@@ -492,13 +487,13 @@ typedef enum {
 
 ### 4.10 sec_d 运行时设计（v1.0.1 Capability Folding 核心枢纽）
 
-`sec_d` 是 12 daemon 之一，作为 v1.0.1 Capability Folding 的**核心枢纽**——`agent_caps[1024]` 静态数组唯一写者，所有 Badge 编译/撤销请求通过 `airy_sys_call`（编号 0）串行化处理。详见 [01-kernel.md §14.2](01-kernel.md)。
+`sec_d` 是 12 daemon 之一，作为 v1.0.1 Capability Folding 的**核心枢纽**——`agent_caps[1024]` 静态数组唯一写者，所有 Badge 编译/撤销请求通过 `airy_sys_call`（编号 548）串行化处理。详见 [01-kernel.md §14.2](01-kernel.md)。
 
 #### 4.10.1 串行化 Badge 编译（令牌桶限流 + 50ms SLO）
 
 | 维度 | 设计 |
 | --- | --- |
-| 入口 | `airy_sys_call`（编号 0）COMPILE_BADGE opcode |
+| 入口 | `airy_sys_call`（编号 548）COMPILE_BADGE opcode |
 | 串行化机制 | sec_d 持单写令牌，内核侧 `agent_caps[1024]` 写入无锁（用户态串行化消除内核锁） |
 | 限流 | 令牌桶（token bucket）：每 Agent 配额默认 100 Badge/s，突发上限 200 |
 | SLO | 单次 Badge 编译 ≤ 50ms（含 RandomTag 生成 + slot 写入 + WAL 追加） |
@@ -707,9 +702,9 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | `AIRY_LSM_KERNEL_HOOK_TOTAL` 常量    | Linux 6.6 LSM 框架可用钩子总数（=250，仅文档用途，非数组尺寸）                          |
 | `airy_task_sec` 结构                | task blob 布局（agent_id/cap_space_root/agent_state/fault_count/sched_budget_ns/last_heartbeat/frozen_reason/ipc_ring） |
 | `airy_inode_sec` 结构               | inode blob 布局（cap_required/owner_agent）                                            |
-| `airy_cap_slot` 结构                | capability slot（`AIRY_ALIGNED(64)`，sizeof=128 字节；badge/agent_id/flags/randtag/perms/epoch + MDB 派生树 parent_agent/first_child/next_sibling/generation/revocable） |
+| `airy_cap_slot` 结构                | capability slot（`AIRY_ALIGNED(64)`，sizeof=80 字节（24 base + 16 MDB + 40 reserved）；badge/agent_id/flags/randtag/perms/epoch + MDB 派生树 parent_agent/first_child/next_sibling/generation/revocable） |
 | `airy_capability_check_fn` 回调签名  | capability 检查函数指针类型（badge, required_perm, agent_id → __s32）                    |
-| v1.0 capability 元数据语义模型（v1.0 元数据已废弃） | capability 派生模型语义契约（cap\_id/cap\_type/rights/parent\_cap\_id/mint\_depth/mint\_quota + 7 操作 Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）；v1.1 物理存储改用 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（详见 §4.1） |
+| v1.0 capability 元数据语义模型（v1.0 元数据已废弃） | capability 派生模型语义契约（cap\_id/cap\_type/rights/parent\_cap\_id/mint\_depth/mint\_quota + 7 操作 Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）；v1.0.1 物理存储改用 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（详见 §4.1） |
 | `airy_vault_backend_t` 结构          | Vault backend 抽象（init/seal/unseal/attest）                                            |
 | `airy_verdict_t` 枚举               | 策略裁决结果 4 值（ALLOW/DENY/AUDIT/COMPLAIN）                                                     |
 
@@ -863,7 +858,7 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 | `vfs_d` | VFS 用户态化 | 文件访问受 `security_file_open()` 钩子 + Landlock 沙箱控制 | LSM hook + Landlock |
 | `config_d` | 统一配置管理 | 安全策略热更新（YAML/JSON）经 sec_d 校验后下发 | 策略签名 + capability 校验 |
 
-> **sec_d 是 12 daemon 的安全核心**：所有 daemon 的 capability 颁发、Badge 编译、LSM 策略加载均经 `sec_d` 通过 `airy_sys_call`（编号 0）串行化处理。其他 11 daemon 通过 io_uring 数据面 / char dev / eBPF ringbuf / sysfs 等通道与 sec_d 间接协作。
+> **sec_d 是 12 daemon 的安全核心**：所有 daemon 的 capability 颁发、Badge 编译、LSM 策略加载均经 `sec_d` 通过 `airy_sys_call`（编号 548）串行化处理。其他 11 daemon 通过 io_uring 数据面 / char dev / eBPF ringbuf / sysfs 等通道与 sec_d 间接协作。
 
 ***
 
@@ -965,5 +960,5 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 
 ***
 
-> **文档结束** | v1.1 | IRON-9 v3 同源且部分代码共享 | 安全是横切关注点 | 0.1.1 = 文档体系完成
+> **文档结束** | v1.0.1 | IRON-9 v3 同源且部分代码共享 | 安全是横切关注点 | 0.1.1 = 文档体系完成
 

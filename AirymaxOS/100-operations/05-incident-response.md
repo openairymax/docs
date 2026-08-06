@@ -251,7 +251,7 @@ A-ULS 模块 macro_d 提供统一的自动重启能力，是事件响应的首�
 每个 daemon 与 Agent 的重启策略通过 A-UCS 配置：
 
 ```yaml
-# /etc/airy/supervision/restart_policy.yaml
+# /etc/agentrt/supervision/restart_policy.yaml
 daemons:
   macro_d:
     restart: always
@@ -543,7 +543,7 @@ macro_d 支持的自动响应动作：
 复杂场景下需要编排多个动作，audit_d 内置编排引擎：
 
 ```yaml
-# /etc/airy/incident/playbooks/oom_recovery.yaml
+# /etc/agentrt/incident/playbooks/oom_recovery.yaml
 name: oom_recovery
 trigger:
   severity: P0

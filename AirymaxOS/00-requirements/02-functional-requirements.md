@@ -132,7 +132,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 编号 | 功能需求 | 输入 | 输出 | 同源 agentrt | 验收标准 |
 |---|---|---|---|---|---|
 | FR-041 | CoreLoopThree kthread | 认知任务 | 认知结果 | coreloopthree | kthread 正确调度 |
-| FR-042 | 认知层（理解意图 + 生成计划） | 用户意图 | 任务 DAG | coreloopthree cognition | DAG 深度限制 10 层 |
+| FR-042 | 认知层（理解意图 + 生成计划） | 用户意图 | 任务 DAG | coreloopthree cognition | DAG 深度支持 20+ 层（对齐 BR-001 长序列任务需求） |
 | FR-043 | 执行层（执行单元 + 补偿事务） | 任务节点 | 执行结果 | coreloopthree execution | 补偿事务正确回滚 |
 | FR-044 | 双系统协同（System 1 + System 2） | 认知请求 | 协同结果 | coreloopthree | 切换阈值正确 |
 | FR-045 | 增量规划器 | 执行反馈 | DAG 扩展 | coreloopthree planner | 增量扩展正确 |

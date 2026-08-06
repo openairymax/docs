@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **`logger_d` 模块级设计** 的唯一权威源。`airy-logger.service` systemd unit 编排、`/etc/agentrt/logger_d.yaml` 配置 schema、按大小+时间的双维度轮转策略、zstd 压缩归档流程、与 `sec_d`/`audit_d` 的审计哈希链协作契约均以本文件为唯一权威定义。
 >
-> 本文件遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) A-ULP 模块设计与 [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) 数据流设计。技术选型对齐 Unify Design 与 ADR-012/ADR-014：日志内存采用 `alloc_pages(GFP_KERNEL)` + mmap（不使用 DMA 一致性内存），调度采用 sched_tac（不使用 sched_ext），微内核化改造仅参考 seL4（不引入 Zircon/Minix3）。`LOG_*` 5 级日志枚举与 128B 记录格式的权威源为 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md)；审计哈希链完整性保护（SHA3-256 + Ed25519 + TPM 2.0）的数据流细节权威源为 [06-logger-daemon-design.md](../40-dataflows/06-logger-daemon-design.md) §5.5。
+> 本文件遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) A-ULP 模块设计与 [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) 数据流设计。技术选型对齐 Unify Design 与 ADR-012/ADR-014：日志内存采用 `alloc_pages(GFP_KERNEL)` + mmap（不使用 DMA 一致性内存），调度采用 sched_tac（不使用 sched_ext），微内核化改造仅参考 seL4（不引入 Zircon/Minix3）。`LOG_*` 5 级日志枚举与 128B 记录格式的权威源为 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md)；审计哈希链完整性保护（SHA-256 + Ed25519 + TPM 2.0）的数据流细节权威源为 [06-logger-daemon-design.md](../40-dataflows/06-logger-daemon-design.md) §5.5。
 
 ---
 
@@ -140,8 +140,8 @@ compress:
 audit_chain:
   # 审计哈希链完整性保护（详见 §6，权威源 40-dataflows/06-logger-daemon-design.md §5.5）
   enabled: true
-  # 哈希算法：SHA3-256
-  hash_algo: sha3_256
+  # 哈希算法：SHA-256
+  hash_algo: sha256
   # 签名算法：Ed25519
   sign_algo: ed25519
   # 链尾签名触发：每 N 条记录签名一次
@@ -157,7 +157,7 @@ audit_chain:
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `level.min` | enum | `INFO` | 5 级日志枚举门槛，权威定义见 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) |
-| `facility.enabled` | string[] | 全部 | facility 白名单，对应 `LOG_*` 记录的 facility 字段（取值 `AIRY_FAC_*`） |
+| `facility.enabled` | string[] | 全部 | facility 白名单，对应 `LOG_*` 记录的 facility 字段（取值 `AIRY_LOG_FAC_*`） |
 | `output.path` | path | `/var/log/agentrt/airy.log` | 落盘文件路径（agentrt 命名空间） |
 | `output.ring_dev` | path | `/dev/airy_log` | Ring Buffer 字符设备（agentrt 命名空间） |
 | `rotation.max_size` | size | `100MB` | 单文件大小阈值 |
@@ -307,7 +307,7 @@ static int logger_archive_compress(const char *src, const char *dst)
 
 ### 6.1 设计目标
 
-A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日志文件可能被攻击者篡改（如本地 root 攻击、磁盘离线篡改）。本节定义 SHA3-256 哈希链 + Ed25519 数字签名 + TPM 2.0 度量机制，确保审计日志的完整性与可追溯性。
+A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日志文件可能被攻击者篡改（如本地 root 攻击、磁盘离线篡改）。本节定义 SHA-256 哈希链 + Ed25519 数字签名 + TPM 2.0 度量机制，确保审计日志的完整性与可追溯性。
 
 > **数据流权威源**：本节为模块级契约，哈希链 C 数据结构、`airy_audit_chain_*` API、密钥管理细节的权威源为 [06-logger-daemon-design.md](../40-dataflows/06-logger-daemon-design.md) §5.5。本文件不重新定义哈希链算法实现，仅定义 `logger_d` 与 `sec_d`/`audit_d` 的协作契约与配置项。
 
@@ -315,7 +315,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 
 | 层 | 机制 | 触发频率 | 责任方 |
 |----|------|---------|--------|
-| 1 | **SHA3-256 哈希链** | 每条审计记录 | `logger_d` 在落盘前追加 `prev_hash` |
+| 1 | **SHA-256 哈希链** | 每条审计记录 | `logger_d` 在落盘前追加 `prev_hash` |
 | 2 | **Ed25519 数字签名** | 每 N=1000 条或 T=60s（先到者触发） | `sec_d` 持有私钥并签名链尾 |
 | 3 | **TPM 2.0 度量** | 启动时度量日志哈希链根 | `sec_d` 在启动时将 `genesis_hash` 度量至 TPM PCG |
 
@@ -325,7 +325,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │  Record[0]      │    │  Record[1]      │    │  Record[2]      │
 │  genesis_hash   │───▶│  prev_hash =    │───▶│  prev_hash =    │───▶ ...
-│                 │    │   SHA3-256(R[0])│    │   SHA3-256(R[1])│
+│                 │    │   SHA-256(R[0])│    │   SHA-256(R[1])│
 │  record_data    │    │  record_data    │    │  record_data    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
         │                                           │
@@ -343,7 +343,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 
 | 协作方向 | 触发场景 | 接口 | 数据流 |
 |---------|---------|------|--------|
-| `sec_d` → `logger_d` | fastpath C-S9 Badge 校验失败（伪造/过期/冻结） | Ring Buffer 写入 `AIRY_FAC_SECURITY` facility 记录 | `logger_d` 消费时识别为审计记录，触发哈希链追加 |
+| `sec_d` → `logger_d` | fastpath C-S9 Badge 校验失败（伪造/过期/冻结） | Ring Buffer 写入 `AIRY_LOG_FAC_SECURITY` facility 记录 | `logger_d` 消费时识别为审计记录，触发哈希链追加 |
 | `logger_d` → `sec_d` | 链尾达到 N=1000 条或 T=60s 阈值 | `airy_audit_chain_sign()` IPC 请求 | `sec_d` 使用 Ed25519 私钥签名链尾哈希，返回 `chain_signature` |
 | `sec_d` → `logger_d` | `sec_d` 收到 SIGTERM | 即时签名链尾 | `logger_d` 在退出前完成最后一段链尾签名 |
 
@@ -368,7 +368,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 | 重排顺序 | `prev_hash` 链断 | `AIRY_FAULT_AUDIT_TAMPER = 0x100B` |
 | 签名失败 | `Ed25519_verify()` 返回 false | `AIRY_FAULT_AUDIT_TAMPER = 0x100B` |
 
-> **OS-SEC-130**（R4）：所有 `AIRY_FAC_SECURITY` facility 的审计日志记录必须经过哈希链完整性保护；审计日志读取方必须重新计算哈希链验证完整性，链断裂即视为日志被篡改，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册）。
+> **OS-SEC-130**（R4）：所有 `AIRY_LOG_FAC_SECURITY` facility 的审计日志记录必须经过哈希链完整性保护；审计日志读取方必须重新计算哈希链验证完整性，链断裂即视为日志被篡改，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（v1.0.1 在 [SC] error.h 中为预留故障码，需先经 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册后方可使用；error.h 当前已定义 0x1001-0x1006）。
 
 ### 6.6 落盘记录结构（OLK 6.6 工程规范）
 
@@ -378,7 +378,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 /* services/daemons/logger_d/audit_chain.h —— 审计哈希链落盘记录 */
 struct airy_audit_record {
     struct airy_log_record log;             /* 128B：A-ULP 标准 128B 日志记录 */
-    uint8_t prev_hash[AIRY_SHA3_256_LEN];   /* 32B：前一条记录的 SHA3-256 哈希 */
+    uint8_t prev_hash[AIRY_SHA256_LEN];   /* 32B：前一条记录的 SHA-256 哈希 */
 } __aligned(64);
 /* sizeof(struct airy_audit_record) == 192（128 + 32 + 对齐填充） */
 
@@ -386,7 +386,7 @@ struct airy_audit_record {
 struct airy_audit_chain_signature {
     uint64_t sequence;                            /* 签名序号（从 0 递增） */
     uint64_t record_count;                        /* 本次签名覆盖的记录数 */
-    uint8_t  last_record_hash[AIRY_SHA3_256_LEN]; /* 链尾记录的哈希 */
+    uint8_t  last_record_hash[AIRY_SHA256_LEN]; /* 链尾记录的哈希 */
     uint8_t  signature[AIRY_ED25519_SIG_LEN];     /* Ed25519 签名 */
     int64_t  timestamp_ns;                         /* 签名时间戳（CLOCK_MONOTONIC） */
 } __aligned(64);
@@ -430,13 +430,13 @@ static void logger_validate_badge(struct airy_log_record *rec, u64 badge)
     if (unlikely(badge_epoch != agent_caps[src_task].epoch)) {
         /* Epoch 不匹配：Badge 已被 O(1) 撤销（airy_cap_epoch_bump(agent_id)，K9-1 per-agent） */
         rec->level = LOG_ERROR;
-        rec->facility = AIRY_FAC_SECURITY;
+        rec->facility = AIRY_LOG_FAC_SECURITY;
         return;  /* 记录 Badge 过期事件，但不丢弃日志 */
     }
     if (unlikely(badge_randtag != agent_caps[src_task].randtag)) {
         /* RandomTag 不匹配：Badge 伪造尝试 */
         rec->level = LOG_FATAL;
-        rec->facility = AIRY_FAC_SECURITY;
+        rec->facility = AIRY_LOG_FAC_SECURITY;
         /* 触发 AIRY_FAULT_CAP_FORGED，由 sec_d 审计 */
         return;
     }
@@ -468,7 +468,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 
 | 层 | 头文件/资源 | logger_d 使用方式 |
 |----|----------|-----------------|
-| [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_FAC_*` facility |
+| [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_LOG_FAC_*` facility |
 | [SC] | `error.h` | `AIRY_EIPC_FROZEN`、`AIRY_ESEC_D_THROTTLED`、`AIRY_FAULT_AUDIT_TAMPER` |
 | [SS] | 配置语义 | `logger_d.yaml` 与 sysctl 语义同源 |
 | [IND] | systemd unit、zstd 压缩、轮转策略 | `logger_d` 实现细节 |
@@ -482,8 +482,8 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 |------|---------|--------------|
 | 日志级别 | 5 级（LOG_DEBUG~LOG_FATAL） | 仅 LOG_FATAL + LOG_ERROR 两级 |
 | 日志通路 | Ring Buffer + `logger_d` 消费 + 落盘 | printk 原生路径（绕过 Ring Buffer） |
-| facility 过滤 | `AIRY_FAC_*` 完整枚举 | 仅 `AIRY_FAC_KERNEL` |
-| 审计哈希链 | SHA3-256 + Ed25519 + TPM 2.0 | 关闭（降级模式下不可靠） |
+| facility 过滤 | `AIRY_LOG_FAC_*` 完整枚举 | 仅 `AIRY_LOG_FAC_KERN` |
+| 审计哈希链 | SHA-256 + Ed25519 + TPM 2.0 | 关闭（降级模式下不可靠） |
 | Capability Folding | fastpath C-S9 Badge 校验 | 跳过（仅 POSIX capability） |
 | 配置加载 | `/etc/agentrt/logger_d.yaml` | 内置默认值（`#warning` 告警） |
 
@@ -502,8 +502,8 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 #define LOG_INFO    LOG_ERROR
 #define LOG_WARN    LOG_ERROR
 
-/* [DSL] 仅保留 AIRY_FAC_KERNEL */
-#define AIRY_FAC_KERNEL  0
+/* [DSL] 仅保留 AIRY_LOG_FAC_KERN */
+#define AIRY_LOG_FAC_KERN  0
 
 /* [DSL] 128B 记录降级为 printk 原生日志（绕过 Ring Buffer） */
 #define airy_log_record  printk_degraded_entry
@@ -530,14 +530,14 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 
 | 协作方 | 协作方向 | 接口 | 协作内容 |
 |--------|---------|------|---------|
-| `sec_d` | 双向 | Ring Buffer + IPC | `sec_d` 写入 Badge 校验日志（`AIRY_FAC_SECURITY` facility）；`logger_d` 请求链尾签名（Ed25519） |
+| `sec_d` | 双向 | Ring Buffer + IPC | `sec_d` 写入 Badge 校验日志（`AIRY_LOG_FAC_SECURITY` facility）；`logger_d` 请求链尾签名（Ed25519） |
 | `audit_d` | 单向（读取） | 落盘文件 | `audit_d` 读取 `/var/log/agentrt/audit_chain.log` + `audit_chain.sig`，调用 `airy_audit_chain_verify()` 校验完整性 |
 | `macro_d` | 单向（被监管） | 心跳上报 | `logger_d` 上报心跳至 `macro_d`，崩溃后由 `macro_d` 通过 systemd 重启 |
 | `config_d` | 单向（被管理） | SIGHUP 热重载 | `config_d` 修改 `/etc/agentrt/logger_d.yaml` 后通过 SIGHUP 触发 `logger_d` 热重载 |
-| `cogn_d` | 单向（生产者） | Ring Buffer | `cogn_d` 写入认知循环日志（`AIRY_FAC_COGNITION` facility），`logger_d` 消费 |
-| `mem_d` | 单向（生产者） | Ring Buffer | `mem_d` 写入记忆卷载日志（`AIRY_FAC_MEMORY` facility），`logger_d` 消费 |
+| `cogn_d` | 单向（生产者） | Ring Buffer | `cogn_d` 写入认知循环日志（`AIRY_LOG_FAC_DAEMON` facility），`logger_d` 消费 |
+| `mem_d` | 单向（生产者） | Ring Buffer | `mem_d` 写入记忆卷载日志（`AIRY_LOG_FAC_MEMORY` facility），`logger_d` 消费 |
 | `gateway_d` | 单向（生产者） | Ring Buffer | `gateway_d` 写入跨节点 IPC 日志，`logger_d` 消费 |
-| `sched_d` | 单向（生产者） | Ring Buffer | `sched_d` 写入调度策略日志（`AIRY_FAC_SCHED` facility），`logger_d` 消费 |
+| `sched_d` | 单向（生产者） | Ring Buffer | `sched_d` 写入调度策略日志（`AIRY_LOG_FAC_SCHED` facility），`logger_d` 消费 |
 | `dev_d` | 单向（生产者） | Ring Buffer | `dev_d` 写入设备驱动用户态化日志，`logger_d` 消费 |
 | `net_d` | 单向（生产者） | Ring Buffer | `net_d` 写入网络栈用户态化日志，`logger_d` 消费 |
 | `vfs_d` | 单向（生产者） | Ring Buffer | `vfs_d` 写入 VFS 用户态化日志，`logger_d` 消费 |
@@ -560,7 +560,7 @@ vfs_d（VFS 用户态化）                  config_d（统一配置管理）
 - [10-unify-design.md](../10-architecture/10-unify-design.md) —— Airymax Unify Design 总纲（A-ULP 模块定位）
 - [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) —— 零拷贝 Ring Buffer 日志数据流（内核生产侧权威）
 - [06-logger-daemon-design.md](../40-dataflows/06-logger-daemon-design.md) —— `logger_d` 数据流设计（§5.5 审计哈希链 C 实现权威源）
-- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式与 `LOG_*`/`AIRY_FAC_*` 枚举 [SC] 契约
+- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式与 `LOG_*`/`AIRY_LOG_FAC_*` 枚举 [SC] 契约
 - [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_EIPC_FROZEN`/`AIRY_ESEC_D_THROTTLED`/`AIRY_FAULT_AUDIT_TAMPER` 错误码注册
 - [13-printk-bridge.md](13-printk-bridge.md) —— printk 桥接设计（日志链路上游）
 - [11-unified-config.md](11-unified-config.md) —— A-UCS 统一配置管理体系（`logger_d.yaml` YAML 语义）

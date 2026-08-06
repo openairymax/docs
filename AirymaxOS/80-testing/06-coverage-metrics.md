@@ -89,10 +89,12 @@ flowchart TB
 `gcov` 由 GCC 提供，通过编译时插桩（`-fprofile-arcs -ftest-coverage`）生成 `.gcno` 文件（编译时元数据），运行时收集 `.gcda` 文件（运行时计数）。
 
 ```bash
-# 编译时启用 gcov
-make ARCH=um defconfig airy_coverage_defconfig
+# 编译时启用 gcov（UML 无 airy_coverage_defconfig：defconfig + fragment 叠加，fragment 为规划项）
+make ARCH=um defconfig
+./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_coverage.config
+make ARCH=um olddefconfig
 
-# airy_coverage_defconfig 关键配置
+# airy_coverage.config 关键配置（规划 fragment）
 # CONFIG_GCOV_KERNEL=y
 # CONFIG_GCOV_PROFILE_ALL=y
 # CONFIG_GCOV_PROFILE_AIRY=y
@@ -245,6 +247,8 @@ agentrt-linux 按模块定义覆盖率门槛，配置文件位于 `scripts/airy_
 
 ### 3.2 门槛等级
 
+> **数值统一声明（权威）**：本卷 4 级门槛为覆盖率数值的唯一权威（kernel/core ≥90%、security ≥95%、ipc ≥90%、关键路径 100%）。[80-testing/README.md](README.md) 与 [70-build-system/03-ci-cd-pipeline.md §5.6](../70-build-system/03-ci-cd-pipeline.md) 均引用本卷数值并互引；各文档出现覆盖率数值时一律以本卷为准，禁止在别处私设门槛。
+
 | 等级 | 模块 | 行覆盖率 | 分支覆盖率 | 函数覆盖率 | 关键路径 |
 |------|------|---------|----------|----------|---------|
 | **关键** | `kernel/airymaxos/ipc/airy_ipc_fastpath.c` 等 4 项 | 100% | 100% | 100% | — |
@@ -393,7 +397,10 @@ jobs:
       
       - name: Build with coverage
         run: |
-          make ARCH=um defconfig airy_coverage_defconfig
+          # UML 无 airy_coverage_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_coverage.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       
       - name: Boot UML and run all tests
@@ -466,7 +473,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with coverage
         run: |
-          make ARCH=um defconfig airy_coverage_defconfig
+          # UML 无 airy_coverage_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_coverage.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Run KUnit + kselftest
         run: |
@@ -597,7 +607,7 @@ agentrt-linux 的 Agent 8 态生命周期状态机（INACTIVE → SPAWNING → R
 /* kernel/airymaxos/coverage/airy_coverage_agent_path.c */
 #include <linux/module.h>
 #include <linux/atomic.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 /* 8x8 状态转换矩阵，记录每条路径被命中的次数 */
 static atomic_t airy_coverage_path_matrix[8][8];
@@ -712,8 +722,8 @@ int airy_coverage_agent_path_illegal_count(void)
 ### 8.3 后续版本规划
 
 - v1.0.1：新增 `airy_coverage_token_budget` Token 预算路径覆盖率。
-- v1.2：与 10-formal-verification 联动，将形式化验证的属性覆盖纳入覆盖率报告。
-- v1.3：支持分支覆盖率的 MC/DC（Modified Condition/Decision Coverage）度量。
+- 下一版本：与 10-formal-verification 联动，将形式化验证的属性覆盖纳入覆盖率报告。
+- 后续版本：支持分支覆盖率的 MC/DC（Modified Condition/Decision Coverage）度量。
 
 ---
 
@@ -785,7 +795,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with perf defconfig
         run: |
-          make ARCH=um defconfig airy_perf_defconfig
+          # UML 无 airy_perf_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_perf.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Run perf benchmarks
         run: |

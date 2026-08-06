@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **Airymax 日志 Ring Buffer 数据流** 的唯一权威源。内存方案（alloc_pages + mmap）、无锁 Ring Buffer 设计（reserve/commit 两阶段 + 三索引 head/commit/tail SPSC 所有权分离，P0-D1/D2 修复）、Fastpath 路径、eventfd 通知、Logger Daemon 分离、Panic 回退路径均以本文件为唯一权威定义。
+> **单一权威源声明**：本文件是 **Airymax 日志 Ring Buffer 数据流** 的唯一权威源。内存方案（alloc_pages + mmap）、无锁 Ring Buffer 设计（reserve/commit 两阶段 + 三索引 head/committed_head/tail SPSC 所有权分离，P0-D1/D2 修复）、Fastpath 路径、eventfd 通知、Logger Daemon 分离、Panic 回退路径均以本文件为唯一权威定义。
 >
 > 技术选型声明：日志内存采用 **`alloc_pages(GFP_KERNEL)` + mmap**（**不使用 DMA 一致性内存**，x86_64 默认缓存一致）。本数据流遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) 的 A-ULP 模块设计与 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) 的 128B 记录格式。整体技术选型对齐 Unify Design：sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射，不使用 sched_ext）+ 纯 C LSM（不使用 BPF LSM）+ IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
@@ -38,9 +38,11 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.2 正确方案：alloc_pages + mmap（P0-D8 修复：分页写保护）
 
-A-ULP 采用 `alloc_pages(GFP_KERNEL)` 分配连续物理页 + `remap_pfn_range` 映射到用户态。**P0-D8 修复**：将 header / tail / data 分离到不同页，header 与 data 页只读映射到用户态，仅 tail 页可写，防止用户态篡改 header 元数据（magic/level/frozen 等）。
+A-ULP 采用 `alloc_pages(GFP_KERNEL)` 分配连续物理页 + `remap_pfn_range` 映射到用户态。
 
-**内存布局**（P0-D8 修复后）：
+> **⚠️ 实现状态标注（v1.0.1-fix）**：P0-D8 分页写保护（将 header / tail / data 分离到不同页分别映射，header 与 data 页只读）为**设计 v1.0.1-fix，尚未落地**。当前实现（`kernel/log/airy_log_ring.c` `airy_log_ring_init()`）为**单一 `kaddr` 连续区**：`struct airy_log_ring_header`（40B，含 `head`/`committed_head`/`tail`/`capacity`/`record_size`/`frozen`）置于区首，`record[0]` 紧随其后，**分页写保护未实现**（整体映射，无 per-page 保护属性）。以下 P0-D8 设计保留为规划稿，落地时以物理文件为准。
+
+**内存布局**（P0-D8 设计稿，未实现）：
 
 ```
 Page 0:   struct airy_log_ring_ro_header  → PROT_READ（用户态只读）
@@ -49,17 +51,17 @@ Page 2+:  record[0] .. record[N-1]        → PROT_READ（用户态只读）
 ```
 
 ```c
-/* kernel/log/airy_log_ring.c —— 内存分配（P0-D8 修复：分页写保护） */
+/* kernel/log/airy_log_ring.c —— 内存分配（P0-D8 设计稿，未实现） */
 
 /* mmap 偏移定义（vm_pgoff 单位为页） */
 #define AIRY_LOG_MMAP_OFF_RO_HEADER  0  /* Page 0: read-only header */
 #define AIRY_LOG_MMAP_OFF_RW_TAIL    1  /* Page 1: writable tail */
 #define AIRY_LOG_MMAP_OFF_RO_DATA    2  /* Page 2+: read-only data */
 
-/* 只读 header（用户态不可写，防止篡改 head/commit/capacity/frozen） */
+/* 只读 header（用户态不可写，防止篡改 head/committed_head/capacity/frozen） */
 struct airy_log_ring_ro_header {
     __u64   head;           /* 生产者 reserve 位置 */
-    __u64   commit;         /* 生产者 commit 位置（P0-D1 修复） */
+    __u64   committed_head; /* 生产者 commit 位置（对齐实现字段名） */
     __u32   capacity;       /* Ring 容量（记录数） */
     __u32   record_size;    /* 单条记录大小（128B） */
     __u32   frozen;         /* 冻结标志（Micro-Supervisor 设置） */
@@ -100,7 +102,7 @@ static int airy_log_ring_alloc(struct airy_log_ring *ring, size_t data_size)
     return 0;
 }
 
-/* mmap 到用户态 Logger Daemon（P0-D8 修复：按 offset 区分保护属性） */
+/* mmap 到用户态 Logger Daemon（P0-D8 设计稿，未实现：按 offset 区分保护属性） */
 static int airy_log_ring_mmap(struct file *f, struct vm_area_struct *vma)
 {
     struct airy_log_ring *ring = f->private_data;
@@ -112,20 +114,20 @@ static int airy_log_ring_mmap(struct file *f, struct vm_area_struct *vma)
 
     switch (pgoff) {
     case AIRY_LOG_MMAP_OFF_RO_HEADER:
-        /* P0-D8 修复：header 页只读，禁止用户态篡改 head/commit/frozen */
+        /* P0-D8 设计：header 页只读，禁止用户态篡改 head/committed_head/frozen */
         prot = pgprot_modify(vma->vm_page_prot, PROT_READ, 0);
         vma->vm_flags &= ~VM_WRITE;
         return remap_pfn_range(vma, vma->vm_start,
                                page_to_pfn(ring->pages),
                                PAGE_SIZE, prot);
     case AIRY_LOG_MMAP_OFF_RW_TAIL:
-        /* tail 页可写（Logger Daemon 写 tail 索引，P0-D3 修复） */
+        /* tail 页可写（Logger Daemon 写 tail 索引，P0-D3 设计） */
         prot = vma->vm_page_prot;
         return remap_pfn_range(vma, vma->vm_start,
                                page_to_pfn(ring->pages) + 1,
                                PAGE_SIZE, prot);
     case AIRY_LOG_MMAP_OFF_RO_DATA:
-        /* P0-D8 修复：data 页只读，禁止用户态篡改日志记录 */
+        /* P0-D8 设计：data 页只读，禁止用户态篡改日志记录 */
         prot = pgprot_modify(vma->vm_page_prot, PROT_READ, 0);
         vma->vm_flags &= ~VM_WRITE;
         return remap_pfn_range(vma, vma->vm_start,
@@ -137,8 +139,7 @@ static int airy_log_ring_mmap(struct file *f, struct vm_area_struct *vma)
 }
 ```
 
-> **⚠️ P0-D8 修复说明**（v1.0.1-fix）：原设计将 header + tail + data 放在同一连续内存区域，用户态以 `PROT_READ|PROT_WRITE` 映射整片区域，导致用户态可篡改 header 元数据（`magic`/`head`/`commit`/`frozen` 等）和日志记录数据。修复后将三者分离到不同页：header 页（Page 0）和 data 页（Page 2+）以 `PROT_READ` 只读映射到用户态，仅 tail 页（Page 1）以 `PROT_READ|PROT_WRITE` 映射。内核在 `airy_log_ring_mmap()` 中根据 `vm_pgoff` 强制清除 `VM_WRITE` 标志，即使用户态请求 `PROT_WRITE` 也无法写入 header/data 页。
-```
+> **⚠️ P0-D8 修复说明**（v1.0.1-fix，**设计态，未实现**）：原设计将 header + tail + data 放在同一连续内存区域，用户态以 `PROT_READ|PROT_WRITE` 映射整片区域，导致用户态可篡改 header 元数据（`magic`/`head`/`committed_head`/`frozen` 等）和日志记录数据。设计稿将三者分离到不同页：header 页（Page 0）和 data 页（Page 2+）以 `PROT_READ` 只读映射到用户态，仅 tail 页（Page 1）以 `PROT_READ|PROT_WRITE` 映射。**当前实现未落地此设计**——实际为单一 `kaddr` 连续区（`header` + `record[]`，见 `airy_log_ring_init()`），写保护未实现。
 
 ### 1.3 缓存一致性保证
 
@@ -161,30 +162,30 @@ A-ULP 的 Ring Buffer 采用 **reserve/commit 两阶段写入**模型，避免�
 ```
 生产者（内核态）                  消费者（Logger Daemon）
 ┌──────────────────────┐        ┌──────────────────────┐
-│ 1. reserve(slot)     │        │ 1. 读取 commit 索引   │
-│    → 获得 slot 偏移  │        │ 2. 消费 [read, commit)│
+│ 1. reserve(slot)     │        │ 1. 读取 committed_head│
+│    → 获得 slot 偏移  │        │ 2. 消费 [read, committed_head)│
 │ 2. memcpy 128B 到 slot│        │ 3. 更新 read 索引     │
 │ 3. commit(slot)      │        │ 4. eventfd 通知已消费 │
-│    → 更新 commit 索引│        │                      │
+│    → 更新 committed_head │     │                      │
 └──────────────────────┘        └──────────────────────┘
 ```
 
 ### 2.2 原子索引（P0-D1 修复：三索引 SPSC 所有权分离）
 
-Ring Buffer 使用三个原子索引（v1.0.1-fix：原两索引模型存在消费者读到未提交数据的根本性缺陷）：
+Ring Buffer 使用三个原子索引（v1.0.1-fix：原两索引模型存在消费者读到未提交数据的根本性缺陷）。索引字段名对齐实现（`kernel/log/airy_log_ring.c` `struct airy_log_ring_header`）：`committed_head`（原文档旧名 `commit`，已统一）：
 
 - `head`：生产者 reserve 位置（仅生产者写，消费者读）—— 标记已预留的 slot
-- `commit`：生产者 commit 位置（仅生产者写，消费者读）—— 标记已提交可消费的记录，消费者只读 `[tail, commit)` 区间
+- `committed_head`：生产者 commit 位置（仅生产者写，消费者读）—— 标记已提交可消费的记录，消费者只读 `[tail, committed_head)` 区间
 - `tail`：消费者 read 位置（仅消费者写，生产者读）—— 标记已消费的位置
 
-> **⚠️ P0-D1 修复说明**（v1.0.1-fix）：原设计仅有 `head`/`tail` 两索引，消费者读取 `[tail, head)` 区间。但 `head` 在 reserve 时即自增，此时 128B 数据尚未写入完成，消费者可能读到半成品数据（magic/level/timestamp 等字段残留上一轮值或为零值）。引入独立 `commit` 索引后，消费者读取 `[tail, commit)` 区间，`commit` 仅在 128B 数据完全写入后才推进，确保消费者只读已提交数据。
+> **⚠️ P0-D1 修复说明**（v1.0.1-fix）：原设计仅有 `head`/`tail` 两索引，消费者读取 `[tail, head)` 区间。但 `head` 在 reserve 时即自增，此时 128B 数据尚未写入完成，消费者可能读到半成品数据（magic/level/timestamp 等字段残留上一轮值或为零值）。引入独立 `committed_head` 索引后，消费者读取 `[tail, committed_head)` 区间，`committed_head` 仅在 128B 数据完全写入后才推进，确保消费者只读已提交数据。
 
-> **⚠️ P0-D2 修复说明**（v1.0.1-fix）：原设计在生产者 reserve 时若 Ring 满，生产者会越权写 `tail`（`smp_store_release(&hdr->tail, tail + 1)`），破坏 SPSC 单生产者单消费者所有权不变量——生产者与消费者并发写 `tail` 会导致数据竞态。修复后生产者 Ring 满时返回 NULL（丢弃写），由调用方走 printk_safe 回退，**生产者不得写 `tail` 索引**。
+> **⚠️ P0-D2 修复说明**（v1.0.1-fix，**设计态**）：原设计在生产者 reserve 时若 Ring 满，生产者会越权写 `tail`（`smp_store_release(&hdr->tail, tail + 1)`），破坏 SPSC 单生产者单消费者所有权不变量——生产者与消费者并发写 `tail` 会导致数据竞态。设计稿修复为：生产者 Ring 满时返回 NULL（丢弃写），由调用方走 printk_safe 回退，**生产者不得写 `tail` 索引**。**注意：当前实现（`airy_log_ring.c`）未采用"满则丢弃"，实际为覆盖写**——Ring 满时新记录覆盖最旧记录（源码注释 "When the ring is full the oldest record is overwritten"），`head`/`tail` 差值允许超过 `capacity`（无满检查）。
 
 ```c
 struct airy_log_ring_header {
     __u64   head;           /* 生产者 reserve 位置（仅生产者写，消费者读） */
-    __u64   commit;         /* 生产者 commit 位置（仅生产者写，消费者读）—— P0-D1 修复 */
+    __u64   committed_head; /* 生产者 commit 位置（仅生产者写，消费者读）—— P0-D1 修复 */
     __u64   tail;           /* 消费者 read 位置（仅消费者写，生产者读） */
     __u32   capacity;       /* Ring 容量（记录数） */
     __u32   record_size;    /* 单条记录大小（128B） */
@@ -211,9 +212,8 @@ static struct airy_log_record *airy_log_reserve(struct airy_log_ring *ring)
     do {
         head = smp_load_acquire(&hdr->head);
         tail = smp_load_acquire(&hdr->tail);
-        /* Ring 满：head - tail == capacity
-         * P0-D2 修复：生产者不得写 tail（SPSC 所有权不变量），
-         * Ring 满时返回 NULL（丢弃写），由调用方走 printk_safe 回退 */
+        /* Ring 满：head - tail == capacity（P0-D2 设计稿）
+         * 注意：当前实现为覆盖写，无此满检查（见 §2.2 P0-D2 标注） */
         if (head - tail >= hdr->capacity)
             return NULL;
         idx = head % hdr->capacity;
@@ -238,16 +238,16 @@ static void airy_log_commit(struct airy_log_ring *ring, struct airy_log_record *
     __u64 commit, head;
     __u32 idx;
 
-    /* P0-D1 修复：commit 写入独立 commit 索引（而非 head）
+    /* P0-D1 修复：commit 写入独立 committed_head 索引（而非 head）
      *
      * 1. 先设置 slot magic（release 屏障确保 128B 数据在 magic 可见前
      *    完成写入），作为 per-slot commit 标志 */
     smp_store_release(&rec->magic, AIRY_LOG_MAGIC);
 
-    /* 2. 推进 commit 索引：扫描连续的已 commit slot
+    /* 2. 推进 committed_head 索引：扫描连续的已 commit slot
      *    支持多生产者乱序完成——某生产者先 commit 后续 slot 时，
-     *    commit 不会跳过未完成的中间 slot */
-    commit = smp_load_acquire(&hdr->commit);
+     *    committed_head 不会跳过未完成的中间 slot */
+    commit = smp_load_acquire(&hdr->committed_head);
     head   = smp_load_acquire(&hdr->head);
     while (commit < head) {
         idx = commit % hdr->capacity;
@@ -257,8 +257,8 @@ static void airy_log_commit(struct airy_log_ring *ring, struct airy_log_record *
             break;  /* 此 slot 未 commit，停止推进（保持 commit 连续性） */
         commit++;
     }
-    if (commit > smp_load_acquire(&hdr->commit))
-        smp_store_release(&hdr->commit, commit);
+    if (commit > smp_load_acquire(&hdr->committed_head))
+        smp_store_release(&hdr->committed_head, commit);
 
     /* 3. eventfd 通知 Logger Daemon（非阻塞） */
     eventfd_signal(ring->efd, 1);
@@ -350,18 +350,18 @@ Logger Daemon 被唤醒后批量消费，避免每条日志触发一次唤醒：
 static void logger_consume(struct airy_log_ring *ring)
 {
     struct airy_log_ring_header *hdr = mmap_addr;
-    __u64 commit, tail;
-    /* P0-D1 修复：消费者读取 commit 索引（而非 head），只消费已提交的记录 */
+    __u64 committed_head, tail;
+    /* P0-D1 修复：消费者读取 committed_head 索引（而非 head），只消费已提交的记录 */
     do {
-        commit = smp_load_acquire(&hdr->commit);
+        committed_head = smp_load_acquire(&hdr->committed_head);
         tail   = hdr->tail;
-        while (tail < commit) {
+        while (tail < committed_head) {
             struct airy_log_record *rec = record_at(ring, tail % hdr->capacity);
             logger_format_and_write(rec);   /* sprintf 格式化 + 落盘 */
             tail++;
         }
         smp_store_release(&hdr->tail, tail);
-    } while (commit != smp_load_acquire(&hdr->commit));   /* 防止漏消费 */
+    } while (committed_head != smp_load_acquire(&hdr->committed_head));   /* 防止漏消费 */
 }
 ```
 
@@ -412,9 +412,9 @@ Logger Daemon 的格式化引擎将 128B raw binary 转换为标准日志行：
 Logger Daemon 是用户态进程，可能崩溃。A-ULP 的设计确保 Logger Daemon 崩溃不丢日志：
 
 1. **Ring Buffer 不丢**：Ring Buffer 在内核态，Logger Daemon 崩溃不影响生产者写入
-2. **丢弃写策略**（P0-D2 修复）：当 Ring Buffer 满，生产者返回 NULL 走 printk_safe 回退（原覆盖写需生产者越权写 tail 违反 SPSC，已修复）
+2. **满策略**（与实现对齐）：当前实现（`airy_log_ring.c`）为**覆盖写**——Ring 满时新记录覆盖最旧记录，不丢弃。原 P0-D2 设计稿"满则返回 NULL 丢弃 + printk_safe 回退"（为规避生产者越权写 tail 违反 SPSC）为规划态，未落地；生产者在覆盖写模式下也不得写 `tail`（SPSC 所有权不变量仍成立）。
 3. **systemd 自动重启**：Logger Daemon 作为 systemd service，崩溃后自动重启
-4. **重启后继续消费**：Logger Daemon 重启后从 `tail` 索引继续消费（P0-D1 修复：基于 commit 判断可消费范围），仅丢失崩溃期间因 Ring 满被丢弃的记录
+4. **重启后继续消费**：Logger Daemon 重启后从 `tail` 索引继续消费（P0-D1 修复：基于 `committed_head` 判断可消费范围）
 
 ---
 
@@ -533,7 +533,7 @@ A-ULP 的延迟 SLO（受 [170-performance/05-agent-latency-slo.md](../170-perfo
 |------|------|---------|
 | v1.0 | 2026-07-17 | 初始版本：零拷贝 Ring Buffer 日志数据流；alloc_pages + mmap 内存方案（不使用 DMA 一致性内存）；无锁 reserve/commit 两阶段写入；Fastpath ~50-100ns；eventfd 通知；Logger Daemon 分离；Panic 回退 printk_safe；性能对比 100-500 倍提升 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
-| v1.0.1-fix | 2026-07-26 | P0-D1/D2 修复：引入三索引模型（head/commit/tail SPSC 所有权分离），消费者读取 `[tail, commit)` 而非 `[tail, head)` 避免读到未提交数据；生产者 Ring 满时返回 NULL 而非越权写 tail；commit 实现改为写入独立 commit 索引 + per-slot magic 扫描推进；内核 mmap 添加 P0-D3/P0-D8 修复说明 |
+| v1.0.1-fix | 2026-07-26 | P0-D1/D2 修复：引入三索引模型（head/committed_head/tail SPSC 所有权分离），消费者读取 `[tail, committed_head)` 而非 `[tail, head)` 避免读到未提交数据；commit 实现改为写入独立 committed_head 索引 + per-slot magic 扫描推进；内核 mmap 添加 P0-D3/P0-D8 修复说明；v1.0.1 复核：P0-D8 分页写保护标注为设计态（实现为单一 kaddr 连续区），满策略与实现统一为覆盖写，索引字段名统一为 committed_head |
 
 ---
 

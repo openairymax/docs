@@ -58,49 +58,37 @@ AirymaxOS 中的 Agent 具有以下特征：
 
 ### 2.1 生命周期状态机
 
-Agent 经历以下状态：
+Agent 生命周期状态对齐 [SC] `sched.h` 的 `enum airy_agent_state` **8 态**（`AIRY_AGENT_INACTIVE` 至 `AIRY_AGENT_DEAD`）：
 
 ```
-                  [创建]
-                     │
-                     ▼
-                 ┌────────┐
-       ┌────────>│ CREATED│
-       │         └────┬───┘
-       │              │ start
-       │              ▼
-       │         ┌────────┐
-       │         │RUNNING │◄───────┐
-       │         └────┬───┘        │
-       │              │ pause      │ resume
-       │              ▼            │
-       │         ┌────────┐        │
-       │         │ PAUSED ├────────┘
-       │         └────┬───┘
-       │              │ stop
-       │              ▼
-       │         ┌────────┐
-       │         │STOPPED │
-       │         └────┬───┘
-       │              │ restart
-       │              ▼
-       └──────────────┘
-                      │ terminate
-                      ▼
-                 ┌────────┐
-                 │TERMINATED│
-                 └────────┘
+   INACTIVE(0) ──fork──► SPAWNING(1) ──就绪──► READY(2)
+                                                  │ 调度
+                                                  ▼
+                    ┌───────────────► RUNNING(3) ◄──────────────┐
+                    │                    │                       │
+                    │              IPC/IO 等待             I/O 完成
+                    │                    ▼                       │
+                    │              BLOCKED(4) ───────────────────┘
+                    │                    │ 冻结（异常/裁决）
+                    │                    ▼
+                    │              STOPPING(5) ──► STOPPED(6) ──► RUNNING/READY（恢复）
+                    │                                         │
+                    └────────────── 终止 ──────────────────────▼
+                                                         DEAD(7) ──waitpid──► 回收
 ```
 
-状态说明：
+状态说明（对齐 `enum airy_agent_state`，与 Linux 进程状态天然映射）：
 
-| 状态 | 含义 | 资源占用 | IPC 可达 |
-|------|------|----------|----------|
-| CREATED | 已创建未启动 | 仅元数据 | 否 |
-| RUNNING | 正在运行 | 全部资源 | 是 |
-| PAUSED | 已暂停 | 内存保留，CPU 释放 | 否 |
-| STOPPED | 已停止 | 内存释放，状态持久化 | 否 |
-| TERMINATED | 已终止 | 全部释放 | 否 |
+| 状态 | 枚举值 | 含义 | 资源占用 | IPC 可达 |
+|------|--------|------|----------|----------|
+| INACTIVE | 0 | 进程不存在，等待 fork | 无 | 否 |
+| SPAWNING | 1 | fork/exec 中，未就绪 | 部分（进程创建中） | 否 |
+| READY | 2 | TASK_RUNNING，在运行队列等待 | 全部资源 | 是 |
+| RUNNING | 3 | TASK_RUNNING，正在 CPU 执行 | 全部资源 | 是 |
+| BLOCKED | 4 | TASK_INTERRUPTIBLE，等待 IPC/IO | 内存保留 | 否（等待中） |
+| STOPPING | 5 | SIGSTOP 发送中，正在冻结 IPC | 内存保留 | 否 |
+| STOPPED | 6 | TASK_STOPPED，已冻结，待裁决 | 内存保留，CPU 释放 | 否 |
+| DEAD | 7 | EXIT_ZOMBIE，等待 waitpid 回收 | 全部释放 | 否 |
 
 ### 2.2 创建阶段
 
@@ -109,7 +97,7 @@ Agent 创建流程：
 1. **请求**：用户/其他 Agent 通过 `airyctl agent create` 或 RPC 发起创建请求。
 2. **校验**：macro_d 校验请求参数（名称、模板、预算等）。
 3. **分配 ID**：macro_d 分配全局唯一 Agent ID。
-4. **初始化元数据**：写入 `/var/lib/airy/agents/<id>/meta.json`。
+4. **初始化元数据**：写入 `/var/lib/agentrt/agents/<id>/meta.json`。
 5. **加载模板**：config_d 加载 Agent 模板配置。
 6. **分配资源**：sched_d 分配调度参数，mem_d 分配记忆空间。
 7. **安全配置**：sec_d 应用能力集与访问控制。
@@ -164,7 +152,7 @@ Agent 终止流程：
 3. **强制停止**：超时后发送 SIGKILL。
 4. **状态持久化**：mem_d 将 L1/L2 数据写入 L3（如配置允许）。
 5. **资源释放**：sched_d 移除调度，mem_d 释放记忆，A-IPC 关闭 IPC。
-6. **元数据归档**：meta.json 移动到 `/var/lib/airy/agents.archive/`。
+6. **元数据归档**：meta.json 移动到 `/var/lib/agentrt/agents.archive/`。
 7. **审计记录**：audit_d 记录终止事件，保留 90 天。
 
 终止是不可逆操作。如需保留 Agent 以备重启，使用 `stop` 而非 `terminate`。
@@ -268,7 +256,7 @@ cogn_d 负责监控 Agent Token 消耗，详见第 5 节。
 每个 Agent 可配置独立的调优策略：
 
 ```yaml
-# /etc/airy/agents/<id>/tuning.yaml
+# /etc/agentrt/agents/<id>/tuning.yaml
 sched:
   auto_tune: true
   min_runtime_ms: 5
@@ -390,7 +378,7 @@ Agent 迁移适用于以下场景：
 
 热迁移不中断 Agent 服务，流程：
 
-1. **预迁移**：macro_d 在目标节点预创建 Agent（CREATED 状态）。
+1. **预迁移**：macro_d 在目标节点预创建 Agent（INACTIVE 状态，进程未启动）。
 2. **状态同步**：
    - L1/L2 记忆通过 RPC 实时同步到目标节点。
    - 调度参数、IPC 状态、Token 预算同步。
@@ -461,7 +449,7 @@ airyctl agent migrate rollback <id>
 
 热升级不重启 Agent 进程，仅更新运行时配置：
 
-1. **准备**：config_d 加载新版本配置到 `/etc/airy/agents/<id>.new/`。
+1. **准备**：config_d 加载新版本配置到 `/etc/agentrt/agents/<id>.new/`。
 2. **校验**：校验配置完整性与兼容性。
 3. **原子切换**：通过 `renameat2(ATOMIC_REPLACE)` 原子替换配置目录。
 4. **通知**：macro_d 发送 SIGHUP 给 Agent。
@@ -476,7 +464,7 @@ airyctl agent migrate rollback <id>
 
 1. **批次划分**：将 Agent 集群分为 N 批（默认 10%）。
 2. **逐批升级**：
-   - 暂停该批次 Agent（PAUSED）。
+   - 暂停该批次 Agent（STOPPED：SIGSTOP 冻结 IPC，待裁决）。
    - 更新配置与代码。
    - 重启 Agent。
    - 健康分稳定 60s 后进入下一批。
@@ -523,7 +511,7 @@ airyctl agent upgrade rollback <id>
 airyctl agent upgrade rollback <id> --version v2.0.5
 ```
 
-回滚保留最近 3 个版本的配置与代码，存储在 `/var/lib/airy/agents/<id>/versions/`。
+回滚保留最近 3 个版本的配置与代码，存储在 `/var/lib/agentrt/agents/<id>/versions/`。
 
 ---
 
@@ -618,7 +606,7 @@ devstation 提供日志查看器，详见 [10-devstation.md](10-devstation.md)�
 
 - **短期**：logger_d Ring Buffer（内存，1 小时）。
 - **中期**：`/var/log/airy/agents/<id>/<YYYYMMDD>.log.zst`（按天分文件，zstd 压缩）。
-- **长期**：超 30 天的日志归档到 `/var/lib/airy/log.archive/`，保留 90 天。
+- **长期**：超 30 天的日志归档到 `/var/lib/agentrt/log.archive/`，保留 90 天。
 
 ---
 

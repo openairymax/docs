@@ -385,7 +385,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | docs/AirymaxRT/10-architecture/00-architectural-principles.md | 架构原则 | 五维正交 24 原则 |
 | 50-engineering-standards/10-coding-style/ | 编码规范 | C / Rust / 安全编码规范文件 |
 | Doxygen 注释 | 代码内文档 | 每个公共 API 的契约注释 |
-| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（17 个 ADR） |
+| ADR | 架构决策记录 | [05-adrs.md](05-adrs.md)（18 个 ADR） |
 
 ### 5.8 E-8 可测试性原则
 
@@ -424,7 +424,7 @@ Airymax 将乔布斯与艾夫的设计哲学确立为 A-1 简约至上原则的�
 | 乔布斯哲学要素 | Airymax 工程落地 |
 |---------------|-----------------|
 | "在复杂中建立秩序" | 微内核设计思想——在 Linux 30 年复杂性中建立 seL4 minimality 秩序 |
-| "对复杂事物的精髓进行深度挖掘和精准提炼" | IRON-9 v3 [SC] 共享契约层——从全量代码中提炼 10 个头文件作为精髓 |
+| "对复杂事物的精髓进行深度挖掘和精准提炼" | IRON-9 v3 [SC] 共享契约层——从全量代码中提炼 12 个头文件作为精髓 |
 | "必须做到真正的深入" | 机制与策略分离——深入理解机制后才能正确分离策略 |
 | "了解简约的产品是如何生产出来的" | SSoT 单一权威源——每个技术点只有一个权威定义，深入了解后才能提炼 |
 | "去芜存菁" | sched_tac 替代 sched_ext——深入理解调度本质后，用原生调度类组合替代 BPF 调度器 |
@@ -571,7 +571,7 @@ Airymax 将乔布斯与艾夫的设计哲学确立为 A-1 简约至上原则的�
 - [系统架构](01-system-architecture.md)：agentrt-linux 系统架构总览
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
 - [工程基线](04-engineering-baseline.md)：agentrt-linux 工程基线
-- [架构决策记录](05-adrs.md)：14 个核心 ADR
+- [架构决策记录](05-adrs.md)：18 个核心 ADR
 - [架构原则](../../AirymaxRT/10-architecture/00-architectural-principles.md)：五维正交 24 原则的完整定义
 
 ---
@@ -592,12 +592,12 @@ Airymax 将乔布斯与艾夫的设计哲学确立为 A-1 简约至上原则的�
 
 | 层次 | 共享程度 | 五维原则映射 |
 |------|---------|-------------|
-| **[SC] 共享契约层** | 完全共享代码 | C 认知观（`cognition_types.h` 三阶段）+ E 工程观编码契约经 10 头文件共享，物理宿主 `kernel/include/uapi/linux/airymax/`，子仓经 `-I` 引用 |
+| **[SC] 共享契约层** | 完全共享代码 | C 认知观（`cognition_types.h` 三阶段）+ E 工程观编码契约经 12 头文件共享，物理宿主 `kernel/include/uapi/linux/airymax/`，子仓经 `-I` 引用 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | S 系统观 + A 设计美学在 agentrt 5 维模块 ↔ agentrt-linux 8 子仓的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | K 内核观（agentrt-linux sched_tac 独有）+ E 工程观实现（CMake vs Kbuild） |
 | **[DSL] 降级生存层** | [SC] 损坏时最小可运行子集 | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
 
-### 10.2 [SC] 共享契约层——10 个头文件在五维原则中的角色
+### 10.2 [SC] 共享契约层——12 个头文件在五维原则中的角色
 
 | 头文件 | 对应维度 | 在五维原则中的角色 | 消费方 |
 |--------|---------|-------------------|--------|
@@ -649,8 +649,8 @@ graph TB
         OS_E[E 工程观<br/>Kbuild + Linux 6.6]
     end
 
-    subgraph "[SC] 共享契约层（10 头文件）"
-        SC[error.h + log_types.h + ipc.h + sched.h<br/>memory_types.h + security_types.h + cognition_types.h<br/>syscalls.h + uapi_compat.h + lsm_types.h]
+    subgraph "[SC] 共享契约层（12 头文件）"
+        SC[error.h + log_types.h + ipc.h + sched.h<br/>memory_types.h + security_types.h + cognition_types.h<br/>syscalls.h + syscall.h + uapi_compat.h + lsm_types.h + bpf_struct_ops.h]
     end
 
     subgraph "[DSL] 降级生存层"
@@ -676,7 +676,7 @@ graph TB
     style OS_K fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-ARCH-004**： 五维原则跨态同源遵循"零适配层天然契合"——A 设计美学与 C 认知观经 [SC] 10 头文件直接对接，不生成 `five_dim_compat.h` 或任何兼容别名层；K 内核观因平台差异落入 [IND]，两端各自演进。
+> **OS-ARCH-004**： 五维原则跨态同源遵循"零适配层天然契合"——A 设计美学与 C 认知观经 [SC] 12 头文件直接对接，不生成 `five_dim_compat.h` 或任何兼容别名层；K 内核观因平台差异落入 [IND]，两端各自演进。
 
 ---
 

@@ -376,7 +376,7 @@ Agent 提交 SQE (IORING_OP_URING_CMD)
 2. **Fault 通知**：调用 `airy_security_fault(pid, AIRY_FAULT_URING_MALFORMED, ioucmd)` 通知 Micro-Supervisor（详见 [07-airy-lsm-design.md §3.5](07-airy-lsm-design.md)）
 3. **审计日志**：`airy_security_fault` 内部触发 `airy_audit_emit_security(AGENT_URING_MALFORMED, ...)` 写入 A-ULP 审计日志（永不可绕过）
 4. **限流**：`pr_warn_ratelimited` 防止日志洪水
-5. **Fault 码**：`AIRY_FAULT_URING_MALFORMED = 0x100A`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册；注：原计划使用 0x1007，但该值已分配给 `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED`，故追加至 0x100A）
+5. **Fault 码**：`AIRY_FAULT_URING_MALFORMED` 规划为 `0x100A`，**预留需注册**——当前 [SC] `error.h` 仅定义 Fault 码 `0x1001-0x1006`（`AIRY_FAULT_CAP_FORGED` 至 `AIRY_FAULT_VM_FAULT`），`0x1007-0x100A` 均未分配，此码需在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 与 [SC] `error.h` 注册后方可使用
 
 > **OS-KER-172**（R6 新增）：所有 `airy_uring_sqe_validate()` 失败必须触发 `airy_security_fault` 通知 Micro-Supervisor；连续 3 次 malformed SQE 的 Agent 由 Macro-Supervisor 裁决为 `AIRY_VERDICT_DENY`（拒绝）或 `AIRY_VERDICT_COMPLAIN`（投诉），详见 [10-user-supervisor-daemon.md §5.2](../20-modules/10-user-supervisor-daemon.md)。
 
@@ -596,10 +596,10 @@ io_uring 安全加固借鉴 seL4 capability-based security（详见 [03-capabili
 |---------|------|------|------|
 | io_uring_disabled 检查 | io_uring 创建 | ~1ns | 一次性 |
 | opcode 白名单 | SQE 提交 | ~5ns | 每次 SQE |
-| Capability 校验（fastpath） | URING_CMD 回调 | ~160ns | 每次操作 |
+| Capability 校验（fastpath） | URING_CMD 回调 | ~2-10ns（`airy_cap_badge_ok` 实测口径，3 个 READ_ONCE + 位运算） | 每次操作 |
 | buffer 注册校验 | 注册时 | ~1μs | 一次性 |
 
-fastpath 总安全开销：~165ns，占 IPC fastpath（~160ns）的 ~50%，但仍在 SLO（≤200ns）内。
+fastpath 总安全开销（实测口径）：`airy_cap_badge_ok` 校验 ~2-10ns（KUnit fastpath 微基准实测），占 IPC fastpath（~160ns）的 ~1-6%，远低于 SLO（≤200ns）。（早期文档估算的 ~165ns 为 radix tree 时代旧口径，v1.0.1 Capability Folding 起已不适用。）
 
 ---
 
@@ -621,7 +621,7 @@ OLK 6.6 的 `IORING_REGISTER_PBUF_RING` 支持 `IOU_PBUF_RING_MMAP` 标志，由
 
 ## §8 测试与验证
 
-### 7.1 测试场景
+### 8.1 测试场景
 
 | 测试场景 | 验证内容 | 预期结果 |
 |---------|---------|---------|
@@ -637,9 +637,9 @@ OLK 6.6 的 `IORING_REGISTER_PBUF_RING` 支持 `IOU_PBUF_RING_MMAP` 标志，由
 | 指标 | SLO | 实测 |
 |------|-----|------|
 | opcode 白名单检查 | ≤10ns | ~5ns |
-| Capability fastpath 校验 | ≤200ns | ~160ns |
+| Capability fastpath 校验（`airy_cap_badge_ok`） | ≤200ns | ~2-10ns |
 | buffer 注册校验 | ≤10μs | ~1μs |
-| 安全检查对 IPC fastpath 影响 | ≤20% | ~50% of 160ns |
+| 安全检查对 IPC fastpath 影响 | ≤20% | ~1-6%（2-10ns of ~160ns） |
 
 ---
 
@@ -655,7 +655,7 @@ OLK 6.6 的 `IORING_REGISTER_PBUF_RING` 支持 `IOU_PBUF_RING_MMAP` 标志，由
 
 ---
 
-## §9 版本历史
+## §10 版本历史
 
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|

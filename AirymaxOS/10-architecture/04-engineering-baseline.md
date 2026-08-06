@@ -533,14 +533,14 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 
 | 层次              | Euler API 兼容策略                                                                         | 落地方式                                                                                                                                                 |
 | --------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层** | 共享类型定义与 IPC 契约与 Euler API 语义对齐（如 capability 模型、IPC 消息头布局参考 Euler IPC 规范演进）             | 10 个 \[SC] 头文件（memory\_types.h / security\_types.h / cognition\_types.h / sched.h / ipc.h / syscalls.h）在 agentrt 与 agentrt-linux 间共享，语义与 Euler API 对齐 |
+| **\[SC] 共享契约层** | 共享类型定义与 IPC 契约与 Euler API 语义对齐（如 capability 模型、IPC 消息头布局参考 Euler IPC 规范演进）             | 12 个 \[SC] 头文件（error.h / log_types.h / ipc.h / sched.h / memory_types.h / security_types.h / cognition_types.h / syscalls.h / syscall.h / uapi_compat.h / lsm_types.h / bpf_struct_ops.h）在 agentrt 与 agentrt-linux 间共享，语义与 Euler API 对齐 |
 | **\[SS] 语义同源层** | 高层 API 语义与 Euler API 保持同源（如 12 daemons 语义对应 Euler 系统服务、io\_uring IPC 原语对应 Euler IO 接口） | API 签名独立演进，语义操作一致，详见 `20-modules/02-services.md` §6.2 \[SS] 语义同源层 20 项 API 映射                                                                        |
-| **\[IND] 独立层**  | agentrt-linux syscall 编号体系独立（AIRY\_SYS\_ 前缀，v1.1: 4 核心 + 20 预留 = 24 槽位），不复用 Euler API 编号    | capability invocation 统一入口 `airy_sys_call` 消除独立 syscall 需求，编号体系详见 `30-interfaces/01-syscalls.md`                                                     |
+| **\[IND] 独立层**  | agentrt-linux syscall 编号体系独立（AIRY\_SYS\_ 前缀，v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位），不复用 Euler API 编号    | capability invocation 统一入口 `airy_sys_call` 消除独立 syscall 需求，编号体系详见 `30-interfaces/01-syscalls.md`                                                     |
 
 **关键声明**：
 
 1. **Euler API 语义对齐**——agentrt-linux 在 \[SC] 和 \[SS] 层面与 Euler API 保持语义同源，确保应用层在 agentrt-linux 与 openEuler 之间的可移植性。
-2. **syscall 编号独立**——agentrt-linux 拥有独立的 syscall 编号体系（AIRY\_SYS\_0\~11 核心 + AIRY\_SYS\_12\~23 预留），不直接复用 Euler API 的 syscall 编号。这是 IRON-9 v3 "同源且独立"原则的体现：语义同源，编号独立。
+2. **syscall 编号独立**——agentrt-linux 拥有独立的 syscall 编号体系（4 核心 548-551 + 20 预留 552-571，v1.0.1），不直接复用 Euler API 的 syscall 编号。这是 IRON-9 v3 "同源且独立"原则的体现：语义同源，编号独立。
 3. **包格式兼容**——agentrt-linux 兼容 Euler API 的 RPM 包格式和 dnf 包管理器，支持直接安装 openEuler 生态的 RPM 包。
 4. **安全模型对齐**——agentrt-linux 的 capability 安全模型与 Euler API 的安全模块（SELinux）在语义层对齐，但实现路径独立（agentrt-linux 用 Cupolas capability 模型 + LSM 钩子）。
 5. **演进策略**——agentrt-linux 跟踪 openEuler 24.03 LTS / 26.03 的 Euler API 演进，通过 ADR 评审决定是否同步新特性，禁止未经评审的基线漂移（IRON-10 / BAN-361）。
@@ -578,7 +578,7 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 - [系统架构](01-system-architecture.md)：agentrt-linux 系统架构总览
 - [五维正交原则](02-five-dimensional-principles.md)：五维正交 24 原则落地映射
 - [微内核策略](03-microkernel-strategy.md)：微内核化改造策略
-- [架构决策记录](05-adrs.md)：16 个核心 ADR（含 ADR-011\~016：架构模型论证 / 微内核路线 / 调度框架 / 微内核来源单一化 / 版本基线锁定）
+- [架构决策记录](05-adrs.md)：18 个核心 ADR（含 ADR-011\~018：架构模型论证 / 微内核路线 / 调度框架 / 微内核来源单一化 / 版本基线锁定 / Capability 派生修复 / openEuler 硬件复用）
 - [架构原则](../../AirymaxRT/00-architectural-principles.md)：五维正交 24 原则的完整定义
 
 ***
@@ -591,12 +591,12 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 
 | 层次               | 共享程度                               | 工程基线映射                                                                                                                                    |
 | ---------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | 10 头文件编码契约（Linux 6.6 内核基线：Tab 8 / snake\_case / 最小 typedef / K\&R / 80 列 / errno+goto / kernel-doc），物理宿主 `kernel/include/uapi/linux/airymax/`，`-I` 引用 |
+| **\[SC] 共享契约层**  | 完全共享代码                             | 12 头文件编码契约（Linux 6.6 内核基线：Tab 8 / snake\_case / 最小 typedef / K\&R / 80 列 / errno+goto / kernel-doc），物理宿主 `kernel/include/uapi/linux/airymax/`，`-I` 引用 |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt CMake 模块 ↔ agentrt-linux 8 子仓 Kbuild 的工程规范同源                                                                                      |
 | **\[IND] 完全独立层** | 完全独立                               | 构建系统（CMake vs Kbuild + Kconfig）+ 平台适配（libc / POSIX vs Linux 6.6 内核 API）                                                                   |
 | **\[DSL] 降级生存层** | [SC] 损坏时最小可运行子集                          | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
 
-### \[SC] 共享契约层——10 个头文件在工程基线中的角色
+### \[SC] 共享契约层——12 个头文件在工程基线中的角色
 
 | 头文件                 | 工程基线角色                                                         | 编码契约                         | 消费方                |
 | ------------------- | -------------------------------------------------------------- | ---------------------------- | ------------------ |
@@ -607,9 +607,11 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 | `memory_types.h`    | MemoryRovol L1-L4 + GFP 掩码                                     | kernel-doc + 80 列            | kernel / memory    |
 | `security_types.h`  | 44 cap + 250 LSM + Cupolas blob                                | kernel-doc + minimal typedef | kernel / security  |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式                                           | kernel-doc + snake\_case     | kernel / cognition |
-| `syscalls.h`        | 4 核心 syscall 编号 + 20 预留槽位（v1.0.1）                                     | kernel-doc + K\&R            | kernel / cognition |
+| `syscalls.h`        | 4 核心 syscall 编号（548-551）+ 20 预留槽位（552-571，v1.0.1）          | kernel-doc + K\&R            | kernel / cognition |
+| `syscall.h`         | syscall 语义声明（与 syscalls.h 编号表配套的 ABI 契约）                   | kernel-doc + K\&R            | kernel / 全部      |
 | `uapi_compat.h`     | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                       | kernel-doc + minimal typedef | IRON-9 跨端 |
 | `lsm_types.h`       | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构        | kernel-doc + minimal typedef | kernel / security  |
+| `bpf_struct_ops.h`  | eBPF struct\_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING，可观测性用，非核心架构，H5 约束） | kernel-doc + minimal typedef | kernel / services  |
 
 ### \[SS] 语义同源层——工程基线 agentrt ↔ agentrt-linux 映射
 
@@ -646,8 +648,8 @@ graph TB
         OS_DOC[Markdown + kernel-doc]
     end
 
-    subgraph "[SC] 共享契约层（10 头文件）"
-        SC[Linux 6.6 内核基线 编码契约<br/>error.h / log_types.h / ipc.h / sched.h<br/>memory_types.h / security_types.h / cognition_types.h<br/>syscalls.h / uapi_compat.h / lsm_types.h]
+    subgraph "[SC] 共享契约层（12 头文件）"
+        SC[Linux 6.6 内核基线 编码契约<br/>error.h / log_types.h / ipc.h / sched.h<br/>memory_types.h / security_types.h / cognition_types.h<br/>syscalls.h / syscall.h / uapi_compat.h / lsm_types.h / bpf_struct_ops.h]
     end
 
     subgraph "[DSL] 降级生存层"
@@ -669,7 +671,7 @@ graph TB
     style OS_KBUILD fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-ARCH-008**： 工程基线跨态协作遵循"契约共享、构建独立"原则——10 头文件编码契约经 \[SC] 直接共享，CMake 与 Kbuild 经 \[SS] 风格同源但工具链独立落入 \[IND]，禁止生成 `build_compat shim` 或构建兼容垫片。
+> **OS-ARCH-008**： 工程基线跨态协作遵循"契约共享、构建独立"原则——12 头文件编码契约经 \[SC] 直接共享，CMake 与 Kbuild 经 \[SS] 风格同源但工具链独立落入 \[IND]，禁止生成 `build_compat shim` 或构建兼容垫片。
 
 ***
 

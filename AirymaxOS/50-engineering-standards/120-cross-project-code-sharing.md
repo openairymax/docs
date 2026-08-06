@@ -174,12 +174,17 @@ struct airy_struct_ops_value {
 
 - `airy_err_t` 类型定义（`typedef int32_t airy_err_t`）
 - 成功码：`AIRY_EOK = 0`（与 `AIRY_SUCCESS = 0` 等价，推荐使用 `AIRY_EOK`）
-- Error 码（负数，可恢复）：5 子空间
-  - `[-1, -40]` POSIX errno 负值（`AIRY_EINVAL=(-22)`、`AIRY_ENOMEM=(-12)` 等）
-  - `[-41, -70]` IPC 错误码
-  - `[-71, -100]` Capability 错误码
-  - `[-101, -200]` [SC] 契约错误码
-  - `[-201, -300]` [DSL] 降级错误码
+- Error 码（常量正数幅值，POSIX errno 风格；调用方返回 `-AIRY_E*`）：10 子空间
+  - `[1, 40]` POSIX 对齐码（`AIRY_EINVAL=5`、`AIRY_ENOMEM=9`、`AIRY_EAGAIN=35` 等）
+  - `[41, 70]` IPC 错误码（`AIRY_EIPC_*`）
+  - `[71, 100]` Capability 错误码（`AIRY_ECAP_*`）
+  - `[101, 120]` 配置/版本错误码（`AIRY_ECFG*`）
+  - `[121, 140]` A-ULS 调度/生命周期（`AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*`）
+  - `[141, 160]` MemoryRoVol（`AIRY_EMEM_*`）
+  - `[161, 180]` 认知（`AIRY_ECOG_*`）
+  - `[181, 200]` 日志（`AIRY_ELOG_*`）
+  - `[201, 220]` Object（`AIRY_EOBJ_*`）
+  - `[221, 240]` Syscall（`AIRY_ESYS_*`）
 - Fault 码（正数 0x1000+，不可恢复）：`AIRY_FAULT_CAP_FORGED`(0x1001) / `AIRY_FAULT_CAP_LEAK`(0x1002) / `AIRY_FAULT_RING_CORRUPT`(0x1003) / `AIRY_FAULT_TIMEOUT`(0x1004) / `AIRY_FAULT_ABNORMAL_CAP`(0x1005) / `AIRY_FAULT_VM_FAULT`(0x1006)
 - [DSL] 降级块：`#ifdef AIRY_SC_FALLBACK` → 仅保留 38 个 POSIX 码
 
@@ -907,9 +912,9 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 | 日期         | 版本    | 变更摘要                                           | 责任人          |
 | ---------- | ----- | ---------------------------------------------- | ------------ |
 | 2026-07-09 | 0.1.1 | 初始创建，定义 IRON-9 v3 四层模型 + 10 个 \[SC] 头文件 + 双向 CI | SPHARX 工程标准组 |
-| 2026-07-17 | v1.0  | 升级为 IRON-9 v3 四层模型（[SC]+[SS]+[IND]+[DSL]）；新增 §3 [DSL] 降级生存层（引用 11-degraded-survival-layer.md）；[IND] 层补充 io_uring + IORING_OP_URING_CMD、alloc_pages + mmap、纯 C LSM；§2.1 头文件清单与 06-iron9-shared-model.md §2.2 对齐；§7.5 新增 magic 值 CI 校验表（含 AGTS 0x41475453）；上级文档改为 10-unify-design.md | SPHARX 工程标准组 |
+| 2026-07-17 | v1.0.1 | 升级为 IRON-9 v3 四层模型（历史记录原 v1.0）：[SC]+[SS]+[IND]+[DSL]；新增 §3 [DSL] 降级生存层（引用 11-degraded-survival-layer.md）；[IND] 层补充 io_uring + IORING_OP_URING_CMD、alloc_pages + mmap、纯 C LSM；§2.1 头文件清单与 06-iron9-shared-model.md §2.2 对齐；§7.5 新增 magic 值 CI 校验表（含 AGTS 0x41475453）；上级文档改为 10-unify-design.md | SPHARX 工程标准组 |
 | 2026-07-21 | v1.0.1 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） | SPHARX 工程标准组 |
-| 2026-07-29 | v1.0.1-fix | **P0-NEW-10/11 修复**：§2.9 与 §11 示例代码中残留的 `__attribute__((aligned(64)))` 修正为 `AIRY_ALIGNED(64)`（OS-IRON-016 sanctioned exception，定义于 uapi_compat.h） | SPHARX 工程标准组 |
+| 2026-07-29 | v1.0.1 | **P0-NEW-10/11 修复**（历史记录原 v1.0.1-fix）：§2.9 与 §11 示例代码中残留的 `__attribute__((aligned(64)))` 修正为 `AIRY_ALIGNED(64)`（OS-IRON-016 sanctioned exception，定义于 uapi_compat.h） | SPHARX 工程标准组 |
 
 ## 11. KABI 机制借鉴（OLK 6.6）
 

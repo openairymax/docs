@@ -894,19 +894,21 @@ pub fn airy_ipc_send_rs(channel: u32, msg: &[u8]) -> i32 {
 > **OS-SEC-241**：FFI 边界上的结构体必须使用 `#[repr(C, align(64))]` 确保与 C 的布局兼容。Rust 默认布局（`repr(Rust)`）不保证字段顺序和填充，不能用于 FFI。IRON-9 v3 [SC] 共享契约层的结构体（如 `AirymaxIpcMsgHdr`）在 agentrt 和 agentrt-linux（AirymaxOS）两端必须位级兼容，`#[repr(C, align(64))]` 是保证这一兼容性的前提（对齐 Layout C SSoT 的 `AIRY_ALIGNED(64)`，OS-IRON-016 sanctioned exception，定义于 `uapi_compat.h`；D-9 修复后禁用 `__attribute__((packed))`）。
 
 ```rust
-/// [SC] 共享契约层：IPC 消息头，与 C 结构体 struct airy_ipc_msg_hdr 完全一致。
+/// [SC] 共享契约层：IPC 消息头，与 C 结构体 struct airy_ipc_msg_hdr 完全一致（Layout C v4）。
 /// 物理宿主见 50-engineering-standards/120-cross-project-code-sharing.md §Layout C。
 #[repr(C, align(64))]
 pub struct AirymaxIpcMsgHdr {
     pub magic: u32,           // offset  0, 'ARE1' (0x41524531)
     pub opcode: u16,          // offset  4, SQE/CQE 操作码
-    pub flags: u16,           // offset  6, 标志位（NOWAIT/SIGNAL 等）
+    pub flags: u16,           // offset  6, 标志位（ZEROCOPY/CAP_CARRY 等）
     pub trace_id: u64,        // offset  8, 链路追踪 ID（OpenTelemetry）
     pub timestamp_ns: u64,    // offset 16, 纳秒时间戳（CLOCK_MONOTONIC）
     pub src_task: u64,        // offset 24, 源任务 ID（0 表示内核发起）
     pub dst_task: u64,        // offset 32, 目标任务 ID（0 表示广播）
-    pub payload_len: u32,     // offset 40, payload 字节数
-    pub reserved: [u8; 84],   // offset 44, 保留字段，填充 0
+    pub capability_badge: u64, // offset 40, Capability Folding badge（C-S9 fastpath 校验，D-9 修复）
+    pub payload_len: u32,     // offset 48, payload 字节数
+    pub crc32: u32,           // offset 52, payload CRC32 校验
+    pub reserved: [u8; 72],   // offset 56, 保留字段，填充 0
 }
 ```
 

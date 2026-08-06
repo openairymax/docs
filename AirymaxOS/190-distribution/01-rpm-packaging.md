@@ -36,7 +36,7 @@ agentrt-linux（AirymaxOS）RPM 打包设计旨在为发行版构建提供可重
 
 | 类别 | 包名前缀 | 数量 | 备注 |
 |------|----------|------|------|
-| 内核 | airymaxos-kernel | 5 | kernel / modules / headers / devel / tools |
+| 内核 | airy-kernel | 5 | 主包 / devel / headers / modules / debuginfo（对齐 build/airy-kernel.spec） |
 | 用户态服务 | airymaxos-services | 12 | gateway_d / cogn_d / dev_d 等 |
 | 认知运行时 | airymaxos-cognition | 3 | cognition / taskflow / mac |
 | 记忆卷载 | airymaxos-memory | 4 | core / regions / forgetting / tiering |
@@ -59,12 +59,12 @@ agentrt-linux 发行版顶层分为"内核"、"用户态"、"开发"三大组：
 ```bash
 # 顶层组与依赖关系
 airymaxos-base (虚拟组)
-├── airymaxos-kernel              # 内核组
-│   ├── airymaxos-kernel-core
-│   ├── airymaxos-kernel-modules
-│   ├── airymaxos-kernel-headers
-│   ├── airymaxos-kernel-devel
-│   └── airymaxos-kernel-tools
+├── airy-kernel                   # 内核组（airy-kernel.spec 5 包拆分）
+│   ├── airy-kernel               # 主包（vmlinuz + /boot + /lib/modules 基础）
+│   ├── airy-kernel-devel
+│   ├── airy-kernel-headers
+│   ├── airy-kernel-modules
+│   └── airy-kernel-debuginfo
 ├── airymaxos-services            # 用户态服务组
 │   ├── airymaxos-services-gateway
 │   ├── airymaxos-services-cogn
@@ -150,7 +150,7 @@ Version:        %{airy_version}
 Release:        %{airy_release}%{?dist}
 Summary:        agentrt-linux (AirymaxOS) Linux 6.6 kernel with sched_tac
 License:        GPL-2.0-only OR AGPL-3.0-or-later
-URL:            https://github.com/spharx/agentrt-linux
+URL:            https://atomgit.com/openairymax/agentrt-linux
 Source0:        airymaxos-kernel-%{version}.tar.gz
 Source1:        airymaxos-kernel.config
 Source2:        sched_agent_cprime.c
@@ -310,7 +310,7 @@ Version:        %{airy_version}
 Release:        %{airy_release}%{?dist}
 Summary:        agentrt-linux LLM Inference Daemon (cogn_d)
 License:        AGPL-3.0-or-later
-URL:            https://github.com/spharx/agentrt-linux
+URL:            https://atomgit.com/openairymax/agentrt-linux
 Source0:        airymaxos-services-%{version}.tar.gz
 
 BuildRequires:  gcc, make, cmake

@@ -306,7 +306,7 @@ stateDiagram-v2
     L0_OBSERVER --> L1_CONTRIBUTOR: 首个补丁被 mainline 接受
     L0_OBSERVER --> [*]: 账号注销
 
-    L1_CONTRIBUTOR --> L2_REVIEWER: 持续贡献 ≥6 个月，≥10 补丁被接受，获 Review 权限
+    L1_CONTRIBUTOR --> L2_REVIEWER: 持续贡献 ≥6 个月，≥5 个被合并 PR 被接受，获 Review 权限
     L1_CONTRIBUTOR --> L0_OBSERVER: 超过 12 个月无贡献（自动降级）
 
     L2_REVIEWER --> L3_SUBMAINTAINER: 子系统维护者推荐 + ≥1 年持续贡献
@@ -346,7 +346,7 @@ stateDiagram-v2
 | — | L0_OBSERVER | 注册 GitHub 账号，订阅子仓 mailing list | 贡献者进入成熟度模型，获得 issue 评论与 PR 提交权限（需 mentor 指导） |
 | L0_OBSERVER | L1_CONTRIBUTOR | 首个补丁被 mainline 接受（合并到 `main` 分支） | 独立提交符合规范的 PR，通过 DCO bot 验证（OS-DEV-231），获得独立提交权限 |
 | L0_OBSERVER | —（终态） | 账号注销 | 贡献者退出成熟度模型，历史贡献记录保留供审计 |
-| L1_CONTRIBUTOR | L2_REVIEWER | 持续贡献 ≥6 个月，≥10 个补丁被接受，无 regression 记录 | 获 Review 权限，PR 可免 Early Review 直入 Wider Review（OS-DEV-251） |
+| L1_CONTRIBUTOR | L2_REVIEWER | 持续贡献 ≥6 个月，≥5 个被合并 PR，无 regression 记录（OS-DEV-251 阈值） | 获 Review 权限，PR 可免 Early Review 直入 Wider Review（OS-DEV-251） |
 | L1_CONTRIBUTOR | L0_OBSERVER | 超过 12 个月无贡献（自动降级） | 撤销独立提交权限，降级为观察者，保留历史贡献记录 |
 | L2_REVIEWER | L3_SUBMAINTAINER | 现有子系统维护者推荐 + ≥1 年持续贡献 + ≥20 个合并 PR + 通过维护者面试 | 获得子模块分支维护权限，负责子模块 PR 审查与合并（OS-DEV-252） |
 | L2_REVIEWER | L1_CONTRIBUTOR | 超过 6 个月无 Review 活动（自动降级） | 撤销 Review 权限，降级为普通贡献者 |

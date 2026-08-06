@@ -79,8 +79,8 @@ flowchart TD
 ### 2.3 步骤 2：RC1 标记（T-14 天）
 
 - **操作**：
-  1. 从 `main` 拉出 `release/vMAJOR.MINOR` 分支。
-  2. 在 `release/vMAJOR.MINOR` 标记 `vMAJOR.MINOR-rc1` tag。
+  1. 从 `main` 拉出 `release/<MAJOR.MINOR>` 分支。
+  2. 在 `release/<MAJOR.MINOR>` 标记 `vMAJOR.MINOR-rc1` tag。
   3. 触发 `release.yml` workflow 构建 RC1 物料。
 - **RC1 物料**：
   - 源码 tarball：`agentrt-linux-MAJOR.MINOR-rc1.tar.xz`。
@@ -111,7 +111,7 @@ flowchart TD
 
 - **触发条件**：RC1 测试发现 P0/P1 缺陷。
 - **操作**：
-  1. 在 `release/vMAJOR.MINOR` 修复缺陷。
+  1. 在 `release/<MAJOR.MINOR>` 修复缺陷。
   2. 标记 `vMAJOR.MINOR-rc2` tag。
   3. 触发 `release.yml` 构建 RC2 物料。
 - **RC 数量**：通常 1-2 个 RC；超过 3 个 RC 由 SSoT 委员会决定是否延期。
@@ -433,11 +433,11 @@ agentrt-linux 提供 `airy-rollback` 命令用于一键回滚：
 # 回滚到上一版本
 airy-rollback
 
-# 回滚到指定版本
-airy-rollback --to 0.1.1
+# 回滚到指定版本（示例：1.0.1 之前的内部构建 v1.0.0）
+airy-rollback --to 1.0.0
 
 # 回滚到指定快照
-airy-rollback --snapshot 2026-02-05
+airy-rollback --snapshot 2026-11-08
 ```
 
 ### 7.3 回滚流程

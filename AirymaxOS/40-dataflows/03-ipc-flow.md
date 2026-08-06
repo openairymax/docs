@@ -16,13 +16,13 @@ IPC 消息流是 agentrt-linux 进程间通信的核心数据流，落地于 `ke
 **核心特征**：
 
 1. **io_uring 零拷贝**（FR-003, FR-009）：通过共享环形缓冲区（SQ ring + CQ ring）避免用户态 ↔ 内核态数据拷贝与 syscall 开销，I/O 延迟降低 > 30%（NFR-P-002）。
-2. **128B 定长消息头**（[SC] 共享契约层）：同源 agentrt AgentsIPC，定长 128 字节，packed 紧凑布局（Layout C v4 SSoT），128 字节 = 2 cache lines，跨系统互通无适配层。**v1.0.1: offset 40-47 为 `capability_badge` 字段（64-bit Native Word），由内核在 SQE 入队时注入（P0-D4 安全修复）**。
+2. **128B 定长消息头**（[SC] 共享契约层）：同源 agentrt AgentsIPC，定长 128 字节，自然对齐布局（Layout C v4 SSoT，`AIRY_ALIGNED(64)`，非 packed），128 字节 = 2 cache lines，跨系统互通无适配层。**v1.0.1: offset 40-47 为 `capability_badge` 字段（64-bit Native Word）**。
 3. **5 种 payload 协议**：REQUEST / RESPONSE / EVENT / STREAM / CONTROL，覆盖请求-响应、事件订阅、流式传输、控制指令 4 类通信模式。
 4. **trace_id 贯穿**：每条消息携带 `trace_id`，通过 OpenTelemetry 全链路追踪（NFR-O-002），语义同源 io_uring `user_data` 字段。
 5. **跨节点扩展**：基于 CXL 3.0 / RDMA / NVLink 实现超节点 OS 跨节点 IPC（FR-048）。
 6. **零 syscall 提交**：SQPOLL 内核轮询线程 + DEFER_TASKRUN 模式实现零 syscall 高频 IPC。
 7. **（v1.0.1 新增）Capability Folding 单平面架构**：IPC 数据传递即能力校验，fastpath C-S9 内联 Badge 校验（~10ns），无独立控制面 syscall。详见 [10-unify-design.md §8](../10-architecture/10-unify-design.md)。
-8. **（v1.0.1 新增）6 条硬约束 H1-H6**：Layout C v4 总长 128B / magic 0x41524531 / capability_badge offset 40-47 / **H3: agentrt 用户态 badge=0 表示"待内核注入"，内核在 SQE 入队时覆写为发送进程有效 Badge（P0-D4 安全修复：禁止用户态跳过 C-S9）** / sec_d 编译 + fastpath C-S9 强制校验 / [DSL] 降级 badge=0 触发 `-AIRY_EIPC_CAP` 拒绝。详见 [10-unify-design.md §8.2](../10-architecture/10-unify-design.md)。
+8. **（v1.0.1 新增）6 条硬约束 H1-H6**：Layout C v4 总长 128B / magic 0x41524531 / capability_badge offset 40-47 / **H3: agentrt 用户态 badge=0；H6: [DSL] 降级 badge=0 → fastpath C-S9 走 cap_pass（见 [SC] ipc.h DSL 块 L105-106 与 airy_cap.h C-S9 语义）** / sec_d 编译 + fastpath C-S9 强制校验。详见 [10-unify-design.md §8.2](../10-architecture/10-unify-design.md)。
 
 **性能目标**（NFR-P-002）：
 
@@ -144,7 +144,7 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 | 11 | `SQE128` | 5.18 | ✅ | 128 字节 SQE（扩展字段），`cmd` 扩展至 80 字节承载 `airy_ipc_cmd`（D-7 修复） | OS-IPC-009 |
 | 12 | `CQE32` | 5.18 | ❌ | 32 字节 CQE（扩展字段） | IPC 用 16B CQE 足够 |
 | 13 | `SINGLE_ISSUER` | 6.0 | ✅ | 单一提交者约束（DEFER_TASKRUN 前置） | OS-IPC-003 |
-| 14 | `DEFER_TASKRUN` | 6.0 | ✅ | task_work 延迟到 `enter` 执行 | OS-IPC-003 |
+| 14 | `DEFER_TASKRUN` | 6.0 | ✅（与 SQPOLL 互斥，二选一） | task_work 延迟到 `enter` 执行 | OS-IPC-003 |
 | 15 | `NO_MMAP` | 6.0 | ✅ | daemon 主动分配 ring 内存 | 走 MemoryRovol 管理 |
 | 16 | `REGISTERED_FD_ONLY` | 6.0 | ❌ | ring fd 固定（无 `io_uring_register`） | daemon 用动态 fd |
 | 17 | `NO_SQARRAY` | 6.6 | ✅ | 取消 sq_array 间接寻址 | 简化提交路径 |
@@ -153,12 +153,12 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 
 **启用策略**：
 
-- **必须启用**（12 项）：`SQPOLL` / `SQ_AFF` / `CQSIZE` / `CLAMP` / `SUBMIT_ALL` / `SQE128` / `TASKRUN_FLAG` / `SINGLE_ISSUER` / `DEFER_TASKRUN` / `NO_MMAP` / `NO_SQARRAY` / `NO_IEC`——覆盖零 syscall（OS-IPC-002）、零拷贝（OS-IPC-003）、低延迟三大场景；`SQE128` 扩展 `cmd` 至 80 字节以承载 `airy_ipc_cmd`（D-7 修复，详见 [30-interfaces/02-ipc-protocol.md §4.9](../30-interfaces/02-ipc-protocol.md) + [30-interfaces/07-ipc-fastpath.md §5.7](../30-interfaces/07-ipc-fastpath.md)）。
-- **互斥标志二选一**：`COOP_TASKRUN`（5.19+）或 `DEFER_TASKRUN`（6.0+），不可同时启用。
+- **必须启用**（11 项）：`SQPOLL` / `SQ_AFF` / `CQSIZE` / `CLAMP` / `SUBMIT_ALL` / `SQE128` / `TASKRUN_FLAG` / `SINGLE_ISSUER` / `NO_MMAP` / `NO_SQARRAY` / `NO_IEC`——覆盖零 syscall（OS-IPC-002）、零拷贝（OS-IPC-003）、低延迟三大场景；`SQE128` 扩展 `cmd` 至 80 字节以承载 `airy_ipc_cmd`（D-7 修复，详见 [30-interfaces/02-ipc-protocol.md §4.9](../30-interfaces/02-ipc-protocol.md) + [30-interfaces/07-ipc-fastpath.md §5.7](../30-interfaces/07-ipc-fastpath.md)）。
+- **互斥标志二选一**：`COOP_TASKRUN`（5.19+）或 `DEFER_TASKRUN`（6.0+），不可同时启用；且 `DEFER_TASKRUN` 与 `SQPOLL` **互斥**（§5.2：SQPOLL 自带轮询线程，不需要 DEFER_TASKRUN）——高频 IPC 走 `SQPOLL`，极致低延迟单提交者场景走 `DEFER_TASKRUN` + `SINGLE_ISSUER`，两者按场景选择其一。
 - **不启用**（5 项）：`IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `CQE32` / `REGISTERED_FD_ONLY`——不适用于 IPC 场景（块设备 I/O / 多 ring 共享 / 立即禁用 / 扩展 CQE / 固定 fd）。
 - **版本路线**（1 项）：`DEFER_INIT`——Linux 6.6 基线不支持（ADR-001）；1.0.1 升级 Linux 7.1 后启用（ADR-013 版本路线，非设计延期；设计决策已在 0.1.1 完成：0.1.1 阶段不启用，1.0.1 阶段启用）。
 
-> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 12 个 `IORING_SETUP_*` 标志（含 `SQE128`，D-7 修复后从禁止列表移至必须启用列表，以扩展 `cmd` 至 80 字节承载 `airy_ipc_cmd`），并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一，禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 设计决策已在 0.1.1 完成（0.1.1 阶段不启用——Linux 6.6 基线不支持 ADR-001；1.0.1 阶段启用——升级 Linux 7.1 后 ADR-013），属版本路线规划非设计延期。
+> **OS-IPC-009**：agentrt-linux IPC 必须显式启用上述 11 个必选 `IORING_SETUP_*` 标志（含 `SQE128`，D-7 修复后从禁止列表移至必须启用列表，以扩展 `cmd` 至 80 字节承载 `airy_ipc_cmd`），并在互斥对 `COOP_TASKRUN` / `DEFER_TASKRUN` 中二选一（`DEFER_TASKRUN` 与 `SQPOLL` 亦互斥，见 §5.2），禁止启用 `IOPOLL` / `ATTACH_WQ` / `R_DISABLED` / `CQE32` / `REGISTERED_FD_ONLY`（不适用于 IPC 场景）。`DEFER_INIT` 设计决策已在 0.1.1 完成（0.1.1 阶段不启用——Linux 6.6 基线不支持 ADR-001；1.0.1 阶段启用——升级 Linux 7.1 后 ADR-013），属版本路线规划非设计延期。
 
 > **与本文档已有提及对齐**：`SQPOLL`（§2.4 / §4 / §10.3）/ `SQ_AFF`（§10.3）/ `DEFER_TASKRUN`（§5）/ `NO_MMAP`（§12.3 [IND]）——本文档前述章节已分散提及 4 项，本表补全至 Linux 6.6 全量 19 项，确保 io_uring SETUP 标志清单的完整性与对齐性。
 
@@ -392,26 +392,25 @@ daemon 侧（使用 BUFFER_SELECT）：
 
 IPC 消息根据 `type` 字段分为 5 种 payload 协议，每种对应不同的通信模式与数据流。
 
-### 7.0 5 种 payload 协议 ↔ 6 个 io_uring OP 映射表
+### 7.0 5 种 payload 协议 ↔ io_uring URING_CMD 操作映射表
 
-下表明确 **5 种 payload 协议**（应用语义层，由 payload 体首字段携带，见 §3 / [30-interfaces/02-ipc-protocol.md §3](../30-interfaces/02-ipc-protocol.md)）与 **6 个 io_uring OP**（传输机制层，agentrt-linux 在 io_uring 注册的固定 OP，见 §4.4 / §8 / §9.4）的映射关系。两层分属不同抽象层级，不可混淆：
+下表明确 **5 种 payload 协议**（应用语义层，由 payload 体首字段携带，见 §3 / [30-interfaces/02-ipc-protocol.md §3](../30-interfaces/02-ipc-protocol.md)）与 **io_uring 传输操作**（传输机制层，**全部经 `IORING_OP_URING_CMD` 复用，由 `cmd_op` 字段区分操作**——不注册任何 IPC 专用固定 OP，见 [30-interfaces/02-ipc-protocol.md §4.4](../30-interfaces/02-ipc-protocol.md)）的映射关系。两层分属不同抽象层级，不可混淆：
 
-| 应用语义层（5 种 payload 协议） | 传输机制层（6 个 io_uring OP） | 映射关系 |
+| 应用语义层（5 种 payload 协议） | 传输机制层（`IORING_OP_URING_CMD` + cmd_op） | 映射关系 |
 |--------------------------------|-------------------------------|---------|
-| REQUEST（0x01） | `IORING_OP_IPC_SEND` + `IORING_OP_IPC_RECV` | 1:N（一个 REQUEST 跨 SEND/RECV 两个 OP 完成） |
-| RESPONSE（0x02） | `IORING_OP_IPC_SEND` + `IORING_OP_IPC_RECV` | 1:N（同 REQUEST，反向数据流） |
-| EVENT（0x03） | `IORING_OP_IPC_SEND` + `IORING_OP_MSG_RING` | 1:N（EVENT 可走 SEND 单播或 MSG_RING 跨 ring 多播） |
-| STREAM（0x04） | `IORING_OP_IPC_SEND` + `IORING_OP_SEND_ZC`（跨节点） | 1:N（本地走 SEND，跨节点走 SEND_ZC 零拷贝） |
-| CONTROL（0x05） | `IORING_OP_IPC_SEND` + `IORING_OP_MSG_RING` | 1:N（CONTROL 可走 SEND 或 MSG_RING 跨 ring 传递） |
-| （跨机制） | `IORING_OP_IPC_REGISTER_RING` / `IORING_OP_IPC_DEREGISTER_RING` | N:0（资源管理 OP，不承载 payload 协议，仅注册/注销跨进程 ring） |
+| REQUEST（0x01） | `cmd_op=AIRY_URING_CMD_IPC_SEND` + `AIRY_URING_CMD_IPC_RECV` | 1:N（一个 REQUEST 跨 SEND/RECV 两个 cmd_op 完成） |
+| RESPONSE（0x02） | `cmd_op=AIRY_URING_CMD_IPC_SEND` + `AIRY_URING_CMD_IPC_RECV` | 1:N（同 REQUEST，反向数据流） |
+| EVENT（0x03） | `cmd_op=AIRY_URING_CMD_IPC_SEND` + `IORING_OP_MSG_RING` | 1:N（EVENT 可走 SEND 单播或 MSG_RING 跨 ring 多播） |
+| STREAM（0x04） | `cmd_op=AIRY_URING_CMD_IPC_SEND` + `IORING_OP_SEND_ZC`（跨节点） | 1:N（本地走 SEND，跨节点走 SEND_ZC 零拷贝） |
+| CONTROL（0x05） | `cmd_op=AIRY_URING_CMD_IPC_SEND` + `IORING_OP_MSG_RING` | 1:N（CONTROL 可走 SEND 或 MSG_RING 跨 ring 传递） |
 
 **映射规则**：
 
-1. **应用语义层与传输机制层正交**：5 种 payload 协议描述"消息语义"（RPC/事件/流/控制），6 个 io_uring OP 描述"传输机制"（发送/接收/注册/注销/跨 ring/零拷贝）。同一 payload 协议可走多个 OP，同一 OP 可承载多种 payload 协议。
+1. **应用语义层与传输机制层正交**：5 种 payload 协议描述"消息语义"（RPC/事件/流/控制），传输机制描述"传递方式"（发送/接收/跨 ring/零拷贝，经 `IORING_OP_URING_CMD` + `cmd_op` 复用）。同一 payload 协议可走多个 cmd_op，同一 cmd_op 可承载多种 payload 协议。
 2. **`opcode` ≠ `type`**：消息头 `opcode`（传输层 SQE/CQE 操作码）与 payload 体首 `type`（应用语义层 payload 协议类型）分属不同字段、不同层次——见 [30-interfaces/02-ipc-protocol.md §2.1](../30-interfaces/02-ipc-protocol.md) 字段语义表与 §3 payload 协议说明。
-3. **资源管理 OP 不承载 payload**：`IPC_REGISTER_RING` / `IPC_DEREGISTER_RING` 是资源管理 OP，不承载 payload 协议数据，仅用于建立/拆除跨进程 ring 通道。
+3. **v1.0.1 统一为 `IORING_OP_URING_CMD` 单平面**：不注册 `IORING_OP_IPC_SEND` 等 IPC 专用固定 OP（v0.1.1 草案的虚构 OP 已移除），全部 IPC 数据传递经 `IORING_OP_URING_CMD` + `cmd_op`（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE）复用——Capability Folding 单平面架构（[30-interfaces/10-unify-design.md §8](../10-architecture/10-unify-design.md)）。跨进程 ring 注册/注销经 `io_uring_register`（无独立 OP）。
 
-> **OS-IPC-010**：agentrt-linux IPC 实现必须严格遵守 5 种 payload 协议（应用语义层）与 6 个 io_uring OP（传输机制层）的正交映射关系。禁止在传输层 OP 中嵌入应用语义，禁止在 payload 协议中假设传输机制。
+> **OS-IPC-010**：agentrt-linux IPC 实现必须严格遵守 5 种 payload 协议（应用语义层）与 `IORING_OP_URING_CMD` + `cmd_op`（传输机制层）的正交映射关系。禁止在传输层 cmd_op 中嵌入应用语义，禁止在 payload 协议中假设传输机制。
 
 ### 7.1 REQUEST（请求-响应）
 
@@ -865,7 +864,7 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 |---|--------|------------------|---------------------|-----------|
 | 1 | [SC] 消息头大小 | `AIRY_IPC_HDR_SIZE = 128` | 同源 128 字节定长 | PASS 完全共享 |
 | 2 | [SC] magic 值 | `0x41524531 'ARE1'` | 同源 `0x41524531` | PASS 完全共享 |
-| 3 | [SC] 消息头结构 | `struct airy_ipc_msg_hdr`（packed 紧凑布局，Layout C v4 SSoT） | 同源结构 | PASS 完全共享 |
+| 3 | [SC] 消息头结构 | `struct airy_ipc_msg_hdr`（自然对齐布局，Layout C v4 SSoT） | 同源结构 | PASS 完全共享 |
 | 4 | [SC] 5 种 payload 协议 | REQUEST/RESPONSE/EVENT/STREAM/CONTROL | 同源 5 种 | PASS 完全共享 |
 | 5 | [SC] trace_id 语义 | `uint64_t trace_id`（同源 io_uring user_data） | 同源语义 | PASS 完全共享 |
 | 6 | [SC] ring 默认/最大 entries | `256 / 32768` | 同源 | PASS 完全共享 |
@@ -878,15 +877,15 @@ agentrt 一致性检查遵循"全面推理 → 系统验证 → 确认不合理�
 | 13 | [IND] REGISTER_RESTRICTIONS | 不涉及（用户态用 capability） | Cupolas capability 替代 SQE 白名单 | PASS 独立正确 |
 | 14 | [IND] cgroup 集成 | 不涉及 | cgroup v2 + agentrt-linux 扩展独立 | PASS 独立正确 |
 | 15 | 跨平台兼容性 | 跨 Linux/macOS/Windows | 仅 Linux（agentrt-linux 专属） | PASS agentrt 保持跨平台，agentrt-linux 仅 Linux |
-| **16** | **[SC] capability_badge 字段**（v1.0.1 新增） | **`capability_badge=0`（H3 硬约束：表示"待内核注入"，用户态不能填充有效 Badge）** | **`capability_badge` = 64-bit Native Word（Epoch + RandomTag + Perms），由内核在 SQE 入队时覆写注入，fastpath C-S9 强制校验** | **PASS [SC] 数据结构共享，[SS] 校验机制同源（P0-D4 安全修复：消除 badge=0 跳过漏洞）** |
+| **16** | **[SC] capability_badge 字段**（v1.0.1 新增） | **`capability_badge=0`（H3 硬约束：agentrt 用户态无 Badge 概念，恒为 0）** | **`capability_badge` = 64-bit Native Word（Epoch + RandomTag + Perms），由发送进程（agentrt-linux 内核态）填充，fastpath C-S9 强制校验；badge=0 → cap_pass（H3/H6 语义，见 [SC] ipc.h DSL 块）** | **PASS [SC] 数据结构共享，[SS] 校验机制同源** |
 | **17** | **[SC] crc32 字段**（v1.0.1 新增） | **同源 crc32（覆盖 header[0:52) + payload）** | **同源 crc32** | **PASS 完全共享** |
-| **18** | **[SS] fastpath C-S9 Badge 校验**（v1.0.1 新增） | **不涉及（agentrt 用户态 badge=0 表示"待内核注入"，跨平台无内核加速路径）** | **`airy_cap_badge_ok()` ~10ns（3 个 READ_ONCE + 位运算），内核在 SQE 入队时覆写注入发送进程有效 Badge 后强制校验** | **PASS [IND] 独立正确（agentrt 用户态无 Badge 校验；agentrt-linux 内核强制 C-S9，消除 P0-D4 badge=0 绕过漏洞）** |
+| **18** | **[SS] fastpath C-S9 Badge 校验**（v1.0.1 新增） | **不涉及（agentrt 用户态 badge=0，跨平台无内核加速路径）** | **`airy_cap_badge_ok()` ~10ns（3 个 READ_ONCE + 位运算，实测 2-10ns，UML x86_64），fastpath C-S9 强制校验；badge=0 → cap_pass（H3/H6）** | **PASS [IND] 独立正确（agentrt 用户态无 Badge 校验；agentrt-linux 内核 C-S9 校验）** |
 | **19** | **[SC] opcode 表**（v1.0.1 新增） | **同源 7 opcode（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE）** | **同源 7 opcode** | **PASS 完全共享** |
 | **20** | **[IND] syscall 数量**（v1.0.1 新增） | **0 个（用户态无 syscall，走 mmap）** | **4 个核心 syscall（548-551，原 12 syscall 精简）** | **PASS [IND] 独立正确** |
 
-**结论**：20 项检查全部 PASS。IPC 数据流与 agentrt AgentsIPC 在 [SC] 共享契约层完全一致（消息头/magic/结构/5 协议/trace_id/entries/capability_badge/crc32/opcode 9 项），[SS] 语义同源层 API 语义等价 + Badge 校验机制同源，[IND] 独立层正确分离（io-wq/NO_MMAP/RESTRICTIONS/cgroup/syscall 数量 内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态（capability_badge=0 表示"待内核注入"，H3 硬约束）；agentrt-linux 在 [IND] 独立层正确引入 io_uring 内核加速路径 + Capability Folding fastpath C-S9 Badge 强制校验（**内核在 SQE 入队时覆写注入发送进程有效 Badge，消除 P0-D4 badge=0 绕过漏洞**），遵循 IRON-9 v3 同源且部分代码共享原则。
+**结论**：20 项检查全部 PASS。IPC 数据流与 agentrt AgentsIPC 在 [SC] 共享契约层完全一致（消息头/magic/结构/5 协议/trace_id/entries/capability_badge/crc32/opcode 9 项），[SS] 语义同源层 API 语义等价 + Badge 校验机制同源，[IND] 独立层正确分离（io-wq/NO_MMAP/RESTRICTIONS/cgroup/syscall 数量 内核态专属机制不污染 agentrt）。agentrt 设计无需修改，保持跨平台用户态（capability_badge=0，H3 硬约束）；agentrt-linux 在 [IND] 独立层正确引入 io_uring 内核加速路径 + Capability Folding fastpath C-S9 Badge 强制校验，遵循 IRON-9 v3 同源且部分代码共享原则。
 
-> **⚠️ P0-D4 安全修复说明**（v1.0.1-fix）：原设计允许 `badge=0` 跳过 C-S9 校验，存在安全漏洞——恶意进程可构造 `badge=0` 消息绕过 capability 校验。修复方案：（1）`badge=0` 语义改为"待内核注入"，不再表示"跳过校验"；（2）agentrt-linux 内核在 `io_uring_submit()` fastpath 中覆写 SQE 的 `capability_badge` 字段为发送进程的有效 Badge；（3）C-S9 校验对所有消息强制执行，`badge=0` 在 agentrt-linux 内核态触发 `-AIRY_EIPC_CAP` 拒绝；（4）agentrt 用户态跨平台路径无内核加速，`badge=0` 由 agentrt 运行时在用户态 cupolas 层校验（非跳过）。
+> **⚠️ badge=0 语义说明**（v1.0.1-fix，对齐 [SC] ipc.h DSL 块 + airy_cap_check.c）：`badge=0` 的语义为 **cap_pass（跳过 C-S9 校验）**，对齐 H3（agentrt 用户态恒 0）与 H6（[DSL] 降级模式恒 0）——见 [SC] `ipc.h` L104-106（`AIRY_DSL_CAPABILITY_BADGE 0ULL`，H6 注释 "fastpath C-S9 goto cap_pass"）与 `airy_cap.h` C-S9 实现。原文档虚构的 `-AIRY_EIPC_CAP` 错误码不在 SSoT `error.h` 定义，已删除；agentrt-linux 内核态不存在"内核在 SQE 入队时覆写注入 Badge"机制——`capability_badge` 由发送进程在消息头中填充（H4：sec_d 编译 Badge 后由 Agent 携带），C-S9 对填充值强制校验。
 
 ---
 

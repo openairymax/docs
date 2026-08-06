@@ -333,7 +333,8 @@ TEST(airy_ipc_header_size) {
 }
 FIXTURE(airy_ipc_channel) { int fd; };
 FIXTURE_SETUP(airy_ipc_channel) {
-    self->fd = open("/dev/airy_ipc0", O_RDWR);
+    /* 设备名规则对齐 60-driver-model：/dev/airy_<agent_id>_<dev_type> */
+    self->fd = open("/dev/airy_0_ipc", O_RDWR);
     ASSERT_GE(self->fd, 0);
 }
 FIXTURE_TEARDOWN(airy_ipc_channel) {
@@ -367,7 +368,7 @@ TEST_HARNESS_MAIN
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include "../../../include/uapi/linux/airymax/agent_ioctl.h"
+#include "../../../include/uapi/linux/airymax/ipc.h"
 
 FIXTURE(agent_sdk) {
     int agent_fd;
@@ -375,7 +376,8 @@ FIXTURE(agent_sdk) {
 };
 
 FIXTURE_SETUP(agent_sdk) {
-    self->agent_fd = open("/dev/airy_agent0", O_RDWR);
+    /* 设备名规则对齐 60-driver-model：/dev/airy_<agent_id>_<dev_type> */
+    self->agent_fd = open("/dev/airy_0_agent", O_RDWR);
     ASSERT_GE(self->agent_fd, 0) TH_LOG("open failed: %s", strerror(errno));
     self->shared_ring = mmap(NULL, AGENT_RING_SIZE, PROT_READ | PROT_WRITE,
                              MAP_SHARED, self->agent_fd, 0);
@@ -394,7 +396,7 @@ TEST_F(agent_sdk, cognition_roundtrip_via_ioctl) {
     };
     struct airy_cognition_response rsp;
     strcpy((char *)self->shared_ring + req.input_offset, "hello");
-    ASSERT_EQ(0, ioctl(self->agent_fd, AIRY_IOCTL_COGNITION, &req))
+    ASSERT_EQ(0, ioctl(self->agent_fd, AIRY_IOC_COGN_INFER, &req))
         TH_LOG("ioctl failed: %s", strerror(errno));
     rsp = *(struct airy_cognition_response *)
           (self->shared_ring + req.output_offset);
@@ -404,13 +406,14 @@ TEST_F(agent_sdk, cognition_roundtrip_via_ioctl) {
 
 TEST_F(agent_sdk, ipc_128b_header_protocol) {
     struct airy_ipc_msg_hdr hdr = { .type = AIRY_IPC_TYPE_REQUEST, .payload_len = 64 };
-    ASSERT_EQ(0, ioctl(self->agent_fd, AIRY_IOCTL_IPC_SEND, &hdr));
+    /* IPC 传输走 io_uring fastpath 入口（AIRY_IOC_URING_CMD，对齐 60-driver-model） */
+    ASSERT_EQ(0, ioctl(self->agent_fd, AIRY_IOC_URING_CMD, &hdr));
     EXPECT_EQ(128, (int)sizeof(hdr));
 }
 TEST_HARNESS_MAIN
 ```
 
-配套文件：`settings` 声明 `timeout=45`；`Makefile` 用 `CFLAGS += -I../../../../include/uapi/airymax` + `TEST_GEN_PROGS := agent_sdk_contract` + `include ../lib.mk`；`config` 列出 `CONFIG_AIRY_AGENT=y`/`CONFIG_AIRY_IPC=y`/`CONFIG_AIRY_COGNITION=y`。
+配套文件：`settings` 声明 `timeout=45`；`Makefile` 用 `CFLAGS += -I../../../../include/uapi/linux/airymax` + `TEST_GEN_PROGS := agent_sdk_contract` + `include ../lib.mk`；`config` 列出 `CONFIG_AIRY_IPC=y`/`CONFIG_AIRY_COREKERN=y`/`CONFIG_AIRY_SYSCALL=y`。
 
 **OS-TEST-020**：agentrt-linux Agent SDK 的每个公共 ioctl 必须有 kselftest 系统级测试；契约覆盖正常路径 + `EINVAL`/`ENOMEM`/`EBUSY` 各一例异常路径。
 
@@ -443,7 +446,7 @@ TEST_HARNESS_MAIN
 
 ### 9.2 IRON-9 v3 四层共享模型
 
-本节将 §9.1 的"同源 / 独立 / 互操作"三要素进一步细化为 **IRON-9 v3 四层共享模型**，明确测试集层在用户态（agentrt）与内核态（agentrt-linux）之间的代码共享边界。三层分别为：**[SC] 共享契约层**（共享头文件 / 数据结构定义）、**[SS] 语义同源层**（设计模式同源但实现独立）、**[IND] 完全独立层**（双方各自独立实现）。该模型由 10 个 [SC] 头文件契约、跨态语义对照表与独立实现清单共同支撑。
+本节将 §9.1 的"同源 / 独立 / 互操作"三要素进一步细化为 **IRON-9 v3 四层共享模型**，明确测试集层在用户态（agentrt）与内核态（agentrt-linux）之间的代码共享边界。三层分别为：**[SC] 共享契约层**（共享头文件 / 数据结构定义）、**[SS] 语义同源层**（设计模式同源但实现独立）、**[IND] 完全独立层**（双方各自独立实现）。该模型由 12 个 [SC] 头文件契约、跨态语义对照表与独立实现清单共同支撑。
 
 #### 9.2.1 三层模型概览表
 
@@ -457,7 +460,7 @@ TEST_HARNESS_MAIN
 
 **无直接 [SC] 共享头文件**。
 
-测试集层不属于 IRON-9 v3 的 10 个 [SC] 共享头文件清单（`syscalls.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h`）。测试集是验证基础设施，两端运行目标截然不同（agentrt 用户态集成测试 vs agentrt-linux 内核态系统级测试），其 Makefile 模式与运行器各自定义，源码层无共享头文件依赖。这一约束确保 agentrt 用户态集成测试演进时不会被动牵连 agentrt-linux kselftest，反之亦然——测试集层的演进由各自的 **OS-TEST 评审** 独立裁决。两端仅通过 **TAP 13 格式** 与 **AgentsIPC** 实现跨态协作而非代码共享。
+测试集层不属于 IRON-9 v3 的 12 个 [SC] 共享头文件清单（`syscalls.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h`）。测试集是验证基础设施，两端运行目标截然不同（agentrt 用户态集成测试 vs agentrt-linux 内核态系统级测试），其 Makefile 模式与运行器各自定义，源码层无共享头文件依赖。这一约束确保 agentrt 用户态集成测试演进时不会被动牵连 agentrt-linux kselftest，反之亦然——测试集层的演进由各自的 **OS-TEST 评审** 独立裁决。两端仅通过 **TAP 13 格式** 与 **AgentsIPC** 实现跨态协作而非代码共享。
 
 #### 9.2.3 [SS] 语义同源层
 
@@ -780,7 +783,7 @@ int kselftest_run(struct kselftest_module *module,
 TEST_GEN_PROGS := agent_sdk_contract
 TEST_PROGS     := agent_runtime_smoke.sh
 TEST_GEN_FILES := agent_fixture.bin
-CFLAGS += -I../../../../include/uapi/airymax
+CFLAGS += -I../../../../include/uapi/linux/airymax
 
 # 必须在变量声明后 include 公共构建规则
 include ../lib.mk
@@ -957,7 +960,7 @@ void ksft_exit_skip(const char *fmt, ...) __attribute__((noreturn));
 #   典型: TEST_GEN_PROGS_EXTENDED := libagent_test.a
 
 # EXTRA_CFLAGS / CFLAGS: 编译开关（须用 -I 指向 uapi 头）
-#   典型: CFLAGS += -I../../../../include/uapi/airymax
+#   典型: CFLAGS += -I../../../../include/uapi/linux/airymax
 
 # include ../lib.mk: 必须在所有变量声明之后 include 公共构建规则
 # @since 0.1.1

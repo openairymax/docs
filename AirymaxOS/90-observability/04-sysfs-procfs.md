@@ -39,7 +39,7 @@ sysfs 与 procfs 是 Linux 6.6 内核基线提供的标准伪文件系统，分�
 
 **OS-OBS-041: sysfs 与 procfs 是 agentrt-linux 可观测性 L4 层的强制基线，所有静态状态导出必须经 sysfs/procfs，不得自创 /sys/kernel/airy 或 /proc/airy_v2 等并行目录。**
 
-**OS-KER-131: kernel 的 defconfig 必须开启 CONFIG_SYSFS、CONFIG_PROC_FS、CONFIG_KOBJECT；agentrt.ko 必须在 module_init 阶段完成 airy_kset 注册。**
+**OS-KER-131: kernel 的 defconfig 必须开启 CONFIG_SYSFS、CONFIG_PROC_FS、CONFIG_KOBJECT；内建 Airy LSM 必须在 `airy_init()` 阶段完成 airy_kset 注册（非模块，无 agentrt.ko）。**
 
 ### 1.2 框架组成
 
@@ -125,15 +125,15 @@ agentrt-linux 遵循上游 Linux 约定的职责划分：
 │       ├── hook_count      # 注册钩子数
 │       ├── cap_checks      # capability 校验计数
 │       └── denials         # 拒绝计数
-└── version                 # agentrt.ko 版本号
+└── version                 # Airy LSM 版本号（v1.0.1）
 ```
 
 ### 2.2 kset 注册流程
 
-agentrt.ko 在 `airy_init()` 中注册顶层 kset `airy_kset`：
+> **实现载体说明**：`airy` 为**内建 LSM**（`DEFINE_LSM(airy)`，见 [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)），**非可加载内核模块**（无 `agentrt.ko`）。sysfs/procfs 导出随 `airy_init()`（`security/airy/airy_lsm.c`）与 `kernel/corekern/` 相关子模块初始化时注册：
 
 ```c
-/* kernel/agentrt/airy_sysfs.c */
+/* kernel/corekern/airy/airy_sysfs.c（规划：内建 LSM 载体，随 airy_init() 初始化） */
 struct kset *airy_kset;
 
 static int __init airy_sysfs_init(void)
@@ -157,7 +157,7 @@ static int __init airy_sysfs_init(void)
 }
 ```
 
-**OS-KER-132: agentrt.ko 必须在 module_init 阶段完成 `/sys/airy/` 顶层 kset 注册；注册失败视为致命错误，agentrt.ko 加载中止。**
+**OS-KER-132: 内建 Airy LSM 必须在 `airy_init()` 阶段完成 `/sys/airy/` 顶层 kset 注册；注册失败视为致命错误，LSM 初始化中止。**
 
 ### 2.3 attribute 定义规范
 
@@ -223,10 +223,10 @@ static struct kobj_attribute sched_stats_attr =
 
 ### 3.2 proc_ops 注册流程
 
-agentrt.ko 在 `airy_init()` 中通过 `proc_mkdir` 创建目录：
+内建 Airy LSM 在 `airy_init()` 中通过 `proc_mkdir` 创建目录：
 
 ```c
-/* kernel/agentrt/airy_procfs.c */
+/* kernel/corekern/airy/airy_procfs.c（规划：内建 LSM 载体，随 airy_init() 初始化） */
 static struct proc_dir_entry *airy_proc_dir;
 
 static int __init airy_procfs_init(void)
@@ -242,7 +242,7 @@ static int __init airy_procfs_init(void)
 }
 ```
 
-**OS-KER-133: `/proc/airy/` 目录及其子目录的创建必须在 agentrt.ko init 阶段完成；任一子目录创建失败视为致命错误。**
+**OS-KER-133: `/proc/airy/` 目录及其子目录的创建必须在内建 Airy LSM `airy_init()` 阶段完成；任一子目录创建失败视为致命错误。**
 
 ---
 
@@ -256,7 +256,7 @@ static int __init airy_procfs_init(void)
 $ cat /proc/airy/agents/42/status
 agent_id: 42
 name: cogn_d_worker
-state: COGNITION_RUNNING       # 8 态之一
+state: RUNNING                  # 8 态之一（enum airy_agent_state）
 state_since: 1784328868912     # 进入当前状态的时间戳（ns）
 sched_class: SCHED_DEADLINE    # 当前调度类
 priority: 99                   # 优先级（SCHED_FIFO/RR）
@@ -265,18 +265,18 @@ cpu_affinity: 0-3              # CPU 亲和性
 parent_id: 1                   # 父 Agent ID
 ```
 
-Agent 8 态定义：
+Agent 8 态定义（对齐 [SC] `sched.h` `enum airy_agent_state`，与 Linux 进程状态天然映射）：
 
-| 状态 | 含义 |
-|------|------|
-| `CREATED` | 已创建未启动 |
-| `COGNITION_RUNNING` | 认知循环运行中 |
-| `PLANNING` | 规划中（DAG 更新） |
-| `SCHEDULING` | 调度中 |
-| `EXECUTING` | 执行工具调用 |
-| `BLOCKED` | 阻塞等待 IPC/IO |
-| `SUSPENDED` | 被 macro_d 挂起 |
-| `TERMINATED` | 已终止 |
+| 状态 | 枚举值 | 含义 |
+|------|--------|------|
+| `INACTIVE` | 0 | 进程不存在，等待 fork |
+| `SPAWNING` | 1 | fork/exec 中，未就绪 |
+| `READY` | 2 | TASK_RUNNING，在运行队列等待 |
+| `RUNNING` | 3 | TASK_RUNNING，正在 CPU 执行 |
+| `BLOCKED` | 4 | TASK_INTERRUPTIBLE，等待 IPC/IO |
+| `STOPPING` | 5 | SIGSTOP 发送中，正在冻结 IPC |
+| `STOPPED` | 6 | TASK_STOPPED，已冻结，待裁决 |
+| `DEAD` | 7 | EXIT_ZOMBIE，等待 waitpid 回收 |
 
 ### 4.2 /proc/airy/agents/[id]/sched
 
@@ -552,16 +552,15 @@ inactive
 
 ### 8.4 日志级别分布
 
+日志级别对齐 [SC] `log_types.h` `enum airy_log_level` **5 级**（`AIRY_LOG_DEBUG/INFO/WARN/ERROR/FATAL`）：
+
 ```bash
 $ cat /sys/airy/log/level_distribution
-EMERG: 0
-ALERT: 0
-CRIT: 0
-ERR: 12
-WARNING: 234
-NOTICE: 1234
+DEBUG: 0                        # 生产环境关闭 DEBUG
 INFO: 1234567
-DEBUG: 0                       # 生产环境关闭 DEBUG
+WARN: 234
+ERROR: 12
+FATAL: 0                        # printk KERN_EMERG/ALERT/CRIT 归并到 FATAL
 ```
 
 **OS-OBS-046: Ring Buffer `overrun` 必须为 0；非零值视为日志丢失，需扩容 Ring Buffer 或审查 logger_d 消费速率。**

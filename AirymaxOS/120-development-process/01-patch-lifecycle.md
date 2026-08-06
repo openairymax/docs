@@ -175,7 +175,7 @@ gh pr create --base develop --title "security/cupolas: add agent capability hook
 ### 5.3 规则编号
 
 - **OS-DEV-121**：补丁进入 `develop` 前必须通过 7 层自动化验证的前 4 层（编译期 / 静态分析 / 预提交 / CI 门禁）。
-- **OS-DEV-122**：`develop` 分支禁止 force-push 历史，所有变更必须以 merge commit 或 rebase 后的提交形式进入。
+- **OS-DEV-122**：`develop` 分支禁止 force-push 历史，所有变更默认以 squash merge、备选 rebase 形式进入，**禁用 merge commit**（对齐 03-pull-requests.md §7 合并策略：squash 默认 / rebase 备选 / merge commit 禁用）。
 - **OS-DEV-123**：`develop` 分支 nightly build 失败必须在 24 小时内修复或回滚；连续 3 天失败的子系统，其补丁将被冻结进入下一轮 Merge Window。
 - **OS-DEV-124**：`develop` 分支每日至少运行 1 次 nightly build，覆盖三架构三配置。
 

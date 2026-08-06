@@ -360,14 +360,14 @@ error: conflicting types for '__u64'
 | `sched.h` | [SC] 核心 | A-ULS 调度扩展 | `__u32/__u64`（调度参数） |
 | `memory_types.h` | [SC] 核心 | A-UMS 内存类型 | `__u32/__u64`（内存层级、GFP 标志） |
 | `security_types.h` | [SC] 核心 | A-USA 安全类型 | `__u64`（cap_t badge）、`__u32`（cap_id） |
-| `cognition_types.h` | [SC] 核心 | A-UCG 认知类型 | `__u32/__s32`（Q16.16 定点数） |
+| `cognition_types.h` | [SC] 核心 | A-UCS 认知类型 | `__u32/__s32`（Q16.16 定点数） |
 | `syscalls.h` | [SC] 核心 | syscall 编号 | `__u32`（编号常量） |
 | `uapi_compat.h` | [SC] 核心 | 类型桥接 | （本文件，定义 `__u8` 等） |
 | `lsm_types.h` | [SC] 核心 | LSM blob 类型 | `__u32/__u64`（capability slots） |
 | `bpf_struct_ops.h` | 补充共享 | eBPF struct_ops | `__u32`（state、refcount） |
 | `syscall.h` | codegen 产物 | syscall 入口 | `__u32/__u64`（参数类型） |
 
-> **v4.0 修复说明**：02-P0-17 SSoT 冲突——原表（v1.0.1-fix）将 12 个文件统称为 "[SC] 头文件"，但 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014）明确为 "10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件"。`bpf_struct_ops.h` 文件头 L5-8 自声明 "NOT a [SC] core header"；`syscall.h` 是 codegen 产物（`@generated` 标记），非 [SC] 共享契约。已修正分类，恢复 SSoT 一致性。
+> **v4.0 修复说明**：02-P0-17 SSoT 冲突——原表（历史 v1.0.1 早期版本）将 12 个文件统称为 "[SC] 头文件"，但 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014）明确为 "10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件"。`bpf_struct_ops.h` 文件头 L5-8 自声明 "NOT a [SC] core header"；`syscall.h` 是 codegen 产物（`@generated` 标记），非 [SC] 共享契约。已修正分类，恢复 SSoT 一致性。
 
 ### 4.3 双端共享机制
 
@@ -399,7 +399,7 @@ CI 对每个 [SC] 头文件执行三路编译测试，确保内核态、Linux �
 ### 5.2 CI 脚本示例
 
 ```yaml
-# .github/workflows/sc-tri-compile-ci.yml —— 三路编译 CI
+# .github/workflows/sc-tri-compile-ci.yml —— 三路编译 CI（规划中，文件尚未创建；落地时以 sc-dual-ci.yml 集成）
 name: [SC] Tri-Compile CI
 on: [pull_request]
 
@@ -494,13 +494,15 @@ jobs:
 
 ## §7 版本历史
 
+> **版本铁律（IRON-7 / IRON-8）**：按 IRON-7 铁律，所有中间版本号（v1.0 / v1.0.1-fix / v1.0.2 / v1.0.3 等）统一为 **v1.0.1**，下表历史条目仅保留日期与变更内容作为变更记录。
+
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
-| v1.0 | 2026-07-17 | 初始版本：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
+| v1.0.1 | 2026-07-17 | 初始版本（历史记录原 v1.0）：[SC] 类型桥接规范；三路条件编译模型（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）；uapi_compat.h 设计（虚构 airy_* 类型别名）；物理宿主 kernel/include/uapi/linux/airymax/uapi_compat.h；CI 三路编译测试（内核/用户 Linux/第三方）；二进制布局一致性保证（_Static_assert） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1 |
-| v1.0.1-fix | 2026-07-26 | **文档-代码策略对立修复**（v3.5 审查 P0）：反映 uapi_compat.h 实际策略——三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 三路编译（内核态 + Linux 用户态 + 第三方） |
-| v1.0.2 | 2026-07-26 | **02-P0-17 SSoT 冲突修复**（v4.0 审查）：§4.1/§4.2 头文件分类修正——原表将 12 个文件统称 "[SC] 头文件" 与 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014 "10 个核心 + bpf_struct_ops.h 补充"）冲突。已修正为三类分类：10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件（文件头自声明非核心）+ syscall.h codegen 产物（@generated 标记，非 [SC] 契约）。§4.3 CI 校验项 "12 头文件" → "10+1 头文件"。 |
-| v1.0.3 | 2026-07-29 | **P0-NEW-04/05/06/07/16 修复**：§2.1/§2.2/§2.3/§5/SSoT 声明由错误的"二路条件编译（不使用 `__KERNEL__`）"修正为与实际 `uapi_compat.h` 代码一致的"三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）"；§5 CI 由二路编译改为三路编译（增加内核态 `__KERNEL__` 路径）；§1.1 头文件计数由"共 12 个"细化为"10 个 [SC] 核心 + bpf_struct_ops.h 补充 + syscall.h codegen"；v1.0.1-fix 版本笔记描述由"二路"修正为"三路"。 |
+| v1.0.1 | 2026-07-26 | **文档-代码策略对立修复**（历史记录原早期修订，v3.5 审查 P0）：反映 uapi_compat.h 实际策略——三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）、直接使用 `__u32` 等 UAPI 类型名称（非 `airy_u32` 别名）、Linux 平台 `#include <linux/types.h>` 复用系统定义（避免 typedef 冲突）、第三方平台 `typedef uint8_t __u8` 映射；添加 §3.4 历史教训记录 typedef 冲突问题；CI 三路编译（内核态 + Linux 用户态 + 第三方） |
+| v1.0.1 | 2026-07-26 | **02-P0-17 SSoT 冲突修复**（历史记录原早期修订，v4.0 审查）：§4.1/§4.2 头文件分类修正——原表将 12 个文件统称 "[SC] 头文件" 与 SSoT 权威源（`09-ssot-registry.md` OS-IRON-014 "10 个核心 + bpf_struct_ops.h 补充"）冲突。已修正为三类分类：10 个 [SC] 核心头文件 + bpf_struct_ops.h 补充共享文件（文件头自声明非核心）+ syscall.h codegen 产物（@generated 标记，非 [SC] 契约）。§4.3 CI 校验项 "12 头文件" → "10+1 头文件"。 |
+| v1.0.1 | 2026-07-29 | **P0-NEW-04/05/06/07/16 修复**（历史记录原早期修订）：§2.1/§2.2/§2.3/§5/SSoT 声明由错误的"二路条件编译（不使用 `__KERNEL__`）"修正为与实际 `uapi_compat.h` 代码一致的"三路条件编译（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`）"；§5 CI 由二路编译改为三路编译（增加内核态 `__KERNEL__` 路径）；§1.1 头文件计数由"共 12 个"细化为"10 个 [SC] 核心 + bpf_struct_ops.h 补充 + syscall.h codegen"。 |
 
 ---
 

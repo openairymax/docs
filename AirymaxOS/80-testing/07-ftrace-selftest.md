@@ -224,7 +224,7 @@ CONFIG_AIRY_TRACE_SELFTEST=y       # agentrt-linux 专属 ftrace 自检
 #include <linux/init.h>
 #include <linux/ftrace.h>
 #include <linux/trace.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 #define AIRY_TRACE_CPRIME_LATENCY_SLA_NS  50000LL  /* 50μs SLA */
 
@@ -235,13 +235,20 @@ static int __init airy_trace_selftest_cprime(void)
     int ret = 0;
 
     /* 1. 启用 sched_switch tracer（追踪调度器切换） */
-    tr = trace_array_get_by_name("sched_switch");
+    tr = trace_array_get_by_name("sched_switch", NULL);
     if (!tr) {
         pr_err("tracer_selftest: airy_cprime: sched_switch trace_array not found\n");
         return -EINVAL;
     }
-    tracer_alloc_buffers(tr);
-    tracer_enable(tr);
+    /* 6.6 真实 API：trace_array_get_by_name() 已分配 ring buffers；
+     * 事件启用/禁用使用 EXPORT_SYMBOL_GPL 的 trace_array_set_clr_event()。
+     * 早期设计中的 tracer_alloc_buffers()/tracer_enable() 为内核内部函数
+     * （非导出 API，6.6 不可在模块中调用），仅作伪代码示意。 */
+    ret = trace_array_set_clr_event(tr, NULL, "sched_switch", true);
+    if (ret) {
+        pr_err("tracer_selftest: airy_cprime: enable sched_switch event failed: %d\n", ret);
+        return ret;
+    }
     pr_info("tracer_selftest: airy_cprime: sched_switch enabled\n");
 
     /* 2. 触发 SCHED_DEADLINE 调度切换 */
@@ -257,26 +264,29 @@ static int __init airy_trace_selftest_cprime(void)
     latency_ns = ktime_get_ns() - start_ns;
     if (ret) {
         pr_err("tracer_selftest: airy_cprime: SCHED_DEADLINE setattr failed: %d\n", ret);
-        tracer_disable(tr);
+        trace_array_set_clr_event(tr, NULL, "sched_switch", false);
         return ret;
     }
     if (latency_ns > AIRY_TRACE_CPRIME_LATENCY_SLA_NS) {
         pr_err("tracer_selftest: airy_cprime: SCHED_DEADLINE latency %lluns > SLA\n",
                latency_ns);
-        tracer_disable(tr);
+        trace_array_set_clr_event(tr, NULL, "sched_switch", false);
         return -EIO;
     }
 
     /* 3. 检查 ring buffer 中的 sched_switch 条目 */
+    /* 伪代码标注：trace_array_entries() 不是 6.6 导出 API（6.6 无此符号）；
+     * 实际条目数应经 tracefs（/sys/kernel/tracing/per_cpu/*/trace）或内部
+     * trace_buffer 统计获取，落地时替换（规划）。 */
     int entries = trace_array_entries(tr);
     if (entries < 5) {
         pr_err("tracer_selftest: airy_cprime: only %d sched_switch entries\n", entries);
-        tracer_disable(tr);
+        trace_array_set_clr_event(tr, NULL, "sched_switch", false);
         return -EIO;
     }
 
     /* 4. 禁用 tracer */
-    tracer_disable(tr);
+    trace_array_set_clr_event(tr, NULL, "sched_switch", false);
     pr_info("tracer_selftest: airy_cprime: sched_switch %d entries, latency %lluns OK\n",
             entries, latency_ns);
     return 0;
@@ -295,6 +305,8 @@ late_initcall(airy_trace_selftest_cprime);
 static int __init airy_trace_selftest_ipc(void)
 {
     /* 1. 启用 airy_ipc_fastpath tracepoint */
+    /* 伪代码标注：trace_array_set_event() 非 6.6 API；真实 API 为
+     * trace_array_set_clr_event(tr, system, event, enable)（EXPORT_SYMBOL_GPL） */
     trace_array_set_event("airy_ipc_fastpath_entry", true);
     trace_array_set_event("airy_ipc_fastpath_exit",  true);
 
@@ -323,6 +335,8 @@ late_initcall(airy_trace_selftest_ipc);
 static int __init airy_trace_selftest_agent(void)
 {
     /* 1. 启用 airy_agent_state_change tracepoint */
+    /* 伪代码标注：trace_array_set_event() 非 6.6 API；真实 API 为
+     * trace_array_set_clr_event(tr, system, event, enable)（EXPORT_SYMBOL_GPL） */
     trace_array_set_event("airy_agent_state_change", true);
 
     /* 2. 触发 Agent spawn → ready → running → stop → dead 路径 */
@@ -331,6 +345,8 @@ static int __init airy_trace_selftest_agent(void)
     airy_stop_agent_selftest(agent_id);
 
     /* 3. 检查 ring buffer 中的状态转换条目 */
+    /* 伪代码标注：trace_array_entries_current() 非 6.6 导出 API；
+     * 实际条目数经 tracefs 或内部 trace_buffer 统计获取（规划） */
     int entries = trace_array_entries_current();
     if (entries < 5) {
         pr_err("tracer_selftest: airy_agent: only %d state_change entries\n", entries);
@@ -406,7 +422,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with airy_ftrace_defconfig
         run: |
-          make ARCH=um defconfig airy_ftrace_defconfig
+          # UML 无 airy_ftrace_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_ftrace.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and capture ftrace selftest
         run: |
@@ -478,15 +497,15 @@ CI 在解析 `dmesg` 时分别提取 `airy_selftest:` 与 `tracer_selftest:` 前
 1. ftrace 自测试框架（`trace_selftest_*` API）的启用模型。
 2. function tracer / function_graph tracer / hwlat tracer 三大上游 tracer 的验证流程。
 3. agentrt-linux 专属 ftrace 自检 3 项（sched_tac 调度延迟、IPC fastpath、Agent 状态转换）。
-4. `airy_ftrace_defconfig` 配置定义。
+4. `airy_ftrace_defconfig` 配置定义（**规划，未实现**）。
 5. `ci-kernel` workflow ftrace 自检阶段。
 6. ftrace → A-ULP 集成验证。
 
 ### 10.3 后续版本规划
 
 - v1.0.1：新增 `airy_trace_selftest_mem`（alloc_pages + mmap 内存路径追踪）。
-- v1.2：与 90-observability 联动，将 ftrace tracepoint 实时上报至 A-ULP 日志系统。
-- v1.3：支持 ftrace histogram 触发自检，验证 hist trigger 功能。
+- 下一版本：与 90-observability 联动，将 ftrace tracepoint 实时上报至 A-ULP 日志系统。
+- 后续版本：支持 ftrace histogram 触发自检，验证 hist trigger 功能。
 
 ---
 

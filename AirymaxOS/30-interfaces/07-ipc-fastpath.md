@@ -24,11 +24,11 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 
 | # | 目标 | 指标 | 验收方式 |
 |---|------|------|---------|
-| G-1 | 最小化 IPC 延迟 | fastpath 单次端到端延迟 ~158ns（x86_64，2.4 GHz 基频，热缓存），含 C-S9 Badge 校验 | §5.3 延迟分解 + §10.4 有界延迟证明 |
+| G-1 | 最小化 IPC 延迟 | fastpath 单次端到端延迟 ~158ns（**设计估算**，x86_64，2.4 GHz 基频，热缓存），含 C-S9 Badge 校验；实测 ~46ns（UML x86_64，`airy_fastpath_bench` KUnit，见 §5.3） | §5.3 延迟分解 + §10.4 有界延迟证明 |
 | G-2 | 优先 fastpath | fastpath 无阻塞、无等待、无调度——禁止在 fastpath 内调用 `schedule()`/`mutex_lock()`/`wait_event*()` | §8 故障注入 + KCSAN 静态扫描 |
 | G-3 | slowpath 回退 | 资源不足（kfifo 满、无匹配消息、跨 CPU）时降级至 slowpath，不丢弃消息 | §4 slowpath 回退机制 + §8 注入测试 |
 | G-4 | 可测性 | fastpath/slowpath 命中比例、错误率可统计，输出至 debugfs + tracepoint | §9 可观测性 |
-| G-5 | Capability Folding 内联 | C-S9 Badge 校验 ~10ns（3 个 `READ_ONCE` + 位运算 + 比较），不阻塞、不调度 | §5.2 fastpath 实现 + §5.3 延迟分解 |
+| G-5 | Capability Folding 内联 | C-S9 Badge 校验 ~10ns（**设计估算**，3 个 `READ_ONCE` + 位运算 + 比较）；实测 2-10ns（UML x86_64，`airy_fastpath_bench` KUnit，见 §5.3），不阻塞、不调度 | §5.2 fastpath 实现 + §5.3 延迟分解 |
 
 ### 1.2 设计约束
 
@@ -149,7 +149,7 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 | `IDLE` | SEND_BATCH（N≥2） | `BATCH` | 入聚合缓冲；待阈值/flush | 聚合阶段无锁 |
 | `IDLE` | CANCEL（有可取消项） | `CANCEL` | 从对端队列移除；释放资源 | 内联 |
 | `IDLE` | CANCEL（无可取消项） | `IDLE` | 返回 `AIRY_ENOENT` | 空操作 |
-| `IDLE` | magic != 0x41524531 | `ERROR` | 返回 `AIRY_EPROTO`；统计 error | — |
+| `IDLE` | magic != 0x41524531 | `ERROR` | 返回 `AIRY_EIPC_MAGIC`（SSoT 码 41）；统计 error | — |
 | `FAST_SEND` | 拷贝完成 | `IDLE` | 唤醒对端 RECV 等待者；填 CQE | ★ FP 出口 |
 | `FAST_SEND` | 拷贝过程中 kfifo 满（竞态） | `SLOW_SEND` | 回滚已拷贝部分；入 wait queue | SP 降级 |
 | `FAST_SEND` | CANCEL 请求 | `CANCEL` | 中止拷贝；回滚 | — |
@@ -158,20 +158,20 @@ agentrt-linux IPC Fastpath 状态机是 Layout C v4 128B 消息头（见 [02-ipc
 | `FAST_RECV` | 接收 buf 失效（被 munmap） | `ERROR` | 返回 `AIRY_EFAULT` | — |
 | `FAST_RECV` | CANCEL 请求 | `CANCEL` | 中止拷贝 | — |
 | `SLOW_SEND` | 唤醒（kfifo 有空位） | `IDLE` | 完成拷贝；填 CQE | SP 出口 |
-| `SLOW_SEND` | 超时（> `timeout_ns`） | `CANCEL` | 移出 wait queue；返回 `AIRY_ETIMEDOUT` | — |
+| `SLOW_SEND` | 超时（> `timeout_ns`） | `CANCEL` | 移出 wait queue；返回 `AIRY_EIPC_TIMEOUT` | — |
 | `SLOW_SEND` | CANCEL 请求 | `CANCEL` | 移出 wait queue；返回 `AIRY_ECANCELED` | — |
 | `SLOW_SEND` | 信号中断（EINTR） | `CANCEL` | 移出 wait queue；返回 `AIRY_EINTR` | — |
 | `SLOW_SEND` | SEND / RECV / SEND_BATCH | `—` | 排队，不抢占当前流程 | — |
 | `SLOW_RECV` | 收到匹配消息（唤醒） | `IDLE` | 完成拷贝；填 CQE | SP 出口 |
-| `SLOW_RECV` | 超时 | `CANCEL` | 返回 `AIRY_ETIMEDOUT` | — |
+| `SLOW_RECV` | 超时 | `CANCEL` | 返回 `AIRY_EIPC_TIMEOUT` | — |
 | `SLOW_RECV` | CANCEL 请求 | `CANCEL` | 返回 `AIRY_ECANCELED` | — |
 | `SLOW_RECV` | 信号中断 | `CANCEL` | 返回 `AIRY_EINTR` | — |
 | `BATCH` | 聚合数达阈值 / flush | `FAST_SEND` | 批量提交 SQE；统计 FP | ★ FP 出口 |
 | `BATCH` | CANCEL 请求 | `CANCEL` | 丢弃未提交聚合项；返回 `AIRY_ECANCELED` | — |
 | `BATCH` | 单条聚合项 magic 失败 | `ERROR` | 丢弃该项；继续聚合其余；统计 error | 部分失败 |
 | `BATCH` | SEND / RECV 事件 | `—` | 排队 | — |
-| `CANCEL` | 清理完成 | `IDLE` | 返回 `AIRY_ECANCELED` / `AIRY_ETIMEDOUT` | — |
-| `CANCEL` | 清理失败（资源已被对端取走） | `IDLE` | 返回 `AIRY_EALREADY` | 视为已完成 |
+| `CANCEL` | 清理完成 | `IDLE` | 返回 `AIRY_ECANCELED` / `AIRY_EIPC_TIMEOUT` | — |
+| `CANCEL` | 清理失败（资源已被对端取走） | `IDLE` | 返回 `AIRY_EOK`（0，视为已完成；原设计稿的 `AIRY_EALREADY` 不在 SSoT error.h 定义，已移除） | 视为已完成 |
 | `CANCEL` | SEND / RECV / SEND_BATCH / CANCEL | `—` | 排队 | — |
 | `ERROR` | 错误码上报完成 | `IDLE` | 重置流程上下文 | — |
 | `ERROR` | 任意新事件 | `IDLE` | 先回到 IDLE 再处理 | 强制复位 |
@@ -229,6 +229,8 @@ C-S9 是 Capability Folding 的核心执行点，内联在 fastpath 校验链中
 > | 权限校验 | `C-S9.PERMS` | capability permission check | `airy_cap_has_perm(badge_perms, opcode)` |
 >
 > **v1.0.1 术语统一**：早期文档使用的 `C-S9a`/`C-S9b`/`C-S9c` 子状态命名已废弃，统一替换为 `C-S9.EPOCH`/`C-S9.RANDTAG`/`C-S9.PERMS`。本文档为该命名的唯一权威源（SSoT）。
+>
+> **⚠️ 子检查执行顺序统一声明（v1.0.1-fix）**：C-S9 三个子检查的**执行顺序**固定为 **`C-S9.EPOCH` → `C-S9.RANDTAG` → `C-S9.PERMS`**，对齐 `airy_cap.h` 中 `airy_cap_badge_ok()` 的实际实现（C-S9.1 epoch → C-S9.2 randtag → C-S9.3 perms，见 `security/airy/airy_cap.h`）。§3.1.1 与 §5.2 的代码块均遵循此顺序（§5.2 早前版本曾先列 RANDTAG，已统一）。任何子检查的顺序调整必须先改实现再改本文档。
 
 校验流程：
 
@@ -352,7 +354,7 @@ slowpath 在 §3 任一条件不满足时触发，具体降级路径如下：
 | 字段 | 来源 | 默认 |
 |------|------|------|
 | `timeout_ns` | 消息头无此字段，由 `flags` 高位 + `reserved` 协商或调用参数传入 | 5 s（与 OS-SEC-009 COMPLAIN 超时对齐） |
-| 超时动作 | 移出 wait queue，返回 `AIRY_ETIMEDOUT`，状态 → CANCEL | — |
+| 超时动作 | 移出 wait queue，返回 `AIRY_EIPC_TIMEOUT`，状态 → CANCEL | — |
 | SQE 设置 `IOSQE_ASYNC`（替代旧 NOWAIT） | 不进入 slowpath，由 io_uring 异步完成 | — |
 
 ---
@@ -377,10 +379,13 @@ io_uring 承担用户态 ↔ 内核态的 IPC 数据面（OS-ARCH-006）。v1.0.
 
 ### 5.2 fastpath 完整实现（v1.0.1 新增，Capability Folding C-S9 内联）
 
-以下代码是 A-IPC fastpath 的 SSoT 实现参考，物理宿主为 `kernel/corekern/ipc/airy_ipc_fastpath.c`。fastpath 入口 `airy_ipc_fastpath_send()` 在 io_uring 持有 `ctx->uring_lock` 时被调用，锁内仅做校验 + 快速投递（无 `wake_up`），需要唤醒时返回 `-EAGAIN`，io-wq 接管（锁外）。
+> **⚠️ 设计稿标注（v1.0.1-fix）**：本节代码（`airy_uring_cmd` / `airy_ipc_validate` / `airy_ipc_can_fast_deliver` / `airy_ipc_deliver_fast` / `airy_ipc_deliver_full`、C-S0~C-S12 校验链、kfifo/io_uring 集成）为**设计稿（超前于实现）**。物理宿主 `kernel/corekern/ipc/airy_ipc_fastpath.c` 当前（v1.0.1）实际实现仅 **91 行**：入口 `airy_ipc_fastpath_send()` 只做 frozen 门检查（`unlikely(READ_ONCE(ring->frozen))` → 返回 `-AIRY_EIPC_FROZEN`）+ 委托 `airy_ipc_ring_post()`（corekern/ipc/airy_ipc_ring.c）；Badge 校验（C-S9）由调用方（LSM hook 路径）在进入本函数前完成。本节为状态机设计参考，实际代码以物理宿主文件为准。
+
+以下代码是 A-IPC fastpath 的设计参考（超前于实现，见上），其设想入口 `airy_uring_cmd()` 在 io_uring 持有 `ctx->uring_lock` 时被调用，锁内仅做校验 + 快速投递（无 `wake_up`），需要唤醒时返回 `-EAGAIN`，io-wq 接管（锁外）。
 
 ```c
-/* kernel/corekern/ipc/airy_ipc_fastpath.c */
+/* 设计稿（超前于实现）：kernel/corekern/ipc/airy_ipc_fastpath.c
+ * 实际实现（v1.0.1）仅 91 行：airy_ipc_fastpath_send() = frozen 门 + ring_post 委托 */
 
 #include <linux/io_uring.h>
 #include <linux/io_uring_types.h>
@@ -650,11 +655,13 @@ static int airy_ipc_deliver_full(struct airy_ipc_cmd *cmd)
 
 ### 5.3 fastpath 延迟分解
 
+> **⚠️ 设计估算标注（v1.0.1-fix）**：下表各项（~68ns/~90ns/~158ns 等）为**设计估算**，对应 §5.2 设计稿代码路径。实测数据（`airy_fastpath_bench` KUnit，UML x86_64，调用真实生产函数 `airy_cap_badge_ok()` / `airy_ipc_fastpath_send()` / `airy_ipc_ring_post()`，见 `kernel/corekern/ipc/airy_fastpath_bench.c`）：fastpath 全路径（frozen 门 + ring_post）实测 **~46ns**，C-S9 Badge 校验实测 **2-10ns**。设计稿实现的额外校验链（C-S0~C-S12/kfifo）尚未落地，落地后需复测刷新本节数字。
+
 ```
 FAST_SEND 路径（SQPOLL + 同 CPU + kfifo 有空位 + 接收方轮询）:
   airy_ipc_validate():     ~68ns (锁内)
     C-S0~C-S8:             ~20ns
-    C-S9 Badge 校验:        ~10ns (3 READ_ONCE + 位运算 + 比较)
+    C-S9 Badge 校验:        ~10ns (3 READ_ONCE + 位运算 + 比较)（实测 2-10ns）
     C-S10~C-S11:            ~5ns
   airy_ipc_deliver_fast(): ~90ns (锁内)
     C-S12 CRC32:            ~15ns
@@ -662,8 +669,8 @@ FAST_SEND 路径（SQPOLL + 同 CPU + kfifo 有空位 + 接收方轮询）:
     cqe_fill:               ~20ns
     preempt_disable/enable: ~5ns
   ────────────────────────────────────
-  锁内总计:                  ~158ns
-  端到端:                    ~158ns（接收方轮询消费）
+  锁内总计:                  ~158ns（设计估算）
+  端到端:                    ~158ns（接收方轮询消费）——实测 ~46ns（UML x86_64）
 
 SLOW_SEND 路径（跨 CPU 或 kfifo 满或接收方阻塞）:
   airy_ipc_validate():     ~68ns (锁内)
@@ -910,8 +917,8 @@ if (likely(hdr.magic == AIRY_IPC_MAGIC) &&
 | 内存分配失败 | `fail_function(airy_ipc_alloc)` | FAST_SEND → ERROR / SLOW_SEND | 返回 `AIRY_ENOMEM` |
 | kfifo 满 | `fail_kfifo_full`（强制 `kfifo_is_full()` 返回 true） | IDLE → SLOW_SEND | 触发背压，入 wait queue |
 | capability 检查失败 | `fail_cap_check`（强制 `airy_cap_badge_ok()` 返回非 0） | FAST_SEND → ERROR | 返回 `AIRY_ECAP_FORGED`(-80) 或 `AIRY_ECAP_PERM`(-81) |
-| magic 校验失败 | 注入错误 magic `0xDEADBEEF` | IDLE → ERROR | 返回 `AIRY_EPROTO` |
-| 唤醒丢失 | `fail_wake_up`（丢弃 `wake_up_interruptible`） | SLOW_RECV 超时 → CANCEL | 返回 `AIRY_ETIMEDOUT` |
+| magic 校验失败 | 注入错误 magic `0xDEADBEEF` | IDLE → ERROR | 返回 `AIRY_EIPC_MAGIC`（SSoT 码 41） |
+| 唤醒丢失 | `fail_wake_up`（丢弃 `wake_up_interruptible`） | SLOW_RECV 超时 → CANCEL | 返回 `AIRY_EIPC_TIMEOUT` |
 | 跨 CPU 注入 | 强制 `dst_cpu != smp_processor_id()` | IDLE → SLOW_SEND | 走跨 CPU 路径 |
 
 ### 8.3 统计与验证
@@ -1045,23 +1052,26 @@ CBMC（C Bounded Model Checker）是对 fastpath **100 行代码**做全函数�
 
 #### 10.6.1 验证范围与目标
 
-| 验证对象 | 物理宿主 | 行数 | 验证工具 | 验证目标 |
+> **⚠️ 规划标注（v1.0.1-fix）**：本小节及 §10.6.2-§10.6.5 的 CBMC 验证对象、物理宿主与属性规约为**规划稿（超前于实现）**。其中声称的物理宿主 `kernel/security/airy/capability.c` **当前不存在**（`airy_cap_badge_ok()` 实际以内联函数形式定义于 `security/airy/airy_cap.h`）；CBMC 属性规约代码（§10.6.2）为设计态，尚未落盘为 `#ifdef CBMC_VERIFICATION` 验证块。以下表格保留设计意图，实际验证以落地后的物理文件为准。
+
+| 验证对象 | 物理宿主（规划） | 行数 | 验证工具 | 验证目标 |
 |---------|---------|------|---------|---------|
-| `airy_cap_badge_ok()` | kernel/security/airy/capability.c | ~30 行 | CBMC | 内存安全 + Badge 校验逻辑不变量 |
-| `airy_ipc_validate()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~40 行 | CBMC | C-S0~C-S11 校验链完备性 |
-| `airy_ipc_deliver_fast()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~20 行 | CBMC | kfifo_in 边界 + preempt 平衡 |
-| `airy_ipc_crc32_ok()` | kernel/corekern/ipc/airy_ipc_fastpath.c | ~10 行 | CBMC | CRC32 计算无越界 |
+| `airy_cap_badge_ok()` | 规划：`kernel/security/airy/capability.c`（当前实际实现：`security/airy/airy_cap.h` 内联） | ~30 行 | CBMC | 内存安全 + Badge 校验逻辑不变量 |
+| `airy_ipc_validate()` | 规划：`kernel/corekern/ipc/airy_ipc_fastpath.c`（当前实际仅有 `airy_ipc_fastpath_send()`，见 §5.2 设计稿标注） | ~40 行 | CBMC | C-S0~C-S11 校验链完备性 |
+| `airy_ipc_deliver_fast()` | 规划：`kernel/corekern/ipc/airy_ipc_fastpath.c`（同上级，设计稿） | ~20 行 | CBMC | kfifo_in 边界 + preempt 平衡 |
+| `airy_ipc_crc32_ok()` | 规划：`kernel/corekern/ipc/airy_ipc_fastpath.c`（同上级，设计稿） | ~10 行 | CBMC | CRC32 计算无越界 |
 | **合计** | — | **~100 行** | CBMC | 全函数验证（H4 硬约束） |
 
 #### 10.6.2 CBMC 属性规约（Property Specifications）
 
-CBMC 通过 `__CPROVER_assert()` 与函数契约（`__CPROVER_requires()` / `__CPROVER_ensures()`）声明属性规约。以下属性规约是 fastpath 100 行代码的**唯一权威规约源**（SSoT）。
+CBMC 通过 `__CPROVER_assert()` 与函数契约（`__CPROVER_requires()` / `__CPROVER_ensures()`）声明属性规约。以下属性规约是 fastpath 100 行代码的**规划态规约源**（设计态，尚未落盘为物理文件）。
 
 ```c
-/* kernel/security/airy/capability.c —— CBMC 属性规约（SSoT）
+/* 设计态（规划稿）：kernel/security/airy/capability.c —— CBMC 属性规约
  *
- * 物理宿主: kernel/security/airy/capability.c（CBMC 验证块）
- * 启用方式: #ifdef CBMC_VERIFICATION 包裹，编译期注入
+ * 物理宿主（规划）: kernel/security/airy/capability.c（CBMC 验证块）
+ * 当前状态: 设计稿，该文件不存在；airy_cap_badge_ok() 实际位于 security/airy/airy_cap.h
+ * 启用方式（规划）: #ifdef CBMC_VERIFICATION 包裹，编译期注入
  * 验证脚本: tests-linux/formal/cbmc/run_fastpath_cbmc.sh
  */
 
@@ -1077,6 +1087,10 @@ __CPROVER_ensures(
     __CPROVER_return_value == -AIRY_ECAP_EPOCH ||
     __CPROVER_return_value == -AIRY_ECAP_FORGED ||
     __CPROVER_return_value == -AIRY_ECAP_PERM)
+/* 设计态签名（规划稿）：实际 airy_cap_badge_ok() 为 3 参
+ * (badge: __u64, agent_id: __u32, required_perms: __u16)，
+ * 定义于 security/airy/airy_cap.h；此处 3 参版本 (task, badge, opcode)
+ * 为 CBMC 抽象模型（规划），参数语义不同，勿与实现混用。 */
 int airy_cap_badge_ok(struct task_struct *task, u64 badge, u16 opcode)
 {
     u32 agent_id = task->pid;

@@ -33,7 +33,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 问题背景
 
-Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uapi/linux/airymax/`，共 10 个头文件）是 agentrt 与 agentrt-linux 双端逐字节共享的权威源。但在以下极端场景下，[SC] 头文件可能不可用或损坏：
+Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uapi/linux/airymax/`，共 12 个头文件）是 agentrt 与 agentrt-linux 双端逐字节共享的权威源。但在以下极端场景下，[SC] 头文件可能不可用或损坏：
 
 | 场景 | 触发原因 | 影响 |
 |------|---------|------|
@@ -85,57 +85,70 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uap
 #ifdef AIRY_SC_FALLBACK
 /*
  * [DSL] 降级生存层 —— AIRY_SC_FALLBACK 激活
- * 仅保留 38 个 POSIX errno 负值 + 1 个配置版本码
- * 禁止在此定义 [SC]/IPC/Capability/[DSL] 扩展码
+ * 对齐 [SC] error.h [DSL] 块：38 个 POSIX 码以 AIRY_DSL_* 别名映射到
+ * 5 个核心码（AIRY_EINVAL / AIRY_ENOMEM / AIRY_EBUSY / AIRY_ECANCELED /
+ * AIRY_EAGAIN，另含 AIRY_EEXIST / AIRY_ENOTSUP 透传）。错误码为 POSIX 风格
+ * 正数幅值（如 AIRY_EINVAL=5），调用方返回 -AIRY_E* 产生负错误值。
+ * 禁止在此重定义独立负值宏（与 [SC] 正数幅值约定冲突）。
  */
 #ifndef _AIRY_ERROR_FALLBACK_H
 #define _AIRY_ERROR_FALLBACK_H
 
-#define AIRY_EOK            0       /* 成功 */
-#define AIRY_EPERM          (-1)    /* 权限不足 */
-#define AIRY_ENOENT         (-2)    /* 不存在 */
-#define AIRY_EINTR          (-4)    /* 被信号中断 */
-#define AIRY_EIO            (-5)    /* I/O 错误 */
-#define AIRY_ENXIO          (-6)    /* 无此设备 */
-#define AIRY_E2BIG          (-7)    /* 参数列表过长 */
-#define AIRY_ENOEXEC        (-8)    /* exec 格式错误 */
-#define AIRY_EBADF          (-9)    /* 坏文件描述符 */
-#define AIRY_ECHILD         (-10)   /* 无子进程 */
-#define AIRY_EAGAIN         (-11)   /* 重试 */
-#define AIRY_ENOMEM         (-12)   /* 内存不足 */
-#define AIRY_EACCES         (-13)   /* 拒绝访问 */
-#define AIRY_EFAULT         (-14)   /* 错误地址 */
-#define AIRY_EBUSY          (-16)   /* 设备忙 */
-#define AIRY_EEXIST         (-17)   /* 已存在 */
-#define AIRY_EXDEV          (-18)   /* 跨设备链接 */
-#define AIRY_ENODEV         (-19)   /* 无此设备 */
-#define AIRY_ENOTDIR        (-20)   /* 非目录 */
-#define AIRY_EISDIR         (-21)   /* 是目录 */
-#define AIRY_EINVAL         (-22)   /* 参数无效 */
-#define AIRY_ENFILE         (-23)   /* 系统文件表满 */
-#define AIRY_EMFILE         (-24)   /* 文件描述符表满 */
-#define AIRY_ENOTTY         (-25)   /* 非 tty */
-#define AIRY_ETXTBSY        (-26)   /* 文本忙 */
-#define AIRY_EFBIG          (-27)   /* 文件过大 */
-#define AIRY_ENOSPC         (-28)   /* 空间不足 */
-#define AIRY_ESPIPE         (-29)   /* 不可 seek */
-#define AIRY_EROFS          (-30)   /* 只读文件系统 */
-#define AIRY_EMLINK         (-31)   /* 链接过多 */
-#define AIRY_EPIPE          (-32)   /* 管道破裂 */
-#define AIRY_EDOM           (-33)   /* 域错误 */
-#define AIRY_ERANGE         (-34)   /* 范围错误 */
-#define AIRY_EDEADLK        (-35)   /* 死锁 */
-#define AIRY_ENAMETOOLONG   (-36)   /* 文件名过长 */
-#define AIRY_ENOLCK         (-37)   /* 无可用锁 */
-#define AIRY_ENOSYS         (-38)   /* 功能未实现 */
-#define AIRY_ENOTEMPTY      (-39)   /* 目录非空 */
-#define AIRY_ELOOP          (-40)   /* 符号链接循环 */
+/* 5 核心码（正数幅值，返回 -AIRY_E*） */
+#define AIRY_EINVAL          5
+#define AIRY_ENOMEM          9
+#define AIRY_EBUSY           16
+#define AIRY_ECANCELED       19
+#define AIRY_EAGAIN          35
+#define AIRY_EEXIST          2
+#define AIRY_ENOTSUP         11
+
+/* 38 个 POSIX 码的 AIRY_DSL_* 别名 → 核心码映射（节选） */
+#define AIRY_DSL_E2BIG        AIRY_EINVAL
+#define AIRY_DSL_ECHILD       AIRY_EINVAL
+#define AIRY_DSL_EDEADLK      AIRY_EBUSY
+#define AIRY_DSL_EDOM         AIRY_EINVAL
+#define AIRY_DSL_EEXIST_S     AIRY_EEXIST
+#define AIRY_DSL_EFBIG        AIRY_EINVAL
+#define AIRY_DSL_EILSEQ       AIRY_EINVAL
+#define AIRY_DSL_EINPROGRESS  AIRY_EAGAIN
+#define AIRY_DSL_EISCONN      AIRY_EBUSY
+#define AIRY_DSL_ELOOP        AIRY_EINVAL
+#define AIRY_DSL_EMFILE       AIRY_ENOMEM
+#define AIRY_DSL_EMLINK       AIRY_ENOMEM
+#define AIRY_DSL_ENAMETOOLONG AIRY_EINVAL
+#define AIRY_DSL_ENFILE       AIRY_ENOMEM
+#define AIRY_DSL_ENODEV       AIRY_EINVAL
+#define AIRY_DSL_ENOEXEC      AIRY_EINVAL
+#define AIRY_DSL_ENOLCK       AIRY_ENOMEM
+#define AIRY_DSL_ENOMSG       AIRY_ECANCELED
+#define AIRY_DSL_ENOTBLK      AIRY_EINVAL
+#define AIRY_DSL_ENOTCONN     AIRY_ECANCELED
+#define AIRY_DSL_ENOTDIR      AIRY_EINVAL
+#define AIRY_DSL_ENOTEMPTY    AIRY_EBUSY
+#define AIRY_DSL_ENOTSOCK     AIRY_EINVAL
+#define AIRY_DSL_ENXIO        AIRY_EINVAL
+#define AIRY_DSL_EOPNOTSUPP   AIRY_ENOTSUP
+#define AIRY_DSL_EOVERFLOW    AIRY_EINVAL
+#define AIRY_DSL_EPIPE        AIRY_ECANCELED
+#define AIRY_DSL_EPROTO       AIRY_EINVAL
+#define AIRY_DSL_EROFS        AIRY_EBUSY
+#define AIRY_DSL_ESPIPE       AIRY_EINVAL
+#define AIRY_DSL_ESRCH        AIRY_EINVAL
+#define AIRY_DSL_ETIMEDOUT    AIRY_ECANCELED
+#define AIRY_DSL_ETXTBSY      AIRY_EBUSY
+#define AIRY_DSL_EWOULDBLOCK  AIRY_EAGAIN
+#define AIRY_DSL_EXDEV        AIRY_EINVAL
+#define AIRY_DSL_ENODATA      AIRY_ECANCELED
+#define AIRY_DSL_ENOSR        AIRY_ENOMEM
+#define AIRY_DSL_ESTALE       AIRY_ECANCELED
+
 /* [DSL] 唯一保留的非 POSIX 码：配置版本不匹配 */
-#define AIRY_ECFGVERSION    (-101)
+#define AIRY_ECFGVERSION    101
 
 /* Fault 码在降级模式下全部禁用，所有故障统一走 Panic 路径 */
 
-#warning "AIRY_SC_FALLBACK active: only 38 POSIX codes + AIRY_ECFGVERSION available, Fault codes disabled"
+#warning "AIRY_SC_FALLBACK active: 38 POSIX codes map to 5 core codes + AIRY_ECFGVERSION, Fault codes disabled"
 
 #endif /* _AIRY_ERROR_FALLBACK_H */
 #endif /* AIRY_SC_FALLBACK */
@@ -143,11 +156,11 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uap
 
 ### 2.2 各头文件降级块职责
 
-10 个 [SC] 头文件各自的降级块职责如下：
+12 个 [SC] 头文件各自的降级块职责如下：
 
 | 头文件 | 降级块职责 | 保留符号 |
 |--------|----------|---------|
-| `error.h` | 38 个 POSIX 码 + `AIRY_ECFGVERSION` | 39 个错误码 |
+| `error.h` | 38 个 POSIX 码以 `AIRY_DSL_*` 别名映射到 5 核心码（EINVAL/ENOMEM/EBUSY/ECANCELED/EAGAIN）+ `AIRY_ECFGVERSION` | 5 核心码 + 配置码 |
 | `log_types.h` | 仅 `LOG_FATAL` + `LOG_ERROR` 两级 | 2 个日志级别 |
 | `ipc.h` | 最简 128B 消息头（magic + opcode + payload_len + **capability_badge=0**） | 4 个字段（H6 落地） |
 | `sched.h` | 仅 `AIRY_TASK_MAGIC` + `AIRY_CAP_MAX_AGENTS` | 2 个符号 |
@@ -236,14 +249,14 @@ static void airy_log_panic(const char *fmt, ...)
 
 #### 4.1.1 错误码子集
 
-仅保留 38 个 POSIX errno 负值（`AIRY_EPERM=-1` ~ `AIRY_ELOOP=-40`）+ 1 个配置版本码 `AIRY_ECFGVERSION=-101`。Fault 码全部禁用——降级模式下所有不可恢复故障统一走 Panic，不尝试通过 Fault Handler 优雅处理。
+对齐 [SC] error.h [DSL] 块：38 个 POSIX errno 以 `AIRY_DSL_*` 别名映射到 5 个核心码（`AIRY_EINVAL=5` / `AIRY_ENOMEM=9` / `AIRY_EBUSY=16` / `AIRY_ECANCELED=19` / `AIRY_EAGAIN=35`，另含 `AIRY_EEXIST`/`AIRY_ENOTSUP` 透传；错误码为**正数幅值**，调用方返回 `-AIRY_E*`）+ 1 个配置版本码 `AIRY_ECFGVERSION=101`。Fault 码全部禁用——降级模式下所有不可恢复故障统一走 Panic，不尝试通过 Fault Handler 优雅处理。
 
 #### 4.1.2 IPC 消息头子集
 
-最简 128B 消息头保留 4 个字段（v1.1: 新增 `capability_badge=0` 字段，H6 落地），其余字段置零：
+最简 128B 消息头保留 4 个字段（v1.0.1: 新增 `capability_badge=0` 字段，H6 落地），其余字段置零：
 
 ```c
-/* 降级模式 IPC 消息头（v1.1: Layout C v4 兼容，capability_badge=0）*/
+/* 降级模式 IPC 消息头（v1.0.1: Layout C v4 兼容，capability_badge=0）*/
 /* D-9 修复后移除 __attribute__((packed))，使用显式 padding 覆盖 airy_ipc_msg_hdr 偏移 */
 struct airy_ipc_msg_hdr_min {
     __u32   magic;              /* offset  0, 'ARE1' 0x41524531 */
@@ -278,11 +291,11 @@ _Static_assert(sizeof(struct airy_ipc_msg_hdr_min) == 128,
 |---------|------|---------|
 | Fault Handler | Fault 码禁用 | 统一 Panic |
 | IPC 队列冻结 | 降级无 FREEZE 操作 | 直接 kill 进程 |
-| **Capability Badge 完整校验**（v1.1 H6） | `capability_badge=0` 固定，fastpath C-S9 跳过 | 仅 POSIX capability（slowpath `airy_cap_check()`） |
+| **Capability Badge 完整校验**（v1.0.1 H6） | `capability_badge=0` 固定，fastpath C-S9 跳过 | 仅 POSIX capability（slowpath `airy_cap_check()`） |
 | Ring Buffer 日志 | 内存不可靠 | printk 原生 |
 | Macro-Supervisor 裁决 | io_uring_cmd 不可靠 | 内核 watchdog 直接重启 |
 | RCU 热重载 | 配置版本不可靠 | 仅默认配置 |
-| **Badge 编译/撤销**（v1.1 H6） | sec_d 不可达，`airy_sys_call` 暂停 | 恢复后批量处理 CAP_REQUEST 队列 |
+| **Badge 编译/撤销**（v1.0.1 H6） | sec_d 不可达，`airy_sys_call` 暂停 | 恢复后批量处理 CAP_REQUEST 队列 |
 
 ### 4.3 降级模式的退出
 
@@ -418,7 +431,7 @@ cap_pass:
 
 ## §6 相关文档
 
-- [10-unify-design.md](10-unify-design.md) —— Airymax Unify Design 总纲（[DSL] 是其韧性领域的最后防线，v1.1 §9 [DSL] ipc.h 降级块）
+- [10-unify-design.md](10-unify-design.md) —— Airymax Unify Design 总纲（[DSL] 是其韧性领域的最后防线，v1.0.1 §9 [DSL] ipc.h 降级块）
 - [06-iron9-shared-model.md](06-iron9-shared-model.md) —— IRON-9 v3 四层模型（[DSL] 是第四层）
 - [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §5 —— error.h [DSL] 降级块细节
 - [30-interfaces/09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— log_types.h 契约（降级时仅 2 级）

@@ -17,7 +17,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 agentrt-linux（AirymaxOS）内存性能工程为 MemoryRovol（记忆卷载）四层记忆架构提供硬件级加速支撑。本设计聚焦三大目标：
 
 1. **MemoryRovol L1-L4 分级内存访问延迟 SLO**：L1 ≤ 0.1ms、L2 ≤ 1ms、L3 ≤ 10ms、L4 ≤ 100ms
-2. **MGLRU 多代 LRU 与遗忘机制语义对齐**：冷热数据分层命中率 ≥ 90%，与 Forgetting Engine 衰减公式协同
+2. **MGLRU 多代 LRU 与遗忘机制语义对齐**：冷热数据分层命中率按层分级——L1 ≥ 85%、L2 ≥ 72%、L3 ≥ 91%、L4 ≥ 95%（加权综合 ≥ 90%），与 Forgetting Engine 衰减公式协同
 3. **CXL/PMEM 混合内存带宽最优利用**：跨节点内存池化带宽利用率 ≥ 80%，PMEM 持久化写入延迟 ≤ 5μs
 
 ### 1.2 适用范围
@@ -204,41 +204,39 @@ Linux 6.6 内核基线原生支持 MGLRU 多代 LRU（非 2.0 版本）。agentr
 ```bash
 # /etc/airymaxos/mglru.conf —— MGLRU 调优配置
 
-# 启用 MGLRU（lru_gen.enabled 必须为 y 或 1）
-echo "y" > /sys/kernel/mm/lru_gen/enabled
-
-# 最小 TTL（保留时间），防止冷数据被过早回收
-echo "1000" > /sys/kernel/mm/lru_gen/min_ttl_ms
-
-# 最大代数（默认 8，agentrt-linux 调整为 12 以匹配 MemoryRovol 四层 × 3 温度）
-echo "12" > /sys/kernel/mm/lru_gen/max_nr_generations
-
-# 多代 LRU 二阶分桶（避免抖动）
-echo "y" > /sys/kernel/mm/lru_gen/lru_gen_enabled_bit
+# 启用 MGLRU（enabled 为位掩码，Linux 6.6 默认 0x7）：
+#   bit0 = MM_LRU_GEN_ENABLED（启用 MGLRU）
+#   bit1 = MM_LRU_GEN_CORE（从页表扫描）
+#   bit2 = MM_LRU_GEN_MEMCG（从 memcg 扫描）
+echo 0x7 > /sys/kernel/mm/lru_gen/enabled
 
 # 查看 MGLRU 状态
 cat /sys/kernel/mm/lru_gen/enabled
-# 输出：0x0007（bit0=-enabled, bit1=walk from page table, bit2=walk from memcg）
+# 输出：0x0007（bit0=enabled, bit1=walk from page table, bit2=walk from memcg）
 
-# 查看当前代数与年龄
-cat /sys/kernel/mm/lru_gen/
+# 注意：Linux 6.6 的 MGLRU 代数为固定的 4 代（MAX_NR_GENS=4，mm/vmscan.c），
+# 内核 sysfs 接口不存在 min_ttl_ms / max_nr_generations / lru_gen_enabled_bit
+# 节点；代间保留时长与代数调整由 lru_gen 用户态控制接口（CONFIG_LRU_GEN_STATS
+# + debugfs lru_gen 文件）与 Forgetting Engine 衰减策略在 agentrt-linux 层
+# 协同实现，不新增内核节点。
+
+# 查看各代统计（需 CONFIG_LRU_GEN_STATS=y）
+cat /sys/kernel/debug/lru_gen
 # 输出示例：
 # node 0
-#   generation 12    max_seq  12
-#     min_gen.time 1468923400000  max_gen.time 1468923401000
-#   generation 11
-#     ...
+#   memcg 1
+#      ...
 ```
 
 ### 3.2 MGLRU 与 Forgetting Engine 协同
 
 Forgetting Engine 衰减公式 `R(t) = e^(-t/τ)`（τ 默认 7 天）与 MGLRU 多代回收策略语义对齐：
 
-| Forgetting Engine 策略 | MGLRU 代数范围 | 行为 |
-|------------------------|----------------|------|
-| NONE（不遗忘） | 全部代保留 | 仅按容量淘汰 |
-| EBBINGHAUS（艾宾浩斯） | 最热 4 代 / 中间 4 代 / 最冷 4 代 | 按遗忘曲线跨代衰减 |
-| LINEAR（线性） | 最冷 2 代 | 均匀淘汰冷数据 |
+| Forgetting Engine 策略 | MGLRU 代数范围（Linux 6.6 固定 4 代，gen 0-3） | 行为 |
+|------------------------|--------------------------------------------------|------|
+| NONE（不遗忘） | 全部代保留（gen 0-3） | 仅按容量淘汰 |
+| EBBINGHAUS（艾宾浩斯） | 最热 2 代 / 中间 1 代 / 最冷 1 代 | 按遗忘曲线跨代衰减 |
+| LINEAR（线性） | 最冷 1-2 代 | 均匀淘汰冷数据 |
 | ACCESS_BASED（访问驱动） | 仅最冷 1 代 | 按访问频率淘汰 |
 
 > **说明性示例，非 SSoT 定义**：以下 `airy_mglru_forgetting_map` 结构体与 `airy_mglru_apply_forgetting` 函数为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `airy_q16_t` 类型来自 `include/uapi/linux/airymax/cognition_types.h`（Q16.16 定点数）；`enum airy_forgetting_strategy` 与 `AIRY_FORGET_EBBINGHAUS` 来自遗忘机制子系统头文件。SSoT `memory_types.h` 仅提供 `enum airy_mem_level` 与 GFP/页面分类宏。
@@ -255,13 +253,12 @@ struct airy_mglru_forgetting_map {
 	airy_q16_t retention_rate;  /* Q16.16 保留率，类型见 cognition_types.h */
 };
 
-/* 艾宾浩斯衰减映射表（基于 R(t) = e^(-t/τ)，τ = 7 天） */
+/* 艾宾浩斯衰减映射表（基于 R(t) = e^(-t/τ)，τ = 7 天；Linux 6.6 固定 4 代） */
 static const struct airy_mglru_forgetting_map ebbinghaus_map[] = {
 	/* 代数 | 保留率 | 含义 */
-	{AIRY_FORGET_EBBINGHAUS, 0,  3, 0x10000},  /* 最热 4 代：1.0 */
-	{AIRY_FORGET_EBBINGHAUS, 4,  7, 0x8000},   /* 中间 4 代：0.5 */
-	{AIRY_FORGET_EBBINGHAUS, 8, 11, 0x2000},   /* 最冷 4 代：0.125 */
-	{AIRY_FORGET_EBBINGHAUS, 12, 12, 0x0000},  /* 回收代：0 */
+	{AIRY_FORGET_EBBINGHAUS, 0, 1, 0x10000},  /* 最热 2 代：1.0 */
+	{AIRY_FORGET_EBBINGHAUS, 2, 2, 0x8000},   /* 中间 1 代：0.5 */
+	{AIRY_FORGET_EBBINGHAUS, 3, 3, 0x2000},   /* 最冷 1 代：0.125 */
 };
 
 /* 应用衰减映射到 MGLRU（参数 ctx 为运行时上下文指针，非 SSoT 类型） */
@@ -302,14 +299,14 @@ struct airy_mr_mglru_bind {
 };
 
 static const struct airy_mr_mglru_bind mglru_binds[] = {
-	/* L1_raw（AIRY_MEM_HOT）：热代 0-2，冷代 10-11（PMEM 持久化） */
-	{AIRY_MEM_HOT,  0,  2, 10, 11},
-	/* L2_feat（AIRY_MEM_WARM）：热代 0-3，冷代 9-11（CXL 迁移） */
-	{AIRY_MEM_WARM, 0,  3,  9, 11},
-	/* L3_str（AIRY_MEM_COLD）：热代 0-4，冷代 8-11（DRAM 驻留） */
-	{AIRY_MEM_COLD, 0,  4,  8, 11},
-	/* L4_pat（AIRY_MEM_PMEM）：热代 0-5，冷代 11-11（PMEM 持久） */
-	{AIRY_MEM_PMEM, 0,  5, 11, 11},
+	/* L1_raw（AIRY_MEM_HOT）：热代 0-1，冷代 3（PMEM 持久化） */
+	{AIRY_MEM_HOT,  0, 1, 3, 3},
+	/* L2_feat（AIRY_MEM_WARM）：热代 0-1，冷代 2-3（CXL 迁移） */
+	{AIRY_MEM_WARM, 0, 1, 2, 3},
+	/* L3_str（AIRY_MEM_COLD）：热代 0-2，冷代 3（DRAM 驻留） */
+	{AIRY_MEM_COLD, 0, 2, 3, 3},
+	/* L4_pat（AIRY_MEM_PMEM）：热代 0-2，冷代 3（PMEM 持久） */
+	{AIRY_MEM_PMEM, 0, 2, 3, 3},
 };
 ```
 
@@ -583,8 +580,8 @@ done
 echo "[2/6] 命中率与驱逐率"
 cat /sys/kernel/agentrt/memory_rovol/perf > "$RESULT_DIR/perf.txt"
 
-echo "[3/6] MGLRU 代数统计"
-cat /sys/kernel/mm/lru_gen/ > "$RESULT_DIR/mglru_status.txt"
+echo "[3/6] MGLRU 状态"
+cat /sys/kernel/mm/lru_gen/enabled > "$RESULT_DIR/mglru_status.txt"
 
 echo "[4/6] CXL 跨 NUMA 带宽"
 perf bench numadist -i 5 > "$RESULT_DIR/cxl_bandwidth.txt"
@@ -615,17 +612,20 @@ echo "[完成] 报告保存于 $RESULT_DIR"
 
 ## 6. 错误码体系对接
 
-内存子系统错误码纳入 agentrt-linux 统一错误码体系（[SC] 共享契约层，-600 ~ -699 段）：
+内存子系统错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，[SC] 共享契约层）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**。MemoryRoVol 段为 **141-160**（原文档虚构的 -600 ~ -699 段 `AIRY_E_MEMORY_*` 符号在 [SC] error.h 中不存在，已废弃）：
 
-| 错误码 | 数值 | 含义 |
-|--------|------|------|
-| AIRY_E_MEMORY_NOMEM | -600 | 内存不足 |
-| AIRY_E_MEMORY_TIER_FAIL | -601 | 跨层迁移失败 |
-| AIRY_E_MEMORY_CXL_FAIL | -602 | CXL 操作失败 |
-| AIRY_E_MEMORY_PMEM_FAIL | -603 | PMEM 持久化失败 |
-| AIRY_E_MEMORY_MGLRU | -604 | MGLRU 调度错误 |
-| AIRY_E_MEMORY_KFIFO_FULL | -605 | 迁移 kfifo 队列满 |
-| AIRY_E_MEMORY_HASH_MISMATCH | -606 | SHA-256 哈希校验失败 |
+| 错误码 | 数值 | 含义 | 原文档符号（已废弃） |
+|--------|------|------|---------------------|
+| AIRY_EMEM_TIER | 141 | 无效内存 tier / 跨层迁移失败 | AIRY_E_MEMORY_TIER_FAIL (-601) |
+| AIRY_EMEM_GFP | 142 | 无效 GFP 标志 | — |
+| AIRY_EMEM_PMEM | 143 | PMEM 操作失败 | AIRY_E_MEMORY_PMEM_FAIL (-603) |
+| AIRY_EMEM_CXL | 144 | CXL 操作失败 | AIRY_E_MEMORY_CXL_FAIL (-602) |
+| AIRY_EMEM_PAGE_CLASS | 145 | 无效页面分类 | — |
+| AIRY_EMEM_MMAP | 146 | mmap 失败 | — |
+| AIRY_EMEM_ALLOC | 147 | alloc_pages 失败（MGLRU/回收异常归此类） | AIRY_E_MEMORY_MGLRU (-604) |
+| AIRY_EMEM_OOM | 148 | 内存不足（agent-scoped OOM） | AIRY_E_MEMORY_NOMEM (-600) |
+| AIRY_EBUSY | 16 | 迁移 kfifo 队列满（资源忙，POSIX 段） | AIRY_E_MEMORY_KFIFO_FULL (-605) |
+| AIRY_EINVAL | 5 | 哈希校验失败（数据损坏，暂用 EINVAL；[149,160] 保留区待分配专用码） | AIRY_E_MEMORY_HASH_MISMATCH (-606) |
 
 > **说明性示例，非 SSoT 定义**：以下 `airy_memory_do_migrate` 函数为本文档设计草案，**不**存在于 `include/uapi/linux/airymax/memory_types.h`。其中 `AIRY_MEM_LEVEL_MAX`/`AIRY_MEM_PMEM`/`AIRY_MEM_HOT` 为 SSoT 实际枚举值（见 §2.2）。
 
@@ -644,19 +644,19 @@ int airy_memory_do_migrate(const struct airy_migrate_entry *e)
 
 	src = airy_memory_map(e->from, e->page_addr, e->size_kb);
 	if (!src) {
-		ret = -AIRY_E_MEMORY_NOMEM;
+		ret = -AIRY_EMEM_OOM;      /* -148: agent-scoped OOM */
 		goto out_err;
 	}
 
 	dst = airy_memory_alloc(e->to, e->size_kb);
 	if (!dst) {
-		ret = -AIRY_E_MEMORY_NOMEM;
+		ret = -AIRY_EMEM_OOM;      /* -148 */
 		goto out_free_src;
 	}
 
 	ret = airy_memory_copy(dst, src, e->size_kb);
 	if (ret < 0) {
-		ret = -AIRY_E_MEMORY_TIER_FAIL;
+		ret = -AIRY_EMEM_TIER;     /* -141: 迁移失败 */
 		goto out_free_dst;
 	}
 
@@ -664,7 +664,7 @@ int airy_memory_do_migrate(const struct airy_migrate_entry *e)
 	    e->to == AIRY_MEM_HOT) {     /* L1_raw 业务语义 */
 		ret = airy_memory_persist(dst, e->size_kb);
 		if (ret < 0) {
-			ret = -AIRY_E_MEMORY_PMEM_FAIL;
+			ret = -AIRY_EMEM_PMEM;   /* -143 */
 			goto out_free_dst;
 		}
 	}

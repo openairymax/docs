@@ -115,7 +115,7 @@ struct airy_agent_config {
  *
  * 返回: 0 成功，-EINVAL 参数无效，-EPERM 权限不足（capability 不满足）
  *
- * 配置完成后进入 CONFIGURED 状态，可以启动。
+ * 配置完成后进入 READY 状态，可以启动。
  * 配置期间进行 capability 检查——若 Agent 不具备所需权限，配置失败。
  */
 int airy_agent_configure(u32 agent_id,
@@ -155,7 +155,7 @@ struct airy_agent_params {
  * airy_agent_start - 启动 Agent 执行
  * @agent_id: Agent ID
  *
- * 返回: 0 成功，-EINVAL 状态不正确（必须为 CONFIGURED/PAUSED），
+ * 返回: 0 成功，-EINVAL 状态不正确（必须为 READY/STOPPED），
  *       -EPERM 沙箱策略违反，-ENOMEM 资源不足
  *
  * 启动过程：
@@ -170,7 +170,7 @@ struct airy_agent_params {
 int airy_agent_start(u32 agent_id);
 ```
 
-**借鉴 seL4 设计**：启动过程的"Point of No Return"模式——从步骤 5（Wasm 运行时分配）开始进入不可返回阶段，步骤 5-7 的任何失败都会导致 Agent 直接进入 TERMINATING 状态而非回滚。这避免了启动过程中的部分资源残留问题。
+**借鉴 seL4 设计**：启动过程的"Point of No Return"模式——从步骤 5（Wasm 运行时分配）开始进入不可返回阶段，步骤 5-7 的任何失败都会导致 Agent 直接进入 STOPPING 状态（随后 STOPPED/DEAD）而非回滚。这避免了启动过程中的部分资源残留问题。
 
 **借鉴 Linux 设计**：cgroup v2 + Landlock + seccomp 三重隔离类似于 Linux 容器的安全模型，但粒度更细——每个 Agent 租户拥有独立的 cgroup 层级。
 
@@ -210,8 +210,8 @@ struct airy_token_budget {
     u32  max_tokens;          /* 预算上限 */
     u32  refill_rate;         /* 补充速率（tokens/ms） */
     u64  last_refill_ts;      /* 上次补充时间戳（ns） */
-    u32  warning_threshold;   /* 警告阈值（低于此值触发 SUSPENDED） */
-    u32  critical_threshold;  /* 临界阈值（低于此值触发 TERMINATING） */
+    u32  warning_threshold;   /* 警告阈值（低于此值触发 BLOCKED 挂起） */
+    u32  critical_threshold;  /* 临界阈值（低于此值触发 STOPPING 终止流程） */
 
     /* 统计数据 */
     u64  total_consumed;      /* 累计消耗 */
@@ -240,11 +240,12 @@ Token 预算采用类似 Linux CFS 的带宽控制模型：
  *   AIRY_PAUSE_SAVE_WASM    - 保存 Wasm 状态快照
  *   AIRY_PAUSE_MIGRATE      - 准备迁移到其他节点
  *
- * 返回: 0 成功（进入 PAUSING 状态），-EINVAL 状态不正确，
+ * 返回: 0 成功（进入 STOPPING 过渡态，冻结完成后 STOPPED），-EINVAL 状态不正确，
  *       -EBUSY Agent 正忙（认知循环中），-ETIME 超时
  *
  * 暂停过程（借鉴 seL4 Zombie 增量模式）：
- * PAUSING 状态为中间态——Agent 在认知循环的完成点进行状态保存。
+ * 暂停语义对应 8 态中的 STOPPING（过渡态）→ STOPPED（已冻结）：
+ * Agent 在认知循环的完成点进行状态保存。
  * 借鉴 seL4 preemptionPoint 模式，长时间保存操作分块可抢占：
  */
 int airy_agent_pause(u32 agent_id, u32 flags);
@@ -264,7 +265,7 @@ struct airy_memory_rovol_snapshot {
 };
 ```
 
-**设计决策**：PAUSING 中间态借鉴 seL4 的 Zombie 对象模式。如同 seL4 能力删除分解为"标记 Zombie → 分块回收 → 最终清理"，Agent 暂停分解为"标记 PAUSING → 分层保存记忆 → 检查点验证 → 标记 PAUSED"。每个分层保存操作后插入 preemption point，允许调度器和中断响应。
+**设计决策**：暂停中间态借鉴 seL4 的 Zombie 对象模式，语义映射到 8 态中的 STOPPING（过渡）→ STOPPED（冻结）。如同 seL4 能力删除分解为"标记 Zombie → 分块回收 → 最终清理"，Agent 暂停分解为"标记 STOPPING → 分层保存记忆 → 检查点验证 → 标记 STOPPED"。每个分层保存操作后插入 preemption point，允许调度器和中断响应。
 
 ### 4.2 跨节点迁移
 
@@ -276,13 +277,13 @@ struct airy_memory_rovol_snapshot {
  * @migration_policy: 迁移策略（冷迁移/热迁移/增量迁移）
  *
  * 热迁移流程（借鉴 Linux CRIU + seL4 capability 转移）：
- * 1. Agent 进入 PAUSING 状态
+ * 1. Agent 进入 STOPPING 过渡态（冻结，8 态 SSoT）
  * 2. 保存 MemoryRovol 快照 + Wasm 状态
  * 3. 通过 CXL 内存池化传输快照到目标节点
  * 4. 在目标节点重建 CSpace（capability 重新派生）
  * 5. 在源节点启动增量同步（dirty page tracking）
  * 6. 最终同步 + 切换
- * 7. 源节点 Agent 进入 TERMINATED
+ * 7. 源节点 Agent 进入 DEAD（终止完成，等待回收）
  * 8. 目标节点 Agent 恢复 RUNNING
  */
 int airy_agent_migrate(u32 agent_id, u32 target_node,
@@ -425,8 +426,8 @@ int airy_cap_derive(uint32_t src_agent, uint32_t dst_agent,
 |---------|---------|---------|
 | **RECOVERABLE** | 重试（最多 3 次） | 内存临时不足、IPC 超时 |
 | **DEGRADABLE** | 降级（降低 Token 预算） | Token 消耗超限 |
-| **SUSPENDABLE** | 暂停（保存状态） | Wasm 运行时 OOM |
-| **TERMINATABLE** | 终止（回收资源） | 安全策略违反、沙箱逃逸 |
+| **SUSPENDABLE** | 暂停（保存状态，进入 BLOCKED/STOPPED） | Wasm 运行时 OOM |
+| **TERMINATABLE** | 终止（回收资源，进入 STOPPING/DEAD） | 安全策略违反、沙箱逃逸 |
 | **PANIC** | 系统告警（隔离该 Agent） | 连续 3 次沙箱逃逸 |
 
 ### 7.2 Agent 诊断信息收集（借鉴 scx_exit_info）

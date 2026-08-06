@@ -100,63 +100,36 @@ sched_tac 用户态调度器通过 `struct airy_sched_ops` 暴露下列回调（
 
 ### 3.1 Q16.16 定点数表示
 
-Linux 6.6 内核态禁用浮点（kernel_fpu 禁用），因此 vtime 必须以定点数表达。agentrt-linux 采用 **Q16.16 定点数**（`airy_q16_t`），整数部分 16 位、小数部分 16 位，定义于 `include/uapi/linux/airymax/memory_types.h`（IRON-9 v3 [SC] 共享契约层）：
+Linux 6.6 内核态禁用浮点（kernel_fpu 禁用），因此 vtime 必须以定点数表达。agentrt-linux 采用 **Q16.16 定点数**（`airy_q16_t`，宿主类型 `__s32`），整数部分 16 位、小数部分 16 位，定义于 `include/uapi/linux/airymax/cognition_types.h`（IRON-9 v3 [SC] 共享契约层，A-UCS）：
 
 ```c
-/* include/uapi/linux/airymax/airy_q16.h —— Q16.16 定点数原语 */
-#ifndef AIRY_Q16_H
-#define AIRY_Q16_H
+/* include/uapi/linux/airymax/cognition_types.h —— Q16.16 定点数（[SC] 实际宿主）
+ * airy_q16_t 定义于 cognition_types.h（非 memory_types.h，亦不存在 airy_q16.h）
+ */
+#ifndef _UAPI_AIRYMAX_COGNITION_TYPES_H
+#define _UAPI_AIRYMAX_COGNITION_TYPES_H
 
-#include <linux/types.h>
+#include <linux/airymax/uapi_compat.h>
 
-typedef __s64 airy_q16_t;       /* Q16.16 定点数 */
-typedef __u32 airy_weight_t;    /* 0-65535 权重 */
+typedef __s32 airy_q16_t;       /* Q16.16 定点数（__s32，非 __s64） */
 
-#define AIRY_Q16_SHIFT       16
-#define AIRY_Q16_ONE         (((airy_q16_t)1) << AIRY_Q16_SHIFT)
-#define AIRY_Q16_HALF        (AIRY_Q16_ONE >> 1)
+#define AIRY_Q16_ONE            (1 << 16)  /* 1.0 in Q16.16 */
+#define AIRY_Q16_HALF           (1 << 15)  /* 0.5 in Q16.16 */
 
-/* 整数 ↔ Q16.16 */
-static inline airy_q16_t airy_q16_from_int(__s64 v)
-{
-	return (airy_q16_t)v << AIRY_Q16_SHIFT;
-}
+/*
+ * Float conversion helpers are userspace-only: the kernel does not
+ * use floating-point (IRON-9 §2.1). Guard with #ifndef __KERNEL__ so
+ * kernel TUs never see the float types.
+ */
+#ifndef __KERNEL__
+#define AIRY_Q16_TO_FLOAT(x)    ((float)(x) / (float)(1 << 16))
+#define AIRY_Q16_FROM_FLOAT(f)  ((airy_q16_t)((f) * (float)(1 << 16)))
+#endif /* __KERNEL__ */
 
-static inline __s64 airy_q16_to_int(airy_q16_t v)
-{
-	return (__s64)(v >> AIRY_Q16_SHIFT);
-}
-
-/* Q16.16 ↔ u32 权重（0-65535 映射到 0.0-1.0） */
-static inline airy_q16_t airy_q16_from_weight(airy_weight_t w)
-{
-	return (airy_q16_t)w << (AIRY_Q16_SHIFT - 16 + 16);
-}
-
-/* 乘法：a * b（其中一个必须是权重，避免溢出） */
-static inline airy_q16_t airy_q16_mul_w(airy_q16_t a, airy_weight_t w)
-{
-	return (airy_q16_t)((__s128)a * w >> 16);
-}
-
-/* 加法 / 减法 / 比较 */
-static inline airy_q16_t airy_q16_add(airy_q16_t a, airy_q16_t b)
-{
-	return a + b;
-}
-
-static inline airy_q16_t airy_q16_sub(airy_q16_t a, airy_q16_t b)
-{
-	return a - b;
-}
-
-static inline bool airy_q16_lt(airy_q16_t a, airy_q16_t b)
-{
-	return a < b;
-}
-
-#endif /* AIRY_Q16_H */
+#endif /* _UAPI_AIRYMAX_COGNITION_TYPES_H */
 ```
+
+> **说明**：[SC] `cognition_types.h` 仅定义 `airy_q16_t`（`__s32`）与 `AIRY_Q16_ONE/HALF` 常量。vtime 衰减所需的辅助函数（`airy_q16_from_int` / `airy_q16_add` / `airy_q16_sub` / `airy_q16_lt` 等）属于 [IND] 完全独立层实现，下文中使用的辅助函数为设计示意，非 [SC] 契约。
 
 ### 3.2 vtime 衰减公式
 
@@ -335,8 +308,7 @@ echo "1,3,5,7" > /sys/fs/cgroup/system/cpuset.cpus
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <airymax/airy_q16.h>
-#include <airymax/memory_types.h>
+#include <airymax/cognition_types.h>   /* airy_q16_t 实际宿主（[SC]） */
 
 /* 任务状态表（用户态维护，替代 BPF task_storage） */
 struct airy_task_state {
@@ -544,15 +516,19 @@ void agent_exit(struct airy_sched_exit_info *info)
 
 ### 7.2 错误码体系对接
 
-调度器错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，IRON-9 v3 [SC] 共享契约层）：
+调度器错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，IRON-9 v3 [SC] 共享契约层）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**。A-ULS Sched/Lifecycle 段为 **121-140**（原文档虚构的 -200 段 `AIRY_E_SCHED_*` 符号在 [SC] error.h 中不存在，已废弃）：
 
-| 错误码 | 数值 | 含义 |
-|--------|------|------|
-| AIRY_E_SCHED_TIMEOUT | -210 | 调度超时 |
-| AIRY_E_SCHED_DAEMON_LOAD | -211 | 用户态调度器加载失败 |
-| AIRY_E_SCHED_VTIME_OVF | -212 | vtime 溢出 |
-| AIRY_E_SCHED_NO_AFFINITY | -213 | 无可用 CPU 亲和性 |
-| AIRY_E_SCHED_TOKEN_BUDGET | -214 | Token 预算耗尽 |
+| 错误码 | 数值 | 含义 | 原文档符号（已废弃） |
+|--------|------|------|---------------------|
+| AIRY_ESCHED_POLICY | 121 | 调度策略非法（含用户态调度器加载失败） | AIRY_E_SCHED_DAEMON_LOAD (-211) |
+| AIRY_ESCHED_BUDGET | 122 | Token 预算耗尽（Runtime budget exceeded） | AIRY_E_SCHED_TOKEN_BUDGET (-214) |
+| AIRY_ESCHED_DEADLINE | 123 | 调度超时（Deadline missed） | AIRY_E_SCHED_TIMEOUT (-210) |
+| AIRY_ESCHED_PERIOD | 124 | 无效 period | — |
+| AIRY_ESCHED_PRIO | 125 | 无效优先级 | — |
+| AIRY_ESCHED_WEIGHT | 126 | 无效 EEVDF 权重（vtime 定点溢出归此类） | AIRY_E_SCHED_VTIME_OVF (-212) |
+| AIRY_EBUSY | 16 | 无可用 CPU 亲和性（资源忙，POSIX 段） | AIRY_E_SCHED_NO_AFFINITY (-213) |
+
+> **修正说明**：vtime 溢出（AIRY_E_SCHED_VTIME_OVF）无专用 [SC] 码，映射至 AIRY_ESCHED_WEIGHT（126）；无可用 CPU 亲和性（AIRY_E_SCHED_NO_AFFINITY）映射至 POSIX 段 AIRY_EBUSY（16）。[127, 140] 为 Lifecycle 段（AIRY_ELIFECYCLE_STATE=127 / TRANS=128 / AGENT=129 / ZOMBIE=130）与保留。
 
 集中错误处理示例（K&R 风格 + `goto out_free_xxx`）：
 
@@ -567,13 +543,13 @@ int airy_sched_agent_init(struct airy_sched_config *cfg)
 	policy_hdl = dlopen("/usr/lib/airymaxos/user-sched/sched_agent.so",
 			    RTLD_NOW | RTLD_GLOBAL);
 	if (!policy_hdl) {
-		ret = AIRY_E_SCHED_DAEMON_LOAD;
+		ret = -AIRY_ESCHED_POLICY;   /* -121: 策略非法/加载失败 */
 		goto out_free;
 	}
 
 	ops = dlsym(policy_hdl, "agent_ops");
 	if (!ops) {
-		ret = AIRY_E_SCHED_DAEMON_LOAD;
+		ret = -AIRY_ESCHED_POLICY;   /* -121 */
 		goto out_free;
 	}
 
@@ -612,7 +588,7 @@ out_free:
 | 调度语义 | stc_agent（sched_tac） | MicroCoreRT 用户态调度 | 调度语义（概念同源，签名独立演进） |
 | vtime 公式 | Q16.16 内核态 | Q16.16 用户态 | `airy_q16_t` 头文件 |
 | 权重因子 | stage + token | stage + token | 权重枚举定义 |
-| 错误码 | AIRY_E_SCHED_* | AIRY_E_SCHED_* | `error.h` 错误码段 |
+| 错误码 | AIRY_ESCHED_*（121-140 正数幅值） | AIRY_ESCHED_* | `error.h` 错误码段 |
 
 ---
 

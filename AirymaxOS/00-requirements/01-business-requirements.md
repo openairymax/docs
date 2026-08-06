@@ -68,7 +68,7 @@ agentrt-linux 支持的 Agent 应用覆盖以下行业领域（持续扩展，�
 - 双系统协同处理快慢任务（对应设计原则 C-1 双思考功能）
 - 任务 DAG 的持久化与恢复（防止数小时任务因故障丢失）
 
-**驱动需求**：FR-005 认知循环、FR-013 记忆持久化、NFR-R-001 Soak Test、NFR-R-005 故障恢复
+**驱动需求**：FR-042 认知层、FR-031 MemoryRovol L1、NFR-R-001 Soak Test、NFR-R-005 故障恢复
 
 ### 2.2 模式二：高并发交互型 Agent（BR-002）
 
@@ -85,12 +85,12 @@ agentrt-linux 支持的 Agent 应用覆盖以下行业领域（持续扩展，�
 
 **关键能力需求**：
 
-- 高并发会话管理（对应 FR-031 K8s 弹性伸缩）
+- 高并发会话管理（对应 FR-052 K8s 自定义调度器）
 - Token 能效优化以降低推理成本（对应 BR-005 AI 原生）
 - 安全的内容过滤与权限控制（对应 NFR-S-003 输入净化）
 - 实时情感反馈与策略调整（对应设计原则 S-1 反馈闭环）
 
-**驱动需求**：FR-001 内核调度、FR-031 K8s 编排、NFR-P-002 吞吐、NFR-S-003 净化
+**驱动需求**：FR-001 内核调度、FR-051 K8s CRD、NFR-P-002 吞吐、NFR-S-003 净化
 
 ### 2.3 模式三：实时控制型 Agent（BR-003）
 
@@ -109,10 +109,10 @@ agentrt-linux 支持的 Agent 应用覆盖以下行业领域（持续扩展，�
 
 - 硬实时调度（对应 FR-001 sched_tac + stc_agent）
 - 形式化验证保证控制逻辑正确性（对应 NFR-R-003 形式化验证）
-- 边缘轻量化部署（对应 FR-043 系统裁剪）
+- 边缘轻量化部署（对应 FR-068 系统裁剪与定制）
 - 故障隔离与快速恢复（对应 NFR-R-004 MTTR < 5min）
 
-**驱动需求**：FR-001 内核调度、FR-008 实时扩展、NFR-P-001 延迟、NFR-R-003 形式化验证
+**驱动需求**：FR-001 内核调度、FR-008 EEVDF 抢占、NFR-P-001 延迟、NFR-R-003 形式化验证
 
 ### 2.4 模式四：多模态感知型 Agent（BR-004）
 
@@ -130,11 +130,11 @@ agentrt-linux 支持的 Agent 应用覆盖以下行业领域（持续扩展，�
 **关键能力需求**：
 
 - 超低延迟感知-决策-控制闭环（对应 NFR-P-001 延迟 < 100ms）
-- 异构计算资源调度（GPU/NPU/FPGA，对应 FR-022 LLM 调度）
+- 异构计算资源调度（GPU/NPU/FPGA，对应 FR-047 LLM 调度策略）
 - 具身智能 Claw 沙箱（对应 BR-005 AI 原生超节点 OS）
 - 实时记忆与快速遗忘（对应设计原则 C-4 遗忘机制）
 
-**驱动需求**：FR-001 内核调度、FR-022 LLM 调度、NFR-P-001 延迟、NFR-P-004 Token 能效
+**驱动需求**：FR-001 内核调度、FR-047 LLM 调度策略、NFR-P-001 延迟、NFR-P-004 Token 能效
 
 ---
 
@@ -160,7 +160,7 @@ agentrt-linux 全面参考 Linux 6.6 内核基线（SP3 增强）与 Linux 7.1�
 - 模型热加载与版本切换
 - 推理结果的缓存与复用
 
-**驱动需求**：FR-021 模型管理、FR-022 LLM 调度、NFR-P-004 Token 能效
+**驱动需求**：FR-041 CoreLoopThree kthread、FR-047 LLM 调度策略、NFR-P-004 Token 能效
 
 ### 3.2 超节点 OS（BR-005-02）
 
@@ -180,7 +180,7 @@ agentrt-linux 全面参考 Linux 6.6 内核基线（SP3 增强）与 Linux 7.1�
 - 运行时任务迁移（迁移延迟 < 100ms）
 - 资源的弹性伸缩与故障转移
 
-**驱动需求**：FR-023 超节点 OS、FR-014 CXL 池化、NFR-P-003 节点通信
+**驱动需求**：FR-048 超节点 OS 沙箱、FR-035 CXL 内存分层与池化、NFR-P-003 节点通信
 
 ### 3.3 Token 能效优化（BR-005-03）
 
@@ -200,7 +200,7 @@ agentrt-linux 全面参考 Linux 6.6 内核基线（SP3 增强）与 Linux 7.1�
 - KV-cache 的智能管理
 - 能耗感知的任务调度
 
-**驱动需求**：FR-022 LLM 调度、NFR-P-004 Token 能效
+**驱动需求**：FR-047 LLM 调度策略、NFR-P-004 Token 能效
 
 ### 3.4 具身智能 Claw（BR-005-04）
 
@@ -220,7 +220,7 @@ agentrt-linux 全面参考 Linux 6.6 内核基线（SP3 增强）与 Linux 7.1�
 - 仿真-现实迁移（Sim2Real）支持
 - 实时安全监控与紧急停止
 
-**驱动需求**：FR-024 Claw 沙箱、FR-025 传感器接入、NFR-S-004 沙箱隔离
+**驱动需求**：FR-049 具身智能 Claw 沙箱、NFR-S-004 沙箱隔离
 
 ---
 
@@ -244,7 +244,7 @@ agentrt-linux 全面支持云原生生态，对齐 Kubernetes、containerd、OCI
 - 基于sched_tac 的 K8s 调度器集成
 - Agent 工作负载的自动伸缩
 
-**驱动需求**：FR-031 K8s CRD、FR-032 调度器扩展
+**驱动需求**：FR-051 K8s CRD、FR-052 调度器扩展
 
 ### 4.2 containerd 容器运行时（BR-006-02）
 
@@ -262,7 +262,7 @@ agentrt-linux 全面支持云原生生态，对齐 Kubernetes、containerd、OCI
 - 镜像的分层缓存与 P2P 分发
 - 快照的增量管理与快速回滚
 
-**驱动需求**：FR-033 containerd shim、FR-034 镜像管理
+**驱动需求**：FR-053 containerd shim、FR-054 镜像管理
 
 ### 4.3 OCI 镜像规范（BR-006-03）
 
@@ -280,7 +280,7 @@ agentrt-linux 全面支持云原生生态，对齐 Kubernetes、containerd、OCI
 - 镜像漏洞扫描
 - 镜像的跨架构支持
 
-**驱动需求**：FR-035 OCI 兼容、NFR-S-005 镜像签名
+**驱动需求**：FR-054 OCI 兼容、NFR-S-005 镜像签名
 
 ### 4.4 CNI 网络插件（BR-006-04）
 
@@ -298,7 +298,7 @@ agentrt-linux 全面支持云原生生态，对齐 Kubernetes、containerd、OCI
 - Service Mesh 集成
 - 网络安全策略
 
-**驱动需求**：FR-036 CNI 网络、NFR-S-006 网络安全
+**驱动需求**：FR-056 CNI 网络、NFR-S-006 网络安全
 
 ### 4.5 微服务架构（BR-006-05）
 
@@ -316,7 +316,7 @@ agentrt-linux 全面支持云原生生态，对齐 Kubernetes、containerd、OCI
 - 熔断降级与限流
 - 全链路追踪（OpenTelemetry）
 
-**驱动需求**：FR-037 微服务、NFR-O-003 链路追踪
+**驱动需求**：FR-058 服务发现 / FR-060 熔断降级、NFR-O-003 链路追踪
 
 ---
 
@@ -340,7 +340,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - 软件源的兼容与镜像
 - GPG 签名验证
 
-**驱动需求**：FR-041 RPM 兼容、NFR-C-001 RPM 兼容
+**驱动需求**：FR-061 RPM 兼容、NFR-C-001 RPM 兼容
 
 ### 5.2 dnf 包管理器（BR-007-02）
 
@@ -358,7 +358,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - 依赖关系的自动解析与冲突解决
 - 事务的原子性与回滚能力
 
-**驱动需求**：FR-042 dnf 兼容、NFR-C-002 dnf 兼容
+**驱动需求**：FR-062 dnf 兼容、NFR-C-002 dnf 兼容
 
 ### 5.3 systemd 服务管理（BR-007-03）
 
@@ -376,7 +376,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - 服务编排与依赖管理
 - journald 结构化日志
 
-**驱动需求**：FR-002 systemd 集成、NFR-C-003 systemd 兼容
+**驱动需求**：FR-014 systemd 服务管理、NFR-C-003 systemd 兼容
 
 ### 5.4 SELinux 安全模块（BR-007-04）
 
@@ -394,7 +394,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - 安全上下文的自动管理
 - AVC 审计日志
 
-**驱动需求**：FR-015 SELinux 集成、NFR-C-004 SELinux 兼容
+**驱动需求**：FR-022 LSM hook（SELinux）、NFR-C-004 SELinux 兼容
 
 ### 5.5 国密算法支持（BR-007-05）
 
@@ -412,7 +412,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - 国密签名的 RPM 包验证
 - 国密的证书体系
 
-**驱动需求**：FR-016 国密算法、NFR-S-002 国密支持
+**驱动需求**：FR-023 国密算法、NFR-S-002 国密支持
 
 ### 5.6 架构支持（BR-007-06）
 
@@ -430,7 +430,7 @@ agentrt-linux 全面参考 Linux 企业级生态标准，确保与企业级 Linu
 - RISC-V 的实验性支持
 - 跨架构的统一构建
 
-**驱动需求**：FR-044 多架构支持、NFR-C-005 架构兼容
+**驱动需求**：FR-069 多架构构建、NFR-C-005 架构兼容
 
 ---
 
@@ -510,11 +510,11 @@ graph LR
     BR7[BR-007 Linux 企业级生态对齐]
 
     FR1[FR-001 内核调度]
-    FR5[FR-005 认知循环]
-    FR13[FR-013 记忆持久化]
-    FR22[FR-022 LLM 调度]
-    FR31[FR-031 K8s 编排]
-    FR41[FR-041 RPM 包管理]
+    FR5[FR-042 认知层]
+    FR13[FR-031 MemoryRovol L1]
+    FR22[FR-047 LLM 调度]
+    FR31[FR-051 K8s CRD]
+    FR41[FR-061 RPM 包管理]
 
     BR1 --> FR5
     BR1 --> FR13

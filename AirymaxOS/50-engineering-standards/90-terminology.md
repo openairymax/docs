@@ -768,7 +768,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 体系                 | 适用场景           | 格式                            |
 | ------------------ | -------------- | ----------------------------- |
-| **C 负整数体系**（首要）    | C 内核和 daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=-1` |
+| **C 正数幅值体系**（首要）    | C 内核和 daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=5`（调用方返回 `-AIRY_E*` 得到负值） |
 | **SDK 十六进制体系**（次要） | SDK 和外部接口      | `0x0000`-`0x7FFF` 分段          |
 
 权威源唯一：`include/uapi/linux/airymax/error.h`（IRON-9 v3 \[SC] 共享契约层，A-UEF 模块）为唯一定义源。
@@ -964,7 +964,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 
 #### Airymax Unify Design / 5 模块统一方案
 
-**定义**: Airymax Unify Design 是 agentrt-linux（AirymaxOS）的**整体架构设计思想**，由 5 大模块构成统一方案：A-UEF（统一错误码与故障定义体系）/ A-ULP（统一日志与打印系统）/ A-UCS（统一配置管理体系）/ A-ULS（统一生命周期管理）/ A-IPC（统一进程间通信体系）。Unify Design 消解 7 个 P0 级架构冲突点（sched\_ext / page flipping / VFS 用户态化 / \[SC] 头文件数量 / 错误码双轨制 / 日志双轨制 / DMA 一致性内存误用）。
+**定义**: Airymax Unify Design 是 agentrt-linux（AirymaxOS）的**整体架构设计思想**，由 5 大模块构成统一方案：A-UEF（统一错误码与故障定义体系）/ A-ULP（统一日志与打印系统）/ A-UCS（统一认知体系）/ A-ULS（统一生命周期管理）/ A-IPC（统一进程间通信体系）。Unify Design 消解 7 个 P0 级架构冲突点（sched\_ext / page flipping / VFS 用户态化 / \[SC] 头文件数量 / 错误码双轨制 / 日志双轨制 / DMA 一致性内存误用）。
 
 **设计哲学**:
 
@@ -1189,7 +1189,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | 日志/IPC 共享内存方案            | alloc\_pages + mmap                          | —                          | \[IND]                    | DMA 一致性内存                    |
 | 统一错误码与故障定义体系             | A-UEF                                        | `AIRY_E*` / `AIRY_FAULT_*` | \[SC]                     | —                            |
 | 统一日志与打印系统                | A-ULP                                        | `LOG_*`                    | \[SC]                     | `AIRY_LOG_*`                 |
-| 统一配置管理体系                 | A-UCS                                        | —                          | \[SC]                     | —                            |
+| 统一认知体系                 | A-UCS                                        | —                          | \[SC]                     | —                            |
 | 统一生命周期管理                 | A-ULS                                        | —                          | \[SC]                     | —                            |
 | 统一进程间通信体系                | A-IPC                                        | —                          | \[SC]                     | —                            |
 | 内核态监管组件（冷酷执法）            | Micro-Supervisor                             | —                          | \[IND]                    | —                            |
@@ -1286,7 +1286,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | `net_d`     | `agentrt-net-d.service`     | 网络策略守护进程（DPDK/AF\_XDP）                                      | 2    |
 | `cogn_d`    | `agentrt-cogn-d.service`    | 认知调度守护进程（LLM 推理代理）                                          | 2    |
 | `dev_d`     | `agentrt-dev-d.service`     | 工具调用代理（注册/执行/验证，含设备驱动）                                      | 3    |
-| `config_d`  | `agentrt-config-d.service`  | 配置管理守护进程（A-UCS 用户态消费端）                                      | 3    |
+| `config_d`  | `agentrt-config-d.service`  | 配置管理守护进程（不属于 Unify Design 5 模块，独立用户态服务）                                      | 3    |
 | `mem_d`     | `agentrt-mem-d.service`     | 记忆管理守护进程（MemoryRovol L1-L4）                                 | 4    |
 | `audit_d`   | `agentrt-audit-d.service`   | 审计守护进程（监控/指标/追踪/告警）                                         | 4    |
 | `sec_d`     | `agentrt-sec-d.service`     | 安全策略守护进程（Cupolas 用户态策略）                                     | 5    |
@@ -1321,7 +1321,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | ----- | --------------------------------------- | ---- | ------------- | ------------------------------------------------- |
 | A-UEF | Unified Error and Fault Framework       | 观测   | `error.h`     | 统一错误码（负数）+ 故障码（正数）+ \[DSL]                        |
 | A-ULP | Unified Logging and Printk Subsystem    | 观测   | `log_types.h` | 统一日志枚举 + 128B 记录 + printk 映射                      |
-| A-UCS | Unified Configuration Subsystem         | 治理   | —             | sysctl/JSON 双向同步热重载                               |
+| A-UCS | Unified Cognition Subsystem         | 认知   | `cognition_types.h` | CoreLoopThree + Thinkdual + Q16.16 定点数（唯一权威定义源） |
 | A-ULS | Unified Lifecycle Supervision Framework | 韧性   | `sched.h`     | 双 Supervisor 模型 + Agent 8 态生命周期                   |
 | A-IPC | Unified Airymax IPC Fabric              | 通信   | `ipc.h`       | IORING\_OP\_URING\_CMD + registered buffer + mmap |
 

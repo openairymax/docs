@@ -76,7 +76,9 @@ agentrt-linux（AirymaxOS）Locale 设计旨在为全球开发者与用户提供
 agentrt-linux 严格遵循 POSIX locale 命名规范 `language[_TERRITORY][.codeset][@modifier]`：
 
 ```c
-/* include/uapi/linux/airymax/locale.h —— agentrt-linux locale 标识符 */
+/* 规划态：[SC] 共享契约层暂无 locale.h（include/uapi/linux/airymax/ 下 12 个头文件中
+ * 不存在该文件）。以下为设计草案，待 locale 子系统在 [SC] 注册后回填实际定义。
+ */
 #ifndef AIRY_LOCALE_H
 #define AIRY_LOCALE_H
 
@@ -159,7 +161,7 @@ agentrt-linux 在 Linux 6.6 内核基线上扩展 printk，支持运行时 local
 #include <linux/spinlock.h>
 #include <linux/string.h>
 #include <linux/types.h>
-#include <uapi/airymax/locale.h>
+#include <uapi/airymax/locale.h>  /* 规划态：[SC] 暂未注册 locale.h（见 §2.2） */
 
 /* 内核消息 ID 枚举（与 agentrt 共享，[SC] 共享契约层） */
 enum airy_kmsg_id {
@@ -286,7 +288,7 @@ void airy_kernel_init_example(void)
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <airymax/locale.h>
+#include <airymax/locale.h>        /* 规划态：[SC] 暂未注册 locale.h（见 §2.2） */
 
 int airy_set_kernel_locale(enum airy_locale_id id)
 {
@@ -337,7 +339,7 @@ ExecStart=/usr/lib/airymaxos/services/cogn_d
 Environment=LANG=zh_CN.UTF-8
 Environment=LC_MESSAGES=zh_CN.UTF-8
 Environment=LC_CTYPE=zh_CN.UTF-8
-Environment=AIRY_LOCALE_ID=2
+Environment=AIRY_LOCALE_ID=1
 Environment=AIRY_LOG_LOCALE=zh_CN.UTF-8
 Restart=on-failure
 RestartSec=5
@@ -354,7 +356,7 @@ WantedBy=multi-user.target
 #include <libintl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <airymax/locale.h>
+#include <airymax/locale.h>        /* 规划态：[SC] 暂未注册 locale.h（见 §2.2） */
 
 #define AIRY_TEXT_DOMAIN "airymaxos"
 

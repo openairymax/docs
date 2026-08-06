@@ -35,7 +35,7 @@ agentrt-linux 在 Linux 6.6 内核基线的标准系统调用之上，新增 Age
 
 | 路径类型 | 路径 | 延迟量级 | 用途 |
 |---------|------|---------|------|
-| 数据面（io_uring） | 用户态 → SQE → `IORING_OP_URING_CMD` → 内核 fastpath → CQE → 用户态 | ~158ns（FAST_SEND，含 C-S9 Badge 校验） | IPC 收发 + 内联能力校验 |
+| 数据面（io_uring） | 用户态 → SQE → `IORING_OP_URING_CMD` → 内核 fastpath → CQE → 用户态 | ~158ns（设计估算，含 C-S9 Badge 校验；实测 ~46ns，UML x86_64，见 [07-ipc-fastpath.md §5.3](07-ipc-fastpath.md)） | IPC 收发 + 内联能力校验 |
 | 数据面（io_uring） | 用户态 → SQE → `IORING_OP_URING_CMD` → io-wq → CQE → 用户态 | ~600ns-5.5μs（SLOW_SEND） | IPC 异步回退、payload 路径、跨 CPU 投递 |
 | 数据面（kfifo） | 内核 kthread A → per-cpu kfifo → kthread B | ~80ns（per-cpu 无锁） | kthread 间消息传递 |
 
@@ -54,7 +54,7 @@ agentrt-linux 在 Linux 6.6 内核基线的标准系统调用之上，新增 Age
 | 路径类型 | 路径 | 延迟量级 | 用途 |
 |---------|------|---------|------|
 | 控制面（syscall） | 用户态 → syscall → 内核 `decode_and_invoke` → 返回 | ~1 μs | sec_d Badge 编译/撤销、策略设置、认知通知、MemoryRovol 控制 |
-| 数据面 fastpath（io_uring） | 用户态 → SQE → `airy_uring_cmd` → `airy_ipc_validate` (C-S0~C-S12) → `airy_ipc_deliver_fast` → CQE → 用户态 | ~158ns | 128B 消息头 IPC + 内联 Badge 校验 |
+| 数据面 fastpath（io_uring） | 用户态 → SQE → `airy_uring_cmd` → `airy_ipc_validate` (C-S0~C-S12) → `airy_ipc_deliver_fast` → CQE → 用户态 | ~158ns（设计估算，含 C-S9 Badge 校验；实测 ~46ns，UML x86_64，见 [07-ipc-fastpath.md §5.3](07-ipc-fastpath.md)） | 128B 消息头 IPC + 内联 Badge 校验 |
 | 数据面 slowpath（io_uring + io-wq） | 用户态 → SQE → `airy_uring_cmd` → `-EAGAIN` → io-wq 接管 → `airy_ipc_deliver_full` → CQE → 用户态 | ~600ns-5.5μs | payload 路径、kfifo 满、跨 CPU 投递 |
 
 控制面用于低频、需同步语义的管理操作；数据面用于高频、可异步、需零拷贝的 IPC 操作。两平面职责严格隔离：控制面不接触 kfifo/io_uring ring，数据面不做管理操作——这是 Capability Folding 消除双平面死锁的根本设计（详见 [07-ipc-fastpath.md §1.2](07-ipc-fastpath.md)）。
@@ -269,29 +269,29 @@ agentrt-linux 专用系统调用采用 **4 核心 + 20 预留 = 24 槽位** 方�
 
 | 编号 | 符号 | 分类 | 说明 |
 |------|------|------|------|
-| 0 | `AIRY_SYS_CALL` | Capability Invocation | sec_d 专属管理入口（Badge 编译/撤销 + LSM_ctl + Wasm_load） |
-| 1 | `AIRY_SYS_ROVOL_CTL` | 控制原语 | 记忆卷载控制（snapshot/restore/migrate/tier） |
-| 2 | `AIRY_SYS_SCHED_CTL` | 控制原语 | 调度策略配置（set/get） |
-| 3 | `AIRY_SYS_CLT_NOTIFY` | 控制原语 | CoreLoopThree 阶段通知 + kthread 注册 |
-| 4-23 | 预留 | — | 未来扩展 |
+| 548 | `AIRY_SYS_CALL` | Capability Invocation | sec_d 专属管理入口（Badge 编译/撤销 + LSM_ctl + Wasm_load） |
+| 549 | `AIRY_SYS_ROVOL_CTL` | 控制原语 | 记忆卷载控制（snapshot/restore/migrate/tier） |
+| 550 | `AIRY_SYS_SCHED_CTL` | 控制原语 | 调度策略配置（set/get） |
+| 551 | `AIRY_SYS_CLT_NOTIFY` | 控制原语 | CoreLoopThree 阶段通知 + kthread 注册 |
+| 552-571 | 预留 | — | 未来扩展 |
 
 **内部编号 → Linux syscall_64.tbl 注册号映射**：
 
-agentrt-linux 新增 syscall 在 Linux 内核 `arch/x86/entry/syscalls/syscall_64.tbl` 中注册于 548 起始的预留区间。
+agentrt-linux 新增 syscall 在 Linux 内核 `arch/x86/entry/syscalls/syscall_64.tbl` 中注册于 548 起始的预留区间，`AIRY_SYS_*` 编号宏直接等于 Linux 注册号（不再使用 0-3 内部编号）。
 
 > **编号起点选择理由（v1.0.1 修正）**：x86_64 架构的 512-547 是 x32 历史遗留区域（`syscall_64.tbl` L384-388 明确标注 "Do not add new syscalls to this range. Numbers 548 and above are available for non-x32 use"）。因此 agentrt-linux 统一使用 548 起始，确保在 x86_64/arm64/riscv 所有架构上编号一致，实现跨架构二进制兼容。原 0.1.1 阶段设计的 512 起始方案在 x86_64 上不可用，v1.0.1 修正为 548 起始。
 
-下表为内部编号与 Linux 注册号的完整映射：
+下表为编号与 Linux 注册号的完整映射：
 
-| 内部编号 | 符号 | Linux 注册号 | syscall_64.tbl 条目 |
+| 编号 | 符号 | Linux 注册号 | syscall_64.tbl 条目 |
 |---------|------|-------------|-------------------|
-| 0 | `AIRY_SYS_CALL` | 548 | `548  common  airy_sys_call      sys_airy_sys_call` |
-| 1 | `AIRY_SYS_ROVOL_CTL` | 549 | `549  common  airy_sys_rovol_ctl sys_airy_sys_rovol_ctl` |
-| 2 | `AIRY_SYS_SCHED_CTL` | 550 | `550  common  airy_sys_sched_ctl sys_airy_sys_sched_ctl` |
-| 3 | `AIRY_SYS_CLT_NOTIFY` | 551 | `551  common  airy_sys_clt_notify sys_airy_sys_clt_notify` |
-| 4-23 | 预留 | 552-571 | 预留槽须在 `syscall_64.tbl` 中逐行登记为 `sys_ni_syscall`（返回 `-ENOSYS`），禁止使用不存在的 `airy_sys_reserved_*` 符号。当前代码仅登记 548-551，552-571 缺失（P0-1，见 [09-known-caveats.md §8.4](../10-architecture/09-known-caveats.md)） |
+| 548 | `AIRY_SYS_CALL` | 548 | `548  common  airy_sys_call      sys_airy_sys_call` |
+| 549 | `AIRY_SYS_ROVOL_CTL` | 549 | `549  common  airy_sys_rovol_ctl sys_airy_sys_rovol_ctl` |
+| 550 | `AIRY_SYS_SCHED_CTL` | 550 | `550  common  airy_sys_sched_ctl sys_airy_sys_sched_ctl` |
+| 551 | `AIRY_SYS_CLT_NOTIFY` | 551 | `551  common  airy_sys_clt_notify sys_airy_sys_clt_notify` |
+| 552-571 | 预留 | 552-571 | 预留槽已在 `syscall_64.tbl` L395-414 逐行登记为 `airy_reserved_4`..`airy_reserved_23` → `sys_ni_syscall`（返回 `-ENOSYS`），v1.0.1 已修复（原 P0-1，见 [09-known-caveats.md §8.4](../10-architecture/09-known-caveats.md)） |
 
-> **映射原则**：内部编号（0-3）仅用于文档和 ABI 头文件中的符号常量定义；Linux 注册号（548-551）用于 `syscall_64.tbl` 注册。两者之间为固定偏移 `+548` 关系，由 `syscalls.h` [SC] 头文件通过 `#define __NR_airy_sys_call 548` 锁定。
+> **映射原则**：`AIRY_SYS_*` 编号宏直接等于 Linux 注册号（548-551，无偏移），由 codegen 流水线生成 `__NR_airy_sys_call 548` 等宏，产物位于 [SC] 头文件 `syscalls.h`（见 [06-codegen-pipeline.md](06-codegen-pipeline.md)），用户态与内核态共用同一份编号定义，禁止在两侧引入映射转换层。
 
 #### 2.2.1 0.1.1 → v1.0.1：syscall 12 → 4 精确映射
 

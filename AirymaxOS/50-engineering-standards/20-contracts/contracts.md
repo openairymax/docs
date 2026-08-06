@@ -283,11 +283,11 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线的 io_uring 子系统，在标�
 
 #### 6.2 零拷贝机制
 
-io_uring 零拷贝路径通过以下三步实现，消除 CPU 数据复制：
+io_uring 零拷贝路径通过以下三步实现，消除 CPU 数据复制（**不使用 page flipping**，遵循 ssot-validate.yml 选型约束）：
 
 1. Registered Buffers：发送方通过 io_uring_register_buffers() 预注册内存页，内核持有 page 引用。
-2. Page Flipping：接收方通过 IORING_OP_IPC_RECV 接收时，内核仅翻转 page table entry，不拷贝数据。发送方页面被映射到接收方地址空间。
-3. Buffer Return：接收方处理完毕后，通过 IORING_OP_IPC_RECV_DONE 归还页面，内核翻转回发送方。
+2. mmap 共享映射：接收方通过 mmap 将发送方注册缓冲区映射到接收方地址空间（零拷贝传输，不翻转 page table）。
+3. Buffer Return：接收方处理完毕后，归还页面，内核解除映射。
 
 零拷贝性能：单核 128B 消息可达 100K+ msg/s（P99 延迟 < 10 μs），1MB 大消息吞吐 > 10 Gbps。
 
@@ -603,25 +603,25 @@ static inline int airy_validate_user_ptr(const void __user *uptr, size_t size)
 
 #### 4.2 错误码定义
 
-agentrt-linux 系统调用错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT，权威定义见 `180-i18n/03-error-message-i18n.md` §2.2），与 agentrt 同源且部分代码共享（IRON-9 v3 [SC] 层）。错误码统一使用 `AIRY_E*` 前缀，负值返回：
+agentrt-linux 系统调用错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT，权威定义见 `180-i18n/03-error-message-i18n.md` §2.2），与 agentrt 同源且部分代码共享（IRON-9 v3 [SC] 层）。`AIRY_E*` 常量采用**正数幅值**（POSIX errno 风格），调用方通过 `return -AIRY_E*` 产生负值错误值（返回值 <0 即失败）：
 
 | 错误码 | 值 | 含义 | 典型触发场景 | 可重试 |
 |--------|-----|------|-------------|--------|
 | `AIRY_EOK` | 0 | 成功 | 调用成功 | - |
-| `AIRY_EINVAL` | -1 | 无效参数 | 参数为 NULL、结构体大小不匹配、对齐错误 | 否 |
-| `AIRY_ENOMEM` | -2 | 内存不足 | 内核分配失败、CXL 池耗尽 | 是（等待后） |
-| `AIRY_ENOSYS` | -3 | 未实现 | 编号未实现或已废弃 | 否 |
-| `AIRY_EPERM` | -4 | 权限不足 | capability 令牌缺失或无效 | 否 |
-| `AIRY_ENOENT` | -5 | 资源不存在 | 任务 ID、快照 ID、capability 句柄不存在 | 否 |
-| `AIRY_EAGAIN` | -6 | 暂时不可用 | io_uring 队列满、CXL 带宽不足 | 是（立即） |
-| `AIRY_EMSGSIZE` | -7 | 消息过大 | payload 超过最大长度 | 否 |
-| `AIRY_EBADF` | -8 | 描述符错误 | ring fd、capability 句柄无效 | 否 |
-| `AIRY_EBUSY` | -9 | 资源繁忙 | 任务正在迁移无法快照、capability 正在传递 | 是（延迟） |
-| `AIRY_ENOTSUP` | -10 | 不支持 | 硬件不支持（如无 CXL 设备）、内核配置未启用 | 否 |
-| `AIRY_ETIMEDOUT` | -11 | 超时 | 调度等待超时、IPC 接收超时 | 是（限制次数） |
-| `AIRY_ECONFLICT` | -12 | 状态冲突 | 任务状态不允许当前操作 | 否 |
-| `AIRY_EFAULT` | -13 | 地址错误 | 用户态指针非法、内存不可访问 | 否 |
-| `AIRY_EOVERFLOW` | -14 | 溢出 | 计数器溢出、编号段耗尽 | 否 |
+| `AIRY_EINVAL` | 5 | 无效参数 | 参数为 NULL、结构体大小不匹配、对齐错误 | 否 |
+| `AIRY_ENOMEM` | 9 | 内存不足 | 内核分配失败、CXL 池耗尽 | 是（等待后） |
+| `AIRY_ENOSYS` | （error.h 未登记，预留） | 未实现 | 编号未实现或已废弃 | 否 |
+| `AIRY_EPERM` | 12 | 权限不足 | capability 令牌缺失或无效 | 否 |
+| `AIRY_ENOENT` | 8 | 资源不存在 | 任务 ID、快照 ID、capability 句柄不存在 | 否 |
+| `AIRY_EAGAIN` | 35 | 暂时不可用 | io_uring 队列满、CXL 带宽不足 | 是（立即） |
+| `AIRY_EMSGSIZE` | （error.h 未登记，预留） | 消息过大 | payload 超过最大长度 | 否 |
+| `AIRY_EBADF` | （error.h 未登记，预留） | 描述符错误 | ring fd、capability 句柄无效 | 否 |
+| `AIRY_EBUSY` | 16 | 资源繁忙 | 任务正在迁移无法快照、capability 正在传递 | 是（延迟） |
+| `AIRY_ENOTSUP` | 11 | 不支持 | 硬件不支持（如无 CXL 设备）、内核配置未启用 | 否 |
+| `AIRY_ETIMEDOUT` | （error.h 未登记；超时语义以 `AIRY_ECANCELED`=19 表示） | 超时 | 调度等待超时、IPC 接收超时 | 是（限制次数） |
+| `AIRY_ECONFLICT` | （error.h 未登记，预留） | 状态冲突 | 任务状态不允许当前操作 | 否 |
+| `AIRY_EFAULT` | 3 | 地址错误 | 用户态指针非法、内存不可访问 | 否 |
+| `AIRY_EOVERFLOW` | （error.h 未登记，预留） | 溢出 | 计数器溢出、编号段耗尽 | 否 |
 
 #### 4.3 错误码使用规范
 
@@ -846,7 +846,7 @@ agentrt-linux 的日志系统遵循以下五维正交原则：
 |------|------|
 | agentrt-linux | agentrt-linux（AirymaxOS）的操作系统内核与运行时环境 |
 | 五维正交 | 本日志系统的核心架构哲学，见上文五个维度 |
-| IRON-9 v3 | 第九代智能路由与可观测性节点规范 v2 版本 |
+| IRON-9 v3 | 同源且部分代码共享的四层共享模型（[SC]/[SS]/[IND]/[DSL]） |
 | airy_log_write() | 用户态日志写入 API |
 | log_write() / log_write_va() | 内核态日志写入函数 |
 | CLOCK_REALTIME | 系统实时时钟，对齐至北京时间（UTC+8） |
@@ -924,7 +924,7 @@ agentrt-linux（AirymaxOS）定义了六个标准日志等级，与 syslog 标�
 |------|------|------|
 | `agent_id` | string | 产生日志的 agent 实例标识 |
 | `task_id` | string | 关联的任务 ID |
-| `channel_id` | string | 关联的 IRON-9 v3 通道 ID |
+| `channel_id` | string | 关联的同源共享通道 ID（IRON-9 v3 四层共享模型下的 IPC 通道） |
 | `duration_ms` | number (float) | 操作耗时，单位毫秒 |
 | `error_code` | string | 错误码，如 `EAGAIN`、`ENOMEM`、`EINVAL` |
 | `span_id` | string (16 hex) | OpenTelemetry span ID |
@@ -995,7 +995,7 @@ int airy_log_write(int level, const char *module,
 - `module`：模块名，长度不超过 64 字符。
 - `agent_id`：agent 实例 ID，可为 NULL。
 - `task_id`：任务 ID，可为 NULL。
-- `channel_id`：IRON-9 v3 通道 ID，可为 NULL。
+- `channel_id`：同源共享通道 ID（IRON-9 v3 四层共享模型下的 IPC 通道），可为 NULL。
 - `duration_ms`：操作耗时，无耗时信息时传 -1.0。
 - `error_code`：错误码，可为 NULL。
 - `fmt, ...`：printf 风格格式化字符串和参数。
@@ -1310,7 +1310,7 @@ agentrt-log-validator --check-mask /var/log/agentrt/system.log
 审计日志不可用时（审计分区满、加密密钥不可用），系统行为：
 - 拒绝所有安全敏感操作（认证、授权、配置变更），返回 `EAUDITUNAVAIL`。
 - 非安全敏感操作继续运行，但会在系统日志中记录 `audit_unavailable` 告警。
-- 审计日志不可用是最高优先级告警，通过 IRON-9 v3 通道立即上报。
+- 审计日志不可用是最高优先级告警，通过 IRON-9 v3 四层共享模型的 IPC 通道立即上报。
 
 ---
 
@@ -1346,7 +1346,7 @@ TRACE  → 青色 (Cyan)     → 极细粒度跟踪
 ---
 
 > **文档维护**： SPHARX Ltd. — agentrt 核心团队
-> **合规声明**： 本文档符合 IRON-9 v3 可观测性节点规范要求，所有日志格式遵循五维正交设计原则。
+> **合规声明**： 本文档符合 IRON-9 v3 四层共享模型要求，所有日志格式遵循五维正交设计原则。
 
 ---
 

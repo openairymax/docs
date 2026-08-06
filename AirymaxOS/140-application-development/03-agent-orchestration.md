@@ -52,7 +52,9 @@ agentrt 用户态运行时的 MAC 框架与 TaskFlow 引擎与本设计遵循 IR
 ### 2.1 协作模式定义
 
 ```c
-/* include/uapi/linux/airymax/mac.h（IRON-9 v3 [SC] 共享契约层，v1.1 计划实现，当前未创建） */
+/* include/uapi/linux/airymax/mac.h（规划新增 [SC] 头文件，当前未创建；
+ * [SC] 头文件集合为固定 10 个（07-syscall-registry.md §10.1 口径），
+ * 新增 mac.h 需 SSoT 委员会决议（OS-IRON 约束）） */
 enum airy_mac_mode {
 	AIRY_MAC_MODE_INDEPENDENT = 0,  /* 独立：各 Agent 独立执行 */
 	AIRY_MAC_MODE_COLLABORATIVE = 1, /* 协作：分工合作 */
@@ -194,9 +196,10 @@ int airy_dag_schedule(struct airy_dag_workflow *wf)
 		ready_count++;
 	}
 
-	/* 若本超步无就绪节点且仍有 PENDING，说明存在环路或死锁 */
+	/* 若本超步无就绪节点且仍有 PENDING，说明存在环路或死锁。
+	 * error.h 暂无 AIRY_EXEC_* 专属码，复用 AIRY_EBUSY（资源/状态繁忙）；专属码待 [SC] 注册 */
 	if (ready_count == 0 && airy_dag_has_pending(wf))
-		return -AIRY_EXEC_EDAG_DEADLOCK;
+		return -AIRY_EBUSY;
 
 	return ready_count;
 }
@@ -234,10 +237,10 @@ graph TD
 
     C3 --> Decision{质量达标?}
     Decision -->|是| End([返回用户])
-    Decision -->|否| A1
+    Decision -->|否| Rollback([回滚至最近检查点])
+    Rollback --> A1
 
     style A1 fill:#e1f5fe
-    style A2 fill:#e1f5fe
     style B1 fill:#f3e5f5
     style B2 fill:#f3e5f5
     style B3 fill:#f3e5f5
@@ -247,7 +250,10 @@ graph TD
     style C3 fill:#e8f5e8
     style Decision fill:#fff9c4
     style End fill:#c8e6c9
+    style Rollback fill:#fce4ec
 ```
+
+> **注**：图中 `Decision -->|否| Rollback --> A1` 的回滚式迭代由**检查点机制**（§5.2 检查点与容错）承载，**并非 DAG 边**——DAG 本身保持无环（§3.1 声明），回滚是"重放至最近检查点"而非图结构中的环。
 
 ### 4.3 工作流 DAG 定义
 
@@ -306,7 +312,8 @@ static struct airy_task_node nodes[] = {
 超步 6: 节点 9（Agent C: 质量评估）
           |
           v
-        若质量不达标，回滚至超步 0 重试
+        若质量不达标，经检查点机制回滚至最近检查点重试
+        （回滚式迭代非 DAG 边——DAG 保持无环，见 §3.1；回滚由 §5.2 检查点承载）
 ```
 
 ---
@@ -476,14 +483,14 @@ int airy_consensus_reach(struct airy_consensus_session *session)
 
 	switch (session->strategy) {
 	case AIRY_MAC_CONSENSUS_MAJORITY:
-		return yes > total / 2 ? 0 : -AIRY_EXEC_ENOCONSENSUS;
+		return yes > total / 2 ? 0 : -AIRY_ECANCELED; /* 无共识：error.h 无 AIRY_EXEC_*，复用 AIRY_ECANCELED */
 	case AIRY_MAC_CONSENSUS_UNANIMOUS:
-		return no == 0 ? 0 : -AIRY_EXEC_ENOCONSENSUS;
+		return no == 0 ? 0 : -AIRY_ECANCELED;
 	case AIRY_MAC_CONSENSUS_WEIGHTED:
 		return airy_weighted_vote(session);
 	case AIRY_MAC_CONSENSUS_LEADER_VETO:
 		return session->votes[0].leader_veto ?
-		       -AIRY_EXEC_ENOCONSENSUS : 0;
+		       -AIRY_ECANCELED : 0;
 	}
 	return -AIRY_EINVAL;
 }
@@ -581,7 +588,7 @@ result = mac.execute(workflow=research_dag,
 | 线性依赖 | A->B->C | 顺序执行 | 3 超步完成 |
 | 并行扇出 | A->B,C,D | 并行执行 | 2 超步完成 |
 | 菱形 | A->B,C->D | B、C 并行后聚合 | 3 超步完成 |
-| 死锁 | A->B->A 环路 | 检测死锁 | 返回 -EDAG_DEADLOCK |
+| 死锁 | A->B->A 环路 | 检测死锁 | 返回 -EBUSY（复用 AIRY_EBUSY） |
 | 节点失败 | A->B(fail) | 触发回滚 | 回滚至超步 0 |
 
 ### 9.2 共识测试

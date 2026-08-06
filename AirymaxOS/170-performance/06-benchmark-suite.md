@@ -658,6 +658,8 @@ int run_bench_suite(const char *category)
 
 ## 9. 测试结果分析
 
+> **规划态声明**：本章及 §10/§17 中所有 `agentctl bench *` 子命令为**规划功能**。当前 `cloudnative/agentctl/agentctl.c` 仅实现 `-h/-v/-s` 三选项（无子命令），`bench` 子命令待后续版本落地后生效。
+
 ### 9.1 结果导出
 
 ```bash
@@ -875,6 +877,8 @@ for r in &results {
 ---
 
 ## 17. 使用示例
+
+> **规划态声明**：以下 `agentctl bench *` 子命令为**规划功能**（当前 agentctl 仅支持 -h/-v/-s，见 §9 声明）。
 
 ```bash
 # 运行全部基准测试

@@ -1,7 +1,7 @@
 Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 # agentrt-linux（AirymaxOS）内核自测试
-> **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 3 卷——`lib/test_*` 内核自检（Boot-time Kernel Selftests）扩展。本卷规定 `lib/test_*.c` 模型、`CONFIG_TEST_*` Kconfig 选项、`/sys/kernel/debug/selftest/` 触发接口、`kernel_init()` 阶段执行顺序，以及 agentrt-linux 专属自测试（sched_tac 调度延迟、IORING_OP_URING_CMD 零拷贝、41 ID Capability、250 钩子纯 C LSM、[SC] 头文件逐字节校验）。\
+> **文档定位**：agentrt-linux（AirymaxOS）测试工程体系第 3 卷——`lib/test_*` 内核自检（Boot-time Kernel Selftests）扩展。本卷规定 `lib/test_*.c` 模型、`CONFIG_TEST_*` Kconfig 选项、`/sys/kernel/debug/selftest/` 触发接口、`kernel_init()` 阶段执行顺序，以及 agentrt-linux 专属自测试（sched_tac 调度延迟、IORING_OP_URING_CMD 零拷贝、41 ID Capability、253 钩子纯 C LSM、[SC] 头文件逐字节校验）。\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-21\
 > **上级文档**：[80-testing README](README.md)\
@@ -61,7 +61,7 @@ flowchart TB
         H["lib/airymax/test_airy_sched.c<br/>sched_tac 调度延迟自检"]
         I["lib/airymax/test_airy_ipc.c<br/>IORING_OP_URING_CMD 零拷贝自检"]
         J["lib/airymax/test_airy_cap.c<br/>41 ID Capability 自检"]
-        K["lib/airymax/test_airy_lsm.c<br/>250 钩子纯 C LSM 自检"]
+        K["lib/airymax/test_airy_lsm.c<br/>253 钩子纯 C LSM 自检"]
         L["lib/airymax/test_airy_sc.c<br/>[SC] 头文件逐字节自检"]
     end
     C -.->|late_initcall| H
@@ -128,7 +128,7 @@ CONFIG_TEST_HASH=y
 CONFIG_AIRY_TEST_SCHED=y       # sched_tac 调度延迟
 CONFIG_AIRY_TEST_IPC=y         # IORING_OP_URING_CMD 零拷贝
 CONFIG_AIRY_TEST_CAP=y         # 41 ID Capability
-CONFIG_AIRY_TEST_LSM=y         # 250 钩子纯 C LSM
+CONFIG_AIRY_TEST_LSM=y         # 253 钩子纯 C LSM
 CONFIG_AIRY_TEST_SC=y          # [SC] 头文件逐字节
 
 # 选型守护自检（必启，断言技术选型未被偏离）
@@ -155,7 +155,7 @@ CONFIG_AIRY_TEST_SELECTION=y   # 五大技术选型回归断言
 #include <linux/sched/task.h>
 #include <linux/delay.h>
 #include <linux/printk.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 #include "airy_selftest.h"
 
 #define AIRY_SCHED_LATENCY_SLA_NS  50000LL  /* 50μs SLA */
@@ -229,7 +229,7 @@ late_initcall(test_airy_sched_cprime_latency);
 #include <linux/init.h>
 #include <linux/io_uring.h>
 #include <linux/io_uring_cmd.h>
-#include <uapi/airymax/ipc.h>
+#include <uapi/linux/airymax/ipc.h>
 #include "airy_selftest.h"
 
 #define AIRY_IPC_FASTPATH_SLA_NS  1000LL  /* 1μs 内核态 SLA */
@@ -290,7 +290,7 @@ late_initcall(test_airy_ipc_uring_cmd_zero_copy);
 /* lib/airymax/test_airy_cap.c */
 #include <linux/module.h>
 #include <linux/init.h>
-#include <uapi/airymax/capability.h>
+#include <uapi/linux/airymax/security_types.h>
 #include "airy_selftest.h"
 
 static const int airy_cap_ids[] = {
@@ -304,7 +304,7 @@ static const int airy_cap_ids[] = {
     CAP_AIRY_MEM_FREE,       /* 7 */
     CAP_AIRY_MEM_MMAP,       /* 8 */
     CAP_AIRY_SCHED_SET,      /* 9 */
-    /* ... 共 41 个，详见 include/uapi/linux/airymax/capability.h */
+    /* ... 共 41 个，详见 include/uapi/linux/airymax/security_types.h */
     CAP_AIRY_LAST            /* 40 */
 };
 
@@ -364,21 +364,21 @@ late_initcall(test_airy_cap_41_ids);
 
 **OS-TEST-034**：Capability 自检必须遍历全部 41 个 ID，验证 "默认拒绝 → 授权允许 → 回收拒绝" 三态语义；任一 ID 语义错误即视为自检失败。
 
-**OS-KER-104**：Capability ID 总数硬编码为 41，对应 `include/uapi/linux/airymax/capability.h` 中的 `CAP_AIRY_LAST + 1`；若自检检测到实际 ID 数 ≠ 41，自检以 `-EINVAL` 失败，提示开发者更新 [SC] 头文件。
+**OS-KER-104**：Capability ID 总数硬编码为 41，对应 `include/uapi/linux/airymax/security_types.h` 中的 `CAP_AIRY_LAST + 1`；若自检检测到实际 ID 数 ≠ 41，自检以 `-EINVAL` 失败，提示开发者更新 [SC] 头文件。
 
-### 3.4 250 钩子纯 C LSM 自检
+### 3.4 253 钩子纯 C LSM 自检
 
-`lib/airymax/test_airy_lsm.c` 验证纯 C LSM（`airy_lsm`）的 250 个安全钩子覆盖完整性。Linux 6.6 LSM 框架定义 250 个 `security_list_options` 钩子点，agentrt-linux 必须全部注册或显式声明豁免。
+`lib/airymax/test_airy_lsm.c` 验证纯 C LSM（`airy_lsm`）的 253 个安全钩子覆盖完整性。Linux 6.6 LSM 框架定义 253 个 `security_list_options` 钩子点，agentrt-linux 必须全部注册或显式声明豁免。
 
 ```c
 /* lib/airymax/test_airy_lsm.c */
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/lsm_hooks.h>
-#include <uapi/airymax/lsm.h>
+#include <uapi/linux/airymax/lsm_types.h>
 #include "airy_selftest.h"
 
-static int __init test_airy_lsm_250_hooks(void)
+static int __init test_airy_lsm_253_hooks(void)
 {
     const struct lsm_id *airy_lsm_id;
     int registered_hooks;
@@ -392,13 +392,13 @@ static int __init test_airy_lsm_250_hooks(void)
     }
     pr_info("airy_selftest: lsm: airy_lsm registered as '%s'\n", airy_lsm_id->name);
 
-    /* 2. 验证 250 钩子覆盖完整性 */
+    /* 2. 验证 253 钩子覆盖完整性 */
     registered_hooks = airy_lsm_count_registered_hooks();
-    if (registered_hooks < 250) {
-        pr_err("airy_selftest: lsm: only %d/250 hooks registered\n", registered_hooks);
+    if (registered_hooks < 253) {
+        pr_err("airy_selftest: lsm: only %d/253 hooks registered\n", registered_hooks);
         return -EINVAL;
     }
-    pr_info("airy_selftest: lsm: %d/250 hooks registered OK\n", registered_hooks);
+    pr_info("airy_selftest: lsm: %d/253 hooks registered OK\n", registered_hooks);
 
     /* 3. 验证 BPF LSM 未启用（技术选型守护） */
     if (IS_ENABLED(CONFIG_BPF_LSM)) {
@@ -425,51 +425,55 @@ static int __init test_airy_lsm_250_hooks(void)
     return 0;
 }
 
-late_initcall(test_airy_lsm_250_hooks);
+late_initcall(test_airy_lsm_253_hooks);
 ```
 
-**OS-TEST-035**：纯 C LSM 自检必须验证 250 钩子全部注册，或显式声明豁免清单（如 `BPF_PROGRAM_RUN` 等 BPF 专属钩子）；豁免清单必须经安全委员会审批并记录在 `lib/airymax/lsm_exempt_list.h`。
+**OS-TEST-035**：纯 C LSM 自检必须验证 253 钩子全部注册，或显式声明豁免清单（如 `BPF_PROGRAM_RUN` 等 BPF 专属钩子）；豁免清单必须经安全委员会审批并记录在 `lib/airymax/lsm_exempt_list.h`。
 
 **OS-KER-105**：自检必须断言 `CONFIG_BPF_LSM=n`；若 CI 检测到 `CONFIG_BPF_LSM=y`，自检以 `-EINVAL` 失败，PR 强制驳回（对应 README §2 技术选型守护）。
 
 ### 3.5 [SC] 头文件逐字节校验自检
 
-`lib/airymax/test_airy_sc.c` 在内核启动阶段对 10 个 [SC] 共享契约层头文件进行逐字节自校验，与 `sc-dual-ci.yml` 的 CI 阶段校验形成"启动时 + CI 时"双重保险。
+`lib/airymax/test_airy_sc.c` 在内核启动阶段对 12 个 [SC] 共享契约层头文件进行逐字节自校验，与 `sc-dual-ci.yml` 的 CI 阶段校验形成"启动时 + CI 时"双重保险。
 
 ```c
 /* lib/airymax/test_airy_sc.c */
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/bug.h>
-#include <uapi/airymax/error.h>
-#include <uapi/airymax/log_types.h>
-#include <uapi/airymax/sched.h>
-#include <uapi/airymax/ipc.h>
-#include <uapi/airymax/security_types.h>
-#include <uapi/airymax/lsm_types.h>
-#include <uapi/airymax/memory_types.h>
-#include <uapi/airymax/cognition_types.h>
-#include <uapi/airymax/syscalls.h>
-#include <uapi/airymax/uapi_compat.h>
+#include <uapi/linux/airymax/error.h>
+#include <uapi/linux/airymax/log_types.h>
+#include <uapi/linux/airymax/sched.h>
+#include <uapi/linux/airymax/ipc.h>
+#include <uapi/linux/airymax/security_types.h>
+#include <uapi/linux/airymax/lsm_types.h>
+#include <uapi/linux/airymax/memory_types.h>
+#include <uapi/linux/airymax/cognition_types.h>
+#include <uapi/linux/airymax/syscalls.h>
+#include <uapi/linux/airymax/uapi_compat.h>
 #include "airy_selftest.h"
 
 /* 内核侧 [SC] 头文件 SHA-256，由构建系统从 agentrt 同源仓注入 */
-static const u8 airy_sc_expected_sha256[10][32] = {
+static const u8 airy_sc_expected_sha256[12][32] = {
     AIRY_ERROR_H_SHA256,        /* error.h */
     AIRY_LOG_TYPES_H_SHA256,    /* log_types.h */
-    AIRY_SCHED_H_SHA256,        /* sched.h */
     AIRY_IPC_H_SHA256,          /* ipc.h */
-    AIRY_CAPABILITY_H_SHA256,   /* capability.h */
-    AIRY_LSM_H_SHA256,          /* lsm.h */
-    AIRY_MEM_H_SHA256,          /* mem.h */
-    AIRY_AGENT_H_SHA256,        /* agent.h */
-    AIRY_DSL_H_SHA256,          /* dsl.h */
-    AIRY_VERSION_H_SHA256,      /* version.h */
+    AIRY_SCHED_H_SHA256,        /* sched.h */
+    AIRY_MEMORY_TYPES_H_SHA256, /* memory_types.h */
+    AIRY_SECURITY_TYPES_H_SHA256, /* security_types.h */
+    AIRY_COGNITION_TYPES_H_SHA256, /* cognition_types.h */
+    AIRY_SYSCALLS_H_SHA256,     /* syscalls.h */
+    AIRY_SYSCALL_H_SHA256,      /* syscall.h */
+    AIRY_UAPI_COMPAT_H_SHA256,  /* uapi_compat.h */
+    AIRY_LSM_TYPES_H_SHA256,    /* lsm_types.h */
+    AIRY_BPF_STRUCT_OPS_H_SHA256, /* bpf_struct_ops.h */
 };
 
-static const char *airy_sc_names[10] = {
-    "error.h", "log_types.h", "sched.h", "ipc.h", "capability.h",
-    "lsm.h", "mem.h", "agent.h", "dsl.h", "version.h"
+static const char *airy_sc_names[12] = {
+    "error.h", "log_types.h", "ipc.h", "sched.h",
+    "memory_types.h", "security_types.h", "cognition_types.h",
+    "syscalls.h", "syscall.h", "uapi_compat.h",
+    "lsm_types.h", "bpf_struct_ops.h"
 };
 
 static int __init test_airy_sc_byte_for_byte(void)
@@ -477,7 +481,7 @@ static int __init test_airy_sc_byte_for_byte(void)
     u8 actual[32];
     int i, ret;
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 12; i++) {
         ret = airy_sc_compute_sha256(i, actual);
         if (ret) {
             pr_err("airy_selftest: sc: %s compute failed: %d\n", airy_sc_names[i], ret);
@@ -499,7 +503,7 @@ static int __init test_airy_sc_byte_for_byte(void)
 late_initcall(test_airy_sc_byte_for_byte);
 ```
 
-**OS-TEST-036**：[SC] 头文件自检必须在内核启动时计算 10 个头文件的 SHA-256，与构建时注入的预期哈希逐字节比对；任一不匹配即视为 [SC] 契约被破坏，自检以 `-EILSEQ` 失败，系统进入 `panic()` 防御模式（可选，由 `airy_sc_panic_on_mismatch` 启动参数控制）。
+**OS-TEST-036**：[SC] 头文件自检必须在内核启动时计算 12 个头文件的 SHA-256，与构建时注入的预期哈希逐字节比对；任一不匹配即视为 [SC] 契约被破坏，自检以 `-EILSEQ` 失败，系统进入 `panic()` 防御模式（可选，由 `airy_sc_panic_on_mismatch` 启动参数控制）。
 
 **OS-STD-062**：`sc-dual-ci.yml` 在 CI 阶段完成首次校验（双端 diff），本自检是"运行时第二次校验"，防止内核镜像被二次篡改；二者共同构成 [SC] 契约的双重保险。
 
@@ -553,7 +557,7 @@ int  airy_sc_compute_sha256(int idx, u8 out[32]);
 [    3.143012] airy_selftest:   sched  (sched_tac latency) ............ PASS  (1.2ms)
 [    3.143138] airy_selftest:   ipc    (URING_CMD zero-copy) ....... PASS  (0.8ms)
 [    3.143261] airy_selftest:   cap    (41 IDs grant/revoke) ....... PASS  (12.3ms)
-[    3.143388] airy_selftest:   lsm    (250 hooks coverage) ........ PASS  (45.6ms)
+[    3.143388] airy_selftest:   lsm    (253 hooks coverage) ........ PASS  (45.6ms)
 [    3.143514] airy_selftest:   sc     (10 [SC] headers SHA-256) ... PASS  (8.9ms)
 [    3.143640] airy_selftest: === 5/5 PASS, 0 FAIL, 0 SKIP ===
 ```
@@ -588,7 +592,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build kernel with airy_defconfig
         run: |
-          make ARCH=um defconfig airy_defconfig
+          # UML 无 airy_*_defconfig 变体：先用架构默认 defconfig 构建，再叠加 airy_defconfig 片段
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and capture selftest output
         run: |
@@ -614,7 +621,7 @@ jobs:
 
 ### 5.2 `sc-dual-ci.yml` 中的 [SC] 自检守护
 
-`sc-dual-ci.yml` 在 CI 阶段完成 10 个 [SC] 头文件的双端 diff 校验，与 `lib/airymax/test_airy_sc.c` 的运行时校验形成双重保险（见 §3.5）。
+`sc-dual-ci.yml` 在 CI 阶段完成 12 个 [SC] 头文件的双端 diff 校验，与 `lib/airymax/test_airy_sc.c` 的运行时校验形成双重保险（见 §3.5）。
 
 ```yaml
 jobs:
@@ -625,10 +632,11 @@ jobs:
         with: { repository: spx/agentrt,         path: agentrt }
       - uses: actions/checkout@v4
         with: { repository: spx/agentrt-linux,   path: agentrt-linux }
-      - name: Diff 10 [SC] headers
+      - name: Diff 12 [SC] headers
         run: |
-          for h in error.h log_types.h sched.h ipc.h capability.h \
-                   lsm.h mem.h agent.h dsl.h version.h; do
+          for h in error.h log_types.h ipc.h sched.h memory_types.h \
+                   security_types.h cognition_types.h syscalls.h syscall.h \
+                   uapi_compat.h lsm_types.h bpf_struct_ops.h; do
             if ! diff -q agentrt/include/uapi/linux/airymax/$h \
                         agentrt-linux/include/uapi/linux/airymax/$h >/dev/null; then
               echo "::error::[SC] header $h byte-for-byte mismatch"
@@ -676,7 +684,7 @@ KUnit（01 卷）是白盒单元测试，运行在用户态 UML 或 `late_initca
 kselftest（02 卷）是用户态系统级测试，启动用户态进程后通过 syscall 测试内核；本卷自检是内核态自检，在用户态启动前完成。二者互补：
 
 - **kselftest**：覆盖用户态接口（syscall、`/proc`、`/sys`），可读性强，CI 友好。
-- **内核自检**：覆盖内核内部不变式（如 [SC] 头文件 SHA-256、250 钩子注册），不依赖用户态。
+- **内核自检**：覆盖内核内部不变式（如 [SC] 头文件 SHA-256、253 钩子注册），不依赖用户态。
 
 ### 6.3 与 ftrace 启动自检的关系
 
@@ -703,8 +711,8 @@ kselftest（02 卷）是用户态系统级测试，启动用户态进程后通�
 ### 7.3 后续版本规划
 
 - v1.0.1：新增 `lib/airymax/test_airy_mem.c`（alloc_pages + mmap 内存路径自检）。
-- v1.2：新增 `lib/airymax/test_airy_iron9.c`（IRON-9 v3 四层归属自检）。
-- v1.3：将 `airy_selftest_summary()` 输出通过 `trace_airy_selftest` tracepoint 暴露，便于 ftrace 实时追踪。
+- 下一版本：新增 `lib/airymax/test_airy_iron9.c`（IRON-9 v3 四层归属自检）。
+- 后续版本：将 `airy_selftest_summary()` 输出通过 `trace_airy_selftest` tracepoint 暴露，便于 ftrace 实时追踪。
 
 ---
 
@@ -727,7 +735,7 @@ kselftest（02 卷）是用户态系统级测试，启动用户态进程后通�
 
 - Linux 6.6 `lib/test_*.c`（50+ 内核自检样本）
 - Linux 6.6 `init/main.c` `do_initcalls()`（`late_initcall` 调用机制）
-- Linux 6.6 `include/linux/lsm_hooks.h`（250 LSM 钩子定义）
+- Linux 6.6 `include/linux/lsm_hooks.h`（253 LSM 钩子定义）
 - Linux 6.6 `io_uring/` `IORING_OP_URING_CMD` 实现
 - seL4 项目 `sel4_verification/`（形式化验证中的自检机制参考）
 
@@ -737,7 +745,7 @@ kselftest（02 卷）是用户态系统级测试，启动用户态进程后通�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.0.1 | 2026-07-18 | 初始版本：定义 `lib/test_*.c` 内核自检模型、`CONFIG_TEST_*` Kconfig、`airy_defconfig` 自检配置；新增 agentrt-linux 专属自检 5 项（sched_tac 调度延迟、IORING_OP_URING_CMD 零拷贝、41 ID Capability、250 钩子纯 C LSM、[SC] 头文件逐字节）；定义 `airy_selftest` 聚合框架与 CI 集成 |
+| v1.0.1 | 2026-07-18 | 初始版本：定义 `lib/test_*.c` 内核自检模型、`CONFIG_TEST_*` Kconfig、`airy_defconfig` 自检配置；新增 agentrt-linux 专属自检 5 项（sched_tac 调度延迟、IORING_OP_URING_CMD 零拷贝、41 ID Capability、253 钩子纯 C LSM、[SC] 头文件逐字节）；定义 `airy_selftest` 聚合框架与 CI 集成 |
 
 ---
 

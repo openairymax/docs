@@ -373,7 +373,7 @@ uint16_t airy_ipc_negotiate_version(uint16_t client_version)
 **当前 v1.0.1 仅有 4 核心 syscall (548-551)，无独立的特性探测 syscall**（`AIRY_SYS_FEATURE_QUERY` 不存在，syscalls.h SSoT 中未定义）。特性探测通过以下两种合规机制实现：
 
 1. **IPC 版本协商（推荐）**：通过 `AIRY_SYS_CALL` (548) 发送 IPC 探测消息，服务端在响应中返回支持的特性位图与版本。
-2. **/proc/airymax/features 读取**：用户态读取 procfs 节点获取特性列表（参见 `30-interfaces/02-procfs.md`）。
+2. **/proc/airymax/features 读取**：用户态读取 procfs 节点获取特性列表（**规划态**：procfs 特性节点文档未落地，当前 `docs/AirymaxOS/30-interfaces/` 下不存在 `02-procfs.md`；特性列表节点与格式以实际实现为准，未来在 `30-interfaces/` 补充 procfs 文档时回填引用）。
 
 ```c
 /* 特性探测通过 IPC 协议层完成（非独立 syscall） */

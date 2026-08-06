@@ -40,7 +40,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 起源与定位
 
-内核模糊测试是 Linux 6.6 内核基线中"通过随机输入发现内核漏洞"的机制。其设计目标有三：**自动化发现**（无需人工设计测试用例）、**覆盖率引导**（KCOV 反馈覆盖率，引导输入变异）、**持续运行**（7×24 小时运行，发现偶发缺陷）。
+内核模糊测试是 Linux 6.6 内核基线中"通过随机输入发现内核漏洞"的机制。其设计目标有三：**自动化发现**（无需人工设计测试用例）、**覆盖率引导**（KCOV 反馈覆盖率，引导输入变异）、**持续运行**（长期目标 7×24 小时，当前 CI 以 12 小时为上限——发现偶发缺陷）。
 
 agentrt-linux 完整继承 Linux 6.6 内核基线的 syzkaller 模糊测试框架（`syzkaller/`、KCOV 覆盖率引导），不修改任何上游源文件。agentrt-linux 专属 syscall 描述以独立 `airy_*.txt` 文件形式驻留于 `syzkaller/sys/airymaxos/`，遵循 IRON-9 v3 [IND] 独立实现层原则。
 
@@ -79,12 +79,12 @@ flowchart TB
 |------|------|---------|------|
 | 开发者本地 | 单 VM + KASAN | 即时反馈 | 1000-5000 exec/s |
 | CI PR | 短时（10 分钟） | PR 阶段快速验证 | 5000-10000 exec/s |
-| CI 持续 | 7×24 小时多 VM | 持续模糊测试 | 50000+ exec/s |
+| CI 持续 | 12 小时多 VM（7×24 为长期目标） | 持续模糊测试 | 50000+ exec/s |
 | syzbot 公开实例 | 公共集群 | 大规模社区发现 | 100000+ exec/s |
 
 **OS-TEST-100**：CI PR 阶段必须运行 10 分钟短时模糊测试，覆盖 4 核心 Agent syscall + io_uring cmd_op 全集；任一 crash 即阻断 PR。
 
-**OS-KER-160**：CI 持续模糊测试必须 7×24 小时运行，至少 4 个并发 VM，覆盖 4 核心 Agent syscall + io_uring cmd_op + ioctl；任一 crash 自动创建 critical issue。
+**OS-KER-160**：CI 持续模糊测试必须持续运行（当前 CI 以 12 小时为上限，对齐 `timeout-minutes: 720`；7×24 为长期目标），至少 4 个并发 VM，覆盖 4 核心 Agent syscall + io_uring cmd_op + ioctl；任一 crash 自动创建 critical issue。
 
 ---
 
@@ -181,7 +181,7 @@ agentrt-linux 在 syscall 表中保留编号 548-571，共 24 槽位（4 核心 
 #endif /* _UAPI_AIRY_SYSCALL_H */
 ```
 
-4 核心 syscall 通过 `op` 参数（op-dispatch）承载多种操作，操作码定义见 `include/uapi/airymax/rovol.h`、`sched.h`、`clt.h` 与 `uring_cmd.h`。
+4 核心 syscall 通过 `op` 参数（op-dispatch）承载多种操作，操作码定义见 `include/uapi/linux/airymax/syscalls.h` 与 `ipc.h`（早期设计中的 `rovol.h` / `clt.h` / `uring_cmd.h` 不在实际 [SC] 12 个头文件清单内，对应语义已并入 `syscalls.h` / `ipc.h`）。
 
 ### 3.2 syzkaller syscall 描述
 
@@ -191,12 +191,11 @@ agentrt-linux 在 syscall 表中保留编号 548-571，共 24 槽位（4 核心 
 # syzkaller/sys/airymaxos/airy_syscall.txt
 # agentrt-linux Agent syscall 描述（编号 548-551）+ op-dispatch
 
-include <uapi/airymax/syscall.h>
-include <uapi/airymax/rovol.h>
-include <uapi/airymax/sched.h>
-include <uapi/airymax/clt.h>
-include <uapi/airymax/ipc.h>
-include <uapi/airymax/uring_cmd.h>
+include <uapi/linux/airymax/syscall.h>
+include <uapi/linux/airymax/syscalls.h>
+include <uapi/linux/airymax/sched.h>
+include <uapi/linux/airymax/ipc.h>
+# 注：早期设计中的 rovol.h/clt.h/uring_cmd.h 已并入实际 [SC] 头文件，不再单独存在
 
 # 4 核心 syscall（v1.0.1 Capability Folding）
 resource airy_cap_fd[int32]
@@ -219,7 +218,7 @@ airy_ipc_msg_hdr {
     payload array[int8, 0:4096]
 }
 
-# op-dispatch 操作码范围（节选，完整定义见 uapi/airymax/*.h）
+# op-dispatch 操作码范围（节选，完整定义见 uapi/linux/airymax/*.h）
 AIRY_ROVOL_SNAPSHOT     = 0
 AIRY_ROVOL_TIER_GET     = 3
 AIRY_SCHED_SET_POLICY   = 0
@@ -257,7 +256,7 @@ airy_sys_clt_notify(99, AIRY_CLT_PHASE_NOTIFY)              # 通知 task 99 进
 ```
 # syzkaller/sys/airymaxos/airy_io_uring.txt
 include <uapi/linux/io_uring.h>
-include <uapi/airymax/ipc.h>
+include <uapi/linux/airymax/ipc.h>
 
 # io_uring setup
 io_uring_setup(entries int32[1:1024], params ptr[in io_uring_params]) fd_uring
@@ -300,14 +299,15 @@ AIRY_CMD_OP_MAX = 63  # 64 个 IPC 命令操作码
 
 ### 5.1 ioctl 参数模糊
 
-agentrt-linux 暴露多个 Agent 设备文件（`/dev/airy_agent` / `/dev/airy_ipc` / `/dev/airy_mem` / `/dev/airy_sched`），通过 ioctl 接口管理。syzkaller 必须对 ioctl 参数进行模糊：
+agentrt-linux 暴露多个 Agent 设备文件（`/dev/airy_<agent_id>_<dev_type>`，如 `/dev/airy_0_agent` / `/dev/airy_0_ipc`，对齐 60-driver-model），通过 ioctl 接口管理。syzkaller 必须对 ioctl 参数进行模糊：
 
 ```
 # syzkaller/sys/airymaxos/airy_dev_ioctl.txt
-include <uapi/airymax/dev.h>
+# 注：ioctl 命令定义在 [SC] ipc.h（AIRY_IOC_*），早期设计中的 dev.h 不在实际头文件清单内
+include <uapi/linux/airymax/ipc.h>
 
-# /dev/airy_agent 设备
-openat$airy_agent(fd const[AT_FDCWD], file const["/dev/airy_agent"],
+# /dev/airy_0_agent 设备
+openat$airy_agent(fd const[AT_FDCWD], file const["/dev/airy_0_agent"],
                   mode const[O_RDWR]) fd_airy_agent
 
 ioctl$AIRY_AGENT_SPAWN(fd fd_airy_agent, cmd const[AIRY_AGENT_IOC_SPAWN], 
@@ -390,7 +390,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build kernel with airy_fuzz_defconfig
         run: |
-          make ARCH=um defconfig airy_fuzz_defconfig
+          # UML 无 airy_fuzz_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_fuzz.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Build syzkaller
         run: |
@@ -417,7 +420,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build kernel with airy_fuzz_defconfig
         run: |
-          make ARCH=um defconfig airy_fuzz_defconfig
+          # UML 无 airy_fuzz_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_fuzz.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Build syzkaller
         run: |
@@ -539,8 +545,8 @@ agentrt-linux 计划在 v1.0.1 版本接入 Google syzbot 公开实例（`syzkal
 ### 9.3 后续版本规划
 
 - v1.0.1：接入 syzbot 公开实例。
-- v1.2：新增 `airy_fuzz_structured`（结构化模糊测试，基于 Agent 业务场景）。
-- v1.3：与 10-formal-verification 联动，将形式化验证的反例作为模糊测试种子。
+- 下一版本：新增 `airy_fuzz_structured`（结构化模糊测试，基于 Agent 业务场景）。
+- 后续版本：与 10-formal-verification 联动，将形式化验证的反例作为模糊测试种子。
 
 ---
 
@@ -599,12 +605,12 @@ Badge 64-bit 格式 `Badge = Epoch<<48 | RandomTag<<16 | Perms`，攻击者可�
 - **全 0 Badge**：`Badge = 0`（非法 sentinel）。
 - **全 1 Badge**：`Badge = 0xFFFFFFFFFFFFFFFF`（边界值）。
 
-KUnit 伪代码（`kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c`）：
+KUnit 伪代码（`kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c`，**规划，未实现**）：
 
 ```c
-/* kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c */
+/* kernel/airymaxos/cap/airy_cap_badge_fuzz_test.c（规划，未实现） */
 #include <kunit/test.h>
-#include <uapi/airymax/cap.h>
+#include <uapi/linux/airymax/security_types.h>
 
 /* Fuzz 1：Epoch 不匹配必须被拒绝 */
 KUNIT_DEFINE_TEST(airy_cap_badge_fuzz_epoch_mismatch)
@@ -760,7 +766,10 @@ v1.0.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（�
       - uses: actions/checkout@v4
       - name: Build with airy_fuzz_defconfig + KASAN
         run: |
-          make ARCH=um defconfig airy_fuzz_defconfig
+          # UML 无 airy_fuzz_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_fuzz.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Run cap-folding fuzz (4 VMs, 12 hours)
         run: |
@@ -781,7 +790,7 @@ v1.0.1 Capability Folding fuzz 集成至现有 `continuous-fuzzing` workflow（�
           fi
 ```
 
-**OS-TEST-107**：CI 持续模糊测试（`cap-folding-fuzz` job）必须 7×24 小时运行，覆盖 F-BADGE-1 / F-SQE128-1 / F-CAPS-1 三类攻击面；任一 crash（KASAN 报告 / panic / -ERANGE 未触发 / -EACCES 未触发）即自动创建 critical issue 并阻断 PR 合入。
+**OS-TEST-107**：CI 持续模糊测试（`cap-folding-fuzz` job）必须运行 **12 小时**（对齐该 job 的 `timeout-minutes: 720`；7×24 小时为长期规划目标），覆盖 F-BADGE-1 / F-SQE128-1 / F-CAPS-1 三类攻击面；任一 crash（KASAN 报告 / panic / -ERANGE 未触发 / -EACCES 未触发）即自动创建 critical issue 并阻断 PR 合入。
 
 **OS-TEST-108**：CI PR 阶段必须运行 KUnit 单元测试 `airy_cap_badge_fuzz_test` 与 `airy_cap_cache_fuzz_test`，覆盖率门槛遵循 06-coverage-metrics §3.2 的 A 级（`cap/` 模块 95% 行 + 95% 分支 + 100% 函数覆盖率）；任一 KUnit 失败即 PR 阻断。
 

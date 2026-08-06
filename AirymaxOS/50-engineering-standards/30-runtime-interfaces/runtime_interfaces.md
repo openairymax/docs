@@ -120,7 +120,7 @@ graph TB
     SEC_OPS --> IPC
     MEM_OPS --> MEM
     
-    TASK --> SCHED_EXT
+    TASK --> SCHED_TAC
     IPC --> LSM
     MEM --> MM
     TIME --> KERNEL
@@ -461,8 +461,9 @@ ops 注入机制是 agentrt-linux（AirymaxOS）L1 接口实现策略与机制�
 /**
  * are_sched_ops - 调度策略操作集
  *
- * 用户空间通过 BPF 程序实现这些函数，然后注册到内核。
- * 参考 Linux 6.6 原生调度类（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ sched_tac 用户态调度策略。
+ * 用户空间通过 sched_tac 用户态调度器（原生调度类 SCHED_DEADLINE/
+ * SCHED_FIFO/EEVDF + seL4 MCS 映射）实现这些函数，然后经 ops 注入注册
+ * 到内核。禁止使用 sched_ext / BPF struct_ops 调度（禁 sched_ext 立场）。
  */
 struct are_sched_ops {
     const char *name;                          /* 调度器名称（最大 64 字符） */
@@ -709,22 +710,20 @@ tests/
 
 ### 7. 错误码体系
 
-L1 接口使用统一的错误码体系，所有错误码负值返回，便于调用方统一处理。
+L1 接口使用统一的错误码体系。`AIRY_E*` 常量采用**正数幅值**（error.h SSoT，POSIX errno 风格），调用方通过 `return -AIRY_E*` 负值返回，便于调用方统一处理。
 
 #### 7.1 错误码定义
 
 | 错误码 | 值 | 含义 | 适用场景 |
 |--------|-----|------|----------|
-| `AIRY_EINVAL` | -22 | 参数无效 | 参数为 NULL、值超出范围、类型不匹配 |
-| `AIRY_EPERM` | -1 | 权限不足 | 缺少必要的能力令牌 |
-| `AIRY_ENOMEM` | -12 | 内存不足 | 内核或用户态内存不足 |
-| `AIRY_ETIMEDOUT` | -110 | 操作超时 | 阻塞操作超时 |
-| `AIRY_EBUSY` | -16 | 资源忙 | 资源已被占用，无法立即获取 |
-| `AIRY_EDEADLK` | -35 | 检测到死锁 | 互斥锁获取可能导致死锁 |
-| `AIRY_EINTR` | -4 | 被信号中断 | 阻塞操作被信号中断 |
-| `AIRY_ENOTSUP` | -95 | 不支持的操作 | 当前内核版本不支持该操作 |
-| `AIRY_EOVERFLOW` | -75 | 数值溢出 | 算术运算溢出 |
-| `AIRY_EFAULT` | -14 | 地址错误 | 用户空间指针无效 |
+| `AIRY_EINVAL` | 5 | 参数无效 | 参数为 NULL、值超出范围、类型不匹配 |
+| `AIRY_EPERM` | 12 | 权限不足 | 缺少必要的能力令牌 |
+| `AIRY_ENOMEM` | 9 | 内存不足 | 内核或用户态内存不足 |
+| `AIRY_ECANCELED` | 19 | 操作超时/取消 | 阻塞操作超时（error.h 无 ETIMEDOUT） |
+| `AIRY_EBUSY` | 16 | 资源忙 | 资源已被占用，无法立即获取 |
+| `AIRY_EINTR` | 4 | 被信号中断 | 阻塞操作被信号中断 |
+| `AIRY_ENOTSUP` | 11 | 不支持的操作 | 当前内核版本不支持该操作 |
+| `AIRY_EFAULT` | 3 | 地址错误 | 用户空间指针无效 |
 
 #### 7.2 错误码使用规范
 
@@ -1032,18 +1031,18 @@ agentrt-linux（AirymaxOS）的 OS 层定义了 12 个 daemon 守护进程，每
 
 | 命名空间 | daemon 名称 | 职责 | 监听的 IPC 端点 |
 |----------|------------|------|----------------|
-| `sched.` | `sched_d` | 调度守护：管理 Agent 调度策略 | `sched.ipc` |
-| `mem.` | `mem_d` | 内存守护：管理 Agent 内存配额和池化 | `mem.ipc` |
-| `cupolas.` | `cupolas_d` | 安全守护：Cupolas 权限引擎和沙箱管理 | `cupolas.ipc` |
-| `cog.` | `cog_d` | 认知守护：CoreLoopThree 认知循环 | `cog.ipc` |
-| `kernel.` | `kernel` | 内核：系统调用分发和内核态服务 | `kernel.ipc` |
-| `macro_d.` | `macro_d` | 记忆守护：多级记忆存储和模式挖掘 | `macro_d.ipc` |
+| `sched.` | `sched_d` | 调度守护：管理 Agent 调度策略（sched_tac 用户态策略） | `sched.ipc` |
+| `mem.` | `mem_d` | 记忆守护：MemoryRovol L1-L4 记忆卷载 | `mem.ipc` |
+| `sec.` | `sec_d` | 安全守护：Cupolas 权限引擎和沙箱管理 | `sec.ipc` |
+| `cogn.` | `cogn_d` | 认知守护：CoreLoopThree 认知循环 | `cogn.ipc` |
+| `macro.` | `macro_d` | 监管守护：Macro-Supervisor 温情裁决 | `macro.ipc` |
 | `gateway.` | `gateway_d` | 网关守护：HTTP/gRPC 入口和路由 | `gateway.ipc` |
-| `audit.` | `audit_d` | 监控守护：指标采集和 Prometheus 导出 | `audit.ipc` |
-| `logd.` | `logd_d` | 日志守护：结构化日志收集和轮转 | `logd.ipc` |
-| `netd.` | `netd_d` | 网络守护：Agent 网络策略和隔离 | `netd.ipc` |
-| `storaged.` | `storaged_d` | 存储守护：Agent 持久化存储管理 | `storaged.ipc` |
-| `marketd.` | `marketd_d` | 市场守护：插件市场和技能注册 | `marketd.ipc` |
+| `audit.` | `audit_d` | 审计守护：监控/指标/追踪/告警 | `audit.ipc` |
+| `logger.` | `logger_d` | 日志守护：结构化日志收集和轮转 | `logger.ipc` |
+| `net.` | `net_d` | 网络守护：网络策略（DPDK/AF_XDP） | `net.ipc` |
+| `vfs.` | `vfs_d` | VFS 守护：用户态文件系统服务 | `vfs.ipc` |
+| `config.` | `config_d` | 配置守护：配置管理 | `config.ipc` |
+| `dev.` | `dev_d` | 工具调用代理（注册/执行/验证，含设备驱动） | `dev.ipc` |
 
 #### 4.2 命名空间路由规则
 
@@ -1595,11 +1594,11 @@ agentrt-linux（AirymaxOS）集成 Linux 6.6 标准 41 个 capabilities（ID 0-4
 | 38 | `CAP_PERFMON` | 性能监控 | 中 |
 | 39 | `CAP_BPF` | BPF 操作 | 高 |
 | 40 | `CAP_CHECKPOINT_RESTORE` | 检查点/恢复 | 中 |
-| 41 | `CAP_AGENT_ADMIN` | **Agent 管理（Airymax 专属）** | 极高 |
-| 42 | `CAP_AGENT_SCHED` | **Agent 调度（Airymax 专属）** | 高 |
-| 43 | `CAP_AGENT_SANDBOX` | **Agent 沙箱管理（Airymax 专属）** | 高 |
+| 41 | `AIRY_CAP_AGENT_SPAWN` | **Agent 生成（Airymax 专属）** | 极高 |
+| 42 | `AIRY_CAP_GPU_SCHED` | **GPU 调度访问（Airymax 专属）** | 高 |
+| 43 | `AIRY_CAP_NPU_ACCESS` | **NPU 算力访问（Airymax 专属）** | 高 |
 
-> 注：ID 41-43 为 agentrt-linux（AirymaxOS）在 Linux 6.6 标准 41 个能力（ID 0-40）基础上新增的 Agent 专属能力，属于 [IND] 完全独立层。
+> 注：ID 41-43 为 agentrt-linux（AirymaxOS）在 Linux 6.6 标准 41 个能力（ID 0-40）基础上新增的 Airymax 专属能力（`AIRY_CAP_AGENT_SPAWN`/`AIRY_CAP_GPU_SCHED`/`AIRY_CAP_NPU_ACCESS`），权威定义见 [SC] `security_types.h` `enum airy_cap_id`。
 
 ---
 
@@ -1655,7 +1654,7 @@ typedef struct {
  *   0: 成功创建
  *   -AIRY_EINVAL: 参数无效
  *   -AIRY_ENOMEM: 资源不足
- *   -AIRY_EPERM: 权限不足（需要 CAP_AGENT_SANDBOX）
+ *   -AIRY_EPERM: 权限不足（需要 AIRY_CAP_NPU_ACCESS 等专属能力）
  */
 int airy_sandbox_create(const are_sandbox_config_t *config,
                            are_cap_t *sandbox_out);
@@ -1718,46 +1717,51 @@ agentrt-linux（AirymaxOS）使用统一的错误码体系，确保错误信息�
 
 #### 4.1 错误码分类
 
+> `AIRY_E*` 错误码为**正数幅值**（error.h SSoT，POSIX errno 风格），调用方返回 `-AIRY_E*`。分类按 [SC] `error.h` 子空间：
+
 | 类别 | 范围 | 描述 | 示例 |
 |------|------|------|------|
-| 通用基础错误 | -1 至 -99 | 跨子系统的通用基础错误 | `AIRY_EINVAL`(-22), `AIRY_EPERM`(-1), `AIRY_ENOMEM`(-12), `AIRY_ETIMEDOUT`(-110), `AIRY_EBUSY`(-16), `AIRY_EDEADLK`(-35), `AIRY_EINTR`(-4), `AIRY_ENOTSUP`(-95), `AIRY_EOVERFLOW`(-75), `AIRY_EFAULT`(-14) |
-| 系统与平台错误 | -100 至 -199 | 系统与平台相关错误 | `AIRY_ECOMM`(-100), `AIRY_EAUDIT_DISK_FULL`(-101) |
-| LLM/AI 错误 | -400 至 -499 | 认知处理相关错误 | `AIRY_ECOG_TIMEOUT`(-400) |
-| 安全/沙箱错误 | -700 至 -799 | 沙箱与能力管理相关错误 | `AIRY_ESANDBOX_FULL`(-700), `AIRY_ESANDBOX_ESC`(-701), `AIRY_ECAP_EXPIRED`(-702), `AIRY_ECAP_REVOKED`(-703) |
-| 协调/规划错误 | -800 至 -899 | 调度相关错误 | `AIRY_ESCHED_EXHAUSTED`(-800) |
+| 通用 POSIX 错误 | 1-40 | 跨子系统的通用基础错误 | `AIRY_EINVAL`(5), `AIRY_EPERM`(12), `AIRY_ENOMEM`(9), `AIRY_EBUSY`(16), `AIRY_EFAULT`(3), `AIRY_EAGAIN`(35) |
+| IPC 错误 | 41-70 | IPC 协议与传输错误 | `AIRY_EIPC_MAGIC`(41), `AIRY_EIPC_CRC32`(51) |
+| Capability 错误 | 71-100 | 能力与安全相关错误 | `AIRY_ECAP_MISSING`(71), `AIRY_ECAP_EXPIRED`(73), `AIRY_ECAP_REVOKED`(72) |
+| 配置/版本错误 | 101-120 | 配置与版本一致性 | `AIRY_ECFGVERSION`(101) |
+| 调度/生命周期错误 | 121-140 | 调度与生命周期相关 | `AIRY_ESCHED_POLICY`(121), `AIRY_ELIFECYCLE_STATE`(127) |
+| 记忆错误 | 141-160 | MemoryRovol 记忆卷载 | `AIRY_EMEM_TIER`(141) |
+| 认知错误 | 161-180 | CoreLoopThree 认知处理 | `AIRY_ECOG_TIMEOUT`(164) |
+| 日志/对象/系统调用错误 | 181-240 | A-ULP 日志 / 对象系统 / syscall | `AIRY_ELOG_RING`(181), `AIRY_ESYS_NUMBER`(221) |
+| 故障码 | 0x1000+ | 不可恢复故障（正数 __u32） | `AIRY_FAULT_CAP_FORGED`(0x1001) |
 
 #### 4.2 错误码定义规范
 
-> **SSoT 对齐说明**：以下错误码值已对齐方案 A（POSIX errno 负值），与 `120-cross-project-code-sharing.md` §2.4 唯一 SSoT 一致。原方案 B（-1/-2/-11 自定义序列）已废弃。
+> **SSoT 对齐说明**：错误码唯一权威为 [SC] `kernel/include/uapi/linux/airymax/error.h`——`AIRY_E*` 采用**正数幅值**（POSIX errno 风格），调用方通过 `return -AIRY_E*` 产生负值错误值。原方案 B（-1/-2/-11 自定义序列）与旧方案 A（POSIX errno 负值）均已废弃。
 
 ```c
 /**
- * 错误码定义规范（方案 A：POSIX errno 负值）
+ * 错误码定义规范（[SC] error.h：AIRY_E* 正数幅值）
  *
  * 1. 所有错误码使用 AIRY_E 前缀
- * 2. 错误码负值返回（对齐 POSIX errno 负值）
+ * 2. 常量为正数幅值，调用方返回 -AIRY_E*（负值返回）
  * 3. 错误码一旦定义即冻结，不可修改语义
  * 4. 新错误码只能追加，不可删除或重新编号
  * 5. 每个错误码必须在文档中清晰描述触发条件
  */
-#define AIRY_EINVAL            (-22)   /* 参数无效（对齐 POSIX EINVAL=22） */
-#define AIRY_EPERM             (-1)    /* 权限不足（对齐 POSIX EPERM=1） */
-#define AIRY_ENOMEM            (-12)   /* 内存不足（对齐 POSIX ENOMEM=12） */
-#define AIRY_ETIMEDOUT          (-110)  /* 操作超时（对齐 POSIX ETIMEDOUT=110） */
-#define AIRY_EBUSY             (-16)   /* 资源忙（对齐 POSIX EBUSY=16） */
-#define AIRY_EDEADLK           (-35)   /* 检测到死锁（对齐 POSIX EDEADLK=35） */
-#define AIRY_EINTR             (-4)   /* 被信号中断（对齐 POSIX EINTR=4） */
-#define AIRY_ENOTSUP           (-95)   /* 不支持的操作（对齐 POSIX ENOTSUP=95） */
-#define AIRY_EOVERFLOW         (-75)   /* 数值溢出（对齐 POSIX EOVERFLOW=75） */
-#define AIRY_EFAULT            (-14)   /* 地址错误（对齐 POSIX EFAULT=14） */
-#define AIRY_ECOMM             (-100)  /* 通信失败 */
-#define AIRY_EAUDIT_DISK_FULL  (-101)  /* 审计磁盘满 */
-#define AIRY_ECOG_TIMEOUT      (-400)  /* 认知处理超时 */
-#define AIRY_ESANDBOX_FULL     (-700)  /* 沙箱容量已满 */
-#define AIRY_ESANDBOX_ESC      (-701)  /* 沙箱逃逸尝试 */
-#define AIRY_ECAP_EXPIRED      (-702)  /* 能力已过期 */
-#define AIRY_ECAP_REVOKED      (-703)  /* 能力已被撤销 */
-#define AIRY_ESCHED_EXHAUSTED  (-800)  /* 调度资源耗尽 */
+#define AIRY_EOK              0     /* 成功 */
+#define AIRY_EFAULT           3     /* 地址错误 */
+#define AIRY_EINTR            4     /* 被信号中断 */
+#define AIRY_EINVAL           5     /* 参数无效 */
+#define AIRY_ENOENT           8     /* 资源不存在 */
+#define AIRY_ENOMEM           9     /* 内存不足 */
+#define AIRY_ENOTSUP          11    /* 不支持的操作 */
+#define AIRY_EPERM            12    /* 权限不足 */
+#define AIRY_EBUSY            16    /* 资源忙 */
+#define AIRY_ECANCELED        19    /* 操作取消/超时 */
+#define AIRY_EAGAIN           35    /* 暂时不可用 */
+#define AIRY_ECAP_MISSING     71    /* 能力缺失 */
+#define AIRY_ECAP_EXPIRED     73    /* 能力过期 */
+#define AIRY_ESCHED_POLICY    121   /* 调度策略非法 */
+/* 注：原负值扩展码（AIRY_ECOG_TIMEOUT(-400)/AIRY_ESANDBOX_*等）已废弃——
+ * 一律以 [SC] error.h 正数幅值为准（认知超时以 AIRY_ECOG_TIMEOUT=164，能力
+ * 过期/撤销以 AIRY_ECAP_EXPIRED=73/AIRY_ECAP_REVOKED=72 表示）。 */
 ```
 
 ---
@@ -2179,7 +2183,7 @@ agentrt-linux（AirymaxOS）在 seL4 基础上增加了：
 1. **能力生存时间（TTL）**：seL4 的能力无过期机制，agentrt-linux 支持 TTL，自动过期
 2. **能力审计链**：每次能力派生和撤销都记录到审计日志
 3. **五级沙箱模型**：seL4 只有进程隔离，agentrt-linux 提供五级隔离
-4. **Agent 专属能力**：`CAP_AGENT_ADMIN`、`CAP_AGENT_SCHED`、`CAP_AGENT_SANDBOX`
+4. **Agent 专属能力**：`AIRY_CAP_AGENT_SPAWN`、`AIRY_CAP_GPU_SCHED`、`AIRY_CAP_NPU_ACCESS`
 
 ---
 

@@ -69,7 +69,7 @@ flowchart LR
 
 - **分支命名**：`<type>/<scope>-<short-description>`，例如 `feat/sched-deadline-tuning`、`fix/ipc-uring-leak`、`docs/sc-header-bridge`。
 - **type 取值**：`feat`（新功能）/ `fix`（缺陷修复）/ `docs`（文档）/ `refactor`（重构）/ `test`（测试）/ `chore`（构建/工具）/ `sc`（[SC] 头文件变更，必须配合 `sc-dual-ci.yml`）。
-- **基线分支**：默认从 `main` 派生；若为稳定版回溯，从 `stable-vX.Y` 派生；若为 develop 集成测试，从 `develop` 派生。
+- **基线分支**：默认从 `main` 派生；若为稳定版回溯，从 `release/*` 派生；若为 develop 集成测试，从 `develop` 派生。
 - **OS-DEV-301**：分支名禁止使用 `master`、`HEAD`、纯数字、超过 80 字符的描述。
 
 ### 2.3 步骤 3：Commit
@@ -106,7 +106,7 @@ Signed-off-by: <作者> <邮箱>                # DCO 必填
 
 ### 2.6 步骤 5：PR 创建
 
-- **PR 目标分支**：默认 `main`；develop 集成测试 PR 目标为 `develop`；稳定版回溯 PR 目标为 `stable-vX.Y`。
+- **PR 目标分支**：默认 `main`；develop 集成测试 PR 目标为 `develop`；稳定版回溯 PR 目标为 `release/*`。
 - **PR 模板**：见第 3 节。
 - **标签自动添加**：根据 PR 标题前缀与变更路径由 `.github/labeler.yml` 自动打标签（`sc` / `lsm` / `ipc` / `sched` / `docs`）。
 

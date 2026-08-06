@@ -143,7 +143,7 @@ kfunc 支持参数注解以辅助验证器：`__sz` 标注缓冲区大小参数�
 
 **OS-OBS-013: agentrt-linux 自定义 kfunc 必须用 `__bpf_kfunc` 宏标注，并通过 `BTF_KFUNCS_START`/`BTF_KFUNCS_END` 注册；未注册的内核函数不得被 BPF 程序调用。**
 
-**OS-KER-109: kernel 必须注册 `bpf_agent_decision_get`、`bpf_agent_token_usage_get` 两个 kfunc，供 BPF 程序查询 Agent 决策与 Token 消耗。**
+**OS-KER-109: 规划注册 `bpf_agent_decision_get`、`bpf_agent_token_usage_get` 两个 kfunc（**当前 kernel 源码未注册，属规划**）；落地时供 BPF 程序查询 Agent 决策与 Token 消耗。**
 
 ### 4.3 kfunc 与 helper 区别
 
@@ -219,9 +219,9 @@ Linux 6.6 内核基线在 `include/uapi/linux/bpf.h` 定义了 30+ 种 BPF 程�
 | `BPF_PROG_TYPE_TRACEPOINT` | 内核 tracepoint | 静态埋点追踪 |
 | `BPF_PROG_TYPE_PERF_EVENT` | perf 事件 | 周期采样、CPU 剖析 |
 | `BPF_PROG_TYPE_RAW_TRACEPOINT` | 裸 tracepoint | 高性能、无参数过滤 |
-| `BPF_PROG_TYPE_STRUCT_OPS` | struct_ops 成员 | Cupolas 安全策略等子系统操作表回调（调度策略改用sched_tac 用户态函数表） |
+| `BPF_PROG_TYPE_STRUCT_OPS` | struct_ops 成员 | 子系统操作表回调（调度策略改用 sched_tac 用户态函数表；agentrt-linux 安全体系不使用 BPF struct_ops——纯 C LSM） |
 | `BPF_PROG_TYPE_TRACING` | fentry/fexit | 函数追踪（BTF 重定位） |
-| `BPF_PROG_TYPE_LSM` | LSM 钩子 | Cupolas 动态安全策略 |
+| `BPF_PROG_TYPE_LSM` | LSM 钩子 | 通用参考——**agentrt-linux 安全体系不使用 BPF LSM**（安全钩子采用纯 C LSM，见 [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)） |
 
 ```c
 /* 可观测性 BPF 程序示例（kprobe）*/
@@ -254,7 +254,7 @@ tracepoint 程序读取 tracepoint 参数需经 BTF 重定位；raw_tracepoint �
 
 ### 7.4 struct_ops 与 tracing 程序
 
-`BPF_PROG_TYPE_STRUCT_OPS` 程序作为子系统的操作表成员，通过 `BPF_MAP_TYPE_STRUCT_OPS` map 注册（用于 Cupolas 安全策略等非调度子系统）。agentrt-linux sched_tac 用户态调度器通过 `struct airy_sched_ops` 函数表注册（详见第 10 章），不走 BPF struct_ops 机制。`BPF_PROG_TYPE_TRACING` 程序通过 fentry/fexit 挂载到内核函数入口/出口，相比 kprobe 性能更高（无 int3 陷阱），但需 BTF 支持。
+`BPF_PROG_TYPE_STRUCT_OPS` 程序作为子系统的操作表成员，通过 `BPF_MAP_TYPE_STRUCT_OPS` map 注册（通用参考；**agentrt-linux 安全体系不使用 BPF struct_ops——安全钩子采用纯 C LSM**）。agentrt-linux sched_tac 用户态调度器通过 `struct airy_sched_ops` 函数表注册（详见第 10 章），不走 BPF struct_ops 机制。`BPF_PROG_TYPE_TRACING` 程序通过 fentry/fexit 挂载到内核函数入口/出口，相比 kprobe 性能更高（无 int3 陷阱），但需 BTF 支持。
 
 ---
 
@@ -358,7 +358,7 @@ graph TD
 
 ### 10.1 设计哲学
 
-sched_tac 不使用 BPF struct_ops 机制注册调度策略——标准 Linux 6.6 主线不包含 sched_ext（SCHED_EXT BPF 调度器框架于 Linux 6.12 才合入主线），agentrt-linux 锁定 Linux 6.6 内核基线（ADR-013），因此可插拔调度策略改用**用户态函数表**实现。agentrt-linux 通过 `struct airy_sched_ops` 函数表注册 sched_tac 用户态调度器；Cupolas 动态安全策略等非调度子系统仍可使用 BPF struct_ops 机制。
+sched_tac 不使用 BPF struct_ops 机制注册调度策略——标准 Linux 6.6 主线不包含 sched_ext（SCHED_EXT BPF 调度器框架于 Linux 6.12 才合入主线），agentrt-linux 锁定 Linux 6.6 内核基线（ADR-013），因此可插拔调度策略改用**用户态函数表**实现。agentrt-linux 通过 `struct airy_sched_ops` 函数表注册 sched_tac 用户态调度器；安全体系亦不使用 BPF struct_ops/BPF LSM——安全钩子采用纯 C LSM（见 [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)）。
 
 **核心设计哲学**：
 
@@ -447,7 +447,7 @@ stc_agent 沿用sched_tac 的软可靠性设计——用户态调度器失败/�
 
 ### 11.1 Token 能效监控
 
-agentrt-linux 通过 eBPF 实现 Token 能效监控：kprobe 挂载 Agent 决策入口，kretprobe 挂载出口，两者时间差为决策耗时；同时通过 `bpf_agent_token_usage_get` kfunc 读取 Token 消耗，计算能效比（token/秒）：
+agentrt-linux 规划通过 eBPF 实现 Token 能效监控：kprobe 挂载 Agent 决策入口，kretprobe 挂载出口，两者时间差为决策耗时；同时通过 `bpf_agent_token_usage_get` kfunc（**规划注册，见 OS-KER-109**）读取 Token 消耗，计算能效比（token/秒）：
 
 ```c
 /* Token 能效监控 BPF 程序 */
@@ -471,7 +471,7 @@ int trace_cognition_ret(struct pt_regs *ctx)
 
 **OS-OBS-019: Token 能效数据必须每 1 秒聚合一次通过 AgentsIPC 上报用户态仪表盘；聚合间隔不得小于 100ms 避免内核噪声。**
 
-**OS-KER-113: kernel 必须在 `/sys/kernel/agentrt/token_usage` 导出 per-Agent Token 累计值，与 BPF map 数据一致。**
+**OS-KER-113: kernel 必须在 `/sys/airy/token_usage` 导出 per-Agent Token 累计值，与 BPF map 数据一致。**
 
 ### 11.2 Agent 行为追踪
 
@@ -581,7 +581,7 @@ agentrt 的 `commons/metrics` 模块定义了 `airy_metrics_record(name, value)`
 | JIT 后端 | 不适用（用户态解释器/LLVM） | kernel x86_64/arm64 JIT |
 | trampoline 机制 | 不适用 | `arch_prepare_bpf_trampoline()` 本机码生成 |
 | verifier 实现 | 不适用 | 内核 verifier.c（21091 行） |
-| 自定义 kfunc | 不适用 | `bpf_agent_decision_get`、`bpf_agent_token_usage_get`、`bpf_agent_state_get` |
+| 自定义 kfunc | 不适用 | `bpf_agent_decision_get`、`bpf_agent_token_usage_get`、`bpf_agent_state_get`（**规划注册**，见 OS-KER-109） |
 | cfi_stubs | 不适用 | kCFI 桩函数表 |
 
 ### 13.5 跨态协作流

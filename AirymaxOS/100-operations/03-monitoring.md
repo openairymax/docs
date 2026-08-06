@@ -397,7 +397,7 @@ TSPoint {
 
 ### 7.1 阈值配置
 
-告警阈值通过 A-UCS（Unified Configuration Subsystem）模块 config_d 集中管理，配置文件位于 `/etc/airy/monitor/thresholds.yaml`：
+告警阈值通过 A-UCS（Unified Configuration Subsystem）模块 config_d 集中管理，配置文件位于 `/etc/agentrt/monitor/thresholds.yaml`：
 
 ```yaml
 thresholds:

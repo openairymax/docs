@@ -133,10 +133,12 @@ https://repo.airymaxos.dev/
 ├── airymaxos-sdk-python-1.0.1-1.noarch.rpm
 ├── airymaxos-sdk-go-1.0.1-1.noarch.rpm
 ├── airymaxos-sdk-rust-1.0.1-1.noarch.rpm
-├── airymaxos-sdk-java-1.0.1-1.noarch.rpm
+├── airymaxos-sdk-typescript-1.0.1-1.noarch.rpm
 ├── airymaxos-docs-1.0.1-1.noarch.rpm
 └── airymaxos-devel-1.0.1-1.x86_64.rpm
 ```
+
+> **包清单对齐**：SDK 组为 4 包（python / rust / go / typescript），与 [01-rpm-packaging.md §1.4](01-rpm-packaging.md) 一致；原文档中的 `airymaxos-sdk-java` 不在 SDK 清单内，已移除（Java SDK 未列入 v1.0.1 SDK 支持矩阵）。
 
 ### 3.2 SRPM 仓库结构
 

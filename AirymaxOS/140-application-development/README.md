@@ -19,7 +19,7 @@ Agent 应用是 AirymaxOS 上的运行时租户：通过多语言 SDK 调用系�
 1. **Agent 生命周期**：定义 Agent 8 态生命周期（INACTIVE → SPAWNING → READY → RUNNING → BLOCKED → STOPPING → STOPPED → DEAD）与系统能力 API。
 2. **多语言 SDK 集成**：Python / Rust / Go / TypeScript 四语言 SDK，16 个嵌套客户端（CognitionClient / SafetyClient / ToolClient / ChatClient）。
 3. **Token 预算契约**：令牌桶算法 + 三级阈值 + 调度集成 token_factor。
-4. **MemoryRovol API**：10 个系统调用（552-561）+ 快照 7 状态生命周期 + 8 步迁移协议。
+4. **MemoryRovol API**：`airy_sys_rovol_ctl`（549）op-dispatch 10 操作（552-571 全部为预留槽位）+ 快照 7 状态生命周期 + 8 步迁移协议。
 5. **认知 API**：CoreLoopThree 三阶段 + Thinkdual 模式 + 系统调用编号注册表（SSoT）。
 
 ---
@@ -51,7 +51,7 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 ├── 02-sdk-integration.md          # 四语言 SDK 集成设计 + IRON-9 v3 层次（v1.0）
 ├── 03-agent-orchestration.md      # 多 Agent 协作模型 + DAG 工作流 + TaskFlow 引擎（v1.0）
 ├── 04-token-budget.md             # Token 预算契约 + 令牌桶 + 三级阈值（v1.0）
-├── 05-memory-rovol-api.md         # MemoryRovol API（10 系统调用 552-561 + 快照迁移）（v1.0）
+├── 05-memory-rovol-api.md         # MemoryRovol API（549 op-dispatch 10 操作 + 快照迁移）（v1.0）
 ├── 06-agent-deployment.md         # Agent 部署与运行契约（.agentpkg/OCI + 四重沙箱）（v1.0）
 └── 07-syscall-registry.md         # Agent 系统调用编号注册表 SSoT（v1.0）
 ```
@@ -65,9 +65,9 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 | 02-sdk-integration.md | SDK 怎么集成？ | 四语言 SDK + 16 嵌套客户端 + IRON-9 v3 [SC]/[SS] 层次 |
 | 03-agent-orchestration.md | 多 Agent 怎么协作？ | DAG 工作流 + TaskFlow 引擎 + 编排模型 |
 | 04-token-budget.md | Token 怎么管？ | 令牌桶算法 + 三级阈值 + 调度 token_factor 集成 |
-| 05-memory-rovol-api.md | 记忆怎么读写？ | 10 系统调用契约 + 快照 7 状态 + 8 步迁移 + CXL 分层 |
-| 06-agent-deployment.md | Agent 怎么部署？ | .agentpkg/OCI/RPM + 9 状态部署状态机 + 四重沙箱 |
-| 07-syscall-registry.md | 编号怎么分配？ | 系统调用编号 SSoT 注册表 + 31 编号 + UAPI 模板 |
+| 05-memory-rovol-api.md | 记忆怎么读写？ | `airy_sys_rovol_ctl` (549) 10 op 契约 + 快照 7 状态 + 8 步迁移 + CXL 分层 |
+| 06-agent-deployment.md | Agent 怎么部署？ | .agentpkg/OCI/RPM + 13 状态部署状态机 + 四重沙箱 |
+| 07-syscall-registry.md | 编号怎么分配？ | 系统调用编号 SSoT 注册表 + 24 槽位（4 核心 + 20 预留） + UAPI 模板 |
 
 ### 3.2 应用开发分层
 
@@ -105,7 +105,7 @@ Airymax Unify Design 五模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）在 Agent 应�
 | **A-UEF** | Unified Error and Fault Framework | **核心**：错误码 API（`AIRY_E*` 负数空间 + `AIRY_FAULT_*` 正数空间）、认知 API（CoreLoopThree 三阶段） | `airy_strerror()` / CognitionClient / `AIRY_SYS_CLT_PHASE_NOTIFY` |
 | **A-UCS** | Unified Configuration Subsystem | 配置 API：sysctl/JSON 双向同步、agent.yaml 清单、Token 预算配置热重载 | `airy_config_get()` / agent.yaml Schema |
 | **A-ULS** | Unified Lifecycle Supervision Framework | Agent 8 态生命周期 API、Capability 申请/撤销、四重沙箱（cgroup v2 + Landlock + seccomp + capability） | `AIRY_SYS_AGENT_SPAWN` / SafetyClient |
-| **A-ULP** | Unified Logging and Printk Subsystem | Agent 日志 API、MemoryRovol 记忆卷载持久化 API（10 系统调用） | `airy_log_emit()` / MemoryRovol API（552-561） |
+| **A-ULP** | Unified Logging and Printk Subsystem | Agent 日志 API、MemoryRovol 记忆卷载持久化 API（`airy_sys_rovol_ctl` 549 op-dispatch） | `airy_log_emit()` / MemoryRovol API（549） |
 
 ### 4.1 A-IPC SDK IPC 接口
 

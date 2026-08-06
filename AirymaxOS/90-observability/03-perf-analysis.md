@@ -143,9 +143,10 @@ perf record -F 99 -g --call-graph dwarf \
 # TUI 交互式报告
 perf report --sort overhead,symbol,dso --stdio
 
-# 按 Agent 分类（需要符号表包含 agent_id）
+# 按 Agent 分类（需要符号表包含 agent_id；airy 为内建 LSM，无 agentrt.ko 可过滤，
+# 直接用 --comms 按 Agent 进程过滤）
 perf report --sort overhead,symbol,dso,symbol_precedence \
-    --dsos=agentrt.ko --comms=agent_42
+    --comms=agent_42
 ```
 
 ### 3.3 perf report 热点归因
@@ -155,15 +156,15 @@ agentrt-linux 的 perf report 输出典型热点分布如下（基线测试数�
 | 排名 | 函数 | 模块 | 开销占比 | 说明 |
 |------|------|------|---------|------|
 | 1 | `io_uring_cmd_submit` | io_uring.ko | 12.3% | IPC fastpath 入口 |
-| 2 | `airy_cognition_process` | agentrt.ko | 9.8% | Agent 认知循环 |
+| 2 | `airy_cognition_process` | kernel（内建） | 9.8% | Agent 认知循环 |
 | 3 | `pick_next_task_fair` | kernel | 7.2% | EEVDF 调度类选择 |
 | 4 | `__schedule` | kernel | 6.5% | 主调度器入口 |
-| 5 | `airy_ring_buffer_write` | agentrt.ko | 5.1% | A-ULP 日志写入 |
+| 5 | `airy_ring_buffer_write` | kernel（内建） | 5.1% | A-ULP 日志写入 |
 | 6 | `remap_pfn_range` | kernel | 4.3% | mmap 映射建立 |
 | 7 | `alloc_pages_current` | kernel | 3.8% | 物理页分配 |
-| 8 | `airy_lsm_cap_check` | airy_lsm.ko | 3.2% | 纯 C LSM 钩子 |
+| 8 | `airy_uring_cmd_check`（5-phase slowpath：phase1_ring_frozen → phase2_cap_request → phase3_dsl_degradation → phase4_fastpath_recheck → phase5_slowpath_enforce） | kernel（内建 LSM，无 airy_lsm.ko） | 3.2% | slowpath Capability 校验（fastpath C-S9 `airy_cap_badge_ok` 内联，不在此表） |
 
-**OS-OBS-033: perf report 热点列表前 20 项中，agentrt.ko 与 airy_lsm.ko 合计不得超过 35%；超限视为可观测性开销过大，需审查 tracepoint 密度。**
+**OS-OBS-033: perf report 热点列表前 20 项中，agentrt-linux 内核态 Airy 模块（内建 LSM + corekern，无 agentrt.ko / airy_lsm.ko 可加载模块）合计不得超过 35%；超限视为可观测性开销过大，需审查 tracepoint 密度。**
 
 ---
 
@@ -323,9 +324,9 @@ perf report 在 IPC fastpath 中的典型热点：
 |------|------|---------|------|
 | `io_uring_cmd_submit` | io_uring.ko | 35% | 命令提交入口 |
 | `copy_from_user` | kernel | 22% | 用户态参数拷贝 |
-| `airy_ipc_ring_write` | agentrt.ko | 18% | ring buffer 写入 |
+| `airy_ipc_ring_write` | kernel（内建） | 18% | ring buffer 写入 |
 | `io_uring_cq_advance` | io_uring.ko | 12% | 完成队列推进 |
-| `airy_lsm_ipc_check` | airy_lsm.ko | 8% | IPC capability 校验 |
+| `airy_uring_cmd_check`（phase4_fastpath_recheck） | kernel（内建 LSM，无 airy_lsm.ko） | 8% | slowpath IPC capability 校验（phase* 系列） |
 
 注意：因不使用 page flipping，`copy_from_user` 仍是必要开销；agentrt-linux 通过 SQE 批处理摊薄此开销。
 

@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[80-testing README](README.md)\
 > **同源映射**：agentrt 7 层验证 L5（静态分析）+ Linux 6.6 内核基线 `scripts/sparse/`、`scripts/coccinelle/`、`scripts/checkpatch.pl`\
 > **理论根基**：Linux 6.6 内核基线静态分析思想 + Airymax 五维正交 24 原则（E-8 可测试性 / S-1 反馈闭环 / A-4 完美主义）\
-> **核心约束**：IRON-9 v3 [SC] 共享契约层——`check-uapi-compiler-agnostic.sh` 强制校验 10 个 [SC] 头文件编译器无关性，禁止使用 GCC/Clang 专属扩展。
+> **核心约束**：IRON-9 v3 [SC] 共享契约层——`check-uapi-compiler-agnostic.sh` 强制校验 12 个 [SC] 头文件编译器无关性，禁止使用 GCC/Clang 专属扩展。
 
 ---
 
@@ -71,7 +71,7 @@ flowchart TB
     end
     B4 -.->|扩展| D
     B1 -.->|规则注入| F
-    A -.->|10 个 [SC] 头文件| E
+    A -.->|12 个 [SC] 头文件| E
     D --> C
     E --> C
     F --> C
@@ -375,7 +375,10 @@ jobs:
       - name: Build with cov-build
         run: |
           export PATH=$PWD/cov-analysis-linux64/bin:$PATH
-          cov-build --dir cov-int make ARCH=um defconfig airy_defconfig
+          # UML 无 airy_defconfig 变体：defconfig + merge_config 叠加 x86 airy_defconfig
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           cov-build --dir cov-int make ARCH=um -j$(nproc)
       - name: Submit to Coverity Scan
         run: |
@@ -471,23 +474,24 @@ sub airy_check {
 
 ### 8.1 检查目标
 
-IRON-9 v3 [SC] 共享契约层的 10 个头文件（`error.h` / `log_types.h` / `sched.h` / `ipc.h` / `capability.h` / `lsm.h` / `mem.h` / `agent.h` / `dsl.h` / `version.h`）必须**编译器无关**——即用 GCC、Clang、TinyCC（TCC）等任意 C 编译器均能编译通过，且语义一致。这保证 [SC] 头文件可在 agentrt（用户态）与 agentrt-linux（内核态）之间无障碍共享。
+IRON-9 v3 [SC] 共享契约层的 12 个头文件（`error.h` / `log_types.h` / `ipc.h` / `sched.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `syscalls.h` / `syscall.h` / `uapi_compat.h` / `lsm_types.h` / `bpf_struct_ops.h`）必须**编译器无关**——即用 GCC、Clang、TinyCC（TCC）等任意 C 编译器均能编译通过，且语义一致。这保证 [SC] 头文件可在 agentrt（用户态）与 agentrt-linux（内核态）之间无障碍共享。
 
 ### 8.2 `check-uapi-compiler-agnostic.sh` 脚本
 
 ```bash
 #!/bin/bash
 # scripts/check-uapi-compiler-agnostic.sh
-# 校验 10 个 [SC] 头文件的编译器无关性
+# 校验 12 个 [SC] 头文件的编译器无关性
 
 set -euo pipefail
 
 SC_HEADERS=(
-    "error.h" "log_types.h" "sched.h" "ipc.h" "capability.h"
-    "lsm.h" "mem.h" "agent.h" "dsl.h" "version.h"
+    "error.h" "log_types.h" "ipc.h" "sched.h" "memory_types.h"
+    "security_types.h" "cognition_types.h" "syscalls.h" "syscall.h"
+    "uapi_compat.h" "lsm_types.h" "bpf_struct_ops.h"
 )
 
-SC_DIR="include/uapi/airymax"
+SC_DIR="include/uapi/linux/airymax"
 
 # 使用的编译器列表
 COMPILERS=("gcc" "clang" "tcc")
@@ -496,7 +500,7 @@ COMPILERS=("gcc" "clang" "tcc")
 STANDARDS=("c89" "c99" "c11" "c17")
 
 # 使用的架构列表
-ARCHS=("x86_64" "aarch64" "riscv64")
+ARCHS=("x86_64" "arm64" "riscv" "loongarch")
 
 failures=0
 
@@ -579,9 +583,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run checkpatch.pl + airy_checkpatch_ext.pl
         run: |
-          # 对每个 .patch 文件运行 checkpatch
+          # 对每个 .patch 文件运行 checkpatch（失败即阻断，对齐 ci-kernel.yml）
           for patch in $(git format-patch -1 HEAD); do
-            scripts/checkpatch.pl --strict --no-tree -f "$patch" || true
+            scripts/checkpatch.pl --strict --no-tree -f "$patch" || exit 1
           done
           # 对 kernel/airymaxos/ 源文件运行 airy_checkpatch_ext
           scripts/airy_checkpatch_ext.pl kernel/airymaxos/ include/uapi/linux/airymax/
@@ -594,7 +598,10 @@ jobs:
         run: sudo apt-get install -y sparse
       - name: Build with Sparse
         run: |
-          make ARCH=um defconfig airy_defconfig
+          # UML 无 airy_defconfig 变体：defconfig + merge_config 叠加 x86 airy_defconfig
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           make ARCH=um C=2 CHECK=sparse \
             CF="-Wbitwise -Wcontext -Wdecl -Wno-transparent-union" \
             -j$(nproc) 2>&1 | tee sparse.log
@@ -646,7 +653,10 @@ jobs:
           cd /tmp/smatch && make && sudo make install
       - name: Run Smatch
         run: |
-          make ARCH=um defconfig airy_defconfig
+          # UML 无 airy_defconfig 变体：defconfig + merge_config 叠加 x86 airy_defconfig
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           make ARCH=um CHECK=smatch C=1 -j$(nproc) 2>&1 | tee smatch.log
       - name: Parse Smatch reports
         run: |
@@ -704,8 +714,8 @@ CI 必须同时启用两者，静态分析阻断 PR，动态分析阻断 nightly
 ### 11.3 后续版本规划
 
 - v1.0.1：新增 `airy_sparse_rules` 5 项规则，覆盖 IPC Ring 锁序、Token 预算原子性。
-- v1.2：将 `check-uapi-compiler-agnostic.sh` 扩展至 5 编译器 × 5 标准 × 5 架构 = 125 组合。
-- v1.3：与 10-formal-verification 联动，将形式化验证的属性检查集成至静态分析阶段。
+- 下一版本：将 `check-uapi-compiler-agnostic.sh` 扩展至 5 编译器 × 5 标准 × 5 架构 = 125 组合。
+- 后续版本：与 10-formal-verification 联动，将形式化验证的属性检查集成至静态分析阶段。
 
 ---
 

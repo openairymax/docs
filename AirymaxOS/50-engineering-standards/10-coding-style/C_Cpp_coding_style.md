@@ -13,6 +13,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ### 0. SSoT 对齐声明与编号映射
 
 > **本节为 SSoT 对齐声明**。本文件 §2（格式规则）的历史编号与 SSoT 文件 `01-coding-standards.md Part II` 存在冲突。为消除编号歧义，下表给出权威映射；§2 正文中的历史编号仅作导航参考，**规则效力以 01-coding-standards.md Part II 为准**。
+>
+> **历史编号注（以 09 为准）**：本文件引用的历史编号 OS-KER-011/012/014/015 等为迁移前编号，其在本文件中的原定义（Tab-8 / 80 列 / 零警告门禁 / 禁 BUG()）与 09-ssot-registry.md §3 的废弃登记（空格规则 / 指针对齐 / typedef 规则等）存在出入——历史编号一律以 09-ssot-registry.md 登记为准，本文件正文采用迁移后的 OS-STD-FMT-NNN / OS-BAN-NNN 编号。
 
 #### 0.1 格式规则映射（SSoT = 01-coding-standards.md Part II）
 
@@ -384,6 +386,8 @@ include 顺序固定：系统头 → 架构头 → 本地头 → `#define CREATE
 #### 6.5 编译期断言与函数属性（OS-KER-229）
 
 > **OS-KER-229**：agentrt-linux 内核态代码必须充分利用编译期断言（`BUILD_BUG_ON()` / `static_assert` / `_Static_assert`）将不变式检测前移到编译阶段；对不会返回的函数（`halt`、`panic` 等致命路径）必须标注 `__noreturn` 属性，使编译器能进行更激进的优化与控制流分析。此规则源于 agentrt-linux 内核工程对"编译期可检测的缺陷不应延迟到运行期"原则的落实。
+>
+> **落地状态（诚实声明）**：本条为**文档承诺**，当前源码零落地（[SC] 头文件 `_Static_assert` 属 OS-IRON-016 既有实践，非本规则实施成果）；列为 E1 改进项，计划 M2 阶段实施（内核态代码编译期断言全面铺开 + `__noreturn` 审计）。
 
 **编译期断言使用场景**：
 
@@ -847,18 +851,16 @@ ssize_t airy_agent_work_log_read(struct airy_agent_ctx *ctx,
 
 agentrt-linux（AirymaxOS）内核态错误码对齐 agentrt 错误码体系（[SS] 语义同源层），使用 `AIRY_E*` 前缀。
 
-> **SSoT 声明**：错误码单一数据源（SSoT）为方案 A（POSIX errno 负值），权威定义见 `120-cross-project-code-sharing.md`。本文件内核态使用 `(-EAGAIN)`、`(-EINVAL)` 等 Linux 内核宏负值形式，与方案 A 的 `AIRY_EAGAIN=(-11)`、`AIRY_EINVAL=(-22)` 等数值完全一致（`-EAGAIN == -11 == AIRY_EAGAIN`）。
+> **SSoT 声明**：错误码单一数据源（SSoT）为 [SC] `kernel/include/uapi/linux/airymax/error.h`（A-UEF）。`AIRY_E*` 常量采用**正数幅值**（POSIX errno 风格，如 `AIRY_EINVAL=5`、`AIRY_ENOMEM=9`），调用方通过 `return -AIRY_E*` 产生负值错误值。内核态可继续使用 Linux 原生 `-EINVAL` 等负值宏，但若返回 `AIRY_E*` 体系，必须以 error.h 登记值为准（数值与 Linux errno 不同，如 `AIRY_EINVAL=5` vs Linux `EINVAL=22`）。
 
 ```c
-/* [SS] 语义同源层：错误码体系（方案 A POSIX errno 负值，error.h SSoT 与内核态映射一致） */
+/* [SS] 语义同源层：错误码体系（error.h SSoT：AIRY_E* 正数幅值，POSIX errno 风格；调用方返回 -AIRY_E*） */
 #define AIRY_EOK              0
-#define AIRY_EAGAIN          (-EAGAIN)   /* == AIRY_EAGAIN (-11) */
-#define AIRY_ENOMEM          (-ENOMEM)   /* == AIRY_ENOMEM  (-12) */
-#define AIRY_EINVAL          (-EINVAL)   /* == AIRY_EINVAL  (-22) */
-#define AIRY_EMSGSIZE        (-EMSGSIZE) /* == AIRY_EMSGSIZE (-90) */
-#define AIRY_ETIMEDOUT       (-ETIMEDOUT) /* == AIRY_ETIMEDOUT (-110) */
-#define AIRY_EBUSY           (-EBUSY)    /* == AIRY_EBUSY   (-16) */
-#define AIRY_ENOENT          (-ENOENT)   /* == AIRY_ENOENT  (-2)  */
+#define AIRY_EINVAL           5     /* Invalid argument */
+#define AIRY_ENOENT           8     /* No such file or directory */
+#define AIRY_ENOMEM           9     /* Out of memory */
+#define AIRY_EBUSY            16    /* Device or resource busy */
+#define AIRY_EAGAIN           35    /* Try again */
 ```
 
 #### 7.6 错误处理流程总览
@@ -2948,7 +2950,7 @@ inline void secure_memset(void* ptr, uint8_t value, size_t size) {
 
 #### 8.1 错误码定义
 
-> **SSoT 说明**：以下为模块级错误码枚举示例（-1000~-999 段），**非 C 内核错误码 SSoT**。C 内核首要错误码体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`、`AIRY_ETIMEDOUT=-110`），权威定义见 `agentrt/commons/include/airy_types.h` + `agentrt/commons/utils/error/include/error.h`（详见 `120-cross-project-code-sharing.md` §2.4）。以下枚举仅用于演示模块级错误码命名规范。
+> **SSoT 说明**：以下为模块级错误码枚举示例（-1000~-999 段），**非 C 内核错误码 SSoT**。C 内核首要错误码体系以 [SC] `error.h` 为唯一权威——`AIRY_E*` 采用**正数幅值**（POSIX errno 风格，如 `AIRY_EINVAL=5`、`AIRY_ENOMEM=9`），调用方返回 `-AIRY_E*`。以下枚举仅用于演示模块级错误码命名规范。
 
 ```cpp
 // 错误码命名：模块名_E描述（模块级错误码示例，非 C 内核 SSoT）
@@ -3799,8 +3801,8 @@ private:
 
 | 规范集 | 说明 | 来源文档 |
 |--------|------|---------|
-| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | [C编码规范 §18](./C_Cpp_coding_style.md) |
-| **CROSS-01~06** | 6 项跨平台编译规则 | [C编码规范 §17](./C_Cpp_coding_style.md) |
+| **BAN-01~13** | 13 项禁止模式（桩函数/假数据/空返回等） | agentrt 工程标准规范手册（闭源）§4.4 等；编号区间与 09 §14.2 BAN-001~361 不一致，**待 SSoT 登记** |
+| **CROSS-01~06** | 6 项跨平台编译规则 | 09 §14.14 已登记（权威定义：agentrt 工程标准规范手册 §4.6，闭源） |
 | **SDK-01~05** | 4 SDK 编译验证规范 | 工程规范化标准手册 v10.5 |
 | **标准术语** | 8 个架构组件标准名称 | [90-terminology.md](../90-terminology.md) |
 

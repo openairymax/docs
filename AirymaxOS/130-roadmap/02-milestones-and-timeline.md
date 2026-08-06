@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 1. 里程碑总览
 
-agentrt-linux 开发方案拆分为 9 个里程碑（M0-M8），对应 9 个 Part。P0 包含 M0-M6（60-90 天），P1 包含 M7-M8（30-45 天），总计约 120 天。
+agentrt-linux 开发方案拆分为 9 个里程碑（M0-M8），对应 9 个 Part。P0 包含 M0-M6（60-90 天），P1 包含 M7-M8（30-45 天），总计约 126 天。
 
 | 里程碑 | 名称 | 对应 Part | 工期 | 完成标准 |
 |--------|------|-----------|------|---------|
@@ -291,7 +291,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 | 维度 | 设计 |
 |------|------|
 | 阶段划分 | (1) **early lockdown**（boot 阶段）：`early_security_init()` 中由 `DEFINE_EARLY_LSM(airy_lockdown)` 注册，禁止 `/dev/mem`、`kexec_load`、`bpf()` 非特权调用、模块签名未通过的 `init_module`，对齐 Linux lockdown `integrity` 模式<br>(2) **late lockdown**（Macro-Supervisor 就绪后）：Macro-Supervisor 通过 `airy_sys_admin(AIRY_ADMIN_LOCKDOWN_LATE)` 触发，追加禁止 `ptrace` 跨 Agent 附加、`userfaultfd` 非特权注册、`/sys/kernel/debug/airy/cbs` 写入、未签名 Agent 二进制 `execve`<br>(3) **full lockdown**（配置冻结后）：`AIRY_ADMIN_LOCKDOWN_FULL` 触发，所有 `airy_sys_admin` 写接口、`sched_setattr` 跨 Agent 修改、`airy_sys_rovol_ctl` 的 TIER_SET/MGLRU_CONFIG 全部转只读 |
-| 接口收敛机制 | `airy_lockdown_state`（atomic_t，0=none/1=early/2=late/3=full），每个可写内核接口入口检查 `airy_lockdown_gate(level)`——当前 lockdown 等级 ≥ 接口要求等级时返回 `-AIRY_ELOCKDOWN`（-90） |
+| 接口收敛机制 | `airy_lockdown_state`（atomic_t，0=none/1=early/2=late/3=full），每个可写内核接口入口检查 `airy_lockdown_gate(level)`——当前 lockdown 等级 ≥ 接口要求等级时返回 `-AIRY_ELOCKDOWN`（`AIRY_ELOCKDOWN` 为**规划错误码**，[SC] error.h 当前未定义，待 lockdown 落地时新增注册） |
 | 与 airy_lsm 联动 | lockdown 检查在 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.3 `airy_uring_cmd_check()` 钩子中作为 Phase 0 前置：lockdown 等级不满足时直接返回 `-AIRY_ELOCKDOWN`，不进入 fastpath C-S9 Badge 校验，不触发 Fault（区分"策略拒绝"与"安全违规"） |
 | 与 Linux lockdown 的关系 | AirymaxOS lockdown 是 Linux 6.6 内置 lockdown LSM 的扩展：Linux lockdown 仅覆盖 integrity/confidentiality 两阶段内核接口，AirymaxOS lockdown 追加 Airymax 专属接口（`airy_sys_admin` / `airy_sys_rovol_ctl` / `sched_setattr` 跨 Agent）的收敛，两者并存且不冲突 |
 | 关键数据结构 | `struct airy_lockdown_rule { const char *interface; u8 required_level; u32 flags; }`——静态规则表 `airy_lockdown_rules[]`，编译期生成，运行时只读 |
@@ -308,7 +308,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 **验收标准**：
 
 - early lockdown 在 `early_security_init()` 完成前生效，`/dev/mem` 打开返回 `-EPERM`
-- late lockdown 触发后 ≤ 1ms 内所有 late 阶段接口返回 `-AIRY_ELOCKDOWN`
+- late lockdown 触发后 ≤ 1ms 内所有 late 阶段接口返回 `-AIRY_ELOCKDOWN`（规划错误码，待 [SC] 新增）
 - lockdown 等级单调递增（不可降级），杜绝运行时放松约束的攻击面
 - lockdown 拒绝路径不触发 `airy_fault_enforce()`（区分策略拒绝与安全违规）
 - 与既有 Linux lockdown LSM 共存，无语义冲突
@@ -354,7 +354,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 | 回收时序 | (1) 用户调用 `DELETE` → capability 节点标记 `REVOKING`<br>(2) IPC ring 取消：调用 `airy_ipc_cancel_badged_sends(snapshot_cap_badge)` 取消所有使用该 badge 的在途 IPC（对齐 [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) §6.4 `cancelBadgedSends`）<br>(3) PMEM/CXL 内存回收（异步，分块 + preemption point）<br>(4) capability 节点从 MDB 树摘除，状态 `DELETED`<br>(5) 通知 Macro-Supervisor（eventfd_signal）|
 | 与 IPC ring 取消协同 | DELETE/MIGRATE 操作前必须等待该 Agent 的 IPC ring 中所有引用目标 snapshot badge 的在途消息完成或取消。`airy_ipc_cancel_badged_sends()` 遍历 ring，对匹配 badge 的 SQE 设置 `AIRY_EIPC_FROZEN` (-53)，CQE 携带 `-EINTR` 通知提交方。对齐 `AIRY_EIPC_FROZEN` 唯一值 -53（不与 `AIRY_EIPC_FLAGS` -46 别名，IRON-9）|
 | 关键数据结构 | `struct airy_rovol_snapshot { u64 snapshot_id; u32 agent_id; u8 state; u8 layer_mask; u8 flags; struct airy_cap_node *cap_node; struct list_head migrate_list; atomic64_t refcount; }`——per-agent 红黑树按 `snapshot_id` 排序，`airy_rovol_lock` 读写锁保护（读操作 LIST/TIER_GET 共享锁，写操作 SNAPSHOT/RESTORE/MIGRATE/DELETE 排他锁） |
-| [DSL] 降级 | `AIRY_SC_FALLBACK` 下 MemoryRovol 退化为仅 SNAPSHOT/RESTORE/DELETE 三操作（fork+COW + mmap + 同步删除），MIGRATE/TIER_SET/MGLRU_CONFIG/DEMOTE/PROMOTE 返回 `-AIRY_ENOSYS`，保证最小可用 |
+| [DSL] 降级 | `AIRY_SC_FALLBACK` 下 MemoryRovol 退化为仅 SNAPSHOT/RESTORE/DELETE 三操作（fork+COW + mmap + 同步删除），MIGRATE/TIER_SET/MGLRU_CONFIG/DEMOTE/PROMOTE 返回 `-ENOSYS`（内核标准 errno，[SC] error.h 未定义 `AIRY_ENOSYS` 宏，直接使用 Linux `ENOSYS`） |
 
 **交付物**：
 
@@ -375,8 +375,8 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 - restore（RESTORE）首次恢复 ≤ 100ms，冷页访问 ≤ 5ms（userfaultfd 缺页）
 - capability 级联撤销：DELETE 一个有 N 个子派生 capability 的快照时，所有子 capability 在 ≤ 10µs 内全部撤销
 - IPC ring 取消协同：DELETE/MIGRATE 触发 `airy_ipc_cancel_badged_sends()` 后，所有在途匹配 badge 的 IPC 在 ≤ 100µs 内完成取消（CQE 返回 `-EINTR`）
-- DSL 降级下仅 SNAPSHOT/RESTORE/DELETE 可用，其余 op 返回 `-AIRY_ENOSYS`
-- 与 CBS 准入（§3.3.1）/ lockdown（§3.5.1）协同：full lockdown 后 TIER_SET/MGLRU_CONFIG 返回 `-AIRY_ELOCKDOWN`，但 SNAPSHOT/RESTORE/DELETE 不受影响
+- DSL 降级下仅 SNAPSHOT/RESTORE/DELETE 可用，其余 op 返回 `-ENOSYS`（内核标准 errno）
+- 与 CBS 准入（§3.3.1）/ lockdown（§3.5.1）协同：full lockdown 后 TIER_SET/MGLRU_CONFIG 返回 `-AIRY_ELOCKDOWN`（规划错误码，待 [SC] 新增），但 SNAPSHOT/RESTORE/DELETE 不受影响
 
 **与既有 airy 模块依赖**：
 
@@ -388,7 +388,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 - Lockdown 策略（§3.5.1）——full lockdown 下写操作收敛
 - Linux 6.6 `mm/vmscan.c`（MGLRU aging/eviction）+ `mm/userfaultfd.c`（缺页迁移）+ `mm/memory-tiers.c`（CXL 分层）
 
-### 3.7 Day 85-91: M6 路线图（依赖 M0-M5）
+### 3.7 Day 78-84: M6 路线图（依赖 M0-M5）
 
 | 维度 | 内容 |
 |------|------|
@@ -399,8 +399,8 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 | **关键产出** | 7 文档 + Gantt 图 + 关键路径 + 验收标准 |
 
 **子任务**:
-- Day 85-87: README + 01 开发策略 + 02 里程碑与时间线（本文件）
-- Day 88-91: 03 资源估算 + 04 依赖图 + 05 风险缓解 + 06 验收标准
+- Day 78-80: README + 01 开发策略 + 02 里程碑与时间线（本文件）
+- Day 81-84: 03 资源估算 + 04 依赖图 + 05 风险缓解 + 06 验收标准
 
 **验收标准**: 7 文档完成 + Gantt 图 + 关键路径图 + M0-M8 验收标准全部定义 + 与 agentrt 协同时序明确。
 
@@ -410,24 +410,24 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 
 P1 阶段覆盖 M7-M8，净工期 35 天（5 周），在 P0 完成后启动。
 
-### 4.1 Day 92-112: M7 应用生态与云原生（依赖 M2-M5）
+### 4.1 Day 85-105: M7 应用生态与云原生（依赖 M2-M5）
 
 | 维度 | 内容 |
 |------|------|
 | **范围** | `140-application-development/` 9 文档 + `150-cloudnative/` 8 文档 |
 | **依赖** | M2（测试）+ M3（可观测）+ M4（安全）+ M5（治理） |
 | **工时** | 200h |
-| **并行** | 与 M8 部分并行（M8 Day 113 起） |
+| **并行** | 与 M8 部分并行（M8 Day 106 起） |
 | **关键产出** | 17 文档 + 应用开发 SDK + 云原生部署 |
 
 **子任务**:
-- Day 92-98: `140-application-development/` 应用开发 SDK（与 agentrt SDK 同源，4 语言）
-- Day 99-105: `150-cloudnative/` K8s + containerd + OCI 集成
-- Day 106-112: agentctl 命令行工具 + 超节点 OS 集成
+- Day 85-91: `140-application-development/` 应用开发 SDK（与 agentrt SDK 同源，4 语言）
+- Day 92-98: `150-cloudnative/` K8s + containerd + OCI 集成
+- Day 99-105: agentctl 命令行工具 + 超节点 OS 集成
 
 **验收标准**: 17 文档完成 + 应用开发 SDK 4 语言（Python/Rust/Go/TS）+ 与 agentrt SDK 同源映射 + 云原生部署方案就位。
 
-### 4.2 Day 113-126: M8 兼容性与性能工程（依赖 M2-M5）
+### 4.2 Day 106-119: M8 兼容性与性能工程（依赖 M2-M5）
 
 | 维度 | 内容 |
 |------|------|
@@ -438,8 +438,8 @@ P1 阶段覆盖 M7-M8，净工期 35 天（5 周），在 P0 完成后启动。
 | **关键产出** | 16 文档 + 兼容性矩阵 + 性能基准 |
 
 **子任务**:
-- Day 113-119: `160-compatibility/` 兼容性矩阵（硬件 / 软件 / ABI）
-- Day 120-126: `170-performance/` 性能基准 + 调优指南 + Token 能效可观测性
+- Day 106-112: `160-compatibility/` 兼容性矩阵（硬件 / 软件 / ABI）
+- Day 113-119: `170-performance/` 性能基准 + 调优指南 + Token 能效可观测性
 
 **验收标准**: 16 文档完成 + 兼容性矩阵（硬件/软件/ABI）+ 性能基准（调度/内存/IPC/认知循环）+ Token 能效可观测性方案就位。
 
@@ -522,12 +522,12 @@ graph LR
     M1 --> M2[M2 测试体系<br/>Day 43-63]
     M1 --> M3[M3 可观测运维<br/>Day 43-63]
     M1 --> M4[M4 安全加固<br/>Day 64-84]
-    M2 --> M6[M6 路线图<br/>Day 85-91]
+    M2 --> M6[M6 路线图<br/>Day 78-84]
     M3 --> M6
     M4 --> M6
     M5 --> M6
-    M6 --> M7[M7 应用生态<br/>Day 92-112]
-    M6 --> M8[M8 兼容性能<br/>Day 113-126]
+    M6 --> M7[M7 应用生态<br/>Day 85-105]
+    M6 --> M8[M8 兼容性能<br/>Day 106-119]
     style M0 fill:#e8f5e9
     style M1 fill:#e3f2fd
     style M6 fill:#fff3e0,stroke:#ff6f00,stroke-width:3px
@@ -540,9 +540,9 @@ graph LR
 | 节点 | 关键路径 | 工期 | 说明 |
 |------|---------|------|------|
 | M0 → M1 | 工程标准 → 架构设计 | 42 天 | 前置依赖链 |
-| M1 → M2 → M6 | 架构 → 测试 → 路线图 | 49 天 | 关键依赖链 |
-| M6 → M7 → M8 | 路线图 → 应用生态 → 性能 | 35 天 | P1 延伸链 |
-| **关键路径总工期** | M0 → M1 → M2 → M6 → M7 → M8 | **126 天** | 项目最短工期 |
+| M1 → M2 → M6 | 架构 → 测试 → 路线图 | 42 天 | 关键依赖链（M1 结束 Day 42 → M6 结束 Day 84） |
+| M6 → M7 → M8 | 路线图 → 应用生态 → 性能 | 35 天 | P1 延伸链（M7 21 天 + M8 14 天） |
+| **关键路径总工期** | M0 → M1 → M2 → M6 → M7 → M8 | **126 天** | 项目最短工期（P0 91 天 + P1 35 天） |
 
 ### 7.2 关键路径管理（A-4 完美主义）
 

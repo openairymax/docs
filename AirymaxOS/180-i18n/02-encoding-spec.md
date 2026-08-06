@@ -77,8 +77,10 @@ UTF-8 编码规则（RFC 3629）：
 
 ### 2.3 内核 UTF-8 原语库
 
+> **规划态声明**：`include/linux/airy_utf8.h` **不存在**（Linux 6.6 基线无此头文件，agentrt-linux 内核侧亦未提供）。以下为设计草案；实际实现时可复用 Linux 6.6 内核既有 UTF-8 设施（`fs/unicode/` 的 `utf8_*` 或 `lib/utf8.c`），或在 [IND] 层新建同名头文件后回填引用。
+
 ```c
-/* include/linux/airy_utf8.h —— 内核态 UTF-8 原语 */
+/* include/linux/airy_utf8.h —— 规划态：内核态 UTF-8 原语（设计草案） */
 #ifndef AIRY_UTF8_H
 #define AIRY_UTF8_H
 
@@ -523,72 +525,27 @@ size_t airy_token_count(const char *prompt, size_t byte_len)
 
 ## 5. 内核态 UTF-8 字符串处理完整示例
 
-### 5.1 IPC 消息头 TraceID 字符串处理
+### 5.1 IPC 消息头 TraceID 数值处理
+
+> **修正说明**：[SC] `ipc.h` 中 `trace_id` 为 **`__u64`（offset 8，8 字节）**，**不是** UTF-8 字符串，也不存在 16B UUID 布局。旧文档将其当作定长字符串处理（strlen/memcpy/UTF-8 校验）与头结构不符，已重写为纯数值读写；字符串型追踪信息应放入 payload。
 
 ```c
-/* IPC 消息头中 TraceID 字段的 UTF-8 安全处理 */
-#include <linux/string.h>
-#include <linux/slab.h>
-#include <airymax/airy_utf8.h>
-#include <airymax/ipc.h>
+/* IPC 消息头中 trace_id 字段为 __u64（offset 8，8 字节，见 [SC] ipc.h），
+ * 非 UTF-8 字符串；分布式追踪 ID 以数值形式写入。 */
+#include <linux/types.h>
+#include <linux/airymax/ipc.h>
 
-/* 设置 IPC 消息头的 trace_id（UTF-8 安全复制） */
-int airy_ipc_set_trace_id(struct airy_ipc_msg_hdr *hdr,
-			    const char *trace_id)
+/* 设置 IPC 消息头的 trace_id（__u64 数值写入） */
+static inline void airy_ipc_set_trace_id(struct airy_ipc_msg_hdr *hdr,
+					  __u64 trace_id)
 {
-	size_t trace_len;
-	int ret;
-
-	if (!hdr || !trace_id)
-		return -EINVAL;
-
-	trace_len = strlen(trace_id);
-	if (trace_len > sizeof(hdr->trace_id))
-		return -E2BIG;
-
-	/* 校验 UTF-8 合法性 */
-	ret = airy_utf8_validate(trace_id, trace_len);
-	if (ret < 0)
-		return ret;
-
-	memcpy(hdr->trace_id, trace_id, trace_len);
-	if (trace_len < sizeof(hdr->trace_id))
-		memset(hdr->trace_id + trace_len, 0,
-		       sizeof(hdr->trace_id) - trace_len);
-	return 0;
+	hdr->trace_id = trace_id;
 }
 
-/* 从 IPC 消息头提取 trace_id 为 C 字符串 */
-int airy_ipc_get_trace_id(const struct airy_ipc_msg_hdr *hdr,
-			    char *out, size_t out_size)
+/* 读取 IPC 消息头的 trace_id（__u64） */
+static inline __u64 airy_ipc_get_trace_id(const struct airy_ipc_msg_hdr *hdr)
 {
-	size_t i;
-	int ret;
-
-	if (!hdr || !out || out_size == 0)
-		return -EINVAL;
-
-	/* 找到第一个 NUL */
-	for (i = 0; i < sizeof(hdr->trace_id); i++)
-		if (hdr->trace_id[i] == 0)
-			break;
-
-	if (i == 0) {
-		out[0] = '\0';
-		return 0;
-	}
-
-	/* 校验 UTF-8 */
-	ret = airy_utf8_validate((const char *)hdr->trace_id, i);
-	if (ret < 0)
-		return ret;
-
-	if (i + 1 > out_size)
-		return -E2BIG;
-
-	memcpy(out, hdr->trace_id, i);
-	out[i] = '\0';
-	return 0;
+	return hdr->trace_id;
 }
 ```
 

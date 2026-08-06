@@ -40,8 +40,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 #### 0.2.2 迁移状态
 
-- **编号体系**：历史 `OS-STD-NNN` 与目标 `OS-STD-PROD-NNN` 等价有效。
-- **编号统一**：CI/CD 流水线脚本与维护者治理文档（07）实施时统一替换为 `OS-STD-PROD-NNN`。
+- **迁移完成**（2026-08-06）：本卷正文编号已统一为 `OS-STD-PROD-NNN`（Part I 补丁生命周期 / 维护者层级）与 `OS-STD-TOOL-NNN`（Part II 工具链与自动化）——历史 `OS-STD-101/121/122/123/131` 等双义裸编号已在正文与汇总表中替换为迁移后编号，与 09-ssot-registry.md §4.6 / §4.6.1 登记一致。
+- **编号统一**：CI/CD 流水线脚本与维护者治理文档（07）实施时统一使用 `OS-STD-PROD-NNN` / `OS-STD-TOOL-NNN`。
 - **冲突消解**：迁移后，本卷与 06-toolchain-and-automation.md 的 `OS-STD-101~158` 段冲突彻底消除——本卷独占 `OS-STD-PROD-NNN` 段，06 独占 `OS-STD-TOOL-NNN` 段。
 - **保留编号**：`OS-KER-xxx`（内核工程规则）与 `OS-ACC-xxx`（验收标准）不受本次迁移影响。
 
@@ -70,7 +70,7 @@ agentrt-linux 继承 Linux 6.6 内核基线的 6 阶段补丁生命周期模型�
 
 - **可在社区内或社区外**：设计可以闭门进行，但**公开设计可节省后期返工**——尤其是涉及 AgentsIPC 协议、Agent SDK 接口、内核 ABI 的设计。
 - **强制产出**：RFC issue（GitHub）或设计文档（Markdown）。涉及 ABI 改动的设计必须遵循 04 工程思想 §6.2 的 4 层接口稳定性分级。
-- **OS-STD-101**：任何影响 L1（Agent 应用 API）或 L2（AgentsIPC 协议）的设计，必须先在 GitHub 创建 RFC issue 并至少获得 1 名顶级子系统维护者 ACK，方可进入早期审查阶段。
+- **OS-STD-PROD-101**：任何影响 L1（Agent 应用 API）或 L2（AgentsIPC 协议）的设计，必须先在 GitHub 创建 RFC issue 并至少获得 1 名顶级子系统维护者 ACK，方可进入早期审查阶段。
 - **OS-STD-102**：设计文档必须包含"五维原则映射"小节，说明该设计涉及哪些原则（如 S-4 涌现性管理、K-2 接口契约化）。
 
 ### 1.2 阶段二：Early Review（早期审查）
@@ -232,7 +232,7 @@ flowchart TD
 
 - `develop` 分支是 agentrt-linux 的预览集成分支，等价 Linux 的 linux-next 树。
 - 所有进入 `main` 之前、已通过子系统树审查的补丁，会汇聚到 `develop` 分支进行跨子系统联调。
-- **OS-STD-131**：`develop` 分支每天至少运行 1 次 nightly build，覆盖 x86_64 / aarch64 / riscv64 三个架构 × allmodconfig / allnoconfig / defconfig 三种配置。
+- **OS-STD-PROD-131**：`develop` 分支每天至少运行 1 次 nightly build，覆盖 x86_64 / aarch64 / riscv64 三个架构 × allmodconfig / allnoconfig / defconfig 三种配置。
 - **OS-STD-132**：`develop` 分支 nightly build 失败必须在 24 小时内修复或回滚；连续 3 天失败的子系统，其补丁将被冻结进入下一轮 Merge Window。
 
 ### 3.2 -mm 等价物：无明确子系统树的补丁归宿
@@ -594,10 +594,10 @@ agentrt-linux 的 8 子仓各有独立的子系统手册，作为本卷的补丁
 | OS-STD-110 | 稳定版后 30 天 telemetry 主动监控 | SHOULD |
 | OS-STD-111 | 作者 12 个月内响应 bug 报告 | MUST |
 | OS-STD-112 | 长期维护修复用 Fixes 溯源 | MUST |
-| OS-STD-121 | 上层拉取需过 CI 门禁 | MUST |
-| OS-STD-122 | 上层保留 NACK 否决权 | MUST |
-| OS-STD-123 | 信任链断裂 30 天启动补选 | MUST |
-| OS-STD-131 | develop nightly build 三架构三配置 | MUST |
+| OS-STD-PROD-121 | 上层拉取需过 CI 门禁 | MUST |
+| OS-STD-PROD-122 | 上层保留 NACK 否决权 | MUST |
+| OS-STD-PROD-123 | 信任链断裂 30 天启动补选 | MUST |
+| OS-STD-PROD-131 | develop nightly build 三架构三配置 | MUST |
 | OS-STD-132 | develop 连续 3 天失败冻结补丁 | MUST |
 | OS-STD-133 | airymax-mm 补丁说明无子系统归属理由 | MUST |
 | OS-STD-134 | staging 文件标注 STAGING 注释 | MUST |
@@ -992,7 +992,7 @@ Linux 内核通过 `make W=<level>` 控制 sparse 警告输出等级（与 OLK-6
   - **ERROR**：极可能错误的项
   - **WARNING**：需仔细审查的项
   - **CHECK**：需思考的项
-- **OS-STD-101**：所有 commit 的 diff 必须通过 `scripts/checkpatch.pl --strict` 检查，ERROR 禁止存在。
+- **OS-STD-TOOL-101**：所有 commit 的 diff 必须通过 `scripts/checkpatch.pl --strict` 检查，ERROR 禁止存在。
 - **OS-STD-102**：剩余的 WARNING/CHECK 必须可被作者辩护（justified）。
 
 > **交叉引用**：本节是 checkpatch 在 7 层验证体系中的框架定位。Linux 6.6 内核基线 `scripts/checkpatch.pl` 中 ≥30 条 ERROR/WARNING/CHECK 规则到 agentrt-linux 规则编号（OS-STD-CODE-NNN）的逐条映射表、每条规则的 Linux 6.6 内核基线 源码行号与触发示例，详见 [01-coding-standards.md Part IV](01-coding-standards.md) §1-§8（55 条规则映射）与 §10（CI 集成与门禁配置）。
@@ -1088,21 +1088,21 @@ Linux 内核通过 `make W=<level>` 控制 sparse 警告输出等级（与 OLK-6
 
 ### 7.3 最低覆盖率门槛
 
-- **OS-STD-121**：内核子系统代码的行覆盖率必须 ≥80%（KUnit + kselftest 合计）。
-- **OS-STD-122**：Agent SDK 代码的行覆盖率必须 ≥80%。
+- **OS-STD-TOOL-121**：内核子系统代码的行覆盖率必须 ≥80%（KUnit + kselftest 合计）。
+- **OS-STD-TOOL-122**：Agent SDK 代码的行覆盖率必须 ≥80%。
 
 > **细粒度门槛权威源**：上述 ≥80% 是全量最低门槛。各子仓的**细粒度门槛**（按子系统分级，含关键路径 100% 强制）由 [80-testing/README.md §4.4](../80-testing/README.md) 权威定义，下表为镜像：
 
 | 子仓 | 最低覆盖率 | 关键路径覆盖率 | 强制规则 |
 |------|-----------|--------------|---------|
-| kernel | 90% | 100%（调度/内存/IPC） | OS-STD-121 + OS-STD-124 |
-| security | 95% | 100%（capability/LSM） | OS-STD-121 + OS-STD-124 |
-| memory | 90% | 100%（CXL/PMEM） | OS-STD-121 + OS-STD-124 |
-| cognition | 85% | 100%（CoreLoopThree） | OS-STD-121 + OS-STD-124 |
-| 其他子仓 | 80% | 90% | OS-STD-121 |
+| kernel | 90% | 100%（调度/内存/IPC） | OS-STD-TOOL-121 + OS-STD-TOOL-124 |
+| security | 95% | 100%（capability/LSM） | OS-STD-TOOL-121 + OS-STD-TOOL-124 |
+| memory | 90% | 100%（CXL/PMEM） | OS-STD-TOOL-121 + OS-STD-TOOL-124 |
+| cognition | 85% | 100%（CoreLoopThree） | OS-STD-TOOL-121 + OS-STD-TOOL-124 |
+| 其他子仓 | 80% | 90% | OS-STD-TOOL-121 |
 
-> **对齐说明**：80-testing/README.md §4.4 是覆盖率细粒度门槛的权威定义源（SSoT 物理宿主）；本节 OS-STD-121/122/124 是规则编号登记（SSoT 规则登记见 [09-ssot-registry.md](./09-ssot-registry.md)）。两者层级不同但内容一致——80-testing 给出子仓级数值，本节给出规则编号与全量最低门槛。
-- **OS-STD-123**：覆盖率报告由 CI 自动生成，发布到 GitHub Pages 供审查者查看。
+> **对齐说明**：80-testing/README.md §4.4 是覆盖率细粒度门槛的权威定义源（SSoT 物理宿主）；本节 OS-STD-TOOL-121/122/124 是规则编号登记（SSoT 规则登记见 [09-ssot-registry.md](./09-ssot-registry.md)）。两者层级不同但内容一致——80-testing 给出子仓级数值，本节给出规则编号与全量最低门槛。
+- **OS-STD-TOOL-123**：覆盖率报告由 CI 自动生成，发布到 GitHub Pages 供审查者查看。
 
 ### 7.4 关键路径必须 100% 覆盖
 
@@ -1118,7 +1118,7 @@ Linux 内核通过 `make W=<level>` 控制 sparse 警告输出等级（与 OLK-6
 
 - agentrt-linux 的 CI/CD 流水线基于 GitHub Actions。
 - 每个子仓一个 `.github/workflows/` 目录，包含多个 workflow 文件。
-- **OS-STD-131**：所有子仓必须维护 `ci.yml`（PR 触发）、`nightly.yml`（定时触发）、`release.yml`（标签触发）三个核心 workflow。
+- **OS-STD-TOOL-131**：所有子仓必须维护 `ci.yml`（PR 触发）、`nightly.yml`（定时触发）、`release.yml`（标签触发）三个核心 workflow。
 
 ### 8.2 多矩阵构建（OS × arch × config）
 
@@ -1262,11 +1262,11 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | **S-1 反馈闭环** | 系统每一层必须有完整"感知-决策-执行-反馈"闭环 | 7 层验证的每一层都是独立反馈闭环；CI 失败即反馈，阻断后续流程 |
 | **S-2 层次分解** | 复杂系统按层次分解 | 7 层验证按"编译期 → 静态 → 预提交 → CI → 连接 → 协议 → 发布"层次分解，每层职责单一 |
 | **E-1 安全内生** | 安全是设计内生的，不是附加的 | 模块签名（OS-STD-062）、KFENCE 生产部署（OS-STD-092）、安全路径 100% 覆盖（OS-STD-124） |
-| **E-2 可观测性** | 系统行为可观测 | 覆盖率报告发布到 GitHub Pages（OS-STD-123）、CI 全流程可追溯 |
-| **E-6 错误可追溯** | 错误可溯源、可追踪 | 静态分析基线（OS-STD-TOOL-011）、Smatch 基线（OS-STD-082）、checkpatch ERROR 禁止（OS-STD-101） |
+| **E-2 可观测性** | 系统行为可观测 | 覆盖率报告发布到 GitHub Pages（OS-STD-TOOL-123）、CI 全流程可追溯 |
+| **E-6 错误可追溯** | 错误可溯源、可追踪 | 静态分析基线（OS-STD-TOOL-011）、Smatch 基线（OS-STD-082）、checkpatch ERROR 禁止（OS-STD-TOOL-101） |
 | **E-7 文档即代码** | 文档与代码同源同审 | `make htmldocs` 构建（OS-STD-302）、kernel-doc 强制（OS-STD-147）、ABI 文档化（OS-STD-307） |
 | **E-8 可测试性** | 系统可测试 | KUnit + kselftest + fault injection + 模糊测试构成完整测试矩阵 |
-| **A-1 极简主义** | 反过度抽象 | checkpatch 严格模式（OS-STD-101）、clippy 0 警告（OS-STD-085） |
+| **A-1 极简主义** | 反过度抽象 | checkpatch 严格模式（OS-STD-TOOL-101）、clippy 0 警告（OS-STD-085） |
 | **A-2 细节关注** | 行尾禁止空白、函数原型元素顺序 | format-check 强制（OS-STD-107）、checkpatch CHECK 级检查 |
 | **A-4 完美主义** | 7 层验证确保完美 | 7 层验证全通过才允许发布（OS-STD-136）、关键路径 100% 覆盖（OS-STD-124） |
 
@@ -1315,7 +1315,7 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | OS-STD-095 | 代码路径在 lockdep 全功能下验证 | MUST |
 | OS-STD-096 | kselftest 后检查 kmemleak | MUST |
 | OS-STD-097 | 模糊测试启用 KCOV | MUST |
-| OS-STD-101 | checkpatch --strict 无 ERROR | MUST |
+| OS-STD-TOOL-101 | checkpatch --strict 无 ERROR | MUST |
 | OS-STD-102 | WARNING/CHECK 可被辩护 | MUST |
 | OS-STD-103 | C/C++ 通过 clang-format | MUST |
 | OS-STD-104 | Rust 通过 cargo fmt --check | MUST |
@@ -1328,11 +1328,11 @@ agentrt-linux 继承 Linux 内核的 24 项提交检查清单，并新增 agentr
 | OS-STD-114 | 错误注入测试 | MUST |
 | OS-STD-115 | Agent SDK 行为契约测试覆盖率 ≥80% | MUST |
 | OS-STD-116 | AgentsIPC 有 syzkaller 描述符 | MUST |
-| OS-STD-121 | 内核子系统覆盖率 ≥80% | MUST |
-| OS-STD-122 | Agent SDK 覆盖率 ≥80% | MUST |
-| OS-STD-123 | 覆盖率报告发布 GitHub Pages | MUST |
-| OS-STD-124 | 关键路径覆盖率 100% | MUST |
-| OS-STD-131 | 子仓维护 ci/nightly/release workflow | MUST |
+| OS-STD-TOOL-121 | 内核子系统覆盖率 ≥80% | MUST |
+| OS-STD-TOOL-122 | Agent SDK 覆盖率 ≥80% | MUST |
+| OS-STD-TOOL-123 | 覆盖率报告发布 GitHub Pages | MUST |
+| OS-STD-TOOL-124 | 关键路径覆盖率 100% | MUST |
+| OS-STD-TOOL-131 | 子仓维护 ci/nightly/release workflow | MUST |
 | OS-STD-132 | CI 矩阵覆盖 9 组合 | MUST |
 | OS-STD-133 | PR 必须过全部检查（同 031/233） | MUST |
 | OS-STD-134 | nightly 覆盖 9 矩阵 + 全动态分析 | MUST |
@@ -1678,7 +1678,7 @@ echo "OK: syscall.xml contract check passed (R-01 dependency: pending 1.0.1 M1)"
 ```
 
 **适用范围**：`include/uapi/linux/airymax/syscalls.h`（[SC] 共享契约层）。
-**合格标准**：v1.1: 4 核心 syscall 编号 + 20 预留槽位完整定义；R-01 落地后增加 XML 一致性检查。
+**合格标准**：v1.0.1: 4 核心 syscall 编号 + 20 预留槽位完整定义；R-01 落地后增加 XML 一致性检查。
 **依赖**：R-01（ES-SEL4-21 syscall.xml 单一来源管理），1.0.1 M1 阶段落地。
 
 ### 2.10 seL4 structures.bf 式 bitfield codegen 检查
@@ -2079,7 +2079,7 @@ scripts/
 [2026-07-07 18:30:01] [  OK  ] OS-CHK-DOC-02 Forbidden words: 0 violations
 [2026-07-07 18:30:02] [  OK  ] OS-CHK-DOC-03 IRON-9 v2 annotations: 8/8 modules pass
 [2026-07-07 18:30:03] [  OK  ] OS-CHK-DOC-05 Link integrity: 0 broken links
-[2026-07-07 18:30:04] [  OK  ] OS-CHK-IRON-01 [SC] consistency: 6/6 headers identical
+[2026-07-07 18:30:04] [  OK  ] OS-CHK-IRON-01 [SC] consistency: 10/10 headers identical
 ```
 
 **违规报告**：

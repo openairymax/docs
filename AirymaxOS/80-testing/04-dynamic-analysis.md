@@ -85,12 +85,14 @@ flowchart TB
 
 | 载体 | 配置 | 适用场景 | 性能开销 |
 |------|------|---------|---------|
-| 开发者 UML | `airy_debug_defconfig` 全开 | 本地开发反馈 | 2-5×（KASAN inline） |
-| CI QEMU | `airy_kasan_defconfig` | PR 阶段快速验证 | 1.5-3×（KASAN outline） |
-| CI nightly | `airy_dyn_full_defconfig` | 每日全量动态分析 | 3-8×（全开） |
+| 开发者 UML | `airy_debug_defconfig` 全开（规划） | 本地开发反馈 | 2-5×（KASAN inline） |
+| CI QEMU | `airy_kasan_defconfig`（规划） | PR 阶段快速验证 | 1.5-3×（KASAN outline） |
+| CI nightly | `airy_dyn_full_defconfig`（规划） | 每日全量动态分析 | 3-8×（全开） |
 | 生产环境 | `airy_defconfig` 仅 KFENCE | 部署后采样 | < 1%（KFENCE） |
 
-**OS-TEST-040**：开发者本地构建必须使用 `airy_debug_defconfig`，启用 KASAN + UBSAN + KCSAN + lockdep；CI PR 阶段必须使用 `airy_kasan_defconfig`，启用 KASAN outline + UBSAN + lockdep。
+> **未实现标注**：`airy_debug_defconfig` / `airy_kasan_defconfig` / `airy_dyn_full_defconfig` / `airy_kcsan_defconfig` / `airy_lockdep_defconfig` / `airy_ubsan_defconfig` / `airy_kmemleak_defconfig` 等专属配置**均不存在**——`arch/*/configs/` 下实际仅有 5 个 `airy_defconfig`（x86_64/arm64/riscv/loongarch/sw_64），**UML 无 `airy_*_defconfig` 变体**。当前 UML 动态分析采用 `make ARCH=um defconfig` + KCONFIG fragment 叠加启用 sanitizer（`scripts/kconfig/merge_config.sh -m .config <fragment>` + `make olddefconfig`）；专属 sanitizer 配置 fragment 为规划项，落地时建议置于 `kernel/configs/` 下。
+
+**OS-TEST-040**：开发者本地构建必须使用全开 sanitizer 配置（规划 `airy_debug_defconfig`，当前以 `defconfig` + fragment 叠加），启用 KASAN + UBSAN + KCSAN + lockdep；CI PR 阶段必须使用 KASAN outline + UBSAN + lockdep（规划 `airy_kasan_defconfig`）。
 
 **OS-KER-110**：生产构建（`airy_defconfig`）必须启用 KFENCE（`CONFIG_KFENCE=y`），仅此一项；其他 sanitizer 必须为 `=n`，禁止生产环境携带 KASAN/KCSAN/UBSAN（开销过高）。
 
@@ -114,7 +116,8 @@ KASAN（Kernel Address SANitizer）通过编译时插桩（`-fsanitize=address`�
 ### 2.2 KASAN Kconfig 选项
 
 ```kconfig
-# airy_debug_defconfig（开发期，全开）
+# 规划 fragment：kernel/configs/airy_kasan_debug.config（开发期，全开）
+# 当前无专属 defconfig，按 §1.2 未实现标注以 defconfig + merge_config 叠加
 CONFIG_KASAN=y
 CONFIG_KASAN_GENERIC=y              # 通用模式（inline 插桩，最高精度）
 CONFIG_KASAN_OUTLINE=n              # outline 模式（函数调用插桩，开销小）
@@ -124,7 +127,7 @@ CONFIG_KASAN_STACK=1                # 栈检测启用
 CONFIG_KASAN_VMALLOC=y              # vmalloc 区域检测
 CONFIG_KASAN_KUNIT_TEST=y           # KUnit 集成测试
 
-# airy_kasan_defconfig（CI PR 阶段，平衡开销）
+# 规划 fragment：kernel/configs/airy_kasan_ci.config（CI PR 阶段，平衡开销）
 CONFIG_KASAN=y
 CONFIG_KASAN_GENERIC=y
 CONFIG_KASAN_OUTLINE=y              # outline 模式（开销优先）
@@ -240,7 +243,7 @@ UBSAN（Undefined Behavior SANitizer）通过编译时插桩（`-fsanitize=undef
 ### 4.2 UBSAN 在 agentrt-linux 的应用
 
 ```kconfig
-# airy_debug_defconfig（开发期）
+# 规划 fragment（开发期）：kernel/configs/airy_ubsan_debug.config
 CONFIG_UBSAN=y
 CONFIG_UBSAN_BOUNDS=y
 CONFIG_UBSAN_SHIFT=y
@@ -345,7 +348,7 @@ lockdep（Lock Dependency Validator）运行时构建锁获取图，检测以下
 ### 6.2 lockdep 在 agentrt-linux 的应用
 
 ```kconfig
-# airy_debug_defconfig / airy_kasan_defconfig（开发期 + CI PR）
+# 规划 fragment（开发期 + CI PR）：kernel/configs/airy_lockdep_debug.config
 CONFIG_LOCKDEP=y
 CONFIG_LOCKDEP_SUPPORT=y
 CONFIG_PROVE_LOCKING=y
@@ -408,7 +411,7 @@ kmemleak（Kernel Memory Leak Detector）周期性扫描内核内存，检测"�
 agentrt-linux 的 Agent 生命周期涉及大量动态分配（Agent 状态、IPC Ring、Token 预算账本），是 kmemleak 检测的重点：
 
 ```kconfig
-# airy_debug_defconfig
+# 规划 fragment（开发期）：kernel/configs/airy_kmemleak_debug.config
 CONFIG_DEBUG_KMEMLEAK=y
 CONFIG_DEBUG_KMEMLEAK_EARLY_LOG_SIZE=1024
 
@@ -446,7 +449,7 @@ agentrt-linux 为每个 Agent 分配 Token 预算（用于约束 Agent 资源消
 #include <linux/module.h>
 #include <linux/atomic.h>
 #include <linux/printk.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 static atomic64_t airy_dyn_token_overflow_count = ATOMIC64_INIT(0);
 
@@ -484,7 +487,7 @@ u64 airy_dyn_token_overflow_total(void)
 #include <linux/rbtree.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 struct airy_dyn_alloc_node {
     struct rb_node  node;
@@ -561,7 +564,7 @@ int airy_dyn_agent_mem_audit(int agent_id)
 /* kernel/airymaxos/dyn/airy_dyn_ipc_ring.c */
 #include <linux/xarray.h>
 #include <linux/spinlock.h>
-#include <uapi/airymax/ipc.h>
+#include <uapi/linux/airymax/ipc.h>
 
 static DEFINE_XARRAY(airy_dyn_ipc_ring_xa);
 static DEFINE_SPINLOCK(airy_dyn_ipc_ring_lock);
@@ -630,9 +633,12 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Build airy_kasan_defconfig
+      - name: Build with KASAN (defconfig + fragment)
         run: |
-          make ARCH=um defconfig airy_kasan_defconfig
+          # UML 无 airy_kasan_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_kasan.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and run KASAN workload
         run: |
@@ -660,7 +666,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with KCSAN
         run: |
-          make ARCH=um defconfig airy_kcsan_defconfig
+          # UML 无 airy_kcsan_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_kcsan.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and run KCSAN workload (30 min)
         run: |
@@ -684,7 +693,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with lockdep
         run: |
-          make ARCH=um defconfig airy_lockdep_defconfig
+          # UML 无 airy_lockdep_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_lockdep.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and run lockdep workload
         run: |
@@ -708,7 +720,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with UBSAN
         run: |
-          make ARCH=um defconfig airy_ubsan_defconfig
+          # UML 无 airy_ubsan_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_ubsan.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and run UBSAN workload
         run: |
@@ -729,7 +744,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with kmemleak
         run: |
-          make ARCH=um defconfig airy_kmemleak_defconfig
+          # UML 无 airy_kmemleak_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_kmemleak.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Boot UML and run kmemleak workload
         run: |
@@ -790,7 +808,7 @@ jobs:
 
 03 卷的内核自检在启动时执行（一次性），本卷的动态分析在运行时持续监控（持续）。二者互补：
 
-- **03 自检**：检测"启动时已知不变式"（如 250 钩子注册、[SC] 头文件 SHA-256）。
+- **03 自检**：检测"启动时已知不变式"（如 253 钩子注册、[SC] 头文件 SHA-256）。
 - **04 动态分析**：检测"运行时未知错误"（如越界访问、数据竞争）。
 
 ### 10.2 与 05-static-analysis 的关系
@@ -822,8 +840,8 @@ jobs:
 ### 11.3 后续版本规划
 
 - v1.0.1：新增 `airy_dyn_lsm_hook`（纯 C LSM 钩子死锁检测）。
-- v1.2：将 `airy_dyn_*` 模块的报告通过 tracepoint 暴露，便于 ftrace 实时追踪。
-- v1.3：与 110-security 联动，将 KASAN/KCSAN 报告自动同步至安全运营中心。
+- 下一版本：将 `airy_dyn_*` 模块的报告通过 tracepoint 暴露，便于 ftrace 实时追踪。
+- 后续版本：与 110-security 联动，将 KASAN/KCSAN 报告自动同步至安全运营中心。
 
 ---
 
@@ -1182,10 +1200,10 @@ rmmod $MOD
 echo "PASS: airy_agent_lifecycle_stress $CYCLES cycles, no leak"
 ```
 
-CI 集成至 `nightly-dynamic-analysis` workflow（§9.1）新增 `agent-lifecycle-leak` job：
+CI 集成规划至 `nightly-dynamic-analysis` workflow（§9.1，**该 workflow 尚未实现**）新增 `agent-lifecycle-leak` job：
 
 ```yaml
-# .github/workflows/nightly-dynamic-analysis.yml 新增 job（增量）
+# .github/workflows/nightly-dynamic-analysis.yml 新增 job（增量，规划）
   agent-lifecycle-leak:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -1193,7 +1211,10 @@ CI 集成至 `nightly-dynamic-analysis` workflow（§9.1）新增 `agent-lifecyc
       - uses: actions/checkout@v4
       - name: Build with kmemleak
         run: |
-          make ARCH=um defconfig airy_kmemleak_defconfig
+          # UML 无 airy_kmemleak_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项，见 §1.2）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config kernel/configs/airy_kmemleak.config
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc) M=kernel/airymaxos/testing
       - name: Run agent lifecycle stress (10000 cycles)
         run: |

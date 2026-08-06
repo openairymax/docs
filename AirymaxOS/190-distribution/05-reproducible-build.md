@@ -678,7 +678,7 @@ skopeo inspect --format '{{.Digest}}' \
 # cloudnative/oci/Containerfile.agent-base
 # 可重现 Agent 基础镜像
 
-ARG BASE_IMAGE=registry.airymaxos.dev/airymaxos/base:1.0.1
+ARG BASE_IMAGE=ghcr.io/spharx/base:1.0.1
 FROM $BASE_IMAGE
 
 # 构建参数（确定性）
@@ -870,7 +870,7 @@ sha256sum build-env-fingerprint.json
 ```json
 {
   "build_env_lock_version": "1.0.1",
-  "base_image": "registry.airymaxos.dev/airymaxos/build-base:1.0.1",
+  "base_image": "ghcr.io/spharx/build-base:1.0.1",
   "base_image_digest": "sha256:abcdef1234567890...",
   "packages": {
     "gcc": "13.2.1-6.fc39",
@@ -887,7 +887,7 @@ sha256sum build-env-fingerprint.json
     "UMASK": "022",
     "PYTHONHASHSEED": "0"
   },
-  "kernel": "6.6.0-airymaxos",
+  "kernel": "6.6.0-airy.1",
   "glibc": "2.38"
 }
 ```
@@ -1232,7 +1232,7 @@ case "$ERROR_CODE" in
     RB-E005)
         echo "[ERROR] Build environment fingerprint mismatch"
         echo "[INFO] Rebuild from locked container image"
-        echo "[FIX] podman pull registry.airymaxos.dev/airymaxos/build-base:1.0.1"
+        echo "[FIX] podman pull ghcr.io/spharx/build-base:1.0.1"
         ;;
     *)
         echo "[ERROR] Unknown error code: $ERROR_CODE"
@@ -1302,7 +1302,7 @@ echo "[OK] All products verified"
 podman run --rm \
     -v $(pwd):/build:Z \
     -w /build \
-    registry.airymaxos.dev/airymaxos/build-base:1.0.1 \
+    ghcr.io/spharx/build-base:1.0.1 \
     /build/scripts/reproducible-rpm-build.sh /build x86_64
 ```
 

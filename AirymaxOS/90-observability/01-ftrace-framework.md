@@ -504,7 +504,7 @@ MicroCoreRT 极简内核契约要求：内核态不解析用户态写入的事�
 /* 结构体名称：struct airy_ipc_msg_hdr（Layout C，物理宿主见
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C） */
 
-/* SQE/CQE 操作码（v1.1 宏定义，非 enum）——ftrace 追踪事件通过 AIRY_IPC_OP_SEND
+/* SQE/CQE 操作码（v1.0.1 宏定义，非 enum）——ftrace 追踪事件通过 AIRY_IPC_OP_SEND
  * 投递，trace 事件 ID / 事件类型携带于 payload（见下方 SSoT 声明） */
 #define AIRY_IPC_OP_SEND          0x0001
 #define AIRY_IPC_OP_RECV          0x0002

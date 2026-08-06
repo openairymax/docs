@@ -414,33 +414,37 @@ v1.0.1 Capability Folding 将 capability check 从独立控制面操作"折叠"�
 
 | 序号 | 职责                                   | Capability Folding 角色                                                  |
 | -- | ------------------------------------ | ---------------------------------------------------------------------- |
-| 1  | CoreLoopThree 阶段通知发起                 | 通过 `airy_sys_clt_notify`（编号 3）向内核 kthread 推送阶段切换，携带 Badge            |
+| 1  | CoreLoopThree 阶段通知发起                 | 通过 `airy_sys_clt_notify`（编号 551）向内核 kthread 推送阶段切换，携带 Badge            |
 | 2  | LLM 推理请求投递                           | 推理请求经 `IORING_OP_URING_CMD`（cmd_op=IPC_SEND）提交，`capability_badge` 承载 Badge |
 | 3  | Thinkdual 快慢思考切换                     | 切换决策通过 io\_uring IPC 传递至内核态 kthread，C-S9 校验后生效                       |
 | 4  | 推理阶段（PREFILL/DECODE/SPECULATIVE）感知   | cogn_d 标记推理阶段至 kthread 内部运行时状态（实现私有，非 \[SC]），调度器感知             |
 | 5  | Badge 携带者                            | 所有 cognition 相关 IPC 消息均携带 sec_d 编译的 Badge，fastpath C-S9 校验              |
 
-**4.9.2 `airy_sys_clt_notify`（编号 3）的使用** \[SS]
+**4.9.2 `airy_sys_clt_notify`（编号 551）的使用** \[SS]
 
-`airy_sys_clt_notify` 是 v1.0.1 4 核心 syscall 之一（编号 3），专为 CoreLoopThree 通知 + kthread 注册设计：
+`airy_sys_clt_notify` 是 v1.0.1 4 核心 syscall 之一（编号 551），专为 CoreLoopThree 通知 + kthread 注册设计：
 
 ```c
-/* airy_sys_clt_notify（编号 3）：CoreLoopThree 通知 + kthread 注册 */
+/* airy_sys_clt_notify（编号 551）：CoreLoopThree 通知 + kthread 注册 */
 int airy_sys_clt_notify(unsigned int op, unsigned long arg);
 
-/* op 取值（定义于 include/uapi/linux/airymax/syscalls.h [SC]）：
- *   AIRY_CLT_NOTIFY_OP_REGISTER_KTHREAD   注册 CoreLoopThree kthread
- *   AIRY_CLT_NOTIFY_OP_PHASE_SWITCH       阶段切换通知（PERCEPT→THINK→ACT）
- *   AIRY_CLT_NOTIFY_OP_THINK_MODE_SWITCH  Thinkdual 快慢思考切换
- *   AIRY_CLT_NOTIFY_OP_INFERENCE_PHASE    LLM 推理阶段标记
+/* op 取值（与 00-alk-kernel-overview.md §4.2 的 8 op 集对齐）：
+ *   AIRY_CLT_NOTIFY_OP_PHASE_NOTIFY          阶段切换通知（PERCEPT→THINK→ACT）
+ *   AIRY_CLT_NOTIFY_OP_REGISTER_KTHREAD      注册 CoreLoopThree kthread
+ *   AIRY_CLT_NOTIFY_OP_UNREGISTER_KTHREAD    注销 CoreLoopThree kthread
+ *   AIRY_CLT_NOTIFY_OP_SET_MODE              Thinkdual 快慢思考模式设置
+ *   AIRY_CLT_NOTIFY_OP_GET_METRICS           查询认知循环指标
+ *   AIRY_CLT_NOTIFY_OP_WASM_LOAD_MODULE      Wasm 模块加载
+ *   AIRY_CLT_NOTIFY_OP_WASM_UNLOAD_MODULE    Wasm 模块卸载
+ *   AIRY_CLT_NOTIFY_OP_WASM_INVOKE           Wasm 模块调用
  */
 ```
 
 - **kthread 注册**：cogn_d 启动时通过 `AIRY_CLT_NOTIFY_OP_REGISTER_KTHREAD` 注册 CoreLoopThree kthread，内核态 `kthread_run()` 创建 kthread 执行循环 \[IND]。
-- **阶段切换通知**：cogn_d 在每阶段切换时通过 `AIRY_CLT_NOTIFY_OP_PHASE_SWITCH` 通知内核 kthread，同时通过 io\_uring IPC 携带 Badge 至 sched_d 协同调度策略 \[SS]。
-- **Thinkdual 切换**：cogn_d 根据任务复杂度决策快慢思考切换，通过 `AIRY_CLT_NOTIFY_OP_THINK_MODE_SWITCH` 通知内核 kthread 切换执行路径 \[SS]。
+- **阶段切换通知**：cogn_d 在每阶段切换时通过 `AIRY_CLT_NOTIFY_OP_PHASE_NOTIFY` 通知内核 kthread，同时通过 io\_uring IPC 携带 Badge 至 sched_d 协同调度策略 \[SS]。
+- **Thinkdual 切换**：cogn_d 根据任务复杂度决策快慢思考切换，通过 `AIRY_CLT_NOTIFY_OP_SET_MODE` 通知内核 kthread 切换执行路径 \[SS]。
 - **推理阶段标记**：cogn_d 标记推理阶段（PREFILL/DECODE/SPECULATIVE）至 kthread 内部运行时状态（实现私有，非 \[SC]），sched_d 通过 sched_tac 感知调度 \[SS]。
-- **不承载 Badge 编译**：`airy_sys_clt_notify` 仅承载通知原语，Badge 编译/撤销由 sec_d 通过 `airy_sys_call`（编号 0）独占管理 \[SS]。
+- **不承载 Badge 编译**：`airy_sys_clt_notify` 仅承载通知原语，Badge 编译/撤销由 sec_d 通过 `airy_sys_call`（编号 548）独占管理 \[SS]。
 
 **4.9.3 CoreLoopThree kthread 与 fastpath C-S9 Badge 校验的协作** \[SS]
 
@@ -450,7 +454,7 @@ CoreLoopThree kthread 是 cognition 子仓的内核态执行实体，与 fastpat
 sequenceDiagram
     participant COGN as cogn_d (用户态)
     participant SECD as sec_d (用户态, 唯一 Badge 写者)
-    participant SYSCALL as airy_sys_clt_notify (编号 3)
+    participant SYSCALL as airy_sys_clt_notify (编号 551)
     participant KTHREAD as CoreLoopThree kthread (内核态)
     participant IPC as io_uring ring
     participant CS9 as fastpath C-S9 (内核态)
@@ -462,7 +466,7 @@ sequenceDiagram
     SYSCALL->>KTHREAD: kthread_run() 创建 kthread [IND]
 
     loop 认知循环 PERCEPT → THINK → ACT
-        COGN->>SYSCALL: AIRY_CLT_NOTIFY_OP_PHASE_SWITCH 阶段切换通知 [SS]
+        COGN->>SYSCALL: AIRY_CLT_NOTIFY_OP_PHASE_NOTIFY 阶段切换通知 [SS]
         SYSCALL->>KTHREAD: 更新 kthread 内部运行时阶段状态（实现私有，非 [SC]）
 
         COGN->>IPC: IORING_OP_URING_CMD 提交推理请求（capability_badge=Badge）[SS]
@@ -478,20 +482,34 @@ sequenceDiagram
 
 1. 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`，比对 `slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
 2. 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`，比对 `READ_ONCE(agent_caps[src_task].randtag)` → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
-3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位（如 `AIRY_PERM_CLT_NOTIFY` / `AIRY_PERM_LLM_SUBMIT`） → 不满足返回 `AIRY_ECAP_PERM`(-81)
+3. 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`，比对 opcode 所需权限位（如 `AIRY_CAP_PERM_SEND` / `AIRY_CAP_PERM_SUPERVISE`） → 不满足返回 `AIRY_ECAP_PERM`(-81)
 4. Ring 冻结检查（C-S0）：`ring->frozen == true` → 返回 `AIRY_EIPC_FROZEN`(-53)
 5. slowpath LSM 钩子（`security_uring_cmd`，单参数 `struct io_uring_cmd *ioucmd`）仅在 C-S9 失败时调用，做策略裁决与冷酷执法
 
 **4.9.4 `agent_caps[1024]` 在认知子仓中的引用** \[SS]
 
-cognition 子仓引用 `agent_caps[1024]` 静态数组（128KB，物理宿主在 kernel 子仓 `kernel/airy/capability.c`）作为 Badge 校验的真相源：
+cognition 子仓引用 `agent_caps[1024]` 静态数组（128KB，物理宿主在 kernel 子仓 `kernel/kernel/ipc/airy_ipc_capability.c`）作为 Badge 校验的真相源：
 
 ```c
-/* agent_caps[1024] 静态数组——Badge 校验真相源（物理宿主：kernel/airy/capability.c） */
-struct airy_cap_entry {
-    u32 randtag;       /* RandomTag（16-bit 实际有效，高 16-bit 保留） */
-    u32 perms;         /* 权限位掩码（含 AIRY_PERM_CLT_NOTIFY / AIRY_PERM_LLM_SUBMIT 等） */
-} agent_caps[1024];   /* 索引：src_task ∈ [0, 1024)，128KB 总占用 */
+/* agent_caps[1024] 静态数组——Badge 校验真相源（物理宿主：kernel/kernel/ipc/airy_ipc_capability.c）
+ * 元素类型为 [SC] lsm_types.h 的 struct airy_cap_slot（sizeof=80 字节：
+ * 24 base + 16 MDB + 40 reserved，AIRY_ALIGNED(64)），非旧版 airy_cap_entry */
+struct airy_cap_slot {
+    __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
+    __u32   agent_id;         /* Owning agent ID */
+    __u32   flags;            /* Slot flags */
+    __u32   randtag;          /* RandomTag（伪造检测） */
+    __u16   perms;            /* 权限位掩码（含 AIRY_CAP_PERM_* 位） */
+    __u16   epoch;            /* per-agent epoch（O(1) 撤销，K9-1） */
+    /* ── MDB 派生树（级联 REVOKE，K9-1 fix） ── */
+    __u32   parent_agent;     /* 派生来源 agent ID（0=root） */
+    __u32   first_child;      /* 首个子 agent ID（0=leaf） */
+    __u32   next_sibling;     /* 下一个兄弟 agent ID */
+    __u16   generation;       /* 派生深度 */
+    __u16   revocable;        /* 1=父 REVOKE 级联到此槽 */
+    __u8    _reserved[40];    /* Cacheline padding */
+} __aligned(64);
+static struct airy_cap_slot agent_caps[1024];   /* 索引：src_task ∈ [0, 1024)，128KB 总占用 */
 ```
 
 - **索引语义**：`agent_caps[src_task].randtag` 与 IPC 消息头 `src_task` 字段一一对应，cognition 子仓的 cogn_d 作为 `src_task` 之一，其 Badge 由 sec_d 编译至 `agent_caps[cogn_d_task_id]`。
@@ -508,7 +526,7 @@ cognition 子仓的 CoreLoopThree kthread + io\_uring IPC 实现严格遵循 OLK
 - **`security_uring_cmd` LSM 钩子**：单参数 `struct io_uring_cmd *ioucmd`，由 `airy_lsm` 在 `LSM_ORDER_MUTABLE`（默认值，非 `LSM_ORDER_FIRST`）下注册，仅在 fastpath C-S9 失败时被调用
 - **SQE128 模式**（`IORING_SETUP_SQE128`）：`cmd` 字段从标准 16 字节扩展至 80 字节（16→80），承载 `airy_ipc_cmd` 结构体（≤ 80 字节，`BUILD_BUG_ON(sizeof(struct airy_ipc_cmd) > 80)` 编译期校验）
 - **`airy_lsm` 模块**：物理宿主 `security/airy/`（非 `security/airymax/`），`CONFIG_SECURITY_AIRY` default 'n'
-- **UAPI 标准路径**：`include/uapi/linux/airymax/`（10 个 \[SC] 共享契约头文件物理宿主，`cognition_types.h` 为其中之一）
+- **UAPI 标准路径**：`include/uapi/linux/airymax/`（12 个 \[SC] 共享契约头文件物理宿主，`cognition_types.h` 为其中之一）
 - **CoreLoopThree kthread 实现**：基于 Linux 6.6 `kernel/kthread.c`（1562 行）的 `kthread_run()` / `kthread_should_stop()` / `kthread_bind()` API，禁止使用已废弃的 `kthread_create()` 直接调用模式
 - **结构体对齐**：`struct airy_cog_config` 等 \[SC] 共享结构使用 `__aligned(64)` 对齐（参考 OLK 6.6 `struct ethhdr` / `struct iphdr` 手动安排字段自然对齐的做法），D-9 修复后移除 packed 属性（破坏自然对齐，影响 fastpath 性能）
 
@@ -672,7 +690,7 @@ cogn_d 作为 12 daemon 之一，与其他 11 daemon 形成"通知原语 + 数�
 | 序号 | 对端 daemon       | 协作内容                                                          | 协作路径                                                              |
 | -- | ---------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
 | 1  | `sec_d`          | cogn_d 向 sec_d 申请 Badge（自举）/ 接收编译好的 Badge                    | `AIRY_IPC_OP_CAP_REQUEST` / `AIRY_IPC_OP_CAP_RESPONSE` via io\_uring |
-| 2  | `sched_d`        | cogn_d 通知 sched_d 推理阶段（PREFILL/DECODE/SPECULATIVE），sched_d 通过 sched_tac 调整调度策略 | `airy_sys_clt_notify`（编号 3）+ io\_uring IPC                          |
+| 2  | `sched_d`        | cogn_d 通知 sched_d 推理阶段（PREFILL/DECODE/SPECULATIVE），sched_d 通过 sched_tac 调整调度策略 | `airy_sys_clt_notify`（编号 551）+ io\_uring IPC                          |
 | 3  | `mem_d`          | 超节点沙箱快照/迁移时，cogn_d 通知 CoreLoopThree kthread 暂停/恢复            | io\_uring IPC（`AIRY_IPC_OP_SEND`）                                  |
 | 4  | `gateway_d`      | 跨节点推理请求由 gateway\_d 转发，入站时重新编译 Badge                         | gRPC over QUIC + mTLS（gateway\_d 承载）                              |
 | 5  | `logger_d`       | cogn_d 输出认知循环日志（阶段切换、推理结果）                                    | io\_uring IPC → logger\_d 聚合（journald 集成）                         |

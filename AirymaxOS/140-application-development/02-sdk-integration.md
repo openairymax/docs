@@ -240,12 +240,12 @@ pub enum AgentrtError {
 
 impl From<i32> for AgentrtError {
     fn from(code: i32) -> Self {
-        /* [SC] 层错误码映射 */
+        /* [SC] 层错误码映射（error.h 正数幅值，系统调用返回 -AIRY_E* 负值） */
         match code {
-            -2 => AgentrtError::InvalidArg,
-            -12 => AgentrtError::NoMemory,
-            -101 => AgentrtError::NotFound,
-            -401 => AgentrtError::BudgetExhausted,
+            -5 => AgentrtError::InvalidArg,        /* -AIRY_EINVAL */
+            -9 => AgentrtError::NoMemory,          /* -AIRY_ENOMEM */
+            -8 => AgentrtError::NotFound,          /* -AIRY_ENOENT */
+            -122 => AgentrtError::BudgetExhausted, /* -AIRY_ESCHED_BUDGET */
             _ => AgentrtError::Unknown(code),
         }
     }
@@ -441,9 +441,11 @@ int airy_client_call(airy_client_t *client,
 	hdr.payload_len  = payload_len;
 	/* payload_type（REQUEST）由 payload 首字段携带，不在消息头中 */
 
-	/* agentrt-linux 路径：syscall（io_uring 注册） */
+	/* agentrt-linux 路径：IPC 数据面走 io_uring（IORING_OP_URING_CMD，零 syscall），
+	 * 控制面（cap 校验/管理）走 548 airy_sys_call（经 msg->opcode 分派，
+	 * 见 07-syscall-registry.md §3.3 / §4.2） */
 	if (client->use_syscall) {
-		ret = syscall(AIRY_SYS_IPC_SEND, &hdr, payload, payload_len);
+		ret = airy_uring_ipc_send(&hdr, payload);
 		if (ret < 0)
 			return ret;
 		return airy_syscall_recv(client, hdr.trace_id, out_resp);
@@ -457,7 +459,7 @@ int airy_client_call(airy_client_t *client,
 
 ### 5.2 SDK 客户端调用系统调用示例
 
-以下展示一个 Python SDK 客户端完整调用 `AIRY_SYS_COGNITION_PROCESS` 系统调用的代码片段：
+以下展示一个 Python SDK 客户端完整调用 `airy_sys_call`（编号 548，经 `msg->opcode` 分派）与 io_uring 数据面完成认知处理请求的代码片段：
 
 ```python
 # airy_python/clients/cognition.py
@@ -475,11 +477,12 @@ class CognitionClient:
 
     def process(self, prompt: str, **kwargs) -> dict:
         """
-        执行认知处理（封装 syscall AIRY_SYS_COGNITION_PROCESS）
-        当宿主为 agentrt-linux 时，SDK 内部走 syscall 路径
+        执行认知处理（封装 airy_sys_call(548) 控制面 + io_uring 数据面，
+        经 msg->opcode 分派，详见 07-syscall-registry.md §4.2/§3.3）
+        当宿主为 agentrt-linux 时，SDK 内部走 syscall/io_uring 路径
         """
         if self._tokens_used >= self._token_budget:
-            raise AgentrtError(-401)  # AIRY_EBUDGET_EXHAUSTED
+            raise AgentrtError(-122)  # -AIRY_ESCHED_BUDGET（预算耗尽）
 
         payload = json.dumps({
             "prompt": prompt,
@@ -488,7 +491,7 @@ class CognitionClient:
         }).encode()
 
         # SDK 内部检测宿主：
-        #   - agentrt-linux -> syscall(AIRY_SYS_COGNITION_PROCESS)
+        #   - agentrt-linux -> airy_sys_call(548)（opcode 分派）+ io_uring 数据面
         #   - agentrt 用户态 -> AgentsIPC 调用 cogn_d
         resp = self._client.call(self.LLM_DAEMON_ID,
                                   "cognition.process", payload)
@@ -516,7 +519,7 @@ class CognitionClient:
    airy_client_call()
        |
        v (检测宿主为 agentrt-linux)
-   syscall(AIRY_SYS_IPC_SEND, hdr, payload)
+   io_uring 提交 SQE（IORING_OP_URING_CMD，AIRY_IPC_OP_SEND）
        |
        v
 [内核态 airy_core]
@@ -608,11 +611,11 @@ bool airy_host_is_airymaxos(void)
 
 | C 错误码 | Python 异常 | Rust 变体 | Go 错误 | TS 异常 |
 |----------|-------------|-----------|---------|---------|
-| -2 EINVAL | ValueError | InvalidArg | ErrInvalid | TypeError |
-| -12 ENOMEM | MemoryError | NoMemory | ErrOOM | RangeError |
-| -101 ENOENT | KeyError | NotFound | ErrNotFound | NotFoundError |
-| -401 EBUDGET | BudgetError | BudgetExhausted | ErrBudget | BudgetError |
-| -701 EPERM | PermissionError | Permission | ErrPerm | PermissionError |
+| -5 EINVAL | ValueError | InvalidArg | ErrInvalid | TypeError |
+| -9 ENOMEM | MemoryError | NoMemory | ErrOOM | RangeError |
+| -8 ENOENT | KeyError | NotFound | ErrNotFound | NotFoundError |
+| -122 ESCHED_BUDGET | BudgetError | BudgetExhausted | ErrBudget | BudgetError |
+| -12 EPERM | PermissionError | Permission | ErrPerm | PermissionError |
 
 ### 8.2 自动重试策略
 
@@ -623,7 +626,7 @@ def call_with_retry(client, dst, method, payload, max_retries=3):
         try:
             return client.call(dst, method, payload)
         except AgentrtError as e:
-            if e.code in (-701, -401):  # 权限/预算错误不重试
+            if e.code in (-12, -122):  # 权限/预算错误不重试（-AIRY_EPERM / -AIRY_ESCHED_BUDGET）
                 raise
             if attempt == max_retries - 1:
                 raise

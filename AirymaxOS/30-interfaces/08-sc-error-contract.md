@@ -13,7 +13,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **单一权威源声明**：本文件是 **Airymax 错误码与故障码体系** 的唯一权威源。Error 码空间分配、Fault 码空间分配、`AIRY_E*` 命名风格、`AIRY_FAULT_*` 命名风格、[DSL] 降级块均以本文件为唯一权威定义。物理宿主为 `kernel/include/uapi/linux/airymax/error.h`，agentrt 与 agentrt-linux 物理共享同一份头文件，逐字节相同。
 >
-> **Capability Folding 工程定义**（v1.0.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check（能力校验）从独立的控制面操作"折叠"到 IPC 数据面消息传递 fastpath 中。其物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；其执行点是 fastpath C-S9 内联校验（`airy_cap_badge_ok()`，~10ns，3 个 READ_ONCE + 位运算 + 比较）。本契约新增的 `-78~-82` Capability 错误码与 `0x1001-0x1003` Fault 码是 Capability Folding 的错误语义 SSoT。
+> **Capability Folding 工程定义**（v1.0.1 新增）：A-IPC 采用 Capability Folding 设计模式——将 capability check（能力校验）从独立的控制面操作"折叠"到 IPC 数据面消息传递 fastpath 中。其物理载体是 [SC] `ipc.h` Layout C v4 消息头 offset 40-47 的 `capability_badge` 字段（64-bit Native Word：Epoch + Random Tag + Perms）；其执行点是 fastpath C-S9 内联校验（`airy_cap_badge_ok()`，~10ns，3 个 READ_ONCE + 位运算 + 比较）。本契约新增的 Capability Badge 错误码（幅值 78-84）与 `0x1001-0x1003` Fault 码是 Capability Folding 的错误语义 SSoT。
 >
 > 废弃风格声明：`AIRY_ERR_*`（详细前缀）已废弃，全部迁移为 `AIRY_E*`；`EAIRY_*`（errno 风格前缀）已废弃。本契约遵循 [10-unify-design.md](../10-architecture/10-unify-design.md) 的技术选型（sched_tac + 纯 C LSM 不使用 BPF LSM + IORING_OP_URING_CMD + registered buffer + mmap 不使用 page flipping + alloc_pages + mmap 不使用 DMA 一致性内存）。
 
@@ -38,7 +38,7 @@ A-UEF（Unified Error and Fault Framework，统一错误码与故障定义体系
 本契约定义以下内容，agentrt 与 agentrt-linux 双端必须逐字节一致：
 
 1. `airy_err_t` 类型定义（错误码类型）
-2. `AIRY_E*` 错误码宏（Error 码，负数空间）
+2. `AIRY_E*` 错误码宏（Error 码，正数幅值，调用方返回 `-AIRY_E*`）
 3. `AIRY_FAULT_*` 故障码宏（Fault 码，正数 0x1000+ 空间）
 4. `AIRY_LOG_MAGIC` 等相关魔数（仅与错误码语义绑定的魔数）
 5. `#ifdef AIRY_SC_FALLBACK` 降级块
@@ -79,15 +79,15 @@ A-UEF（Unified Error and Fault Framework，统一错误码与故障定义体系
 
 ## §2 Error 码空间分配
 
-Error 码占据负数空间 `[-300, -1]`，按来源分 **10 个子空间**（对齐 `error.h` SSoT，P0-I2 修复：原 5 子空间划分遗漏了 Config/A-ULS/MemoryRoVol/Cognition/Log/Object/Syscall 7 个子空间），每个子空间有明确的值域、来源与语义。
+Error 码宏定义为**正数幅值**（对齐 POSIX errno 风格，SSoT `error.h` 文件头注释 L9-11："`AIRY_E*` constants are positive magnitudes (like POSIX errno); callers return `-AIRY_E*` to produce the negative error value"），调用方通过 `return -AIRY_E*` 得到负值 Error。返回值占据负数空间 `[-300, -1]`，按来源分 **10 个子空间**（对齐 `error.h` SSoT，P0-I2 修复：原 5 子空间划分遗漏了 Config/A-ULS/MemoryRoVol/Cognition/Log/Object/Syscall 7 个子空间），每个子空间有明确的值域、来源与语义。
 
 ### 2.1 Error 码空间总表（10 子空间，对齐 SSoT error.h）
 
-| 子空间 | 值域 | 来源 | 已定义数 | 命名风格 |
+| 子空间 | 值域（负返回空间） | 来源 | 已定义数 | 命名风格 |
 |--------|------|------|---------|---------|
 | POSIX 码 | `[-1, -40]` | 对齐 Linux errno | 16 | `AIRY_E*`（对齐 `E*` errno 名） |
 | IPC 码 | `[-41, -70]` | A-IPC 协议层（Capability Folding fastpath C-S0~C-S12） | 13 | `AIRY_EIPC_*` |
-| Capability 码 | `[-71, -100]` | 安全子系统（含 Capability Folding Badge 校验） | 13 | `AIRY_ECAP_*` / `AIRY_ESEC_*` |
+| Capability 码 | `[-71, -100]` | 安全子系统（含 Capability Folding Badge 校验） | 14 | `AIRY_ECAP_*` / `AIRY_ESEC_*` |
 | Config 码 | `[-101, -120]` | A-UCS 配置管理 | 5 | `AIRY_ECFG*` |
 | A-ULS 码 | `[-121, -140]` | A-ULS 调度/生命周期 | 10 | `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*` |
 | MemoryRoVol 码 | `[-141, -160]` | MemoryRoVol 内存子系统 | 8 | `AIRY_EMEM_*` |
@@ -99,213 +99,223 @@ Error 码占据负数空间 `[-300, -1]`，按来源分 **10 个子空间**（�
 
 > **⚠️ P0-I2 修复说明**（v1.0.1-fix）：原文档声明 5 子空间（POSIX/IPC/Capability/[SC]/[DSL]），与 `error.h` SSoT 实际 10 子空间严重不符。修复后对齐 SSoT 实际定义：移除虚构的 `[SC]` 与 `[DSL]` 错误码子空间（这两个概念属于 [DSL] 降级块机制，不是独立错误码子空间），新增 7 个实际存在的子空间（Config/A-ULS/MemoryRoVol/Cognition/Log/Object/Syscall）。
 
-### 2.2 POSIX 码 `[-1, -40]`（对齐 SSoT error.h L28-43）
+### 2.2 POSIX 码 `[-1, -40]`（对齐 SSoT error.h L30-45）
 
 对齐 Linux 6.6 标准 errno，SSoT `error.h` 实际定义 16 个 POSIX 兼容码（非连续编号，对齐 Linux errno 数值）：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L28-43 —— POSIX 错误码 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L30-45 —— POSIX 错误码 */
+/* 宏为正数幅值（对齐 POSIX errno），调用方返回 -AIRY_E* 得到负值 Error */
 #define AIRY_EOK            0       /* 成功（非负数，特殊） */
-#define AIRY_EACCES         (-1)    /* Operation not permitted */
-#define AIRY_EEXIST         (-2)    /* File exists */
-#define AIRY_EFAULT         (-3)    /* Bad address */
-#define AIRY_EINTR          (-4)    /* Interrupted system call */
-#define AIRY_EINVAL         (-5)    /* Invalid argument */
-#define AIRY_EIO            (-6)    /* I/O error */
-#define AIRY_EISDIR         (-7)    /* Is a directory */
-#define AIRY_ENOENT         (-8)    /* No such file or directory */
-#define AIRY_ENOMEM         (-9)    /* Out of memory */
-#define AIRY_ENOSPC         (-10)   /* No space left on device */
-#define AIRY_ENOTSUP        (-11)   /* Operation not supported */
-#define AIRY_EPERM          (-12)   /* Operation not permitted (POSIX) */
-#define AIRY_ERANGE         (-13)   /* Result too large */
-#define AIRY_EBUSY          (-16)   /* Device or resource busy */
-#define AIRY_ECANCELED      (-19)   /* Operation canceled */
-#define AIRY_EAGAIN         (-35)   /* Try again */
+#define AIRY_EACCES         1       /* Operation not permitted */
+#define AIRY_EEXIST         2       /* File exists */
+#define AIRY_EFAULT         3       /* Bad address */
+#define AIRY_EINTR          4       /* Interrupted system call */
+#define AIRY_EINVAL         5       /* Invalid argument */
+#define AIRY_EIO            6       /* I/O error */
+#define AIRY_EISDIR         7       /* Is a directory */
+#define AIRY_ENOENT         8       /* No such file or directory */
+#define AIRY_ENOMEM         9       /* Out of memory */
+#define AIRY_ENOSPC         10      /* No space left on device */
+#define AIRY_ENOTSUP        11      /* Operation not supported */
+#define AIRY_EPERM          12      /* Operation not permitted (POSIX) */
+#define AIRY_ERANGE         13      /* Result too large */
+#define AIRY_EBUSY          16      /* Device or resource busy */
+#define AIRY_ECANCELED      19      /* Operation canceled */
+#define AIRY_EAGAIN         35      /* Try again */
 ```
 
-> **⚠️ P0-I1 修复说明**（v1.0.1-fix）：原文档列举的错误码值（`AIRY_EPERM=-1 / AIRY_ENOENT=-2 / AIRY_EINVAL=-22` 等）与 SSoT `error.h` 严重不符。SSoT 实际定义：`AIRY_EACCES=-1 / AIRY_EEXIST=-2 / AIRY_EFAULT=-3 / AIRY_EINTR=-4 / AIRY_EINVAL=-5 / AIRY_EIO=-6` 等。修复后所有错误码值严格对齐 SSoT `error.h` L28-43 行的源码定义。
+> **⚠️ P0-I1/P0-I4 修复说明**（v1.0.1-fix）：原文档列举的错误码值（`AIRY_EPERM=-1 / AIRY_ENOENT=-2 / AIRY_EINVAL=-22` 等）与 SSoT `error.h` 严重不符，且错误码一律写成负值宏。SSoT `error.h` 实际定义为**正数幅值**（`AIRY_EACCES=1 / AIRY_EEXIST=2 / AIRY_EFAULT=3 / AIRY_EINTR=4 / AIRY_EINVAL=5 / AIRY_EIO=6` 等），调用方返回 `-AIRY_E*` 得到负值。修复后所有错误码值严格对齐 SSoT `error.h` L30-45 行的源码定义。原文档虚构的 `AIRY_EMSGSIZE`/`AIRY_ECONFLICT`/`AIRY_ETIMEDOUT`/`AIRY_ENOSYS`/`AIRY_EGENERIC`/`AIRY_EBADF` 均不在 SSoT 中定义，已删除/标注为不存在。
 
 ### 2.3 IPC 码 `[-41, -70]`
 
 A-IPC 协议层专用错误码，覆盖 IPC 协议、Ring Buffer、io_uring_cmd、fastpath C-S0~C-S12 校验链等场景。v1.0.1 起，IPC 码空间与 [07-ipc-fastpath.md](07-ipc-fastpath.md) 的 C-S 检查链精确对齐：
 
 ```c
-/* ===== IPC 码空间 [-41, -70] ===== */
+/* ===== IPC 码空间 [-41, -70]（宏为正数幅值 41-53，调用方返回 -AIRY_EIPC_*） ===== */
 /* 与 fastpath C-S0~C-S12 检查链精确对齐（见 07-ipc-fastpath.md §5.2） */
-#define AIRY_EIPC_MAGIC        (-41)   /* C-S1:  magic 校验失败 */
-#define AIRY_EIPC_OPCODE       (-42)   /* C-S2:  未知 opcode */
-#define AIRY_EIPC_PAYLOAD      (-43)   /* C-S3:  payload_len 非法 */
-#define AIRY_EIPC_HDRSIZE      (-44)   /* C-S4:  头部大小不等于 128 */
-#define AIRY_EIPC_RESERVED     (-45)   /* C-S4:  reserved[72] 非全零 */
-#define AIRY_EIPC_FLAGS        (-46)   /* C-S10: flags 非法（保留位非零） */
-#define AIRY_EIPC_NOTSUPP      (-47)   /* C-S10: 不支持的 opcode/flag（如 ENCRYPT/COMPRESS） */
-#define AIRY_EIPC_KFIFO        (-48)   /* C-S6:  kfifo 入队失败 */
-#define AIRY_EIPC_RECLAIM      (-49)   /* C-S7:  reclaim flag 置位 */
-#define AIRY_EIPC_CONTEXT      (-50)   /* C-S8:  上下文检查失败（!in_task） */
-#define AIRY_EIPC_CRC32        (-51)   /* C-S12: CRC32 校验失败（覆盖 header[0:52) + payload） */
-#define AIRY_EIPC_TIMEOUT      (-52)   /* SLOW_SEND 超时 */
-/* [-53, -70] 预留 */
+#define AIRY_EIPC_MAGIC        41      /* C-S1:  magic 校验失败 */
+#define AIRY_EIPC_OPCODE       42      /* C-S2:  未知 opcode */
+#define AIRY_EIPC_PAYLOAD      43      /* C-S3:  payload_len 非法 */
+#define AIRY_EIPC_HDRSIZE      44      /* C-S4:  头部大小不等于 128 */
+#define AIRY_EIPC_RESERVED     45      /* C-S4:  reserved[72] 非全零 */
+#define AIRY_EIPC_FLAGS        46      /* C-S10: flags 非法（保留位非零） */
+#define AIRY_EIPC_NOTSUPP      47      /* C-S10: 不支持的 opcode/flag（如 ENCRYPT/COMPRESS） */
+#define AIRY_EIPC_KFIFO        48      /* C-S6:  kfifo 入队失败 */
+#define AIRY_EIPC_RECLAIM      49      /* C-S7:  reclaim flag 置位 */
+#define AIRY_EIPC_CONTEXT      50      /* C-S8:  上下文检查失败（!in_task） */
+#define AIRY_EIPC_CRC32        51      /* C-S12: CRC32 校验失败（覆盖 header[0:52) + payload） */
+#define AIRY_EIPC_TIMEOUT      52      /* SLOW_SEND 超时 */
+#define AIRY_EIPC_FROZEN       53      /* C-S0:  Ring frozen（fastpath freeze 检查，A-ULS 控制） */
+/* [54, 70] 预留 */
 ```
 
 **v1.0.1 变更说明**：v1.0.1 之前的 IPC 码（`RING_FULL`/`RING_EMPTY`/`REGISTERED`/`URING_CMD` 等）已废弃，替换为与 C-S 检查链精确对齐的命名。由于 0.1.1 阶段 0 行内核代码，此替换无向后兼容负担。
 
 ### 2.4 Capability 码 `[-71, -100]`
 
-安全子系统专用错误码，覆盖 Capability 校验、纯 C LSM 检查、Capability Folding Badge 校验等场景。v1.0.1 新增 `-78~-82` 用于 Capability Folding Badge 校验：
+安全子系统专用错误码，覆盖 Capability 校验、纯 C LSM 检查、Capability Folding Badge 校验等场景。v1.0.1 新增幅值 78-84（`AIRY_ECAP_BADGE`~`AIRY_ECAP_OVERFLOW`）用于 Capability Folding Badge 校验：
 
 ```c
-/* ===== Capability 码空间 [-71, -100] ===== */
+/* ===== Capability 码空间 [-71, -100]（宏为正数幅值 71-84，调用方返回 -AIRY_ECAP_*） ===== */
 
 /* 原有 Capability 校验码（v1.0.1 保留） */
-#define AIRY_ECAP_MISSING       (-71)   /* Capability 缺失 */
-#define AIRY_ECAP_REVOKED       (-72)   /* Capability 已撤销 */
-#define AIRY_ECAP_EXPIRED       (-73)   /* Capability 已过期 */
-#define AIRY_ECAP_MISMATCH      (-74)   /* Capability 不匹配 */
-#define AIRY_ECAP_LSM_DENIED    (-75)   /* 纯 C LSM 拒绝 */
+#define AIRY_ECAP_MISSING       71      /* Capability 缺失 */
+#define AIRY_ECAP_REVOKED       72      /* Capability 已撤销 */
+#define AIRY_ECAP_EXPIRED       73      /* Capability 已过期 */
+#define AIRY_ECAP_MISMATCH      74      /* Capability 不匹配 */
+#define AIRY_ECAP_LSM_DENIED    75      /* 纯 C LSM 拒绝 */
 
 /* [DSL] 降级模式兜底码（v1.0.1 保留，仅 AIRY_SC_FALLBACK 模式触发） */
-#define AIRY_ECAP_RADIX_MISS    (-76)   /* [DSL] radix tree 查找失败 */
-#define AIRY_ECAP_STATIC_KEY    (-77)   /* [DSL] static_key 禁用 */
+#define AIRY_ECAP_RADIX_MISS    76      /* [DSL] radix tree 查找失败 */
+#define AIRY_ECAP_STATIC_KEY    77      /* [DSL] static_key 禁用 */
 
 /* Capability Folding Badge 校验码（v1.0.1 新增） */
 /* 触发位置: fastpath C-S9 内联 airy_cap_badge_ok()，见 07-ipc-fastpath.md §5.2 */
-#define AIRY_ECAP_BADGE         (-78)   /* Badge 格式无效、Random Tag 不匹配、CAP_CARRY 但 badge=0 */
-#define AIRY_ECAP_EPOCH         (-79)   /* Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） */
-#define AIRY_ECAP_FORGED        (-80)   /* 检测到 Badge 伪造尝试（同时触发 AIRY_FAULT_CAP_FORGED） */
-#define AIRY_ECAP_PERM          (-81)   /* Badge 权限位不满足 opcode 所需权限 */
-#define AIRY_ECAP_FROZEN        (-82)   /* Capability badge 已冻结（badge 撤销，A-ULS 控制，非 C-S0） */
+#define AIRY_ECAP_BADGE         78      /* Badge 格式无效、Random Tag 不匹配、CAP_CARRY 但 badge=0 */
+#define AIRY_ECAP_EPOCH         79      /* Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） */
+#define AIRY_ECAP_FORGED        80      /* 检测到 Badge 伪造尝试（同时触发 AIRY_FAULT_CAP_FORGED） */
+#define AIRY_ECAP_PERM          81      /* Badge 权限位不满足 opcode 所需权限 */
+#define AIRY_ECAP_FROZEN        82      /* Capability badge 已冻结（badge 撤销，A-ULS 控制，非 C-S0） */
 
 /* sec_d 限流拒绝码（R1 补强：sec_d 滥用防护，非 C-S9 fastpath 触发） */
 /* 触发位置: sec_d 限流器 airy_sec_d_throttle_check()，见 10-user-supervisor-daemon.md §4.6 */
-/* 注: 值 -83 为 Capability 码空间 [-71, -100] 内下一个可用值；-82 已分配给 AIRY_ECAP_FROZEN */
-#define AIRY_ESEC_D_THROTTLED   (-83)   /* sec_d 限流拒绝（队列已满，Agent 请求被拒绝）*/
+/* 注: 值 83 为 Capability 码空间 [-71, -100] 内下一个可用值；82 已分配给 AIRY_ECAP_FROZEN */
+#define AIRY_ESEC_D_THROTTLED   83      /* sec_d 限流拒绝（队列已满，Agent 请求被拒绝）*/
+#define AIRY_ECAP_OVERFLOW      84      /* Capability 槽位表溢出（agent_id >= AIRY_CAP_MAX_AGENTS） */
 
-/* [-84, -100] 预留 */
+/* [85, 100] 预留 */
 ```
 
 **Capability Folding Badge 错误码语义详解**：
 
-| 错误码 | 值 | 触发条件（C-S9 内） | 发送方处理 | 是否触发 Fault |
+| 错误码 | 值（幅值） | 触发条件（C-S9 内） | 发送方处理 | 是否触发 Fault |
 |--------|---|---------|-----------|:---:|
-| `AIRY_ECAP_BADGE` | -78 | Badge 格式无效、Random Tag 不匹配（非伪造）、`CAP_CARRY` 置位但 `badge=0` 且 `opcode != CAP_REQUEST` | 检查 Badge 是否正确编译，重新向 sec_d 请求 | 否 |
-| `AIRY_ECAP_EPOCH` | -79 | `badge_epoch != slot_epoch`（per-agent，Badge 已撤销或过期） | 重新向 sec_d 请求 Badge（`CAP_REQUEST` opcode） | 否 |
-| `AIRY_ECAP_FORGED` | -80 | `badge_randtag != agent_caps[src_task].randtag`（Badge 伪造尝试） | 触发 Fault，sec_d 审计，可能终止 Agent | **是**（`AIRY_FAULT_CAP_FORGED` 0x1001） |
-| `AIRY_ECAP_PERM` | -81 | `badge_perms & required != required`（权限位不满足 opcode 所需） | 重新申请更高权限 Badge | 否 |
-| `AIRY_ECAP_FROZEN` | -82 | badge 撤销（A-ULS 控制，非 C-S0） | 等待解冻或联系管理员 | 否 |
+| `AIRY_ECAP_BADGE` | 78 | Badge 格式无效、Random Tag 不匹配（非伪造）、`CAP_CARRY` 置位但 `badge=0` 且 `opcode != CAP_REQUEST` | 检查 Badge 是否正确编译，重新向 sec_d 请求 | 否 |
+| `AIRY_ECAP_EPOCH` | 79 | `badge_epoch != slot_epoch`（per-agent，Badge 已撤销或过期） | 重新向 sec_d 请求 Badge（`CAP_REQUEST` opcode） | 否 |
+| `AIRY_ECAP_FORGED` | 80 | `badge_randtag != agent_caps[src_task].randtag`（Badge 伪造尝试） | 触发 Fault，sec_d 审计，可能终止 Agent | **是**（`AIRY_FAULT_CAP_FORGED` 0x1001） |
+| `AIRY_ECAP_PERM` | 81 | `badge_perms & required != required`（权限位不满足 opcode 所需） | 重新申请更高权限 Badge | 否 |
+| `AIRY_ECAP_FROZEN` | 82 | badge 撤销（A-ULS 控制，非 C-S0） | 等待解冻或联系管理员 | 否 |
 
 **sec_d 限流拒绝码**（R1 补强新增，非 C-S9 fastpath 触发）：
 
-`AIRY_ESEC_D_THROTTLED`(-83) 不是 C-S9 fastpath Badge 校验错误，而是 sec_d 限流器在请求队列满时返回的拒绝码。触发位置是 `airy_sec_d_throttle_check()`（详见 [10-user-supervisor-daemon.md §4.6](../20-modules/10-user-supervisor-daemon.md)）。Agent 收到此错误码后应执行指数退避重试，连续拒绝 3 次后降级至 [DSL] 模式。该错误码与 `-78~-82`（C-S9 Badge 校验码）在码空间上相邻（同属 Capability 码空间 `[-71, -100]`），但触发语义不同：`-78~-82` 由 fastpath C-S9 内联触发，`-83` 由 sec_d slowpath 限流器触发。
+`AIRY_ESEC_D_THROTTLED`(83) 不是 C-S9 fastpath Badge 校验错误，而是 sec_d 限流器在请求队列满时返回的拒绝码。触发位置是 `airy_sec_d_throttle_check()`（详见 [10-user-supervisor-daemon.md §4.6](../20-modules/10-user-supervisor-daemon.md)）。Agent 收到 `-AIRY_ESEC_D_THROTTLED` 后应执行指数退避重试，连续拒绝 3 次后降级至 [DSL] 模式。该错误码与幅值 78-82（C-S9 Badge 校验码）在码空间上相邻（同属 Capability 码空间 `[-71, -100]`），但触发语义不同：78-82 由 fastpath C-S9 内联触发，83 由 sec_d slowpath 限流器触发。
 
 **[DSL] 降级模式下的兜底语义**：
 
-当 `AIRY_SC_FALLBACK` 编译开关启用时，C-S9 跳过 Badge 校验（`capability_badge=0`），退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组）。此时使用 `-76`（`AIRY_ECAP_RADIX_MISS`）和 `-77`（`AIRY_ECAP_STATIC_KEY`）作为兜底错误码（保留编号但 v1.0.1 不触发实际 radix tree 查找），`-78~-82` 不触发。详见 [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2.2。
+当 `AIRY_SC_FALLBACK` 编译开关启用时，C-S9 跳过 Badge 校验（`capability_badge=0`），退化到 `airy_cap_check()` slowpath 兜底路径（基于 `agent_caps[1024]` 静态数组）。此时使用 `AIRY_ECAP_RADIX_MISS`(76) 和 `AIRY_ECAP_STATIC_KEY`(77) 作为兜底错误码（保留编号但 v1.0.1 不触发实际 radix tree 查找），78-84 不触发。详见 [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2.2。
 
-### 2.5 Config 码 `[-101, -120]`（对齐 SSoT error.h L84-93）
+### 2.5 Config 码 `[-101, -120]`（对齐 SSoT error.h L92-96）
 
 A-UCS 配置管理专用错误码，覆盖配置版本/Schema/Base64/JSON/IO 等场景。`AIRY_ECFGVERSION` 是 [DSL] 降级块中唯一保留的非 POSIX 码（详见 §5.1）：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L84-93 —— Config 错误码 */
-#define AIRY_ECFGVERSION      (-101)   /* Configuration version mismatch */
-#define AIRY_ECFGSCHEMA       (-102)   /* Configuration schema invalid */
-#define AIRY_ECFGBASE64       (-103)   /* Base64 decode failure */
-#define AIRY_ECFGJSON         (-104)   /* JSON parse failure */
-#define AIRY_ECFGIO           (-105)   /* Config I/O error */
-/* [-106, -120] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L92-96 —— Config 错误码 */
+/* 宏为正数幅值 101-105，调用方返回 -AIRY_ECFG* 得到负值 Error */
+#define AIRY_ECFGVERSION      101     /* Configuration version mismatch */
+#define AIRY_ECFGSCHEMA       102     /* Configuration schema invalid */
+#define AIRY_ECFGBASE64       103     /* Base64 decode failure */
+#define AIRY_ECFGJSON         104     /* JSON parse failure */
+#define AIRY_ECFGIO           105     /* Config I/O error */
+/* [106, 120] 预留 */
 ```
 
-### 2.6 A-ULS 码 `[-121, -140]`（对齐 SSoT error.h L95-108）
+### 2.6 A-ULS 码 `[-121, -140]`（对齐 SSoT error.h L102-111）
 
 A-ULS（Unified Lifecycle Supervision）调度与生命周期错误码，覆盖 sched_tac 策略/预算/截止时间/周期/优先级/权重与 agent 生命周期状态迁移：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L95-108 —— A-ULS 错误码 */
-#define AIRY_ESCHED_POLICY    (-121)   /* Invalid scheduling policy */
-#define AIRY_ESCHED_BUDGET    (-122)   /* Runtime budget exceeded */
-#define AIRY_ESCHED_DEADLINE  (-123)   /* Deadline missed */
-#define AIRY_ESCHED_PERIOD    (-124)   /* Invalid period */
-#define AIRY_ESCHED_PRIO      (-125)   /* Invalid priority */
-#define AIRY_ESCHED_WEIGHT    (-126)   /* Invalid EEVDF weight */
-#define AIRY_ELIFECYCLE_STATE (-127)   /* Invalid agent lifecycle state */
-#define AIRY_ELIFECYCLE_TRANS (-128)   /* Illegal state transition */
-#define AIRY_ELIFECYCLE_AGENT (-129)   /* Agent not found */
-#define AIRY_ELIFECYCLE_ZOMBIE (-130)  /* Agent in zombie state */
-/* [-131, -140] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L102-111 —— A-ULS 错误码 */
+/* 宏为正数幅值 121-130，调用方返回 -AIRY_ESCHED_* / -AIRY_ELIFECYCLE_* */
+#define AIRY_ESCHED_POLICY    121     /* Invalid scheduling policy */
+#define AIRY_ESCHED_BUDGET    122     /* Runtime budget exceeded */
+#define AIRY_ESCHED_DEADLINE  123     /* Deadline missed */
+#define AIRY_ESCHED_PERIOD    124     /* Invalid period */
+#define AIRY_ESCHED_PRIO      125     /* Invalid priority */
+#define AIRY_ESCHED_WEIGHT    126     /* Invalid EEVDF weight */
+#define AIRY_ELIFECYCLE_STATE 127     /* Invalid agent lifecycle state */
+#define AIRY_ELIFECYCLE_TRANS 128     /* Illegal state transition */
+#define AIRY_ELIFECYCLE_AGENT 129     /* Agent not found */
+#define AIRY_ELIFECYCLE_ZOMBIE 130    /* Agent in zombie state */
+/* [131, 140] 预留 */
 ```
 
-### 2.7 MemoryRoVol 码 `[-141, -160]`（对齐 SSoT error.h L110-120）
+### 2.7 MemoryRoVol 码 `[-141, -160]`（对齐 SSoT error.h L116-123）
 
 MemoryRovol 内存子系统错误码，覆盖 tier 分配/GFP 标志/PMEM/CXL/page 分类/mmap/alloc/OOM：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L110-120 —— MemoryRoVol 错误码 */
-#define AIRY_EMEM_TIER        (-141)   /* Invalid memory tier */
-#define AIRY_EMEM_GFP         (-142)   /* Invalid GFP flags */
-#define AIRY_EMEM_PMEM        (-143)   /* PMEM operation failed */
-#define AIRY_EMEM_CXL         (-144)   /* CXL operation failed */
-#define AIRY_EMEM_PAGE_CLASS  (-145)   /* Invalid page classification */
-#define AIRY_EMEM_MMAP        (-146)   /* mmap failed */
-#define AIRY_EMEM_ALLOC       (-147)   /* alloc_pages failed */
-#define AIRY_EMEM_OOM         (-148)   /* Out of memory (agent-scoped) */
-/* [-149, -160] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L116-123 —— MemoryRoVol 错误码 */
+/* 宏为正数幅值 141-148，调用方返回 -AIRY_EMEM_* 得到负值 Error */
+#define AIRY_EMEM_TIER        141     /* Invalid memory tier */
+#define AIRY_EMEM_GFP         142     /* Invalid GFP flags */
+#define AIRY_EMEM_PMEM        143     /* PMEM operation failed */
+#define AIRY_EMEM_CXL         144     /* CXL operation failed */
+#define AIRY_EMEM_PAGE_CLASS  145     /* Invalid page classification */
+#define AIRY_EMEM_MMAP        146     /* mmap failed */
+#define AIRY_EMEM_ALLOC       147     /* alloc_pages failed */
+#define AIRY_EMEM_OOM         148     /* Out of memory (agent-scoped) */
+/* [149, 160] 预留 */
 ```
 
-### 2.8 Cognition 码 `[-161, -180]`（对齐 SSoT error.h L122-130）
+### 2.8 Cognition 码 `[-161, -180]`（对齐 SSoT error.h L128-133）
 
 A-UCS 认知子系统错误码，覆盖 CoreLoopThree 阶段/Think 模式/Q16.16/超时/迭代上限/置信度：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L122-130 —— Cognition 错误码 */
-#define AIRY_ECOG_PHASE       (-161)   /* Invalid cognition phase */
-#define AIRY_ECOG_MODE        (-162)   /* Invalid think mode */
-#define AIRY_ECOG_Q16         (-163)   /* Q16.16 overflow/underflow */
-#define AIRY_ECOG_TIMEOUT     (-164)   /* Cognition loop timeout */
-#define AIRY_ECOG_ITERATIONS  (-165)   /* Max think iterations exceeded */
-#define AIRY_ECOG_CONFIDENCE  (-166)   /* Confidence threshold not met */
-/* [-167, -180] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L128-133 —— Cognition 错误码 */
+/* 宏为正数幅值 161-166，调用方返回 -AIRY_ECOG_* 得到负值 Error */
+#define AIRY_ECOG_PHASE       161     /* Invalid cognition phase */
+#define AIRY_ECOG_MODE        162     /* Invalid think mode */
+#define AIRY_ECOG_Q16         163     /* Q16.16 overflow/underflow */
+#define AIRY_ECOG_TIMEOUT     164     /* Cognition loop timeout */
+#define AIRY_ECOG_ITERATIONS  165     /* Max think iterations exceeded */
+#define AIRY_ECOG_CONFIDENCE  166     /* Confidence threshold not met */
+/* [167, 180] 预留 */
 ```
 
-### 2.9 Log 码 `[-181, -200]`（对齐 SSoT error.h L132-140）
+### 2.9 Log 码 `[-181, -200]`（对齐 SSoT error.h L138-143）
 
 A-ULP 日志子系统错误码，覆盖 Ring Buffer 写入/满/级别/设施/持久化/magic 校验：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L132-140 —— Log 错误码 */
-#define AIRY_ELOG_RING        (-181)   /* Ring Buffer write failed */
-#define AIRY_ELOG_FULL        (-182)   /* Ring Buffer full */
-#define AIRY_ELOG_LEVEL       (-183)   /* Invalid log level */
-#define AIRY_ELOG_FACILITY    (-184)   /* Invalid facility code */
-#define AIRY_ELOG_PERSIST     (-185)   /* Log persistence failed */
-#define AIRY_ELOG_MAGIC       (-186)   /* Log record magic mismatch */
-/* [-187, -200] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L138-143 —— Log 错误码 */
+/* 宏为正数幅值 181-186，调用方返回 -AIRY_ELOG_* 得到负值 Error */
+#define AIRY_ELOG_RING        181     /* Ring Buffer write failed */
+#define AIRY_ELOG_FULL        182     /* Ring Buffer full */
+#define AIRY_ELOG_LEVEL       183     /* Invalid log level */
+#define AIRY_ELOG_FACILITY    184     /* Invalid facility code */
+#define AIRY_ELOG_PERSIST     185     /* Log persistence failed */
+#define AIRY_ELOG_MAGIC       186     /* Log record magic mismatch */
+/* [187, 200] 预留 */
 ```
 
-### 2.10 Object 码 `[-201, -220]`（对齐 SSoT error.h L142-148）
+### 2.10 Object 码 `[-201, -220]`（对齐 SSoT error.h L148-151）
 
 Airymax Object 系统错误码，覆盖对象句柄/引用计数/类型匹配/对象销毁：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L142-148 —— Object 错误码 */
-#define AIRY_EOBJ_HANDLE      (-201)   /* Invalid object handle */
-#define AIRY_EOBJ_REFCOUNT    (-202)   /* Reference count overflow/underflow */
-#define AIRY_EOBJ_TYPE        (-203)   /* Object type mismatch */
-#define AIRY_EOBJ_GONE        (-204)   /* Object already destroyed */
-/* [-205, -220] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L148-151 —— Object 错误码 */
+/* 宏为正数幅值 201-204，调用方返回 -AIRY_EOBJ_* 得到负值 Error */
+#define AIRY_EOBJ_HANDLE      201     /* Invalid object handle */
+#define AIRY_EOBJ_REFCOUNT    202     /* Reference count overflow/underflow */
+#define AIRY_EOBJ_TYPE        203     /* Object type mismatch */
+#define AIRY_EOBJ_GONE        204     /* Object already destroyed */
+/* [205, 220] 预留 */
 ```
 
-### 2.11 Syscall 码 `[-221, -240]`（对齐 SSoT error.h L150-156）
+### 2.11 Syscall 码 `[-221, -240]`（对齐 SSoT error.h L156-159）
 
 Airymax syscall 表面错误码，覆盖编号/参数/DSL 禁用/ABI 不匹配：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L150-156 —— Syscall 错误码 */
-#define AIRY_ESYS_NUMBER      (-221)   /* Invalid syscall number */
-#define AIRY_ESYS_ARGS        (-222)   /* Invalid syscall arguments */
-#define AIRY_ESYS_DISABLED    (-223)   /* Syscall disabled in [DSL] mode */
-#define AIRY_ESYS_ABI         (-224)   /* ABI mismatch */
-/* [-225, -240] 预留 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L156-159 —— Syscall 错误码 */
+/* 宏为正数幅值 221-224，调用方返回 -AIRY_ESYS_* 得到负值 Error */
+#define AIRY_ESYS_NUMBER      221     /* Invalid syscall number */
+#define AIRY_ESYS_ARGS        222     /* Invalid syscall arguments */
+#define AIRY_ESYS_DISABLED    223     /* Syscall disabled in [DSL] mode */
+#define AIRY_ESYS_ABI         224     /* ABI mismatch */
+/* [225, 240] 预留 */
 ```
 
 ### 2.12 预留码 `[-241, -300]`
@@ -325,7 +335,7 @@ Fault 码占据正数空间 `[0x1000, 0x1FFF]`，从 `0x1000` 起步以避免与
 SSoT `error.h` 实际定义 6 个 Fault 码（`0x1001-0x1006`），覆盖 Badge 伪造/泄漏、Ring 损坏、Agent 心跳超时、Capability 异常、VM 页错误：
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L163-169 —— Fault 码（正数 0x1000+，不可恢复） */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L167-172 —— Fault 码（正数 0x1000+，不可恢复） */
 #define AIRY_FAULT_CAP_FORGED        0x1001  /* Badge forgery (security breach) */
 #define AIRY_FAULT_CAP_LEAK          0x1002  /* Capability leak detected */
 #define AIRY_FAULT_RING_CORRUPT      0x1003  /* IPC ring corruption */
@@ -434,21 +444,21 @@ jobs:
 
 ## §5 [DSL] 降级块：#ifdef AIRY_SC_FALLBACK → 仅保留 38 个 POSIX 码
 
-### 5.1 降级块设计（对齐 SSoT error.h L175-219）
+### 5.1 降级块设计（对齐 SSoT error.h L179-222）
 
 `error.h` 底部包含 `#ifdef AIRY_SC_FALLBACK` 降级块，详细设计见 [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2。降级块生效时（P0-I3 修复：对齐 SSoT 实际定义，移除虚构的 `AIRY_ECFGVERSION` 别名声明）：
 
-- **保留**：38 个 POSIX errno 负值（`AIRY_EACCES=-1` ~ `AIRY_EAGAIN=-35`，对齐 SSoT `error.h` L28-43 的 16 个核心 POSIX 码）
+- **保留**：16 个核心 POSIX 码（宏为正数幅值 `AIRY_EACCES=1` ~ `AIRY_EAGAIN=35`，对齐 SSoT `error.h` L30-45，调用方返回 `-AIRY_E*`）
 - **新增**：38 个 `AIRY_DSL_*` 宏映射（将 38 个未在 SSoT 主块定义的 POSIX 码映射到 7 个核心码 `AIRY_EINVAL`/`AIRY_EEXIST`/`AIRY_EBUSY`/`AIRY_ENOMEM`/`AIRY_ECANCELED`/`AIRY_EAGAIN`/`AIRY_ENOTSUP`）
 - **禁用**：IPC 码、Capability 码、Config 码、A-ULS 码、MemoryRoVol 码、Cognition 码、Log 码、Object 码、Syscall 码（全部 9 个非 POSIX 子空间）
 - **禁用**：全部 Fault 码（降级模式下故障统一走 Panic）
 
-> **⚠️ P0-I3 修复说明（续）**：原文档 §5.1 声明"保留 1 个配置版本码 `AIRY_ECFGVERSION=-101`（降级块内别名，对应 `AIRY_ESC_CFGVERSION`）"，与 SSoT `error.h` L175-219 实际降级块不符。SSoT 降级块**未定义** `AIRY_ECFGVERSION` 别名（Config 码 `AIRY_ECFGVERSION` 在 L89 主块中定义，降级块不重复定义）。`AIRY_ESC_CFGVERSION` 也是虚构宏，SSoT 不存在。修复后移除该虚构声明。
+> **⚠️ P0-I3 修复说明（续）**：原文档 §5.1 声明"保留 1 个配置版本码 `AIRY_ECFGVERSION=-101`（降级块内别名，对应 `AIRY_ESC_CFGVERSION`）"，与 SSoT `error.h` L179-222 实际降级块不符。SSoT 降级块**未定义** `AIRY_ECFGVERSION` 别名（Config 码 `AIRY_ECFGVERSION` 在 L92 主块中定义，降级块不重复定义）。`AIRY_ESC_CFGVERSION` 也是虚构宏，SSoT 不存在。修复后移除该虚构声明。
 
-### 5.2 降级块代码骨架（对齐 SSoT error.h L175-219）
+### 5.2 降级块代码骨架（对齐 SSoT error.h L179-222）
 
 ```c
-/* SSoT: kernel/include/uapi/linux/airymax/error.h L175-219 —— [DSL] 降级块 */
+/* SSoT: kernel/include/uapi/linux/airymax/error.h L179-222 —— [DSL] 降级块 */
 #ifdef AIRY_SC_FALLBACK
 	/*
 	 * When [SC] headers are unavailable (boot/rescue mode),
@@ -495,7 +505,7 @@ jobs:
 #endif /* AIRY_SC_FALLBACK */
 ```
 
-> **⚠️ P0-I3 修复说明（续）**：原文档 §5.2 降级块骨架虚构了一个 `_AIRY_ERROR_FALLBACK_H` 内层 include guard 与 `AIRY_ECFGVERSION` 别名定义，与 SSoT `error.h` L175-219 实际降级块不符。SSoT 实际降级块仅定义 38 个 `AIRY_DSL_*` 宏映射（映射到 `AIRY_EINVAL`/`AIRY_EEXIST`/`AIRY_EBUSY`/`AIRY_ENOMEM`/`AIRY_ECANCELED`/`AIRY_EAGAIN`/`AIRY_ENOTSUP` 7 个核心码），无内层 include guard，无 `AIRY_ECFGVERSION` 别名。修复后严格对齐 SSoT。
+> **⚠️ P0-I3 修复说明（续）**：原文档 §5.2 降级块骨架虚构了一个 `_AIRY_ERROR_FALLBACK_H` 内层 include guard 与 `AIRY_ECFGVERSION` 别名定义，与 SSoT `error.h` L179-222 实际降级块不符。SSoT 实际降级块仅定义 38 个 `AIRY_DSL_*` 宏映射（映射到 `AIRY_EINVAL`/`AIRY_EEXIST`/`AIRY_EBUSY`/`AIRY_ENOMEM`/`AIRY_ECANCELED`/`AIRY_EAGAIN`/`AIRY_ENOTSUP` 7 个核心码），无内层 include guard，无 `AIRY_ECFGVERSION` 别名。修复后严格对齐 SSoT。
 
 ### 5.3 [DSL] 模式下的 Capability Folding 降级语义
 
@@ -503,8 +513,8 @@ jobs:
 
 - `capability_badge` 字段必须为 `0`（H6 硬约束）
 - C-S9 跳过 `airy_cap_badge_ok()`，调用 `airy_cap_check()` 兜底（slowpath POSIX capability 校验，详见 [03-capability-model.md §4.3.2](../110-security/03-capability-model.md)）
-- 错误码使用 `-76`（`AIRY_ECAP_RADIX_MISS`）和 `-77`（`AIRY_ECAP_STATIC_KEY`）
-- `-78~-82`（Badge 校验码）不触发
+- 错误码使用 `AIRY_ECAP_RADIX_MISS`(76) 和 `AIRY_ECAP_STATIC_KEY`(77)（调用方收到 `-76/-77`）
+- 幅值 78-84（Badge 校验码）不触发
 - `0x1001-0x1003`（Capability Folding Fault 码）不触发（降级模式 Fault 统一走 Panic）
 
 **[DSL] 模式限制**：
@@ -534,26 +544,26 @@ jobs:
 
 `error.h` 文件结构自上而下（P0-I2 修复：原描述遗漏 7 个子空间）：
 
-1. 版权头 + 文件说明注释（L1-14）
-2. 头文件守卫 `#ifndef _UAPI_AIRYMAX_ERROR_H`（L16-17）
-3. `#include <linux/airymax/uapi_compat.h>`（L19）
-4. `airy_err_t` 类型定义（L22）
-5. `AIRY_EOK` 成功码（L25）
-6. POSIX 码 `[-1, -40]`（L27-43，16 个定义）
-7. IPC 码 `[-41, -70]`（L45-62，13 个定义，含 `AIRY_EIPC_FROZEN` 独立值 -53）
-8. Capability 码 `[-71, -100]`（L64-82，13 个定义）
-9. Config 码 `[-101, -120]`（L84-93，5 个定义）
-10. A-ULS 码 `[-121, -140]`（L95-108，10 个定义）
-11. MemoryRoVol 码 `[-141, -160]`（L110-120，8 个定义）
-12. Cognition 码 `[-161, -180]`（L122-130，6 个定义）
-13. Log 码 `[-181, -200]`（L132-140，6 个定义）
-14. Object 码 `[-201, -220]`（L142-148，4 个定义）
-15. Syscall 码 `[-221, -240]`（L150-156，4 个定义）
-16. 预留码 `[-241, -300]`（L158-161）
-17. Fault 码 `[0x1000, 0x1FFF]`（L163-169，6 个定义）
-18. 辅助宏 `AIRY_ERR_OK` / `AIRY_ERR_FAIL`（L171-173）
-19. `#ifdef AIRY_SC_FALLBACK` 降级块（L175-219，38 个 `AIRY_DSL_*` 映射）
-20. 头文件守卫结束 `#endif`（L221）
+1. 版权头 + 文件说明注释（L1-16）
+2. 头文件守卫 `#ifndef _UAPI_AIRYMAX_ERROR_H`（L18-19）
+3. `#include <linux/airymax/uapi_compat.h>`（L21）
+4. `airy_err_t` 类型定义（L24）
+5. `AIRY_EOK` 成功码（L27）
+6. POSIX 码（幅值 1-35，返回负空间 `[-1, -40]`）（L30-45，16 个定义）
+7. IPC 码（幅值 41-53，返回负空间 `[-41, -70]`）（L51-63，13 个定义，含 `AIRY_EIPC_FROZEN` 独立值 53）
+8. Capability 码（幅值 71-84，返回负空间 `[-71, -100]`）（L69-84，14 个定义）
+9. Config 码（幅值 101-105，返回负空间 `[-101, -120]`）（L92-96，5 个定义）
+10. A-ULS 码（幅值 121-130，返回负空间 `[-121, -140]`）（L102-111，10 个定义）
+11. MemoryRoVol 码（幅值 141-148，返回负空间 `[-141, -160]`）（L116-123，8 个定义）
+12. Cognition 码（幅值 161-166，返回负空间 `[-161, -180]`）（L128-133，6 个定义）
+13. Log 码（幅值 181-186，返回负空间 `[-181, -200]`）（L138-143，6 个定义）
+14. Object 码（幅值 201-204，返回负空间 `[-201, -220]`）（L148-151，4 个定义）
+15. Syscall 码（幅值 221-224，返回负空间 `[-221, -240]`）（L156-159，4 个定义）
+16. 预留码（负空间 `[-241, -300]`）（L161-164）
+17. Fault 码 `[0x1000, 0x1FFF]`（L167-172，6 个定义）
+18. 辅助宏 `AIRY_ERR_OK` / `AIRY_ERR_FAIL`（L175-176）
+19. `#ifdef AIRY_SC_FALLBACK` 降级块（L179-222，38 个 `AIRY_DSL_*` 映射）
+20. 头文件守卫结束 `#endif`（L224）
 
 ### 6.3 变更流程
 
@@ -575,7 +585,7 @@ jobs:
 - [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §2 —— [SC] 共享契约层
 - [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) §2 —— [DSL] 降级块机制
 - [02-ipc-protocol.md](02-ipc-protocol.md) —— Layout C v4 消息头定义（`capability_badge` offset 40-47）
-- [07-ipc-fastpath.md](07-ipc-fastpath.md) —— fastpath C-S0~C-S12 检查链（C-S9 Badge 校验触发 -78~-82）
+- [07-ipc-fastpath.md](07-ipc-fastpath.md) —— fastpath C-S0~C-S12 检查链（C-S9 Badge 校验触发幅值 78-84）
 - [01-syscalls.md](01-syscalls.md) —— syscall 12→4 映射（`airy_sys_call` 编译 Badge）
 - [03-capability-model.md](../110-security/03-capability-model.md) —— Capability 模型（Badge 编译/撤销/校验）
 - [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) §2.7 —— [SC] `ipc.h` Layout C v4 定义

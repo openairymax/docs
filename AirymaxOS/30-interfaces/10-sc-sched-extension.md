@@ -222,8 +222,8 @@ struct airy_task_desc {
     __u32       sched_policy;   /* offset 40: SCHED_DEADLINE/FIFO/OTHER */
     __u32       weight;         /* offset 44: EEVDF weight */
     __u32       state;          /* offset 48: agent lifecycle state */
-    __u8        reserved[12];   /* offset 52: reserved */
-} __attribute__((aligned(64)));
+    __u8        _reserved[12];  /* offset 52: reserved（下划线前缀，对齐 OS-IRON-014 命名） */
+} AIRY_ALIGNED(64);
 
 _Static_assert(sizeof(struct airy_task_desc) == 64,
                "airy_task_desc must be exactly 64 bytes");
@@ -364,7 +364,7 @@ OLK 6.6 提供了一系列 QoS 调度增强（`kernel/sched/grid/`），agentrt-
 | 项目 | 路径 | 说明 |
 |------|------|------|
 | [SC] 头文件 | `kernel/include/uapi/linux/airymax/sched.h` | 双端逐字节共享 |
-| 内核实现 | `kernel/kernel/superv/airy_sched.c` | 调度策略实现 |
+| 内核实现 | `kernel/corekern/taskflow/airy_task_desc.c`（`airy_task_desc_init()` / `airy_task_desc_valid()`；原文档引用的 `kernel/kernel/superv/airy_sched.c` 不存在，调度策略注入走 `sched_setattr()`，见 §4.2） | 调度策略实现 |
 | 用户态实现 | `services/daemons/macro_d/sched.c` | 调度参数注入 |
 
 ### 6.2 版本号

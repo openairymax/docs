@@ -68,7 +68,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ----------- | --------- | --------------------- | --------------------- |
 | 内核核心代码      | \~1.44 万行 | 5-10 万行（含 agent 调度原语） | 每新增子系统需论证"无法在用户态安全实现" |
 | 微内核化改造补丁    | —         | 控制在 2 万行以内            | VFS / 网络栈 / 驱动用户态化补丁  |
-| \[SC] 共享契约层 | —         | 10 个头文件（IRON-9 v3）     | 单一物理宿主，禁止重复定义         |
+| \[SC] 共享契约层 | —         | 12 个头文件（IRON-9 v3）     | 单一物理宿主，禁止重复定义         |
 
 ### 1.2 内核代码体量预算
 
@@ -78,7 +78,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ---------------------------- | -------- | ---------------- | --------------- |
 | 内核核心（调度/IPC/capability/内存原语） | \~14,400 | 5-10 万行          | 真正的"微内核化"必需     |
 | 微内核化改造补丁（VFS/网络/驱动用户态化）      | —        | ≤ 2 万行           | 渐进式改造           |
-| \[SC] 共享契约层                  | —        | 10 个头文件           | IRON-9 v3 单一数据源 |
+| \[SC] 共享契约层                  | —        | 12 个头文件           | IRON-9 v3 单一数据源 |
 | \[SS] 语义同源层                  | —        | 30+ 项高层 API 语义   | 实现独立，语义同源       |
 | \[IND] 独立层                   | —        | 15+ 项            | 内核态专属           |
 
@@ -164,7 +164,7 @@ if (ret < 0) {
 
 | 层次               | 共享程度               | 内核子系统内容                                                                                                                                                                                                                                                                                 | 组织方式                              |
 | ---------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码             | 10 个头文件（详见 §10.1）：error.h / log_types.h / ipc.h / sched.h / memory_types.h / security_types.h / cognition_types.h / syscalls.h / uapi_compat.h / lsm_types.h                                                                                                                                                                                | `kernel/include/uapi/linux/airymax/`（单一物理宿主，每个头文件底部含 \[DSL] 降级块） |
+| **\[SC] 共享契约层**  | 完全共享代码             | 12 个头文件（详见 §10.1）：error.h / log_types.h / ipc.h / sched.h / memory_types.h / security_types.h / cognition_types.h / syscalls.h / syscall.h / uapi_compat.h / lsm_types.h / bpf_struct_ops.h                                                                                                                                                                                | `kernel/include/uapi/linux/airymax/`（单一物理宿主，每个头文件底部含 \[DSL] 降级块） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源，签名独立演进 | sched_tac 25+ 调度回调语义、io\_uring ring 创建/提交/完成/注册、MSG\_RING 跨环消息、SQPOLL 状态机、DEFER\_TASKRUN、eBPF struct\_ops 注册、bpf\_prog 生命周期、bpf\_link 生命周期、bpf\_map\_ops 回调表、ringbuf reserve/submit、kfunc 注册模式 等 30+ 项                                                                                 | 各自独立实现                            |
 | **\[IND] 完全独立层** | 完全独立               | 策略守护进程注册、策略守护进程 enable/disable、调度上下文追踪、fallback 回退机制、cgroup 集成、core-sched 集成、debug dump；io-wq 工作队列、NO\_MMAP、REGISTERED\_FD\_ONLY、URING\_CMD；JIT 后端、trampoline 本机码生成、verifier 实现、CFS 钩子（不引入）、cfi\_stubs、KABI\_RESERVE（不采用）；VFS/网络/驱动用户态化改造；Rust 驱动框架 | 各自独立仓库                            |
 | **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集             | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 个 `AIRY_DSL_*` 降级宏映射、printk 原生日志、最简 128B IPC、EEVDF 默认调度、仅 POSIX capability、统一 Panic）                                                                                                                                  | 自包含，不依赖 \[SC] 其他符号                  |
@@ -308,7 +308,7 @@ eBPF struct\_ops 扩展，struct\_ops 状态机与 common\_value \[SC] 与 agent
 
 > **v1.0.1 Capability Folding 实现注记**：seL4 风格 CSpace+MDB 派生树的设计语义（ES-SEL4-05\~09 设计溯源）在 v1.0.1 Capability Folding 后工程实现已**简化**为：
 >
-> - **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节 = 80 内容 + 对齐填充）替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `epoch`(2) + MDB 派生树字段 `parent_agent`(4) + `first_child`(4) + `next_sibling`(4) + `generation`(2) + `revocable`(2) + `_reserved[40]` = 80 字节内容（K9-1 fix 引入 per-agent `epoch` 字段 + MDB 左孩子右兄弟派生树，从原 `_reserved[56]` 中 carved out 16 字节，UAPI 二进制兼容）。
+> - **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节（24 base + 16 MDB + 40 reserved））替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `epoch`(2) + MDB 派生树字段 `parent_agent`(4) + `first_child`(4) + `next_sibling`(4) + `generation`(2) + `revocable`(2) + `_reserved[40]` = 80 字节（K9-1 fix 引入 per-agent `epoch` 字段 + MDB 左孩子右兄弟派生树，从原 `_reserved[56]` 中 carved out 16 字节，UAPI 二进制兼容）。
 > - **Badge 64-bit 编码**：`Epoch<<48 | RandomTag<<16 | Perms`（bits 63:48 为 16 位 Epoch，bits 47:16 为 32 位 RandomTag，bits 15:0 为 16 位 Perms），派生关系隐式编码在 RandomTag 中，无需 MDB 链表维护。
 > - **O(1) 撤销**：`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制），fastpath C-S9 校验路径通过 epoch 比对自动失效该 Agent 的旧 badge；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销（`airy_cap_epoch_bump_all()`）时使用。
 > - **CNode 7 操作语义保留**（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate），但实现路径通过 sec_d 串行化（不暴露并发 CNode 操作 API）。
@@ -422,7 +422,7 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 
 | 维度 | seL4 原始设计（设计溯源） | v1.0.1 Capability Folding 工程实现 | 简化理由 |
 | --- | --- | --- | --- |
-| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
+| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
 | 写者模型 | 内核态多写者（CNode 操作并发） | **sec_d 唯一写者**（用户态串行化） | 用户态串行化消除内核锁，sec_d 持单写令牌 |
 | Badge 编码 | 64-bit badge 字段（endpoint\_cap/notification\_cap） | **`Epoch<<48 \| RandomTag<<16 \| Perms`** | epoch 位段支持 O(1) 撤销，RandomTag 隐式编码派生关系 |
 | 派生关系 | MDB（Mapping Database）双向链表维护父子 | **RandomTag 隐式编码**（同源派生共享 RandomTag） | 免链表维护，撤销通过 per-agent epoch 递增实现 |
@@ -436,7 +436,7 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 /* v1.0.1 Capability Folding: 静态数组 + Badge 64-bit 编码 */
 #define AIRY_CAP_MAX_AGENTS    1024
 
-/* [SC] lsm_types.h: 每槽 sizeof=128 字节（80 内容 + AIRY_ALIGNED(64) 对齐填充） */
+/* [SC] lsm_types.h: 每槽 sizeof=80 字节（24 base + 16 MDB + 40 reserved，AIRY_ALIGNED(64)） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
     __u32   agent_id;         /* Owning agent ID */
@@ -503,7 +503,7 @@ static __always_inline int airy_cap_badge_ok(__u64 badge, __u32 agent_id,
 
 ### 5.1 CTE 与 CSpace 设计
 
-**seL4 capability 即内存**（ES-SEL4-05）：每个 cap 是定长 word（64 位系统为 128 字节，agentrt-linux `airy_cap_slot` sizeof=128 字节与之对齐），通过 CTE（Capability Table Entry）存储。
+**seL4 capability 即内存**（ES-SEL4-05）：每个 cap 是定长 word，agentrt-linux `airy_cap_slot` sizeof=80 字节（24 base + 16 MDB + 40 reserved），通过 CTE（Capability Table Entry）存储。
 
 | 维度         | seL4 实现                     | 代码证据                                    | agentrt-linux 落地                                     |
 | ---------- | --------------------------- | --------------------------------------- | ---------------------------------------------------- |
@@ -742,7 +742,7 @@ io_uring 内核侧 issue 路径
 | C-S9.RANDTAG | RandomTag 伪造检测（badge_randtag != agent_caps[src_task].randtag） | `-AIRY_ECAP_FORGED`（-80） |
 | C-S9.PERMS | Perms 位段权限匹配（opcode vs cap 权限） | `-AIRY_ECAP_PERM`（-81） |
 
-**sec_d 串行化 Badge 编译**：sec_d 通过 `airy_sys_call`（编号 0）独占 Badge 编译/撤销，内部采用**令牌桶限流**（避免恶意 Agent 暴力耗尽 epoch 空间），**50ms SLO**（Badge 编译请求 50ms 内完成）。sec_d 限流拒绝时返回 `AIRY_ESEC_D_THROTTLED = -83`。
+**sec_d 串行化 Badge 编译**：sec_d 通过 `airy_sys_call`（编号 548）独占 Badge 编译/撤销，内部采用**令牌桶限流**（避免恶意 Agent 暴力耗尽 epoch 空间），**50ms SLO**（Badge 编译请求 50ms 内完成）。sec_d 限流拒绝时返回 `AIRY_ESEC_D_THROTTLED = 83`（-83）。
 
 **fastpath 与 slowpath 分工**：
 
@@ -758,18 +758,18 @@ io_uring 内核侧 issue 路径
 - 完成接口：`io_uring_cmd_done(cmd, ret, res2, issue_flags)` 4 参数。
 - uring\_cmd LSM 钩子：单参数 `struct io_uring_cmd *ioucmd`。
 
-**故障码**（`AIRY_FAULT_*` 前缀，v1.0.1 定义 6 个，详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §3.1）：
+**故障码**（`AIRY_FAULT_*` 前缀，v1.0.1 定义 6 个，SSoT 见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §3.1，对齐 [SC] error.h）：
 
 | 故障码 | 值 | 含义 |
 | --- | --- | --- |
 | `AIRY_FAULT_CAP_FORGED` | `0x1001` | Badge 伪造检测（安全漏洞） |
-| `AIRY_FAULT_CAP_EPOCH_OVERFLOW` | `0x1002` | Epoch 计数器溢出 |
-| `AIRY_FAULT_IPC_MAGIC_REPEAT` | `0x1003` | IPC magic 校验连续失败 |
-| `AIRY_FAULT_LSM_HOOK_FAIL` | `0x1004` | LSM 钩子执行异常 |
-| `AIRY_FAULT_RING_CORRUPTION` | `0x1005` | IPC Ring Buffer 损坏 |
-| `AIRY_FAULT_CONFIG_TAMPER` | `0x1006` | 配置完整性校验失败 |
+| `AIRY_FAULT_CAP_LEAK` | `0x1002` | Capability 泄漏检测 |
+| `AIRY_FAULT_RING_CORRUPT` | `0x1003` | IPC Ring Buffer 损坏 |
+| `AIRY_FAULT_TIMEOUT` | `0x1004` | Agent 心跳超时 |
+| `AIRY_FAULT_ABNORMAL_CAP` | `0x1005` | 异常 capability 使用 |
+| `AIRY_FAULT_VM_FAULT` | `0x1006` | Agent 内 VM 缺页故障 |
 
-> **v1.1+ 计划扩展**（当前 SSoT 未定义）：`AIRY_FAULT_URING_MALFORMED`(0x100A)、`AIRY_FAULT_AUDIT_TAMPER`(0x100B) 等。
+> **v1.0.1 扩展预留**（当前 [SC] error.h 未定义）：`AIRY_FAULT_URING_MALFORMED`(0x100A)、`AIRY_FAULT_AUDIT_TAMPER`(0x100B) 等需先经 08-sc-error-contract.md 注册后方可使用。
 
 ***
 
@@ -792,15 +792,27 @@ io_uring 内核侧 issue 路径
 | `magic` | `__u32`        | `AIRY_TASK_MAGIC`（0x41475453 'AGTS'）          |
 | `prio`  | `__u16`        | 优先级 \[AIRY\_PRIO\_MIN=0, AIRY\_PRIO\_MAX=139] |
 | `_pad`  | `__u16`        | 填充对齐                                          |
+| `runtime_ns` | `__u64`    | 运行预算（ns）                                      |
+| `deadline_ns` | `__u64`    | 截止时间（ns）                                      |
+| `period_ns`   | `__u64`    | 周期（ns）                                        |
 | `vtime` | `airy_vtime_t` | 虚拟时间（Q16.16 定点数，`int32_t`）                    |
+| `agent_id` | `__u32`     | Agent 标识符 \[0, 1023]                          |
+| `sched_policy` | `__u32`  | SCHED_DEADLINE/FIFO/OTHER                        |
+| `weight` | `__u32`       | EEVDF 权重                                        |
+| `state`  | `__u32`       | Agent 生命周期状态（8 态枚举）                          |
+| `_reserved[12]` | `__u8[12]` | 预留（underscore 前缀，IRON-014 命名约定）           |
 
-**vtime 衰减公式**（SSoT `sched.h`）：
+> 结构体共 **12 字段，总大小 64B**（`_Static_assert(sizeof == 64)`，[SC] sched.h 权威）。
+
+**vtime 衰减公式**（SSoT `sched.h`，2 参数，用户态近似，非内核 EEVDF 内部算法）：
 
 ```c
 static inline airy_vtime_t
-airy_vtime_decay(airy_vtime_t vtime, u64 consumed_slice, u32 weight)
+airy_vtime_decay(airy_vtime_t vtime, __u32 weight)
 {
-    return vtime + (airy_vtime_t)(consumed_slice * 100 / weight);
+    /* vtime + AIRY_SLICE_DFL * AIRY_VTIME_ONE / weight（Q16.16） */
+    return vtime + (AIRY_SLICE_DFL * AIRY_VTIME_ONE) /
+           (weight ? weight : 1);
 }
 ```
 
@@ -813,6 +825,7 @@ airy_vtime_decay(airy_vtime_t vtime, u64 consumed_slice, u32 weight)
 | `AIRY_WEIGHT_MIN`   | 1     | 最小权重         |
 | `AIRY_WEIGHT_MAX`   | 10000 | 最大权重         |
 | `AIRY_SLICE_DFL` | 20    | 默认时间片（ms）    |
+| `AIRY_VTIME_ONE`    | 1<<16 | Q16.16 的 1.0    |
 | `AIRY_CAP_MAX_AGENTS`    | 1024  | 并发 Agent 硬上限 |
 
 **注意**：vtime 使用 Q16.16 定点数（`int32_t`），因内核态禁止浮点运算（`-mno-80387`）。agentrt 用户态可使用 `float`，但跨 \[SC] 边界统一使用 Q16.16。
@@ -915,16 +928,16 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 
 本节详细列出 agentrt-linux 内核中 IRON-9 v3 四层共享模型的具体落地细节。所有 \[SC] 定义以 SSoT（`120-cross-project-code-sharing.md`）为唯一权威来源。
 
-### 10.1 \[SC] 共享契约层——10 个头文件
+### 10.1 \[SC] 共享契约层——12 个头文件
 
 #### 10.1.1 sched.h — 调度契约
 
 | 共享内容          | 符号                      | 值/类型            | 说明                                                                      |
 | ------------- | ----------------------- | --------------- | ----------------------------------------------------------------------- |
 | 任务描述符 magic   | `AIRY_TASK_MAGIC`       | `0x41475453u`   | 'AGTS'（Agent Task State）                                                |
-| 任务描述符结构       | `struct airy_task_desc` | 4 字段            | magic(\_\_u32) + prio(\_\_u16) + \_pad(\_\_u16) + vtime(airy\_vtime\_t) |
+| 任务描述符结构       | `struct airy_task_desc` | 12 字段，64B     | magic(\_\_u32) + prio(\_\_u16) + \_pad(\_\_u16) + runtime\_ns(\_\_u64) + deadline\_ns(\_\_u64) + period\_ns(\_\_u64) + vtime(airy\_vtime\_t) + agent\_id(\_\_u32) + sched\_policy(\_\_u32) + weight(\_\_u32) + state(\_\_u32) + \_reserved[12]（\`_Static_assert(sizeof==64)\`） |
 | vtime 类型      | `airy_vtime_t`          | `int32_t`       | Q16.16 定点数                                                              |
-| vtime 衰减函数    | `airy_vtime_decay()`    | inline          | vtime + (consumed\_slice \* 100 / weight)                               |
+| vtime 衰减函数    | `airy_vtime_decay()`    | inline          | vtime + AIRY\_SLICE\_DFL \* AIRY\_VTIME\_ONE / weight（2 参数，用户态近似）   |
 | 优先级范围         | `AIRY_PRIO_MIN/MAX`     | 0 / 139         | 兼容 Linux 优先级                                                            |
 | 权重范围          | `AIRY_WEIGHT_MIN/MAX`   | 1 / 10000       | 兼容sched_tac 权重模型                                                      |
 | 默认时间片         | `AIRY_SLICE_DFL`     | 20              | 20ms                                                                    |
@@ -937,7 +950,7 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 | IPC magic | `AIRY_IPC_MAGIC`                                     | `0x41524531u`     | 'ARE1'（Airymax Runtime Engine v1）                                                                                                                                                      |
 | 消息头大小     | `AIRY_IPC_HDR_SIZE`                                    | 128               | 128 字节                                                                                                                                                                                 |
 | 消息头结构     | `struct airy_ipc_msg_hdr`                            | 11 字段              | magic(\_\_u32) + opcode(\_\_u16) + flags(\_\_u16) + trace\_id(\_\_u64) + timestamp\_ns(\_\_u64) + src\_task(\_\_u64) + dst\_task(\_\_u64) + capability\_badge(\_\_u64, offset 40, v1.0.1 Capability Folding) + payload\_len(\_\_u32) + crc32(\_\_u32, offset 52) + reserved[72](__u8, offset 56) |
-| 消息标志      | `AIRY_IPC_FLAG_ZEROCOPY/CAP_CARRY/BATCH_TAIL`           | (1u<<0)/(1u<<1)/(1u<<4) | 零拷贝 / 携带 Badge / 批量尾（v1.0.1 废弃 NOWAIT/SIGNAL，由 io_uring `IOSQE_ASYNC` 与 CQE 通知替代）                                                                                                  |
+| 消息标志      | `AIRY_IPC_FLAG_ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL` | (1u<<0)/(1u<<1)/(1u<<2)/(1u<<3)/(1u<<4) | 5 个 active 标志（零拷贝 / 携带 Badge / 加密 / 压缩 / 批量尾；v1.0.1 废弃 NOWAIT/SIGNAL，由 io_uring `IOSQE_ASYNC` 与 CQE 通知替代；ENCRYPT/COMPRESS 预留 inactive） |
 | IPC 操作码   | `AIRY_IPC_OP_SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE` | 0x0001~0x0011 | 7 个操作码（v1.0.1 Capability Folding）                                                                                                                                                 |
 | SQE 标志    | `AIRY_IPC_SQE_F_FIXED_BUF/ASYNC/BUF_SELECT/SKIP_CQE` | (1u<<0)\~(1u<<3)  | io\_uring SQE 标志                                                                                                                                                                       |
 | CQE 标志    | `AIRY_IPC_CQE_F_BUFFER/MORE/NOTIF`                   | (1u<<0)\~(1u<<2)  | io\_uring CQE 标志                                                                                                                                                                       |
@@ -978,10 +991,10 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 
 | 共享内容       | 符号                                                       | 值                     | 说明                         |
 | ---------- | -------------------------------------------------------- | --------------------- | -------------------------- |
-| Syscall 架构 | —                                                        | v1.0.1: 4 核心 + 20 预留 = 24 槽位 | 1 Capability Invocation + 3 控制原语（IPC 数据面零 syscall） |
-| 编号 0       | `AIRY_SYS_CALL`                                          | 0                     | Capability Invocation（sec_d 专属管理入口） |
-| 编号 1-3     | `AIRY_SYS_ROVOL_CTL/SCHED_CTL/CLT_NOTIFY`                | 1-3                   | 3 个控制原语（记忆卷载/调度/CoreLoopThree） |
-| 编号 4-23    | 预留                                                       | 4-23                  | 未来扩展                       |
+| Syscall 架构 | —                                                        | v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位 | 1 Capability Invocation + 3 控制原语（IPC 数据面零 syscall），编号 548 起始，避开 x32 历史区 512-547 |
+| 编号 548     | `AIRY_SYS_CALL`                                          | 548                   | Capability Invocation（sec_d 专属管理入口） |
+| 编号 549-551 | `AIRY_SYS_ROVOL_CTL/SCHED_CTL/CLT_NOTIFY`                | 549-551               | 3 个控制原语（记忆卷载/调度/CoreLoopThree） |
+| 编号 552-571 | 预留                                                       | 552-571               | 20 个预留槽位，未来扩展                 |
 
 ### 10.2 \[SS] 语义同源层——30+ 项
 
@@ -1093,10 +1106,10 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 | Daemon | 职责 | 内核切入点 | syscall / 通道 |
 | --- | --- | --- | --- |
-| `sec_d` | capability 编译/撤销 + Badge 生命周期 + LSM_ctl + Wasm_load | `security/airy/airy_lsm.c` + `agent_caps[1024]` 静态数组写者 | `airy_sys_call`（编号 0）+ airy_lsm LSM 钩子 |
-| `cogn_d` | 认知循环调度（CoreLoopThree：PERCEPT/THINK/ACT） | kthread 注册 + CoreLoopThree 阶段通知 | `airy_sys_clt_notify`（编号 3）|
-| `mem_d` | 记忆卷载管理（MemoryRovol L1-L4 快照/恢复/迁移） | userfaultfd + MGLRU + CXL bus | `airy_sys_rovol_ctl`（编号 1）|
-| `sched_d` | sched_tac 策略守护（stc_realtime/interactive/agent/batch） | sched_tac 策略框架 + cgroup cpuset | `airy_sys_sched_ctl`（编号 2）|
+| `sec_d` | capability 编译/撤销 + Badge 生命周期 + LSM_ctl + Wasm_load | `security/airy/airy_lsm.c` + `agent_caps[1024]` 静态数组写者 | `airy_sys_call`（编号 548）+ airy_lsm LSM 钩子 |
+| `cogn_d` | 认知循环调度（CoreLoopThree：PERCEPT/THINK/ACT） | kthread 注册 + CoreLoopThree 阶段通知 | `airy_sys_clt_notify`（编号 551）|
+| `mem_d` | 记忆卷载管理（MemoryRovol L1-L4 快照/恢复/迁移） | userfaultfd + MGLRU + CXL bus | `airy_sys_rovol_ctl`（编号 549）|
+| `sched_d` | sched_tac 策略守护（stc_realtime/interactive/agent/batch） | sched_tac 策略框架 + cgroup cpuset | `airy_sys_sched_ctl`（编号 550）|
 | `logger_d` | 统一日志（128B 记录 + 5 级枚举） | printk bridge + char dev `/dev/airy_log` | char dev + \[SC] `log_types.h` |
 | `audit_d` | 审计哈希链（`AIRY_FAULT_AUDIT_TAMPER=0x100B` 检测） | eBPF ringbuf 上报审计事件 | eBPF ringbuf + kfunc |
 | `gateway_d` | 跨节点 IPC（分布式 Agent 通信） | io_uring ring + 网络栈 | io_uring + gRPC/QUIC |
@@ -1108,11 +1121,11 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 **daemon 与 syscall 编号映射**（v1.0.1 Capability Folding 后）：
 
-- 编号 0 `airy_sys_call` → sec_d 独占（Badge 编译/撤销 + LSM_ctl + Wasm_load）
-- 编号 1 `airy_sys_rovol_ctl` → mem_d 独占（记忆卷载控制）
-- 编号 2 `airy_sys_sched_ctl` → sched_d 独占（调度策略配置）
-- 编号 3 `airy_sys_clt_notify` → cogn_d 独占（CoreLoopThree 通知 + kthread 注册）
-- 编号 4-23 预留（未来 daemon 扩展）
+- 编号 548 `airy_sys_call` → sec_d 独占（Badge 编译/撤销 + LSM_ctl + Wasm_load）
+- 编号 549 `airy_sys_rovol_ctl` → mem_d 独占（记忆卷载控制）
+- 编号 550 `airy_sys_sched_ctl` → sched_d 独占（调度策略配置）
+- 编号 551 `airy_sys_clt_notify` → cogn_d 独占（CoreLoopThree 通知 + kthread 注册）
+- 编号 552-571 预留（未来 daemon 扩展）
 
 **说明**：
 - logger_d / audit_d / gateway_d / macro_d / vfs_d / net_d / dev_d / config_d 共 8 个 daemon **不直接占用 syscall 槽位**，通过 io_uring 数据面 / char dev / eBPF ringbuf / sysfs 等通道与内核协作。
@@ -1161,7 +1174,7 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 | 结构体                     | agentrt                                         | agentrt-linux                                   | 一致性 |
 | ----------------------- | ----------------------------------------------- | ----------------------------------------------- | --- |
-| `airy_task_desc`        | 4 字段（magic/prio/\_pad/vtime）                    | 4 字段（magic/prio/\_pad/vtime）                    | 一致  |
+| `airy_task_desc`        | 12 字段，64B（magic/prio/\_pad/runtime\_ns/deadline\_ns/period\_ns/vtime/agent\_id/sched\_policy/weight/state/\_reserved[12]） | 12 字段，64B（同左）                    | 一致  |
 | `airy_ipc_msg_hdr`      | 128B，Layout C v4（magic/opcode/flags/trace\_id/timestamp\_ns/src\_task/dst\_task/capability\_badge/payload\_len/crc32/reserved，11 字段，capability\_badge offset 40） | 128B，Layout C v4（同左，capability\_badge offset 40） | 一致（H1 硬约束） |
 | `airy_struct_ops_value` | state + common                                  | state + common                                  | 一致  |
 | `airy_struct_ops_state` | INIT/REGISTERED/ACTIVE/DRAINING                 | INIT/REGISTERED/ACTIVE/DRAINING                 | 一致  |
@@ -1177,7 +1190,7 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 | `AIRY_PRIO_MIN/MAX`   | 0/139                        | 0/139                        | 一致  |
 | `AIRY_WEIGHT_MIN/MAX` | 1/10000                      | 1/10000                      | 一致  |
 | `AIRY_IPC_OP_*`       | SEND/RECV/SEND\_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE (0x0001~0x0011) | 同左（v1.0.1 Capability Folding 7 opcode） | 一致  |
-| `AIRY_SYS_*`          | 0-3（4 核心，v1.0.1）            | 0-3（4 核心，v1.0.1）            | 一致  |
+| `AIRY_SYS_*`          | 548-551（4 核心，v1.0.1）            | 548-551（4 核心，v1.0.1）            | 一致  |
 
 ### 16.4 Capability 操作一致性
 
@@ -1195,9 +1208,9 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 ## 17. openEuler 硬件驱动 LAYER 复用
 
-agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
+agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66148--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
 
-- **arch/sw_64/**：完整导入申威架构支持（366 文件），vanilla 6.6.144 不含此架构
+- **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.148 不含此架构
 - **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
 - **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
 - **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）

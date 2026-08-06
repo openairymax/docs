@@ -29,10 +29,10 @@ agentrt-linux IPC 协议与 agentrt AgentsIPC 同源，保留 128 字节定长�
 消息头定义位于 [SC] 共享契约层头文件 `include/uapi/linux/airymax/ipc.h`（SSoT 物理宿主见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)），遵循 **Tab 8 缩进**（对齐 OLK-6.6 §1 + SSoT）+ Doxygen 注释规范（详见 [04-coding-standard.md](04-coding-standard.md)）。Layout C v4 相对 v1 新增 `capability_badge`（offset 40，D-9 修复后 8 字节对齐）与 `crc32`（offset 52）字段，`reserved` 收缩至 72 字节。
 
 ```c
-#ifndef AIRYMAX_IPC_H
-#define AIRYMAX_IPC_H
+#ifndef _UAPI_AIRYMAX_IPC_H
+#define _UAPI_AIRYMAX_IPC_H
 
-#include <airymax/types.h>  /* __u32, __u64, __u8 */
+#include <linux/airymax/uapi_compat.h>  /* __u32, __u64, __u8, AIRY_ALIGNED */
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,12 +61,8 @@ extern "C" {
 #define AIRY_IPC_FLAG_BATCH_TAIL		0x0010  /* SEND_BATCH 的最后一个 SQE */
 #define AIRY_IPC_FLAG_RESERVED		0xFFE0  /* 必须为零 */
 
-/* payload 协议类型（payload 体首字段携带，非消息头字段） */
-#define AIRY_IPC_TYPE_REQUEST		0x0001
-#define AIRY_IPC_TYPE_RESPONSE		0x0002
-#define AIRY_IPC_TYPE_EVENT		0x0003
-#define AIRY_IPC_TYPE_STREAM		0x0004
-#define AIRY_IPC_TYPE_CONTROL		0x0005
+/* 注：无 AIRY_IPC_TYPE_* 宏——payload 协议类型（REQUEST/RESPONSE/EVENT/STREAM/
+ * CONTROL）不下沉为 [SC] 宏，由 payload 体首字段携带（见第 3 章） */
 
 /**
  * struct airy_ipc_msg_hdr - IPC 128 字节定长消息头（SSoT：Layout C v4）
@@ -78,7 +74,7 @@ extern "C" {
  *   - 不使用 __attribute__((packed))，参考 OLK 6.6 内核协议头（struct ethhdr /
  *     struct iphdr / struct udphdr）手动安排字段自然对齐的做法
  *   - 所有 __u64 字段对齐到 8 字节边界，__u32 对齐到 4 字节边界，__u16 对齐到 2 字节边界
- *   - 128B = 2 cache lines（x86_64/aarch64 64B/line），struct 整体 __attribute__((aligned(64)))
+ *   - 128B = 2 cache lines（x86_64/aarch64 64B/line），struct 整体 AIRY_ALIGNED(64)
  *   - 热字段（magic ~ crc32）集中在 cache line 1（offset 0-55），reserved 填充至 cache line 2 尾
  *   - capability_badge 从 v0.1.1 的 offset 44 前移至 offset 40，恢复 8 字节自然对齐
  *
@@ -87,7 +83,7 @@ extern "C" {
  *   offset  4: opcode             (2B) AIRY_IPC_OP_*
  *   offset  6: flags              (2B) AIRY_IPC_FLAG_*
  *   offset  8: trace_id           (8B) OpenTelemetry trace ID
- *   offset 16: timestamp_ns       (8B) CLOCK_REALTIME ns
+ *   offset 16: timestamp_ns       (8B) CLOCK_MONOTONIC ns
  *   offset 24: src_task           (8B) source Agent/daemon task_id
  *   offset 32: dst_task           (8B) destination Agent/daemon task_id
  *   offset 40: capability_badge   (8B) [SS] agentrt-linux uses, agentrt=0
@@ -102,14 +98,14 @@ struct airy_ipc_msg_hdr {
 	__u16	opcode;			/* offset  4, see AIRY_IPC_OP_* */
 	__u16	flags;			/* offset  6, see AIRY_IPC_FLAG_* */
 	__u64	trace_id;		/* offset  8, OpenTelemetry trace ID */
-	__u64	timestamp_ns;		/* offset 16, CLOCK_REALTIME nanoseconds */
+	__u64	timestamp_ns;		/* offset 16, CLOCK_MONOTONIC nanoseconds */
 	__u64	src_task;		/* offset 24, source Agent/daemon task_id */
 	__u64	dst_task;		/* offset 32, destination Agent/daemon task_id */
 	__u64	capability_badge;	/* offset 40, [SS] agentrt-linux uses, agentrt=0 */
 	__u32	payload_len;		/* offset 48, payload length (excluding header) */
 	__u32	crc32;			/* offset 52, CRC32 over header[0:52) + payload */
 	__u8	reserved[72];		/* offset 56, must be zero (CL1 [56:64) + CL2 [64:128)) */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 
 _Static_assert(sizeof(struct airy_ipc_msg_hdr) == AIRY_IPC_HDR_SIZE,
 	"airy_ipc_msg_hdr must be exactly 128 bytes");
@@ -118,7 +114,7 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 40,
 _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 	"crc32 must be at offset 52");
 
-/* ===== Badge 位布局（仅 [SS] 语义同源，定义在内核实现侧）===== */
+/* ===== Badge 位布局（[SC] ipc.h 定义，校验逻辑属 [SS] 语义同源层）===== */
 /* agentrt 用户态：capability_badge 始终为 0（H3） */
 /* agentrt-linux 内核：capability_badge 由 sec_d 编译（H4） */
 /* [DSL] 降级模式：capability_badge = 0，跳过 C-S9（H6） */
@@ -155,10 +151,10 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 }
 #endif
 
-#endif /* AIRYMAX_IPC_H */
+#endif /* _UAPI_AIRYMAX_IPC_H */
 ```
 
-> **SSoT 声明**：本结构体定义以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）为单一数据源。结构体名 `struct airy_ipc_msg_hdr`，`__attribute__((aligned(64)))` 对齐（D-9 修复后移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐），UAPI 类型 `__u32`/`__u16`/`__u64`/`__u8`，字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。本协议主文档与 SSoT 逐字节一致，**缩进风格对齐 OLK-6.6 §1（Tab 8）**。
+> **SSoT 声明**：本结构体定义以 `include/uapi/linux/airymax/ipc.h`（物理宿主见 [120-cross-project-code-sharing.md §2.7](../50-engineering-standards/120-cross-project-code-sharing.md)）为单一数据源。结构体名 `struct airy_ipc_msg_hdr`，`AIRY_ALIGNED(64)` 对齐（宏定义于 `uapi_compat.h`，跨编译器可移植，OS-IRON-016 唯一豁免；D-9 修复后移除 `__attribute__((packed))`，参考 OLK 6.6 `struct ethhdr`/`struct iphdr` 手动安排字段自然对齐），UAPI 类型 `__u32`/`__u16`/`__u64`/`__u8`，字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]（capability_badge 前移至 offset 40 恢复 8 字节自然对齐）。本协议主文档与 SSoT 字段级一致（守卫宏 `_UAPI_AIRYMAX_IPC_H`、`#include <linux/airymax/uapi_compat.h>`、无 `AIRY_IPC_TYPE_*` 宏），**缩进风格对齐 OLK-6.6 §1（Tab 8）**。
 >
 > **[SC] / [SS] 边界声明（H2）**：本头文件中 `struct airy_ipc_msg_hdr` 数据结构、字段偏移与大小、magic 值、opcode 枚举、flags 位定义、Badge 位布局宏、Capability 权限位、`_Static_assert(sizeof == 128)` 属于 [SC] 共享契约层；`airy_cap_badge_ok()` 内联函数、`agent_caps[]` 静态数组、per-agent `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ `airy_cap_global_epoch` atomic_t（补充性全局计数器，UNFREEZE 时使用）、Random Tag 生成、C-S9 校验逻辑、sec_d Badge 编译流程属于 [SS] 语义同源层（不在本头文件，定义在内核实现侧，权威源为 [07-ipc-fastpath.md §5.2](07-ipc-fastpath.md) 与 [03-capability-model.md §3](../110-security/03-capability-model.md)）。
 
@@ -170,7 +166,7 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 | `opcode` | 4 | 2 | SQE/CQE 操作码（见 `AIRY_IPC_OP_*`，如 SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE） | C-S2 |
 | `flags` | 6 | 2 | 标志位（ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL） | C-S10 |
 | `trace_id` | 8 | 8 | OpenTelemetry 链路追踪 ID | 不校验（透传） |
-| `timestamp_ns` | 16 | 8 | 纳秒时间戳（CLOCK_REALTIME，对齐北京时间） | 不校验（透传） |
+| `timestamp_ns` | 16 | 8 | 纳秒时间戳（CLOCK_MONOTONIC，单调递增，见 §2.4） | 不校验（透传） |
 | `src_task` | 24 | 8 | 源任务 ID（0 表示内核发起），与 Badge 编译时绑定 | C-S9（与 `agent_caps[]` 对照） |
 | `dst_task` | 32 | 8 | 目标任务 ID（0 表示广播），决定 kfifo 路由 | C-S5/C-S6（路由） |
 | `capability_badge` | 40 | 8 | [SS] 语义同源：agentrt-linux 内核由 sec_d 编译，agentrt 用户态始终为 0（D-9 修复后 8 字节对齐至 offset 40） | C-S9（Badge 校验） |
@@ -198,28 +194,26 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
 
 ### 2.4 `timestamp_ns` 时钟基准设计权衡（CLOCK_REALTIME vs CLOCK_MONOTONIC）
 
-`timestamp_ns` 字段（offset 16）使用 **CLOCK_REALTIME** 作为时钟基准，对齐北京时间（UTC+8）。本节记录该选择的工程权衡，避免未来误改。
+`timestamp_ns` 字段（offset 16）使用 **CLOCK_MONOTONIC** 作为时钟基准（对齐 SSoT `ipc.h` L72 注释 "offset 16: monotonic ns timestamp"）。本节记录该选择的工程权衡，避免未来误改。
 
-**设计决策**：IPC 消息头 `timestamp_ns` 使用 `CLOCK_REALTIME`，调度数据流 vtime 使用 `__s32` Q16.16 定点（不依赖 wall clock）。
+**设计决策**：IPC 消息头 `timestamp_ns` 使用 `CLOCK_MONOTONIC`（单机内单调递增，不受系统时间调整影响），调度数据流 vtime 使用 `__s32` Q16.16 定点（不依赖 wall clock）。跨主机分布式追踪的时间对齐由上层 OpenTelemetry SDK 将单调时间戳转换为挂钟时间（记录启动时 `CLOCK_REALTIME`↔`CLOCK_MONOTONIC` 偏移），不污染 [SC] 消息头。
 
 **权衡分析**：
 
-| 维度 | CLOCK_REALTIME（已选） | CLOCK_MONOTONIC（备选） |
+| 维度 | CLOCK_MONOTONIC（已选，SSoT ipc.h） | CLOCK_REALTIME（备选） |
 |------|----------------------|----------------------|
-| 语义 | 挂钟时间（wall clock），可被 NTP/settimeofday 调整 | 单调递增，不受系统时间调整影响 |
-| 跨主机对齐 | ✅ 支持（agent 分布式部署场景关键） | ❌ 各主机启动基准不同，无法跨机对齐 |
-| 跨时区可读性 | ✅ 配合 UTC+8 偏移可读为北京时间 | ❌ 仅"自启动以来纳秒"，无挂钟含义 |
-| 链路追踪对齐 | ✅ OpenTelemetry `trace_id` 时间戳默认 CLOCK_REALTIME，可对齐 | ❌ 无法与外部系统日志对齐 |
-| NTP 跳变风险 | ⚠️ NTP 渐变或跳变可导致时间戳非单调 | ✅ 单调保证 |
-| 适用场景 | 跨主机分布式追踪、可观测性、审计 | 单机内调度顺序、超时检测 |
+| 语义 | 单调递增，不受系统时间调整影响 | 挂钟时间（wall clock），可被 NTP/settimeofday 调整 |
+| 单机内顺序 | ✅ 严格单调，IPC 时序/超时检测可靠 | ❌ NTP 跳变可导致非单调 |
+| 跨主机对齐 | ⚠️ 各主机启动基准不同，需 SDK 层转换偏移 | ✅ 支持（agent 分布式部署场景） |
+| NTP 跳变风险 | ✅ 单调保证 | ⚠️ NTP 渐变或跳变可导致时间戳非单调 |
+| 链路追踪对齐 | ⚠️ 需 SDK 层将单调时间戳换算为挂钟时间 | ✅ OpenTelemetry `trace_id` 时间戳默认 CLOCK_REALTIME |
 
 **取舍依据**：
-1. agentrt-linux 部署形态为分布式 agent 集群，IPC 消息在多机间传递，`timestamp_ns` 必须跨主机对齐以支持全链路追踪。
-2. 调度顺序与超时检测由 [SC] `airy_vtime_t`（Q16.16 定点）独立承担，不依赖 `timestamp_ns`，避免时钟跳变影响调度正确性。
-3. OpenTelemetry 协议默认 CLOCK_REALTIME，保持兼容性。
-4. NTP 跳变风险通过 NTP 渐变（slewing，默认 NTP 守护进程行为）缓解，避免跳跃式调整。
+1. SSoT `ipc.h` 注释明确 `timestamp_ns` 为 monotonic（v1.0.1 修正：原文档 §2.4 论证 CLOCK_REALTIME 与 SSoT 不符）。消息头属于单机内 fastpath 热路径字段，单调性保证 IPC 时序与超时检测正确性，不因 NTP 调整产生非单调时间戳。
+2. 调度顺序与超时检测由 [SC] `airy_vtime_t`（Q16.16 定点）独立承担；`timestamp_ns` 用于可观测性，单调性优先。
+3. 跨主机分布式追踪的时间对齐由上层 SDK 完成（记录启动偏移后转换），[SC] 消息头保持单调语义。
 
-**禁止误改**：`timestamp_ns` 不应改用 `CLOCK_MONOTONIC`，否则将破坏跨主机分布式追踪能力。如需单机单调时间戳，应在 payload 协议中扩展独立字段（不污染 [SC] 消息头）。
+**禁止误改**：`timestamp_ns` 不应改用 `CLOCK_REALTIME`，否则将破坏单调性保证（NTP 调整导致非单调时间戳），且与 SSoT `ipc.h` 注释（monotonic）不符。如需挂钟时间戳，应在 payload 协议中扩展独立字段（不污染 [SC] 消息头）。
 
 ### 2.5 `crc32` 覆盖范围
 
@@ -256,7 +250,7 @@ CRC32 覆盖范围: header[0:52) + payload（D-9 修复后字段顺序调整，�
 - 位布局：`(Epoch << 48) | (RandomTag << 16) | Perms`
   - `Epoch`（bits 48-63，16 位）：per-agent 代际快照，由 `agent_caps[agent_id].epoch` 维护（K9-1 主要撤销机制），单 Agent 撤销通过 `airy_cap_epoch_bump(agent_id)` 递增该 Agent 的 epoch；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销时使用
   - `RandomTag`（bits 16-47，32 位）：随机标签，由 sec_d 在编译 Badge 时通过 `get_random_bytes()` 生成，防伪造
-  - `Perms`（bits 0-15，16 位）：权限位，由 `AIRY_CAP_PERM_*` 宏定义（SEND/RECV/CALL/GRANT/REVOKE/FREEZE/BATCH）
+  - `Perms`（bits 0-15，16 位）：权限位，由 `AIRY_CAP_PERM_*` 宏定义（SSoT：`security_types.h`）——`AIRY_CAP_PERM_SEND=0x1`/`RECV=0x2`/`DERIVE=0x4`/`KILL=0x8`/`FILE_OPEN=0x10`/`ROTATE=0x20`/`SUPERVISE=0x40`，`AIRY_CAP_PERM_RESERVED=0xFF80`（bits 7-15 必须为零）
 
 **执行点**：fastpath C-S9 内联校验 `airy_cap_badge_ok()`，~10ns，3 个 `READ_ONCE` + 位运算 + 比较（详见 [07-ipc-fastpath.md §5.2](07-ipc-fastpath.md)）。
 
@@ -490,9 +484,9 @@ agentrt-linux 内核态 IPC 通过 `capability_badge` 字段承载 64-bit Native
    - 提取 `badge_epoch = AIRY_BADGE_EPOCH(badge)`
    - 提取 `badge_randtag = AIRY_BADGE_RANDTAG(badge)`
    - 提取 `badge_perms = AIRY_BADGE_PERMS(badge)`
-   - `READ_ONCE(agent_caps[src_task].randtag)` 比对 → 不匹配返回 `AIRY_ECAP_FORGED`(-80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
-   - 比对 `badge_epoch == slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `AIRY_ECAP_EPOCH`(-79)
-   - 比对 `badge_perms & required == required` → 不满足返回 `AIRY_ECAP_PERM`(-81)
+   - `READ_ONCE(agent_caps[src_task].randtag)` 比对 → 不匹配返回 `-AIRY_ECAP_FORGED`(幅值 80) 同时触发 `AIRY_FAULT_CAP_FORGED`(0x1001)
+   - 比对 `badge_epoch == slot_epoch`（`READ_ONCE(agent_caps[src_task].epoch)`，per-agent）→ 不匹配返回 `-AIRY_ECAP_EPOCH`(幅值 79)
+   - 比对 `badge_perms & required == required` → 不满足返回 `-AIRY_ECAP_PERM`(幅值 81)
 3. **接收方**：使用通过校验的 Badge 权限执行受保护操作。
 
 **自举场景**：当 `opcode == AIRY_IPC_OP_CAP_REQUEST` 时，C-S9 跳过 Badge 校验（无 Badge 即可请求 Badge），由 sec_d 编译好后通过 `AIRY_IPC_OP_CAP_RESPONSE` 返回。
@@ -700,7 +694,7 @@ IPC 性能约束对齐非功能性需求 NFR-P-002（详见 [00-requirements/03-
 | `AIRY_BADGE_*` 位布局宏 | Epoch/RandomTag/Perms 提取与编译宏 | Badge 校验与编译 |
 | `AIRY_CAP_PERM_*` 权限位 | SEND/RECV/DERIVE/KILL/FILE_OPEN/ROTATE/SUPERVISE 权限位 | C-S9 权限校验 |
 
-> **cancelBadgedSends（P1-8，M2 规划）**：seL4 在 `endpoint.c:476-489` 提供 `cancelBadgedSends(ep, badge)` 操作，撤销指定 endpoint 上匹配 badge 的所有待发送消息。agentrt-linux v1.0.1 尚未实现此操作（grep `cancelBadgedSends`/`cancel_badged_sends` 零匹配）。M2 阶段须在 `AIRY_IPC_OP_*` opcode 体系中新增 `AIRY_IPC_OP_CANCEL_BADGED`，由 sec_d（唯一持有 `AIRY_CAP_PERM_DERIVE` 的 Agent）调用，扫描目标 ring 的 kfifo 待发送队列并移除匹配 badge 的消息。详见 [09-known-caveats.md §8.4 P1-8](../10-architecture/09-known-caveats.md)。
+> **cancelBadgedSends（P1-8，v1.0.1 已实现）**：seL4 在 `endpoint.c:476-489` 提供 `cancelBadgedSends(ep, badge)` 操作，撤销指定 endpoint 上匹配 badge 的所有待发送消息。agentrt-linux 已实现等价操作 `airy_ipc_cancel_badged_sends(ring, badge)`（`kernel/corekern/ipc/airy_ipc_ring.c` L179），通过将匹配 slot 的 `magic` 清零实现取消（`airy_ipc_ring_consume()` 跳过 `magic==0` 的 slot），在 badge 撤销路径（`airy_cap_derive` REVOKE）调用，确保以已失效 Badge 投递的消息永不被投递。M2 阶段可在 `AIRY_IPC_OP_*` opcode 体系中新增 `AIRY_IPC_OP_CANCEL_BADGED`，由 sec_d（唯一持有 `AIRY_CAP_PERM_DERIVE` 的 Agent）经 io_uring `cmd_op` 调用。详见 [09-known-caveats.md §8.4 P1-8](../10-architecture/09-known-caveats.md)。
 
 ### 8.3 [SS] 语义同源层——agentrt ↔ agentrt-linux IPC API 映射
 
@@ -878,7 +872,7 @@ graph TB
 
 /* Local Agent ID: 单节点内唯一，用于 agent_caps[] 索引与 fastpath C-S9
  * 范围: [0, 1024)，per-node 独立
- * 物理载体: 消息头 src_task / dst_task 字段（32-bit，[SC] ipc.h）
+ * 物理载体: 消息头 src_task / dst_task 字段（`__u64`，[SC] ipc.h；Local Agent ID 落在低 32 位，高 32 位为 0）
  * 注意: 同一 Global Agent 在不同节点可能有不同的 Local Agent ID
  */
 typedef u32 airy_local_agent_id_t;  /* 范围 [0, 1024) */

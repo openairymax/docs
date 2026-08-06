@@ -26,8 +26,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 术语 | 定义 |
 |------|------|
 | 7 层自动化验证体系 | OS-STD-TOOL-001~161 定义的端到端验证链：L1 编译期检查 / L2 静态分析 / L3 预提交 / L4 CI 门禁 / L5 连接验证 / L6 协议验证 / L7 发布验证 |
-| CI 矩阵 | 配置 × 架构 × 编译器的笛卡尔积构建矩阵（3×3×2=18） |
-| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014），物理宿主 `kernel/include/uapi/linux/airymax/` |
+| CI 矩阵 | 配置 × 架构 × 编译器的笛卡尔积构建矩阵（4×4×2−1=31，loongarch+clang 组合暂不支持） |
+| [SC] 共享契约层 | agentrt ↔ agentrt-linux 之间逐字节相同的 12 个头文件层（OS-IRON-014），物理宿主 `kernel/include/uapi/linux/airymax/` |
 | 双向 CI | kernel CI 通过 → 触发 agentrt 镜像 PR → agentrt CI 通过 → L1 审查 → L3 审批（OS-IRON-008） |
 | SSoT | Single Source of Truth，规则编号唯一权威来源（`09-ssot-registry.md`/`.yaml`） |
 | 门禁（Gate） | CI 中阻断 PR 合并的硬性检查点，失败即禁止合并 |
@@ -92,22 +92,25 @@ CI 覆盖范围遵循 OS-IRON-013（8 子仓独立 git 仓库 + submodule 管理
 
 ```
 agentrt-linux/.github/workflows/
-├── ci-kernel.yml            # kernel 子仓 CI（Kbuild + checkpatch + sparse + Coccinelle + KUnit + kselftest）
+├── ci-kernel.yml            # kernel 子仓 CI（31 格 Kbuild 矩阵 + checkpatch + sparse + Coccinelle + KUnit + kselftest）
+├── ci-airy.yml              # Airymax 专属代码 CI（airy_defconfig 4 架构构建 + checkpatch + SPDX + 符号完整性）
 ├── ssot-validate.yml        # SSoT 规则 ID 校验（全仓）
 ├── sc-dual-ci.yml           # [SC] 共享契约层双向 CI（OS-IRON-008）
-├── nightly.yml              # develop nightly build（L5/L6 连接/协议验证）
+├── nightly.yml              # develop nightly build（L5/L6 连接/协议验证；formal/soak/chaos 工具未实现，降级 SKIP）
 ├── release.yml              # release tag 流水线（L7 发布验证）
-└── mgmt-orchestrator.yml    # 管理仓编排：SSoT + 文件完整性 + 子仓状态 + 文档格式
+└── mgmt-orchestrator.yml    # 管理仓编排：文件完整性 + 子仓 CI 编排
 ```
+
+> **规划说明**：coverity-scan / nightly-dynamic-analysis / formal-verification 等独立 workflow 尚未实现，属规划项，不在上述 7 个 workflow 之列；形式化验证相关能力见 §5.4 的"未实现"标注。
 
 ### 2.2 管理仓 CI（mgmt-orchestrator.yml）
 
-管理仓 CI 串行执行 4 类校验，任一失败即阻断：
+管理仓 CI 由 **2 个 job** 组成：`file-integrity`（治理文件与子仓完整性）→ `orchestrate-leaf-ci`（子仓 CI 编排），任一失败即阻断：
 
-1. **SSoT 校验**：扫描全仓 `.md` 文件中的 `OS-*-NNN` 规则 ID，与 `ssot-registry.yaml`（管理仓根）比对（详见 §6）。
-2. **文件完整性**：校验 `.gitmodules` 中声明的 8 子仓 submodule 指针与实际 checkout 一致；校验 `kernel/include/uapi/linux/airymax/` 下 10 个头文件物理存在（OS-IRON-014）。
-3. **子仓状态**：聚合 8 子仓最近一次 CI 状态，任一子仓主干红则管理仓 CI 红。
-4. **文档格式**：校验 markdownlint + front-matter 版权头 + 父文档链接有效性。
+1. **file-integrity（治理文件完整性）**：校验 `.gitmodules` 中声明的 8 子仓 submodule 目录实际存在（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）；校验 `kernel/include/uapi/linux/airymax/` 下 12 个头文件物理存在（OS-IRON-014）；校验治理文件（README/LICENSE/NOTICE/MAINTAINERS/CODEOWNERS 等）齐备；校验无 `airymaxos-` 前缀残留。
+2. **orchestrate-leaf-ci（子仓 CI 编排）**：通过 `aggregate-subrepo-ci.py` 聚合 8 子仓最近一次 CI 状态（任一子仓主干红则管理仓红）；markdownlint 校验 `docs/`；校验文档版权头（`check-copyright.py`）。
+
+> **职责划分**：SSoT 规则 ID 校验不在此 workflow 内，由独立的 `ssot-validate.yml` 承担（§6）。本 workflow 通过 `needs: file-integrity` 保证 job 2 串行等待 job 1。
 
 ```yaml
 # agentrt-linux/.github/workflows/mgmt-orchestrator.yml
@@ -118,56 +121,54 @@ on:
       - 'docs/**'
       - '.gitmodules'
       - 'ssot-registry.yaml'
+      - 'MAINTAINERS'
+      - 'CODEOWNERS'
   push:
     branches: [main, develop]
 
 jobs:
-  ssot-validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { submodules: recursive }
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
-      - name: SSoT rule ID validation
-        run: python3 agentrt-linux/tools/validate-ssot.py --md-root . --yaml ssot-registry.yaml
-
   file-integrity:
+    name: Governance File & Submodule Integrity
     runs-on: ubuntu-latest
-    needs: ssot-validate
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
-      - name: Verify 8 subrepo submodule pointers
-        run: python3 agentrt-linux/tools/check-submodules.py --expected 8
-      - name: Verify [SC] 10 shared headers exist
+      - name: Verify 8 submodule directories exist
         run: |
-          test -f kernel/include/uapi/linux/airymax/airy_agent.h
-          test -f kernel/include/uapi/linux/airymax/airy_ipc.h
-          test -f kernel/include/uapi/linux/airymax/airy_sched.h
-          test -f kernel/include/uapi/linux/airymax/airy_mem.h
-          test -f kernel/include/uapi/linux/airymax/airy_security.h
-          test -f kernel/include/uapi/linux/airymax/airy_version.h
-          test -f kernel/include/uapi/linux/airymax/bpf_struct_ops.h
-          test -f kernel/include/uapi/linux/airymax/error.h
+          set -e
+          for sub in kernel services security memory cognition cloudnative system tests-linux; do
+            test -d "$sub" || { echo "FAIL: $sub/ missing"; exit 1; }
+          done
+      - name: Verify [SC] 12 shared headers exist
+        run: |
+          set -e
+          for h in error.h log_types.h ipc.h sched.h memory_types.h \
+                   security_types.h cognition_types.h syscalls.h syscall.h \
+                   uapi_compat.h lsm_types.h bpf_struct_ops.h; do
+            test -f "kernel/include/uapi/linux/airymax/$h" || { echo "FAIL: $h missing"; exit 1; }
+          done
+      - name: Verify required governance files
+        run: |
+          set -e
+          for f in README.md README_zh.md LICENSE NOTICE CONTRIBUTING.md \
+                   MAINTAINERS SECURITY.md CODEOWNERS .gitignore .gitmodules; do
+            test -f "$f" || { echo "FAIL: $f missing"; exit 1; }
+          done
 
-  subrepo-status:
+  orchestrate-leaf-ci:
+    name: Orchestrate Leaf Submodule CI
     runs-on: ubuntu-latest
     needs: file-integrity
     steps:
       - uses: actions/checkout@v4
-      - name: Aggregate 8 subrepo CI status
-        run: python3 agentrt-linux/tools/aggregate-subrepo-ci.py --fail-on-red
-
-  doc-format:
-    runs-on: ubuntu-latest
-    needs: subrepo-status
-    steps:
-      - uses: actions/checkout@v4
+        with: { submodules: recursive }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: npm install -g markdownlint-cli2
-      - name: markdownlint
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Aggregate 8 subrepo CI status
+        run: python3 agentrt-linux/tools/aggregate-subrepo-ci.py --fail-on-red
+      - name: markdownlint (docs only)
         run: markdownlint-cli2 'docs/**/*.md'
       - name: Verify copyright header (line 1)
         run: python3 agentrt-linux/tools/check-copyright.py --root docs
@@ -179,12 +180,14 @@ kernel 子仓 CI 是全仓最重的管道，承载 Linux 内核基线全套验�
 
 | 阶段 | 工具 | 规则编号 | 阻断 |
 |------|------|---------|------|
-| Kbuild 编译 | `make` + 3 配置矩阵 | OS-STD-TOOL-161 | 是 |
+| Kbuild 编译 | `make` + 4 配置矩阵（31 格） | OS-STD-TOOL-161 | 是 |
 | checkpatch | `scripts/checkpatch.pl --strict` | OS-STD-TOOL-160 | 是 |
 | sparse | `make C=2` + W=2 | OS-STD-TOOL-081-CI | 是 |
 | Coccinelle | `make coccicheck` | L2 静态分析段（OS-STD-TOOL-001~099） | 是 |
-| KUnit | `make ARCH=um kunit` | OS-TEST-001~012 | 是 |
+| KUnit | UML + `kunit.py run` | OS-TEST-001~012 | 是 |
 | kselftest | QEMU + TAP 解析 | OS-TEST-013~022 | 是 |
+
+> **job 结构**：ci-kernel.yml 实际重组为 **2 个 job**——`kernel-build`（31 格 Kbuild 编译矩阵）+ `kernel-verify`（静态分析 + 运行时测试，含 checkpatch/sparse/Coccinelle/KUnit/kselftest/ABI/codegen 校验），`kernel-verify` 通过 `needs: kernel-build` 串行等待编译矩阵全绿。
 
 ```yaml
 # agentrt-linux/.github/workflows/ci-kernel.yml（节选）
@@ -197,92 +200,68 @@ on:
     paths: ['kernel/**']
 
 jobs:
-  kbuild-matrix:
+  kernel-build:
+    name: Kbuild Matrix (31 configs)
     runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:
       fail-fast: false
+      max-parallel: 8
       matrix:
-        config: [defconfig, allnoconfig, allmodconfig]
-        arch: [x86_64, arm64, riscv64]
+        config: [defconfig, allnoconfig, allmodconfig, airy_defconfig]
+        arch: [x86_64, arm64, riscv, loongarch]
         compiler: [gcc, clang]
+        exclude:
+          # clang + loongarch 上游工具链暂不支持
+          - arch: loongarch
+            compiler: clang
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
-      - uses: ./.github/actions/setup-toolchain
-        with:
-          arch: ${{ matrix.arch }}
-          compiler: ${{ matrix.compiler }}
-      - uses: hendrikmuhs/ccache-action@v1
-        with:
-          key: kernel-${{ matrix.config }}-${{ matrix.arch }}-${{ matrix.compiler }}
-          max-size: 2G
       - name: Kbuild ${{ matrix.config }} / ${{ matrix.arch }} / ${{ matrix.compiler }}
         run: |
           make ARCH=${{ matrix.arch }} CC=${{ matrix.compiler }} ${{ matrix.config }}
           make ARCH=${{ matrix.arch }} CC=${{ matrix.compiler }} -j$(nproc) W=2 2>&1 | tee build.log
           ! grep -E "error:|warning:" build.log
 
-  checkpatch:
+  kernel-verify:
+    name: Static Analysis + Runtime Tests
     runs-on: ubuntu-latest
-    needs: kbuild-matrix
+    needs: kernel-build
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: ABI consistency check (OS-IRON-001)
+        run: python3 tools/abi-check/abi_check.py --check
+      - name: Codegen drift check (R-01 SSoT)
+        run: python3 tools/codegen/syscall_gen.py --check
       - name: checkpatch.pl --strict (OS-STD-TOOL-160)
         run: |
           git diff --name-only origin/${{ github.base_ref }} HEAD -- 'kernel/**/*.c' 'kernel/**/*.h' > files.txt
           while read f; do
-            scripts/checkpatch.pl --strict --no-tree -f "$f" || exit 1
+            kernel/scripts/checkpatch.pl --strict --no-tree -f "$f" || exit 1
           done < files.txt
-
-  sparse:
-    runs-on: ubuntu-latest
-    needs: checkpatch
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get install -y sparse
       - name: sparse make C=2 W=2 (OS-STD-TOOL-081-CI)
         run: |
-          make ARCH=x86_64 airy_defconfig
+          make ARCH=x86_64 defconfig
           make ARCH=x86_64 C=2 W=2 -j$(nproc) 2>&1 | tee sparse.log
           ! grep -E "warning:" sparse.log
-
-  coccinelle:
-    runs-on: ubuntu-latest
-    needs: sparse
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get install -y coccinelle
-      - name: make coccicheck
-        run: make ARCH=x86_64 coccicheck MODE=report V=1
-
-  kunit:
-    runs-on: ubuntu-latest
-    needs: coccinelle
-    steps:
-      - uses: actions/checkout@v4
       - name: KUnit on UML (OS-TEST-001~012)
         run: |
           make ARCH=um defconfig
           ./tools/testing/kunit/kunit.py run --arch=um --raw_output=TAP
-      - name: Verify TAP case count monotonic (OS-TEST-012)
-        run: python3 agentrt-linux/tools/kunit-tap-diff.py --baseline origin/develop
-
-  kselftest:
-    runs-on: ubuntu-latest
-    needs: kunit
-    steps:
-      - uses: actions/checkout@v4
       - name: kselftest on QEMU (OS-TEST-013~022)
         run: |
-          make ARCH=x86_64 airy_defconfig
-          ./tools/testing/kselftest/run_kselftest.sh --tap > kselftest.tap
-          python3 agentrt-linux/tools/parse-tap.py --input kselftest.tap --fail-on-not-ok
+          make ARCH=x86_64 defconfig
+          ./tools/testing/kselftest/run_kselftest.sh --tap > /tmp/kselftest.tap
+      - name: Parse kselftest TAP
+        run: python3 tools/parse-tap.py --input /tmp/kselftest.tap --fail-on-not-ok
 ```
 
 ### 2.4 其他子仓 CI（按构建系统分类，子仓级 workflow）
 
-> **归属说明**：下列 workflow 模板位于**各子仓自身的** `.github/workflows/` 目录中，不在管理仓 `agentrt-linux/.github/workflows/` 的 6 个 workflow 之内（§2.1）。每个子仓按自身构建系统选用对应模板，管理仓通过 `mgmt-orchestrator.yml` 聚合各子仓 CI 状态（§2.2）。
+> **归属说明**：下列 workflow 模板位于**各子仓自身的** `.github/workflows/` 目录中，不在管理仓 `agentrt-linux/.github/workflows/` 的 7 个 workflow 之内（§2.1）。每个子仓按自身构建系统选用对应模板，管理仓通过 `mgmt-orchestrator.yml` 聚合各子仓 CI 状态（§2.2）。
 
 非 kernel 子仓按构建系统分类，每类一个 workflow 模板，子仓按自身归属选用：
 
@@ -310,7 +289,7 @@ jobs:
 
 ### 2.5 [SC] 共享契约层双向 CI（OS-IRON-008）
 
-[SC] 层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。任一端的 [SC] 头文件变更必须触发对端的镜像 PR 并通过其 CI，详见 §7。
+[SC] 层是 agentrt ↔ agentrt-linux 之间逐字节相同的 12 个头文件层（OS-IRON-014）。任一端的 [SC] 头文件变更必须触发对端的镜像 PR 并通过其 CI，详见 §7。
 
 ---
 
@@ -318,14 +297,14 @@ jobs:
 
 ### 3.1 矩阵定义（OS-STD-TOOL-161）
 
-每个 PR 必须通过 **3 配置 × 3 架构 × 2 编译器 = 18 配置矩阵** 的 Kbuild 构建。三者（配置/架构/编译器）皆绿方可合并——`allnoconfig` 暴露 `#ifdef` 错配、`allmodconfig` 暴露符号冲突、`defconfig` 验证默认路径。
+每个 PR 必须通过 **4 配置 × 4 架构 × 2 编译器 − 1（loongarch 暂不支持 clang）= 31 配置矩阵** 的 Kbuild 构建。配置/架构/编译器三者皆绿方可合并——`allnoconfig` 暴露 `#ifdef` 错配、`allmodconfig` 暴露符号冲突、`defconfig` 验证默认路径、`airy_defconfig` 验证 Airymax 专属配置闭包。
 
 | 维度 | 取值 | 数量 | 验证目标 |
 |------|------|------|---------|
-| **配置** | defconfig / allnoconfig / allmodconfig | 3 | `#ifdef` 错配 / 符号冲突 / 默认路径 |
-| **架构** | x86_64 / arm64 / riscv64 | 3 | 三架构 ABI 一致性 |
-| **编译器** | GCC / Clang | 2 | 编译器无关性 |
-| **合计** | — | **18** | — |
+| **配置** | defconfig / allnoconfig / allmodconfig / airy_defconfig | 4 | `#ifdef` 错配 / 符号冲突 / 默认路径 / Airymax 配置闭包 |
+| **架构** | x86_64 / arm64 / riscv / loongarch | 4 | 四架构 ABI 一致性 |
+| **编译器** | GCC / Clang | 2 | 编译器无关性（loongarch+clang 组合暂不支持，见 exclude） |
+| **合计** | — | **31** | — |
 
 ### 3.2 矩阵生成与调度
 
@@ -333,11 +312,14 @@ jobs:
 # agentrt-linux/.github/workflows/ci-kernel.yml（矩阵段）
 strategy:
   fail-fast: false          # 单格失败不取消其他格，便于一次性收集全部错误
-  max-parallel: 9           # 18 格分两批，避免超出 GitHub Actions 并发上限
+  max-parallel: 8           # 31 格分批运行，避免超出 GitHub Actions 并发上限
   matrix:
-    config: [defconfig, allnoconfig, allmodconfig]
-    arch: [x86_64, arm64, riscv64]
+    config: [defconfig, allnoconfig, allmodconfig, airy_defconfig]
+    arch: [x86_64, arm64, riscv, loongarch]
     compiler: [gcc, clang]
+    exclude:
+      - arch: loongarch
+        compiler: clang     # 上游工具链暂不支持，31 = 4×4×2−1
 ```
 
 ### 3.3 矩阵编译命令模板
@@ -361,16 +343,16 @@ fi
 - **defconfig 失败**：默认路径损坏，P0 级阻塞——禁止任何绕过。
 - **allnoconfig 失败**：`#ifdef CONFIG_*` 错配，遗漏 `depends on` 或 `select` 依赖——必须修复 Kconfig 依赖闭包。
 - **allmodconfig 失败**：符号冲突 / 重复定义 / 模块间循环依赖——必须修复符号导出。
-- **arm64/riscv64 失败但 x86_64 通过**：架构相关代码未做抽象——必须在 PR 描述中说明架构差异并经 L2 维护者 ACK。
+- **arm64/riscv/loongarch 失败但 x86_64 通过**：架构相关代码未做抽象——必须在 PR 描述中说明架构差异并经 L2 维护者 ACK。
 - **Clang 失败但 GCC 通过**：GCC 扩展语法（如 `__attribute__` 非标准用法）——必须改为标准 C 或加 `#ifdef __clang__` 兼容。
 
 ### 3.5 矩阵优化
 
-18 格全量构建在 GitHub Actions 上耗时约 40 分钟，逼近 60 分钟上限（OS-STD-TEST-011）。优化策略：
+31 格全量构建在 GitHub Actions 上耗时约 40 分钟，逼近 60 分钟上限（OS-STD-TEST-011）。优化策略：
 
 - **ccache 命中**：按 `config+arch+compiler` 三元组缓存 2G，二次构建命中率 ≥70%。
 - **路径过滤**：PR 仅触及 `Documentation/` 或 `tools/` 时跳过矩阵，仅跑文档格式校验。
-- **并行分批**：18 格 `max-parallel: 9` 分两批，每批 ≤20 分钟。
+- **并行分批**：31 格 `max-parallel: 8` 分批运行，每批 ≤20 分钟。
 
 ---
 
@@ -470,9 +452,9 @@ C/C++ 代码必须通过 `.clang-format`（同源 Linux 6.6 内核基线 689 行
 |---------|---------|---------|------|---------|
 | KUnit 单元测试 | OS-TEST-001~012 | UML | 每 PR | 是 |
 | kselftest 系统测试 | OS-TEST-013~022 | QEMU | 每 PR | 是 |
-| 形式化验证（seL4 风格） | — | CI（nightly） | 每日 | 是（develop） |
-| Soak 长时间运行 | — | CI（nightly） | 每日 | 是（develop） |
-| Chaos 混沌测试 | — | CI（nightly） | 每日 | 是（develop） |
+| 形式化验证（seL4 风格） | — | CI（nightly） | 每日 | 否（工具未实现，nightly 降级 SKIP） |
+| Soak 长时间运行 | — | CI（nightly） | 每日 | 否（工具未实现，nightly 降级 SKIP） |
+| Chaos 混沌测试 | — | CI（nightly） | 每日 | 否（工具未实现，nightly 降级 SKIP） |
 
 ### 5.2 KUnit 单元测试（OS-TEST-001~012）
 
@@ -511,66 +493,80 @@ kselftest 是 agentrt-linux 系统级测试框架，默认在 QEMU 上运行（C
 
 ### 5.4 形式化验证（seL4 风格）
 
-借鉴 seL4 形式化验证思想（OS-IRON-012：seL4 借鉴仅限架构层），在 nightly build 中对关键内核子系统（调度器、IPC ring buffer、share_pool 引用计数）运行形式化验证：
+借鉴 seL4 形式化验证思想（OS-IRON-012：seL4 借鉴仅限架构层），规划在 nightly build 中对关键内核子系统（调度器、IPC ring buffer、share_pool 引用计数）运行形式化验证。
+
+> **未实现标注**：`formal-verify.py` 目前**不存在**（`tools/` 下未提供），`nightly.yml` 已降级为 `SKIP` 分支——脚本存在时执行并仅告警，不存在时打印 `SKIP: formal-verify.py not yet implemented (1.0.1+ verification path)`。本小节为规划描述，不构成已落地能力。
 
 ```yaml
-# agentrt-linux/.github/workflows/nightly.yml（节选）
-formal-verification:
+# agentrt-linux/.github/workflows/nightly.yml（节选，实际结构）
+nightly-test-suite:
   runs-on: ubuntu-latest
+  timeout-minutes: 4320   # 72h max
   steps:
     - uses: actions/checkout@v4
-    - name: seL4-style formal verification (scheduler / IPC / refcount)
+        with: { submodules: recursive }
+    - name: Formal verification (seL4-style)
       run: |
-        python3 agentrt-linux/tools/formal-verify.py --target kernel/sched/core.c
-        python3 agentrt-linux/tools/formal-verify.py --target drivers/airymax/ipc/airy_ipc.c
-        python3 agentrt-linux/tools/formal-verify.py --target mm/share_pool.c
+        if [ -f agentrt-linux/tools/formal-verify.py ]; then
+          python3 agentrt-linux/tools/formal-verify.py --target kernel/sched/core.c || \
+            echo "WARN: formal verification incomplete"
+        else
+          echo "SKIP: formal-verify.py not yet implemented (1.0.1+ verification path)"
+        fi
 ```
 
 ### 5.5 Soak 与 Chaos 测试
 
-- **Soak 测试**：72 小时持续运行 agentrt-linux 工作负载，检测内存泄漏、引用计数漂移、timer 累积误差。
-- **Chaos 测试**：在 QEMU 中注入故障（CPU 热插拔、内存 hotremove、磁盘 I/O 错误、网络分区），验证 agentrt-linux 的故障恢复路径。
+- **Soak 测试**：规划 72 小时持续运行 agentrt-linux 工作负载，检测内存泄漏、引用计数漂移、timer 累积误差。
+- **Chaos 测试**：规划在 QEMU 中注入故障（CPU 热插拔、内存 hotremove、磁盘 I/O 错误、网络分区），验证 agentrt-linux 的故障恢复路径。
+
+> **未实现标注**：`soak-runner.py` / `chaos-runner.py` 目前**均不存在**，`nightly.yml` 已将 formal/soak/chaos 合并为单一 `nightly-test-suite` job 并降级为 `SKIP`（脚本不存在时打印 SKIP，存在时仅告警不阻断）。
 
 ```yaml
-# agentrt-linux/.github/workflows/nightly.yml（节选）
-soak-test:
-  runs-on: ubuntu-latest
-  timeout-minutes: 4320   # 72h
-  steps:
-    - uses: actions/checkout@v4
-    - name: 72h soak (memory leak / refcount drift)
-      run: python3 agentrt-linux/tools/soak-runner.py --duration 72h --workload agent-busy-loop
+# agentrt-linux/.github/workflows/nightly.yml（节选，实际结构）
+    - name: 72h soak test (memory leak / refcount drift)
+      run: |
+        if [ -f agentrt-linux/tools/soak-runner.py ]; then
+          python3 agentrt-linux/tools/soak-runner.py --duration 72h --workload agent-busy-loop
+        else
+          echo "SKIP: soak-runner.py not yet implemented"
+        fi
 
-chaos-test:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
     - name: Chaos injection (CPU hotplug / mem hotremove / I/O error / net partition)
-      run: python3 agentrt-linux/tools/chaos-runner.py --profile full
+      run: |
+        if [ -f agentrt-linux/tools/chaos-runner.py ]; then
+          python3 agentrt-linux/tools/chaos-runner.py --profile full
+        else
+          echo "SKIP: chaos-runner.py not yet implemented"
+        fi
 ```
 
 ### 5.6 覆盖率门槛
 
+> **数值统一说明**：覆盖率门槛数值以 [`80-testing/06-coverage-metrics.md`](../80-testing/06-coverage-metrics.md) 的 4 级门槛为唯一权威（kernel/core ≥90%、security ≥95%、ipc ≥90%、关键路径 100%），并在 [`80-testing/README.md`](../80-testing/README.md) 汇总互引。下表与本卷其他章节出现覆盖率数值时，一律以 06 卷为准。
+
 | 规则编号 | 范围 | 门槛 |
 |---------|------|------|
-| **OS-STD-TOOL-121** | 内核子系统 | 行覆盖率 ≥80% |
-| **OS-STD-TOOL-122** | Agent SDK | 行覆盖率 ≥80% |
-| **OS-STD-TOOL-124** | 关键路径 | 覆盖率 100% |
+| **OS-STD-TOOL-121** | 内核子系统（kernel/core） | 行覆盖率 ≥90% |
+| **OS-STD-TOOL-122** | Agent SDK / security 层 | 行覆盖率 ≥95% |
+| **OS-STD-TOOL-124** | 关键路径（fastpath 等 4 项） | 覆盖率 100% |
+
+> **未实现标注**：`agentrt-linux/tools/coverage-gate.py` 与 `critical-paths.txt` 目前**均不存在**，覆盖率门禁尚未在 CI 落地；落地时按 06 卷 `airy_coverage_gate.sh` 方案执行（夜间/PR 门槛校验，任一模块跌破门槛即阻断）。以下为规划命令，非已运行流水线：
 
 ```yaml
 - name: Coverage gate (OS-STD-TOOL-121/122/124)
   run: |
-    make ARCH=x86_64 airy_defconfig
+    make ARCH=x86_64 defconfig
     ./tools/testing/kunit/kunit.py run --arch=um --make_options=GCOV=1
     lcov --capture --directory . --output-file coverage.info
     python3 agentrt-linux/tools/coverage-gate.py \
       --info coverage.info \
-      --kernel-subsystem 80 \
-      --agent-sdk 80 \
+      --kernel-subsystem 90 \
+      --agent-sdk 95 \
       --critical-paths agentrt-linux/tools/critical-paths.txt:100
 ```
 
-"关键路径"清单由维护者在 `agentrt-linux/tools/critical-paths.txt` 维护，覆盖：调度器上下文切换、IPC 消息拷贝、share_pool 引用计数增减、LSM 钩子决策、capability 检查。
+"关键路径"清单由维护者维护（规划路径 `agentrt-linux/tools/critical-paths.txt`），覆盖：调度器上下文切换、IPC 消息拷贝、share_pool 引用计数增减、LSM 钩子决策、capability 检查。
 
 ---
 
@@ -683,41 +679,49 @@ SSoT 校验独立于 7 层验证体系，是横切关注点：它不验证代码
 
 ### 7.1 触发条件
 
-[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 10 个头文件层（OS-IRON-014）。物理宿主为 `kernel/include/uapi/linux/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。
+[SC] 共享契约层是 agentrt ↔ agentrt-linux 之间逐字节相同的 12 个头文件层（OS-IRON-014）。物理宿主为 `kernel/include/uapi/linux/airymax/`，agentrt 用户态通过 `-I../kernel/include` 引用，禁止物理副本。目录下实际共 14 个文件：12 个 `.h` + `syscall.xml`（syscall 编号 SSoT）+ `Kbuild`。
 
-当以下 8 个文件中任一发生变更时，触发双向 CI：
+当以下 12 个头文件中任一发生变更时，触发双向 CI：
 
 | 序号 | 文件 | 共享内容 |
 |------|------|---------|
-| 1 | `kernel/include/uapi/linux/airymax/airy_agent.h` | Agent 句柄/状态结构 |
-| 2 | `kernel/include/uapi/linux/airymax/airy_ipc.h` | AgentsIPC 128B 消息协议 |
-| 3 | `kernel/include/uapi/linux/airymax/airy_sched.h` | 调度器策略枚举 |
-| 4 | `kernel/include/uapi/linux/airymax/airy_mem.h` | share_pool 内存语义 |
-| 5 | `kernel/include/uapi/linux/airymax/airy_security.h` | LSM 钩子/capability |
-| 6 | `kernel/include/uapi/linux/airymax/airy_version.h` | 版本注入宏 |
-| 7 | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | BPF 结构操作（补充共享） |
-| 8 | `kernel/include/uapi/linux/airymax/error.h` | 错误码 SSoT（补充共享） |
+| 1 | `kernel/include/uapi/linux/airymax/error.h` | 错误码 SSoT |
+| 2 | `kernel/include/uapi/linux/airymax/log_types.h` | 统一日志 5 级枚举/128B 记录 |
+| 3 | `kernel/include/uapi/linux/airymax/ipc.h` | AgentsIPC 消息协议 |
+| 4 | `kernel/include/uapi/linux/airymax/sched.h` | 调度器策略枚举 |
+| 5 | `kernel/include/uapi/linux/airymax/memory_types.h` | share_pool 内存语义 |
+| 6 | `kernel/include/uapi/linux/airymax/security_types.h` | LSM 钩子/capability 类型 |
+| 7 | `kernel/include/uapi/linux/airymax/cognition_types.h` | 认知模块类型 |
+| 8 | `kernel/include/uapi/linux/airymax/syscalls.h` | syscall 编号声明 |
+| 9 | `kernel/include/uapi/linux/airymax/syscall.h` | syscall 接口定义 |
+| 10 | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 用户态兼容桥接 |
+| 11 | `kernel/include/uapi/linux/airymax/lsm_types.h` | LSM 专用类型 |
+| 12 | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | BPF 结构操作 |
 
 ```yaml
 # agentrt-linux/.github/workflows/sc-dual-ci.yml（触发段）
 on:
   pull_request:
     paths:
-      - 'kernel/include/uapi/linux/airymax/airy_agent.h'
-      - 'kernel/include/uapi/linux/airymax/airy_ipc.h'
-      - 'kernel/include/uapi/linux/airymax/airy_sched.h'
-      - 'kernel/include/uapi/linux/airymax/airy_mem.h'
-      - 'kernel/include/uapi/linux/airymax/airy_security.h'
-      - 'kernel/include/uapi/linux/airymax/airy_version.h'
-      - 'kernel/include/uapi/linux/airymax/bpf_struct_ops.h'
       - 'kernel/include/uapi/linux/airymax/error.h'
+      - 'kernel/include/uapi/linux/airymax/log_types.h'
+      - 'kernel/include/uapi/linux/airymax/ipc.h'
+      - 'kernel/include/uapi/linux/airymax/sched.h'
+      - 'kernel/include/uapi/linux/airymax/memory_types.h'
+      - 'kernel/include/uapi/linux/airymax/security_types.h'
+      - 'kernel/include/uapi/linux/airymax/cognition_types.h'
+      - 'kernel/include/uapi/linux/airymax/syscalls.h'
+      - 'kernel/include/uapi/linux/airymax/syscall.h'
+      - 'kernel/include/uapi/linux/airymax/uapi_compat.h'
+      - 'kernel/include/uapi/linux/airymax/lsm_types.h'
+      - 'kernel/include/uapi/linux/airymax/bpf_struct_ops.h'
 ```
 
 ### 7.2 双向流程
 
 ```mermaid
 flowchart LR
-    A[kernel PR 触及<br/>10 个头文件] --> B{kernel CI<br/>18 矩阵+全套验证}
+    A[kernel PR 触及<br/>12 个头文件] --> B{kernel CI<br/>31 矩阵+全套验证}
     B -->|fail| Z[阻断 kernel PR 合并]
     B -->|pass| C[触发 agentrt 镜像 PR]
     C --> D{agentrt CI<br/>用户态全量验证}
@@ -758,7 +762,7 @@ jobs:
         env:
           AGENTRT_TOKEN: ${{ secrets.AGENTRT_CI_TOKEN }}
         run: |
-          # 导出 10 个头文件变更补丁
+          # 导出 12 个头文件变更补丁
           git format-patch origin/${{ github.base_ref }} HEAD -- \
             kernel/include/uapi/linux/airymax/ -o /tmp/patches
           # 在 agentrt 仓创建镜像 PR
@@ -807,7 +811,7 @@ agentrt CI 失败时自动阻止 kernel PR 合并：
 
 | 层级 | 发布阶段 | 执行内容 |
 |------|---------|---------|
-| L4 | CI 门禁 | release 候选分支通过 18 矩阵 + 全套质量门禁 |
+| L4 | CI 门禁 | release 候选分支通过 31 矩阵 + 全套质量门禁 |
 | L5 | 连接验证 | ABI 兼容性回归（与上一 release 对比） |
 | L6 | 协议验证 | AgentsIPC 协议契约一致性 + syscall 语义映射校验 |
 | L7 | 发布验证 | SBOM 生成 + 签名构建 + 发布渠道分发 |
@@ -935,7 +939,7 @@ publish:
 
 | 子仓 | 运行器 | 备注 |
 |------|--------|------|
-| kernel | ubuntu-latest（2 核 7G） | 矩阵 18 格，需 ccache 加速 |
+| kernel | ubuntu-latest（2 核 7G） | 矩阵 31 格，需 ccache 加速 |
 | agentrt | ubuntu-latest | 用户态全量 |
 | sdk | ubuntu-latest | 多语言绑定矩阵 |
 | 其余 5 子仓 | ubuntu-latest | 按构建系统分类 |
@@ -969,8 +973,8 @@ publish:
 | 维度 | 策略 |
 |------|------|
 | **8 子仓** | 并行（各子仓独立 workflow，互不阻塞） |
-| **kernel 18 矩阵** | `max-parallel: 9`（分两批） |
-| **管理仓 4 job** | 串行（ssot → integrity → status → doc-format） |
+| **kernel 31 矩阵** | `max-parallel: 8`（分批运行） |
+| **管理仓 2 job** | 串行（file-integrity → orchestrate-leaf-ci） |
 | **[SC] 双向 CI** | kernel CI → agentrt CI 串行（依赖关系） |
 
 ### 9.4 超时约束（OS-STD-TEST-011）
@@ -979,11 +983,11 @@ CI 总时长不得超过 60 分钟。各阶段预算：
 
 | 阶段 | 预算 | 备注 |
 |------|------|------|
-| kernel 18 矩阵 | 40 分钟 | ccache 命中后 ≤25 分钟 |
+| kernel 31 矩阵 | 40 分钟 | ccache 命中后 ≤25 分钟 |
 | kernel 质量门禁（checkpatch/sparse/Coccinelle） | 8 分钟 | 串行 |
 | kernel KUnit + kselftest | 10 分钟 | UML + QEMU |
 | 其他 7 子仓（并行） | 15 分钟 | 与 kernel 并行，不占 kernel 预算 |
-| 管理仓 4 job（串行） | 5 分钟 | 与子仓并行 |
+| 管理仓 2 job（串行） | 5 分钟 | 与子仓并行 |
 | **总计（关键路径）** | **≤60 分钟** | kernel 为关键路径 |
 
 ```yaml
@@ -1003,7 +1007,7 @@ kbuild-matrix:
 
 | 类别 | 触发条件 | 严重级别 | 处理 |
 |------|---------|---------|------|
-| **编译错误** | 18 矩阵任一格 `make` 非零退出 | P0 | 阻断合并，PR 标记 `ci-fail-compile` |
+| **编译错误** | 31 矩阵任一格 `make` 非零退出 | P0 | 阻断合并，PR 标记 `ci-fail-compile` |
 | **测试失败** | KUnit `not ok` / kselftest 非 0 退出 / 覆盖率未达门槛 | P0 | 阻断合并，PR 标记 `ci-fail-test` |
 | **静态分析警告** | sparse W=2 warning / Coccinelle report / clang-tidy warning | P0 | 阻断合并，PR 标记 `ci-fail-static` |
 | **格式违规** | checkpatch ERROR/WARNING / clang-format 差异 | P0 | 阻断合并，PR 标记 `ci-fail-format` |
@@ -1065,7 +1069,7 @@ CI 失败通过 GitHub PR review comment 精准通知，避免全局噪音：
 
 | 原则 | 在本卷的体现 |
 |------|------------|
-| **A-4 完美主义** | 7 层验证全绿方可合并；18 矩阵零警告；关键路径 100% 覆盖（OS-STD-TOOL-124） |
+| **A-4 完美主义** | 7 层验证全绿方可合并；31 矩阵零警告；关键路径 100% 覆盖（OS-STD-TOOL-124） |
 | **S-1 反馈闭环** | L3 本地预提交毫秒级 + L4 CI 分钟级 + nightly 回归自动 revert |
 | **S-2 层次分解** | 7 层按"局部→全局→跨仓→发布"递进；8 子仓 CI 隔离 |
 | **E-3 资源确定性** | 三级缓存 + CI ≤60 分钟（OS-STD-TEST-011）+ 可重现发布 |
@@ -1083,7 +1087,7 @@ CI 失败通过 GitHub PR review comment 精准通知，避免全局噪音：
 - [`50-engineering-standards/09-ssot-registry.md`](../50-engineering-standards/09-ssot-registry.md)（SSoT 规则编号权威注册表，文档体系 Markdown 源）
 - [`agentrt-linux/ssot-registry.yaml`](../../../agentrt-linux/ssot-registry.yaml)（SSoT 机器可读 Schema，管理仓根）
 - [`50-engineering-standards/05-development-process.md`](../50-engineering-standards/05-development-process.md)（补丁生命周期 + 7 层验证前 4 层强制）
-- [`50-engineering-standards/120-cross-project-code-sharing.md`](../50-engineering-standards/120-cross-project-code-sharing.md)（[SC] 共享契约层 10 个头文件，OS-IRON-014）
+- [`50-engineering-standards/120-cross-project-code-sharing.md`](../50-engineering-standards/120-cross-project-code-sharing.md)（[SC] 共享契约层 12 个头文件，OS-IRON-014）
 - [`80-testing/01-kunit-framework.md`](../80-testing/01-kunit-framework.md)（KUnit，OS-TEST-001~012）
 - [`80-testing/02-kselftest.md`](../80-testing/02-kselftest.md)（kselftest，OS-TEST-013~022 + OS-STD-TEST-011）
 

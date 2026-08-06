@@ -223,8 +223,14 @@ SYSCALL_DEFINE1(airy_agent_fork,
 `mmap()` 在 agentrt-linux 中扩展支持映射 MemoryRovol 卷：
 
 ```c
-/* 新增 MAP_MEMORYROVOL 标志 */
-#define MAP_MEMORYROVOL  0x100000   /* 映射 MemoryRovol 卷 */
+/*
+ * 新增 MAP_MEMORYROVOL 标志 —— 注意与既有标志位冲突的规避：
+ *  - x86_64 Linux 6.6 中 0x100000 已被 MAP_FIXED_NOREPLACE 占用，不可复用；
+ *  - 选用 0x200000（Linux 6.6 x86_64/arm64/aarch64 mman.h 均未分配）；
+ *  - 各架构 mmap 标志位空间已接近饱和，长期方案为 fd-based 控制接口
+ *    （AIRY_SYS_ROVOL_CTL=549 op 子命令），mmap 标志位仅为便捷入口。
+ */
+#define MAP_MEMORYROVOL  0x200000   /* 映射 MemoryRovol 卷（x86_64/arm64 高位未占用值） */
 
 /* 新增 memoryrovol fd 类型 */
 int fd = open("memoryrovol://agent-100/L2", O_RDWR);
@@ -232,6 +238,8 @@ void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
 		  MAP_SHARED | MAP_MEMORYROVOL, fd, 0);
 /* addr 指向 MemoryRovol L2 向量索引区域 */
 ```
+
+> **架构差异标注**：`MAP_MEMORYROVOL=0x200000` 以 x86_64/arm64 Linux 6.6 的 mman.h 为准；若目标架构已占用 0x200000（如未来上游新增标志），需随各架构 `asm/mman.h` 调整，且内核必须校验未知标志位返回 `-EINVAL`。用户态应优先使用 `AIRY_SYS_ROVOL_CTL(549)` op 子命令，避免依赖标志位值。
 
 ### 4.2 兼容性保证
 
@@ -255,16 +263,22 @@ void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE,
  */
 #define AIRY_STC_POLICY_NAME  "stc_agent"  /* 用户态策略枚举名，非调度类编号 */
 
-/* 扩展 sched_param 结构 */
-struct sched_param {
-	int sched_priority;
-#ifdef CONFIG_AIRYMAXOS_AGENT
-	/* agentrt-linux 扩展字段 */
-	uint32_t agent_id;
-	uint64_t token_budget;
-	uint8_t  cognition_phase;  /* 认知阶段 */
-#endif
+/*
+ * 禁止修改 glibc 的 struct sched_param（修改会破坏 glibc ABI 与跨发行版
+ * 二进制兼容）。Agent 扩展参数通过独立的 airy_sched_param 结构传递，
+ * 由 sched_tac 用户态策略接口（AIRY_SYS_SCHED_CTL=550）提交，内核侧
+ * 在 include/uapi/linux/airymax/sched.h（[SC] 共享契约层）定义。
+ */
+struct airy_sched_param {
+	pid_t       pid;              /* 目标任务 */
+	uint32_t    agent_id;         /* Agent ID */
+	uint64_t    token_budget;     /* Token 预算 */
+	uint8_t     cognition_phase;  /* 认知阶段（AIRY_COG_*） */
+	uint8_t     _pad[7];          /* 对齐 */
 };
+
+/* 通过 AIRY_SYS_SCHED_CTL(550) 提交 Agent 调度扩展参数 */
+int airy_sched_set_agent_param(pid_t pid, const struct airy_sched_param *ap);
 ```
 
 ### 5.2 兼容性保证

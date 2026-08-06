@@ -39,17 +39,17 @@ Agent 行为追踪是 agentrt-linux 专属的可观测性 L9 层，专门追踪�
 
 **OS-OBS-081: Agent 行为追踪是 agentrt-linux 可观测性 L9 层的强制基线，所有 Agent 必须接受行为追踪，不得存在"匿名行为"路径。**
 
-**OS-KER-171: kernel 的 defconfig 必须开启 CONFIG_AIRY_AGENT_TRACING；agentrt.ko 必须在 module_init 阶段注册 Agent 行为追踪基础设施。**
+**OS-KER-171: Agent 行为追踪规划配置项 `CONFIG_AIRY_AGENT_TRACING`（**当前 kernel 源码中不存在，属规划**）；落地时由内建 Airy LSM（非 agentrt.ko）在 `airy_init()` 阶段注册 Agent 行为追踪基础设施。**
 
 ### 1.2 框架组成
 
 | 组件 | 实现位置 | 职责 |
 |------|----------|------|
-| 行为追踪核心 | `kernel/agentrt/airy_trace.c` | per-Agent 追踪上下文管理 |
+| 行为追踪核心 | `kernel/corekern/airy/airy_trace.c`（规划） | per-Agent 追踪上下文管理 |
 | ftrace tracepoint | `include/trace/events/airy.h` | 内核态行为事件 |
 | user_events 桥接 | `daemons/cogn_d/user_events.c` | 用户态行为事件 |
 | eBPF 探针 | `tools/agentrt/ebpf/agent_trace.bpf.c` | 可编程深度追踪 |
-| 调用图生成 | `kernel/agentrt/airy_call_graph.c` | Agent 调用图构建 |
+| 调用图生成 | `kernel/corekern/airy/airy_call_graph.c`（规划） | Agent 调用图构建 |
 | 持久化 | `daemons/logger_d/trace_persister.c` | 追踪数据落盘 |
 | 分析工具 | `tools/agentrt/airy-trace-analyze.py` | 追踪数据分析 |
 
@@ -230,7 +230,7 @@ int trace_airy_sched_switch(struct trace_event_raw_airy_sched_switch *ctx)
 agentrt-linux 提供 `airy_trace_agent_call_graph()` API，用于构建 Agent 间的调用关系图：
 
 ```c
-/* include/uapi/linux/airymax/trace.h（v1.1 计划实现，当前未创建） */
+/* include/uapi/linux/airymax/trace.h（v1.0.1 计划实现，当前未创建） */
 
 struct airy_call_graph_node {
     u32 agent_id;
@@ -274,7 +274,7 @@ int airy_trace_agent_call_graph(u32 agent_id, u32 depth,
 调用图在内核态实时维护，基于 IPC 交互与工具调用事件：
 
 ```c
-/* kernel/agentrt/airy_call_graph.c */
+/* kernel/corekern/airy/airy_call_graph.c（规划） */
 struct airy_call_graph {
     struct list_head nodes;     /* 节点链表 */
     struct list_head edges;     /* 边链表 */
@@ -323,9 +323,9 @@ digraph agent_call_graph {
     rankdir=LR;
     node [shape=box];
 
-    agent_42 [label="agent_42\ncogn_d_worker\nstate=COGNITION_RUNNING\ncalls=0"];
-    agent_43 [label="agent_43\nsearch_agent\nstate=EXECUTING\ncalls=1234"];
-    agent_44 [label="agent_44\nplanner\nstate=PLANNING\ncalls=567"];
+    agent_42 [label="agent_42\ncogn_d_worker\nstate=RUNNING\ncalls=0"];
+    agent_43 [label="agent_43\nsearch_agent\nstate=RUNNING\ncalls=1234"];
+    agent_44 [label="agent_44\nplanner\nstate=READY\ncalls=567"];
 
     agent_42 -> agent_43 [label="IPC_SEND\n1234 calls\navg=1234ns"];
     agent_42 -> agent_44 [label="TOOL_CALL\n567 calls\navg=2345ns"];
@@ -472,11 +472,9 @@ airy-trace-analyze --agent 42 --date 2026-07-18 \
     "token_consumed": 2222221
   },
   "state_analysis": {
-    "COGNITION_RUNNING": {"count": 1234, "avg_duration_ms": 12.3},
-    "PLANNING": {"count": 1234, "avg_duration_ms": 5.6},
-    "SCHEDULING": {"count": 1234, "avg_duration_ms": 1.2},
-    "EXECUTING": {"count": 1234, "avg_duration_ms": 23.4},
-    "BLOCKED": {"count": 567, "avg_duration_ms": 45.6}
+    "RUNNING": {"count": 1234, "avg_duration_ms": 12.3},
+    "READY": {"count": 1234, "avg_duration_ms": 1.2},
+    "BLOCKED": {"count": 1234, "avg_duration_ms": 23.4}
   },
   "sched_analysis": {
     "avg_latency_ns": 12345,
@@ -529,12 +527,12 @@ Agent 8 态生命周期迁移是行为追踪的核心维度。每个状态转换
 
 ```bash
 $ cat /sys/kernel/tracing/trace | grep agent_state_change
-  cogn_d-1234 [000] d... 1784328868.912345: airy_agent_state_change: agent=42 CREATED→COGNITION_RUNNING reason=INIT
-  sched_d-1235 [001] d... 1784328868.923456: airy_agent_state_change: agent=42 COGNITION_RUNNING→PLANNING reason=DAG_UPDATE
-  sched_d-1235 [001] d... 1784328868.934567: airy_agent_state_change: agent=42 PLANNING→SCHEDULING reason=PLAN_READY
-  sched_d-1235 [001] d... 1784328868.945678: airy_agent_state_change: agent=42 SCHEDULING→EXECUTING reason=DISPATCH
-  cogn_d-1234 [000] d... 1784328868.956789: airy_agent_state_change: agent=42 EXECUTING→BLOCKED reason=IPC_WAIT
-  cogn_d-1234 [000] d... 1784328868.967890: airy_agent_state_change: agent=42 BLOCKED→COGNITION_RUNNING reason=IPC_RECV
+  cogn_d-1234 [000] d... 1784328868.912345: airy_agent_state_change: agent=42 READY→RUNNING reason=SCHED_START
+  sched_d-1235 [001] d... 1784328868.923456: airy_agent_state_change: agent=42 RUNNING→BLOCKED reason=IPC_WAIT
+  sched_d-1235 [001] d... 1784328868.934567: airy_agent_state_change: agent=42 BLOCKED→READY reason=IPC_RECV
+  sched_d-1235 [001] d... 1784328868.945678: airy_agent_state_change: agent=42 READY→RUNNING reason=DISPATCH
+  cogn_d-1234 [000] d... 1784328868.956789: airy_agent_state_change: agent=42 RUNNING→BLOCKED reason=IPC_WAIT
+  cogn_d-1234 [000] d... 1784328868.967890: airy_agent_state_change: agent=42 BLOCKED→RUNNING reason=IPC_RECV
 ```
 
 ### 7.2 状态转换原因码
@@ -557,12 +555,10 @@ $ cat /sys/kernel/tracing/trace | grep agent_state_change
 ```bash
 $ airy-trace-analyze --state-durations --agent 42 --date 2026-07-18
 Agent 42 State Duration Analysis:
-  COGNITION_RUNNING: 45.6% (avg 12.3ms, max 234ms)
-  PLANNING:           5.2% (avg 5.6ms, max 45ms)
-  SCHEDULING:         1.1% (avg 1.2ms, max 12ms)
-  EXECUTING:         23.4% (avg 23.4ms, max 567ms)
+  RUNNING: 45.6% (avg 12.3ms, max 234ms)
+  READY:             6.3% (avg 1.2ms, max 12ms)
   BLOCKED:           24.7% (avg 45.6ms, max 1234ms)
-  SUSPENDED:          0.0% (never suspended)
+  STOPPED:            0.0% (never suspended)
 ```
 
 **OS-OBS-085: Agent 在 BLOCKED 状态的停留时间占比不得超过 30%；超限视为 IPC 瓶颈，需审查 fastpath 占比。**

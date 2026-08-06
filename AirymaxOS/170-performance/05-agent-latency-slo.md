@@ -611,6 +611,8 @@ println!("L1 achievement: {:.2}%", metrics.l1_achievement_rate * 100.0);
 
 ## 17. 使用示例
 
+> **规划态声明**：以下 `agentctl slo *` / `agentctl test slo *` 子命令为**规划功能**。当前 `cloudnative/agentctl/agentctl.c` 仅实现 `-h/-v/-s` 三选项（无子命令），`slo` 子命令待后续版本落地后生效。
+
 ```bash
 # 查看 Agent 的 SLO 状态
 agentctl slo status --agent 1234
@@ -633,6 +635,8 @@ agentctl slo violations --agent 1234
 ## 18. 测试策略
 
 ### 18.1 SLO 达标测试
+
+> **规划态声明**：以下 `agentctl test slo *` 子命令为**规划功能**（当前 agentctl 仅支持 -h/-v/-s）。
 
 ```bash
 # 运行 SLO 达标测试

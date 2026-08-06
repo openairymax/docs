@@ -35,8 +35,8 @@ agentrt-linux 构建系统是连接源代码与可分发产物的核心工程基
 
 - **多语言构建**：C（Kbuild）+ Rust（cargo）+ Python（poetry）+ TypeScript（tsc/webpack）
 - **多仓集成**：8 子仓 + agentrt 同源仓库的统一构建入口
-- **多平台目标**：x86_64 / aarch64 / riscv64 / sw_64（LAYER 复用 openEuler 申威架构，详见 ADR-018）+ 跨平台用户态（Linux/macOS/Windows）
-- **airy_defconfig 锁定五大技术选型**：sched_ext 关闭、page flipping 关闭、BPF LSM 关闭、DMA 一致性内存关闭、IRON-9 v3 [DSL] 降级生存层开启
+- **多平台目标**：x86_64 / aarch64 / riscv / loongarch / sw_64（LAYER 复用 openEuler 申威架构，详见 ADR-018）+ 跨平台用户态（Linux/macOS/Windows）
+- **airy_defconfig 锁定五大技术选型**：page flipping 关闭、BPF LSM 关闭、DMA 一致性内存关闭、IRON-9 v3 [DSL] 降级生存层开启、Airymax 配置闭包（`CONFIG_SECURITY_AIRY=y` 等 5 项 Airymax 专属 CONFIG）
 
 ---
 
@@ -46,11 +46,11 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 
 | # | 技术维度 | 选定方案 | 明确不采用的方案 | 在本目录的落地 |
 |---|---------|---------|----------------|--------------|
-| 1 | **内核调度** | **sched_tac**：复用 Linux 6.6 原生 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 调度类 | **不使用 sched_ext**（不引入 eBPF 调度器、不使用 `SCHED_EXT=7` 调度类） | `airy_defconfig` 强制 `# CONFIG_SCHED_EXT is not set`；Kconfig 中 sched_ext 依赖项被 disable |
+| 1 | **内核调度** | **sched_tac**：复用 Linux 6.6 原生 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 调度类 | **不使用 sched_ext**（不引入 eBPF 调度器、不使用 `SCHED_EXT=7` 调度类） | `airy_defconfig` 以 6.6 原生调度类为准（`CONFIG_SCHED_DEADLINE=y`），不引入 sched_ext 相关强制项（6.6 无 `CONFIG_SCHED_EXT` 符号） |
 | 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | `airy_defconfig` 强制 `CONFIG_IO_URING=y`；page flipping 相关代码路径不编译 |
-| 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | `airy_defconfig` 强制 `# CONFIG_BPF_LSM is not set`；`CONFIG_SECURITY_AIRY_LSM=y` 编译纯 C LSM 模块 |
+| 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | `airy_defconfig` 强制 `# CONFIG_BPF_LSM is not set`；`CONFIG_SECURITY_AIRY=y` 编译纯 C LSM 模块 |
 | 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | `airy_defconfig` 不启用 `DMA_CMA` 一致性路径；共享内存构建目标绑定 `alloc_pages + mmap` 实现源文件 |
-| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | CI 流水线强制校验 `include/uapi/linux/airymax/*.h` 共 10 个 [SC] 头文件逐字节一致；`AIRY_SC_FALLBACK` 宏由构建系统在 [SC] 校验失败时自动注入（[DSL] 第四层） |
+| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | CI 流水线强制校验 `include/uapi/linux/airymax/*.h` 共 12 个 [SC] 头文件逐字节一致；`AIRY_SC_FALLBACK` 宏由构建系统在 [SC] 校验失败时自动注入（[DSL] 第四层） |
 
 ### 2.1 IRON-9 v3 四层模型在构建系统的归属
 
@@ -88,7 +88,7 @@ agentrt-linux v1.0 构建系统在内核调度、IPC 传输、安全钩子、内
 以下文档在 1.0.1 版本完成，不在 v1.0 范围内：
 
 - `04-makefile-patterns.md`：Makefile 模式与惯用法
-- `05-cross-compilation.md`：跨平台编译（x86_64/aarch64/riscv64）
+- `05-cross-compilation.md`：跨平台编译（x86_64/aarch64/riscv/loongarch/sw_64）
 - `06-airymaxos-build.md`：agentrt-linux 多仓多语言构建集成
 - `07-cmake-userland.md`：用户态 CMake 构建工具链（对齐 agentrt `cmake/`）
 - `08-rpm-spec.md`：RPM spec 打包规范
@@ -108,7 +108,7 @@ AirymaxOS 全面复用 openEuler 24.03 LTS 构建体系（LAYER 方案，详见 
 **关键约束**：
 
 1. **不 fork 原则**：仅通过配置覆盖实现定制，不 fork openEuler 构建工具链（imageTailor/Yocto/isocut/Anaconda/OBS/dnf）
-2. **版本对齐**：openEuler OLK-6.6 当前同步到 6.6.144，与 AirymaxOS vanilla 6.6.144 在 `6.6.0-144` 段完全对齐，构建工具链无需版本迁移
+2. **版本对齐**：openEuler OLK-6.6 当前同步到 6.6.148，与 AirymaxOS vanilla 6.6.148 在 `6.6.0-148` 段完全对齐，构建工具链无需版本迁移
 3. **IRON-7 不变**：openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值
 
 > 详细构建与烧录策略见闭源文档 [12-build-and-flash-strategy.md](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/12-build-and-flash-strategy.md)。
@@ -124,7 +124,7 @@ AirymaxOS 全面复用 openEuler 24.03 LTS 构建体系（LAYER 方案，详见 
 | **A-UEF** | 辅助 | A-UEF 的 [SC] `error.h` 头文件由 CI 流水线逐字节校验（`sc-dual-ci.yml`） |
 | **A-ULP** | 辅助 | A-ULP 的 [SC] `log_types.h` 头文件由 CI 流水线逐字节校验；128B 日志记录格式在 defconfig 中固化 |
 | **A-UCS** | **核心** | `airy_defconfig` 是 A-UCS 模块在构建期的物理承载——所有 [SC] 配置项（IPC 消息头大小、Ring Buffer 大小、魔数）在 defconfig 中固化为不可妥协基线；sysctl/JSON 双向热重载的语义同源配置（[SS]）由 Kconfig 选项控制启用 |
-| **A-ULS** | 辅助 | A-ULS 的纯 C LSM 模块（`airy_lsm`）通过 `CONFIG_SECURITY_AIRY_LSM=y` 编译；Agent 8 态生命周期 [SC] `sched.h` 由 CI 校验 |
+| **A-ULS** | 辅助 | A-ULS 的纯 C LSM 模块（`airy_lsm`）通过 `CONFIG_SECURITY_AIRY=y` 编译；Agent 8 态生命周期 [SC] `sched.h` 由 CI 校验 |
 | **A-IPC** | 辅助 | A-IPC 的 [SC] `ipc.h` 头文件由 CI 流水线逐字节校验；`IORING_OP_URING_CMD` 路径通过 `CONFIG_IO_URING=y` 强制启用 |
 
 ### 4.1 A-UCS 权威源引用

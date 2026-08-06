@@ -612,7 +612,10 @@ final_mask = domain_L0 & domain_L1 & domain_L2
 某层未授予的访问位，在最终掩码中必为 0；任一层否决即整体否决。这与 Landlock `layer_masks` 多层短路语义一致（§3.2），保证 Agent 沙箱的最严策略优先。
 
 ```c
-/* security/cupolas/landlock_merge.c —— agentrt-linux 专属 */
+/* security/airy/（agentrt-linux 专属，规划）—— 注：agentrt-linux 内核无
+ * security/cupolas/ 目录；此合并辅助函数属规划实现，当前由用户态
+ * cupolas_d 在 Landlock 三层域下发前合并掩码，内核侧无需落地。
+ */
 #include <linux/landlock.h>
 #include <linux/build_bug.h>
 

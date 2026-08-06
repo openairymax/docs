@@ -416,26 +416,32 @@ echo madvise > /sys/kernel/mm/transparent_hugepage/shmem_enabled
 | --- | --- |
 | 职责 | MemoryRovol L1-L4 快照/恢复/迁移管理 |
 | 内核切入点 | userfaultfd + MGLRU + CXL bus |
-| 控制通道 | `airy_sys_rovol_ctl`（编号 1）——记忆卷载控制 syscall |
+| 控制通道 | `airy_sys_rovol_ctl`（编号 549）——记忆卷载控制 syscall |
 | 数据通道 | io_uring `IORING_OP_URING_CMD`（SQE128 模式，cmd 扩展至 80 字节） |
 | daemon 命名 | `mem_d`（`_d` 后缀，12 daemon 命名约定） |
 
-**`airy_sys_rovol_ctl`（编号 1）控制接口**：
+**`airy_sys_rovol_ctl`（编号 549）控制接口**：
 
 ```c
 /* mem_d 通过 airy_sys_rovol_ctl 控制记忆卷载——4 核心 syscall 之一 */
 enum airy_rovol_opcode {
-    AIRY_ROVOL_SNAPSHOT   = 1,  /* 创建记忆快照 [SS] */
-    AIRY_ROVOL_RESTORE    = 2,  /* 从快照恢复 [SS] */
-    AIRY_ROVOL_MIGRATE    = 3,  /* 跨节点/跨 tier 迁移 [SS] */
-    AIRY_ROVOL_COMPRESS   = 4,  /* 压缩快照 [SS] */
-    AIRY_ROVOL_REGISTER   = 5,  /* 注册 io_uring registered buffer [IND] */
-    AIRY_ROVOL_QUERY_TIER = 6,  /* 查询页面所在 tier [IND] */
+    AIRY_ROVOL_SNAPSHOT    = 1,  /* 创建记忆快照 [SS] */
+    AIRY_ROVOL_RESTORE     = 2,  /* 从快照恢复 [SS] */
+    AIRY_ROVOL_MIGRATE     = 3,  /* 跨节点/跨 tier 迁移 [SS] */
+    AIRY_ROVOL_TIER_SET    = 4,  /* 配置页面所在 tier [IND] */
+    AIRY_ROVOL_TIER_GET    = 5,  /* 查询页面所在 tier [IND] */
+    AIRY_ROVOL_MGLRU_CONFIG = 6, /* 配置 MGLRU 多代 LRU [IND] */
+    AIRY_ROVOL_LIST        = 7,  /* 列举卷/快照 [IND] */
+    AIRY_ROVOL_DELETE      = 8,  /* 删除卷/快照 [IND] */
+    AIRY_ROVOL_DEMOTE      = 9,  /* 页面降级（热→冷 tier）[SS] */
+    AIRY_ROVOL_PROMOTE     = 10, /* 页面升级（冷→热 tier）[SS] */
 };
 
 int airy_sys_rovol_ctl(enum airy_rovol_opcode op,
                        struct airy_rovol_args __user *args);
 ```
+
+> **opcode 集对齐**：10 op（SNAPSHOT/RESTORE/MIGRATE/TIER_SET/TIER_GET/MGLRU_CONFIG/LIST/DELETE/DEMOTE/PROMOTE）与 [00-alk-kernel-overview.md §4.2](../10-architecture/00-alk-kernel-overview.md) 保持一致，**内核实现待 M5 里程碑**（M0-M1 仅 [SC] 契约占位）。
 
 > **mem_d 与 sec_d 协作**：mem_d 的所有记忆卷载操作受 `sec_d` 颁发的 Badge 权限控制（详见 §4.10）。`airy_sys_rovol_ctl` 入口校验调用方 Badge 的 Perms 位段是否含 `AIRY_CAP_PERM_ROVOL_*` 权限位。
 
@@ -762,20 +768,20 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 
 | Daemon | 职责 | 与记忆子仓的协作 | 数据通道 |
 | --- | --- | --- | --- |
-| `mem_d` | 记忆卷载管理（MemoryRovol L1-L4） | **记忆子仓核心 daemon**——通过 `airy_sys_rovol_ctl`（编号 1）控制记忆卷载 | io_uring + userfaultfd |
-| `sec_d` | capability 编译/撤销 + Badge 生命周期 | 为 mem_d 颁发 `AIRY_CAP_PERM_ROVOL_*` Badge 权限位；fastpath C-S9 校验 | `airy_sys_call`（编号 0）+ agent_caps[] |
-| `cogn_d` | 认知循环调度（CoreLoopThree） | CoreLoopThree 各阶段切换时同步记忆状态（perception→thinking→action） | `airy_sys_clt_notify`（编号 3） |
+| `mem_d` | 记忆卷载管理（MemoryRovol L1-L4） | **记忆子仓核心 daemon**——通过 `airy_sys_rovol_ctl`（编号 549）控制记忆卷载 | io_uring + userfaultfd |
+| `sec_d` | capability 编译/撤销 + Badge 生命周期 | 为 mem_d 颁发 `AIRY_CAP_PERM_ROVOL_*` Badge 权限位；fastpath C-S9 校验 | `airy_sys_call`（编号 548）+ agent_caps[] |
+| `cogn_d` | 认知循环调度（CoreLoopThree） | CoreLoopThree 各阶段切换时同步记忆状态（perception→thinking→action） | `airy_sys_clt_notify`（编号 551） |
 | `gateway_d` | 跨节点 IPC | 跨节点记忆迁移通过 `gateway_d` 转发 + gossip 100ms Epoch 同步 | io_uring + gRPC/QUIC |
 | `logger_d` | 统一日志（128B 记录） | 接收 MemoryRovol 操作日志（快照/恢复/迁移事件） | char dev `/dev/airy_log` |
 | `macro_d` | 宏观监管 | 监控 mem_d 心跳（systemd watchdog），Badge Epoch 失效时重启 Agent | systemd watchdog |
 | `audit_d` | 审计哈希链 | 审计 MemoryRovol 跨 tier/跨节点迁移操作 | eBPF ringbuf |
-| `sched_d` | sched_tac 策略守护 | 记忆迁移感知——迁移期间调整调度优先级 | `airy_sys_sched_ctl`（编号 2） |
+| `sched_d` | sched_tac 策略守护 | 记忆迁移感知——迁移期间调整调度优先级 | `airy_sys_sched_ctl`（编号 550） |
 | `dev_d` | 设备驱动用户态化 | CXL/PMEM 设备通过 dev_d 用户态驱动注册 | io_uring + VFIO |
 | `net_d` | 网络栈用户态化 | 跨节点记忆迁移数据传输 | io_uring + VFIO |
 | `vfs_d` | VFS 用户态化 | MemoryRovol 快照通过 vfs_d 持久化至文件系统 | io_uring + VFIO |
 | `config_d` | 统一配置管理 | MGLRU/CXL tier/THP 等运行时参数热更新 | sysfs + procfs |
 
-> **mem_d 是 12 daemon 的记忆核心**：所有记忆卷载操作（快照/恢复/迁移/压缩）均经 `mem_d` 通过 `airy_sys_rovol_ctl`（编号 1）处理。mem_d 与 sec_d 协作完成 Badge 权限校验，与 cogn_d 协作完成 CoreLoopThree 阶段同步，与 gateway_d 协作完成跨节点迁移。
+> **mem_d 是 12 daemon 的记忆核心**：所有记忆卷载操作（快照/恢复/迁移）均经 `mem_d` 通过 `airy_sys_rovol_ctl`（编号 549）处理。mem_d 与 sec_d 协作完成 Badge 权限校验，与 cogn_d 协作完成 CoreLoopThree 阶段同步，与 gateway_d 协作完成跨节点迁移。
 
 ***
 
@@ -838,7 +844,7 @@ AirymaxOS 用户态 **12 daemon**（daemon 命名后缀统一为 `_d`，**无例
 - `90-observability/README.md`（内存监控）
 - [01-kernel.md §14.2](01-kernel.md)（12 daemon 内核切入点）
 - [03-security.md](03-security.md)（Badge 权限 + sec_d 协作 + 记忆加密）
-- [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md)（`airy_sys_rovol_ctl` 编号 1 + 24 槽位 syscall 表）
+- [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md)（`airy_sys_rovol_ctl` 编号 549 + 24 槽位 syscall 表）
 - [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)（io_uring SQE128 模式 + `io_uring_cmd_to_pdu()` + `io_uring_cmd_done()` 4 参数）
 - [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（`AIRY_ECAP_FROZEN = -82` + `AIRY_ECAP_PERM = -81`）
 - [10-architecture/05-adrs.md#adr-012](../10-architecture/05-adrs.md)（ADR-012 微内核化改造技术路线）

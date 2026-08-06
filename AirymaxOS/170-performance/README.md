@@ -151,7 +151,7 @@ A-ULP 的日志 Ring Buffer 基于 **alloc_pages + mmap**（**不使用 DMA 一�
 ## 5. 相关文档
 
 ### 5.1 上级与架构文档
-- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0）
+- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0.1）
 - [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) —— Airymax Unify Design 总纲（五模块 SSoT）
 - [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) —— IRON-9 v3 四层模型
 

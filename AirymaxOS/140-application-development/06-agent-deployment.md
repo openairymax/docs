@@ -23,7 +23,7 @@ Agent 部署是 agentrt-linux 区别于通用操作系统的另一核心特征�
 |------|---------|---------------|
 | Agent 包格式不明 | 190-distribution 仅提"RPM 分发" | 定义完整 Agent 包格式（`.agentpkg` + OCI 镜像） |
 | 部署清单缺失 | 150-cloudnative 仅给 CRD 示例片段 | 定义完整 Agent 清单 YAML Schema |
-| 部署状态机不明 | 01-agent-lifecycle 仅覆盖运行态 | 定义完整 9 状态部署生命周期 |
+| 部署状态机不明 | 01-agent-lifecycle 仅覆盖运行态 | 定义完整 13 状态部署生命周期（§4.2 详述） |
 | 健康检查契约缺失 | 无文档定义 liveness/readiness 协议 | 定义统一健康检查协议 |
 | 滚动更新策略不清 | 190-distribution 仅提"原子更新" | 定义 blue-green/canary/rolling 三策略 |
 | 回滚机制不明 | 190-distribution 仅提"Btrfs 快照" | 定义基于 MemoryRovol 快照的应用层回滚 |
@@ -366,7 +366,7 @@ spec:
 
 ### 4.1 部署状态机
 
-Agent 部署经历 9 个状态，借鉴 Kubernetes Pod 生命周期与 seL4 TCB 状态机的组合：
+Agent 部署经历 13 个状态（§4.2 逐一详述），借鉴 Kubernetes Pod 生命周期与 seL4 TCB 状态机的组合：
 
 ```mermaid
 stateDiagram-v2
@@ -403,7 +403,7 @@ stateDiagram-v2
     TERMINATED --> [*]
 ```
 
-**图 2**：Agent 部署 9 状态生命周期。PENDING/PULLING/VERIFYING/SANDBOXING/STARTING 为部署阶段，HEALTHY/RUNNING/UPDATING/UNHEALTHY 为运行阶段，ROLLING_BACK/TERMINATING/FAILED/TERMINATED 为终态或回收阶段。
+**图 2**：Agent 部署 13 状态生命周期。PENDING/PULLING/VERIFYING/SANDBOXING/STARTING 为部署阶段，HEALTHY/RUNNING/UPDATING/UNHEALTHY 为运行阶段，ROLLING_BACK/TERMINATING/FAILED/TERMINATED 为终态或回收阶段。
 
 **设计决策**：中间态（PULLING/VERIFYING/SANDBOXING/STARTING）借鉴 seL4 的 preemptionPoint 模式——每个阶段可被更高优先级任务抢占，避免长部署阻塞调度器。
 
@@ -783,7 +783,7 @@ sequenceDiagram
     participant SNAP as 快照 S1
 
     Note over DEPLOY,AGENT: 更新前
-    DEPLOY->>ROVOL: 552 snapshot(agent_id, L1-L4)
+    DEPLOY->>ROVOL: 549 airy_sys_rovol_ctl(SNAPSHOT, agent_id, ...)（L1-L4）
     ROVOL->>SNAP: 创建快照 S1（v1.0.1 完整状态）
     Note over SNAP: S1 标记为 CHECKPOINT
 
@@ -793,14 +793,14 @@ sequenceDiagram
     Note over DEPLOY: 健康检查连续失败 5 次
     DEPLOY->>DEPLOY: 触发回滚
 
-    DEPLOY->>ROVOL: 553 restore(S1, agent_id)
+    DEPLOY->>ROVOL: 549 airy_sys_rovol_ctl(RESTORE, agent_id, snapshot_id)
     ROVOL->>AGENT: 恢复 v1.0.1 完整状态
     Note over AGENT: Agent 回到 v1.0.1
 
     DEPLOY->>DEPLOY: 标记回滚成功
 ```
 
-**图 6**：基于 MemoryRovol 快照的回滚。更新前创建 CHECKPOINT 快照，回滚时通过 553 restore 恢复。
+**图 6**：基于 MemoryRovol 快照的回滚。更新前创建 CHECKPOINT 快照（549 op=SNAPSHOT），回滚时通过 549 op=RESTORE 恢复。
 
 ### 8.2 回滚触发条件
 
@@ -823,7 +823,7 @@ stateDiagram-v2
     TRIGGERED --> SNAPSHOT_LOOKUP : 查找最近 CHECKPOINT 快照
     SNAPSHOT_LOOKUP --> RESTORING : 找到快照 S1
     SNAPSHOT_LOOKUP --> FAILED : 无快照可用
-    RESTORING --> VERIFIED : 553 restore 成功
+    RESTORING --> VERIFIED : 549 op=RESTORE 成功
     RESTORING --> FAILED : restore 失败
     VERIFIED --> RESTARTED : Agent 重启
     RESTARTED --> HEALTHY : 健康检查通过
@@ -841,7 +841,7 @@ Agent 的资源配额分为 4 个维度，借鉴 Kubernetes Resource Requests/Li
 
 | 维度 | 配额类型 | 默认值 | 超限行为 |
 |------|---------|--------|---------|
-| **Token** | 预算 + 补充速率 | 1,000,000 / 1,000 tokens/ms | SUSPENDED（[04-token-budget.md](04-token-budget.md)） |
+| **Token** | 预算 + 补充速率 | 1,000,000 / 1,000 tokens/ms | BLOCKED 挂起（[04-token-budget.md](04-token-budget.md)） |
 | **MemoryRovol** | 层级 + TTL | 4 层 + 1h TTL | 遗忘（[05-memory-rovol-api.md](05-memory-rovol-api.md)） |
 | **CPU** | CFS 配额 + cpuset | 100ms / 100ms | 限流 |
 | **Memory** | 上限 + swap | 4Gi / 1Gi | OOM Kill |
@@ -1436,7 +1436,7 @@ class TestAgentDeploy:
 
 | 版本 | 日期 | 变更内容 | 变更人 |
 |------|------|---------|--------|
-| 0.1.1 | 2026-07-09 | 初始版本，定义 Agent 包格式、清单规范、9 状态部署生命周期、四重沙箱隔离、三类健康检查探针、三种滚动更新策略、MemoryRovol 快照回滚、4 维资源配额、agentdeploy CLI、四语言 SDK 集成、测试策略 | 工程规范委员会 |
+| 0.1.1 | 2026-07-09 | 初始版本，定义 Agent 包格式、清单规范、13 状态部署生命周期、四重沙箱隔离、三类健康检查探针、三种滚动更新策略、MemoryRovol 快照回滚、4 维资源配额、agentdeploy CLI、四语言 SDK 集成、测试策略 | 工程规范委员会 |
 
 ---
 

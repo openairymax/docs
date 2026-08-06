@@ -17,7 +17,7 @@ agentrt-linux 测试体系是工程标准可执行性的核心保障。它继承
 1. **KUnit 单元测试**：白盒单元测试，毫秒级执行，验证单函数行为契约（含 A-UEF 错误码、A-ULP 128B 记录格式、A-UCS 配置加载）。
 2. **kselftest 系统级测试**：从用户态测试内核特性，重点覆盖sched_tac 调度类（`SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF`）、io_uring IORING_OP_URING_CMD 零拷贝、纯 C LSM 钩子。
 3. **集成测试**：跨子仓跨模块的端到端测试，验证 IRON-9 v3 四层模型的 [SC] 头文件逐字节一致、agentrt ↔ agentrt-linux 同源 API 互操作。
-4. **CI 流水线**：`sc-dual-ci.yml`（[SC] 逐字节校验）+ `ssot-validate.yml`（四层模型归属校验）+ 覆盖率门槛（kernel 90% / security 95%，关键路径 100%）。
+4. **CI 流水线**：`sc-dual-ci.yml`（[SC] 逐字节校验）+ `ssot-validate.yml`（四层模型归属校验）+ 覆盖率门槛（kernel 90% / security 95%，关键路径 100%——数值以 [06-coverage-metrics.md](06-coverage-metrics.md) 4 级门槛为唯一权威，与 [70-build-system/03-ci-cd-pipeline.md §5.6](../70-build-system/03-ci-cd-pipeline.md) 互引统一）。
 
 ### 1.1 测试体系分层
 
@@ -37,8 +37,8 @@ agentrt-linux 测试体系是工程标准可执行性的核心保障。它继承
 ### 1.2 agentrt-linux 专属测试
 
 - **sched_tac 调度测试**：验证 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 三层调度类组合的 Agent 8 态生命周期映射（INACTIVE→SPAWNING→READY→RUNNING→BLOCKED→STOPPING→STOPPED→DEAD）
-- **IPC 零拷贝测试**：验证 `IORING_OP_URING_CMD` 的 fastpath 性能（~160ns）与 page flipping 路径未启用
-- **[SC] 头文件逐字节校验**：`sc-dual-ci.yml` 双端 diff 10 个 `include/uapi/linux/airymax/*.h` 头文件
+- **IPC 零拷贝测试**：验证 `IORING_OP_URING_CMD` 的 fastpath 性能（~160ns 为端到端口径 SLA；内核派发口径实测 ~46ns，UML x86_64）与 page flipping 路径未启用
+- **[SC] 头文件逐字节校验**：`sc-dual-ci.yml` 双端 diff 12 个 `include/uapi/linux/airymax/*.h` 头文件
 - **纯 C LSM 验证**：验证 `airy_lsm` 钩子注册、capability 缓存命中、BPF LSM 未启用
 - **alloc_pages + mmap 验证**：验证共享内存未使用 `dma_alloc_coherent`
 
@@ -50,11 +50,11 @@ agentrt-linux v1.0 测试体系在内核调度、IPC 传输、安全钩子、内
 
 | # | 技术维度 | 选定方案 | 明确不采用的方案 | 在本目录的落地 |
 |---|---------|---------|----------------|--------------|
-| 1 | **内核调度** | **sched_tac**：复用 Linux 6.6 原生 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 调度类 | **不使用 sched_ext**（不引入 eBPF 调度器、不使用 `SCHED_EXT=7` 调度类） | kselftest `sched/` 子目录验证sched_tac 三层调度类组合；CI 断言 `CONFIG_SCHED_EXT` 未启用 |
-| 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | IPC fastpath 性能基准测试（~160ns SLA）；CI 断言 page flipping 代码路径未编译 |
+| 1 | **内核调度** | **sched_tac**：复用 Linux 6.6 原生 `SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF` 调度类 | **不使用 sched_ext**（不引入 eBPF 调度器、不使用 `SCHED_EXT=7` 调度类） | kselftest `sched/` 子目录验证sched_tac 三层调度类组合；CI 断言 sched_ext 调度类未启用 |
+| 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | IPC fastpath 性能基准测试（~160ns 端到端 SLA；内核派发口径实测 ~46ns）；CI 断言 page flipping 代码路径未编译 |
 | 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | KUnit 测试纯 C LSM 钩子注册与 capability 缓存；CI 断言 `CONFIG_BPF_LSM` 未启用 |
 | 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | KUnit 测试 `alloc_pages + mmap` 内存路径；CI 断言 `dma_alloc_coherent` 未在共享内存路径调用 |
-| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | `sc-dual-ci.yml` 双端逐字节校验 10 个 [SC] 头文件；`ssot-validate.yml` 校验四层归属一致性 |
+| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | `sc-dual-ci.yml` 双端逐字节校验 12 个 [SC] 头文件；`ssot-validate.yml` 校验四层归属一致性 |
 
 ### 2.1 IRON-9 v3 四层模型在测试体系的归属
 
@@ -83,7 +83,7 @@ agentrt-linux v1.0 测试体系在内核调度、IPC 传输、安全钩子、内
 |---|------|------|---------|
 | — | [README.md](README.md) | v1.0 | 测试体系主索引（本文件） |
 | 1 | [01-kunit-framework.md](01-kunit-framework.md) | v1.0 | KUnit 白盒单元测试框架、A-UEF 错误码契约测试、A-ULP 128B 记录格式测试、[SC] 头文件一致性测试、[DSL] 降级块自检 |
-| 2 | [02-kselftest.md](02-kselftest.md) | v1.0 | kselftest 系统级测试、sched_tac 调度类测试（`SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF`）、IPC 零拷贝性能基准（~160ns）、纯 C LSM 钩子验证 |
+| 2 | [02-kselftest.md](02-kselftest.md) | v1.0 | kselftest 系统级测试、sched_tac 调度类测试（`SCHED_DEADLINE` / `SCHED_FIFO` / `EEVDF`）、IPC 零拷贝性能基准（~160ns 端到端 SLA，内核派发口径 ~46ns）、纯 C LSM 钩子验证 |
 
 ### 3.1 后续规划文档（1.0.1 版本）
 
@@ -110,7 +110,7 @@ agentrt-linux v1.0 测试体系在内核调度、IPC 传输、安全钩子、内
 | **A-ULP** | 辅助 | A-ULP 128B 日志记录格式的 KUnit 测试；[SC] `log_types.h` 双端逐字节校验 |
 | **A-UCS** | 辅助 | A-UCS 配置加载与 RCU 热重载的 KUnit 测试；`airy_defconfig` 锁定五大选型的回归测试 |
 | **A-ULS** | **核心** | sched_tac 调度测试——验证 Agent 8 态生命周期与 Linux 进程状态的映射；纯 C LSM 钩子注册与 capability 缓存测试；Micro-Supervisor 冷酷执法 + Macro-Supervisor 温情裁决的双层测试 |
-| **A-IPC** | **核心** | IPC 零拷贝测试——验证 `IORING_OP_URING_CMD` fastpath 性能（~160ns SLA）、Ring 生命周期解耦、离线缓存校验、Reconciliation 三原则 |
+| **A-IPC** | **核心** | IPC 零拷贝测试——验证 `IORING_OP_URING_CMD` fastpath 性能（~160ns 端到端 SLA，内核派发口径实测 ~46ns）、Ring 生命周期解耦、离线缓存校验、Reconciliation 三原则 |
 
 ### 4.1 Unify Design 权威源引用
 
@@ -179,8 +179,8 @@ tools/testing/airy_regression/
 │   ├── perf_regression.list           # 性能回归基准（fastpath/io_uring/Badge）
 │   └── daemon_recovery_regression.list # 多 daemon 灾难恢复回归用例
 ├── baselines/
-│   ├── v1.1.0_baseline.json           # v1.1.0 发布时的基线快照
-│   └── v1.0.1_baseline.json           # v1.0.1 发布时的基线快照
+│   ├── v1.0.1_baseline.json           # v1.0.1 发布时的基线快照
+│   └── next_baseline.json             # 下一版本发布时的基线快照
 └── scripts/
     ├── airy_bisect.sh                 # git bisect 自动化脚本
     └── airy_regression_diff.py        # PR 影响范围分析
@@ -295,17 +295,19 @@ fi
 
 `airy_regression_baseline.json` 记录已知通过的用例集，作为回归对比基线：
 
+> **规划扩展标注**：下列基线为回归测试设计目标（总用例 1247，含上游 KUnit 全量与 daemon 恢复用例）。Airymax 自有 KUnit 当前实际为 **5 套件 31 用例 + 1 bench**：`airy_lsm_test`（9）/ `airy_cap_derive_test`（4）/ `airy_ipc_ring_test`（5）/ `stc_dispatch_test`（10）/ `airy_ipc_capability_test`（3）+ `airy_fastpath_bench`（bench，不计用例数）。OS-TEST-012 单调递增断言以当前实际 31 用例为基线。
+
 ```json
 {
-  "version": "v1.1.0",
+  "version": "v1.0.1",
   "baseline_date": "2026-07-15",
   "total_suites": 6,
-  "total_cases": 1247,
+  "total_cases": 966,
   "suites": [
     {
       "name": "kunit_regression",
-      "cases": 312,
-      "expected_pass": 312,
+      "cases": 31,
+      "expected_pass": 31,
       "duration_sla_s": 30
     },
     {
@@ -560,15 +562,14 @@ fi
 
 | 升级路径 | 兼容性 | 数据迁移 | 测试范围 |
 |---------|--------|---------|---------|
-| 0.1.1 → 1.0.1 | ABI 不兼容 | `airy_migrate_config` 自动迁移 | config 迁移 + Agent 状态恢复 |
-| 1.0.1 → 2.0.1 | ABI 不兼容（41 ID → Capability Folding） | `airy_migrate_caps` 迁移权限模型 | config 迁移 + `agent_caps[]` 重建 + Agent 重新认证 |
-| 0.1.1 → 1.1.0 | ABI 不兼容 | 两步迁移（0.1.1 → 1.0.1 → 1.1.0） | 全量升级测试 |
+| 0.1.1 → 1.0.1 | ABI 不兼容（41 ID → Capability Folding） | `airy_migrate_config` + `airy_migrate_caps` 迁移权限模型 | config 迁移 + `agent_caps[]` 重建 + Agent 重新认证 |
+| 1.0.1 → 下一版本 | 待定（下一版本发布前评估） | 待定 | 升级测试（路径与迁移方案待定） |
 
 ### 11.2 降级路径
 
 | 降级路径 | 适用场景 | 数据兼容性 | 测试范围 |
 |---------|---------|-----------|---------|
-| 2.0.1 → 1.0.1 | 紧急回滚（v2.0.1 发现 critical bug） | `agent_caps[]` 数据丢失（降级后重建 41 ID 模型） | 紧急回滚 + Agent 重新认证 |
+| 下一版本 → 1.0.1 | 紧急回滚（下一版本发现 critical bug） | `agent_caps[]` 数据丢失（降级后重建 41 ID 模型） | 紧急回滚 + Agent 重新认证 |
 | 1.0.1 → 0.1.1 | 不支持 | — | 禁止降级 |
 
 ### 11.3 测试范围
@@ -576,8 +577,8 @@ fi
 | 测试项 | 升级 | 降级 |
 |--------|------|------|
 | config 迁移 | `airy_migrate_config` 自动迁移 `airy_defconfig` | config 回滚至上一版本 |
-| `agent_caps[]` 兼容性 | v1.0.x 41 ID → v2.0.1 Badge 迁移（`airy_migrate_caps`） | v2.0.1 Badge 丢弃，重建 v1.0.x 41 ID |
-| ABI 兼容性 | 用户态 daemon 重新编译（v2.0.1 [SC] 头文件） | daemon 回滚至 v1.0.x 二进制 |
+| `agent_caps[]` 兼容性 | v1.0.x 41 ID → v1.0.1 Badge 迁移（`airy_migrate_caps`） | v1.0.1 Badge 丢弃，重建 v1.0.x 41 ID |
+| ABI 兼容性 | 用户态 daemon 重新编译（v1.0.1 [SC] 头文件） | daemon 回滚至 v1.0.x 二进制 |
 | Agent 状态恢复 | 升级中 RUNNING Agent 暂停，升级后恢复 | 降级中 RUNNING Agent 强制 STOPPED |
 | 审计哈希链 | 升级前后哈希链连续 | 降级后哈希链标注"版本切换"断点 |
 
@@ -587,7 +588,7 @@ fi
 # airy_migrate_config: config 迁移
 airy_migrate_config \
     --from-version 1.0.1 \
-    --to-version 1.1.0 \
+    --to-version next \
     --config /etc/airy/airy_defconfig \
     --backup /etc/airy/airy_defconfig.bak.1.0.1
 
@@ -634,8 +635,8 @@ TEST(airy_upgrade, migrate_41_id_to_cap_folding) {
     }
 }
 
-TEST(airy_upgrade, rollback_1_1_0_to_1_0_1) {
-    /* 模拟 v1.1.0 紧急回滚至 v1.0.1 */
+TEST(airy_upgrade, rollback_next_to_1_0_1) {
+    /* 模拟下一版本紧急回滚至 v1.0.1 */
     ASSERT_EQ(0, system("airy_emergency_rollback --to 1.0.1"));
 
     /* 验证：系统恢复至 v1.0.1 */
@@ -653,8 +654,8 @@ TEST(airy_upgrade, zero_data_loss) {
     char snapshot_before[65536];
     ASSERT_GT(0, airy_agent_snapshot_all(snapshot_before, sizeof(snapshot_before)));
 
-    /* 执行升级 1.0.1 → 1.1.0 */
-    ASSERT_EQ(0, system("airy_upgrade --from 1.0.1 --to 1.1.0"));
+    /* 执行升级 1.0.1 → 下一版本 */
+    ASSERT_EQ(0, system("airy_upgrade --from 1.0.1 --to next"));
 
     /* 升级后记录所有 Agent 状态 */
     char snapshot_after[65536];
@@ -668,9 +669,9 @@ TEST(airy_upgrade, zero_data_loss) {
 
 ### 11.6 通过标准
 
-**OS-TEST-119**：升级测试必须覆盖 0.1.1 → 1.0.1 → 1.1.0 完整升级路径；升级后所有 Agent 正常运行（无状态丢失、无权限错误）即通过。
+**OS-TEST-119**：升级测试必须覆盖 0.1.1 → 1.0.1 → 下一版本完整升级路径；升级后所有 Agent 正常运行（无状态丢失、无权限错误）即通过。
 
-**OS-TEST-120**：降级测试必须覆盖 1.1.0 → 1.0.1 紧急回滚路径；降级后 0 数据丢失（Agent 状态、Token 账本、L1-L4 记忆配额均完整）即通过。
+**OS-TEST-120**：降级测试必须覆盖下一版本 → 1.0.1 紧急回滚路径；降级后 0 数据丢失（Agent 状态、Token 账本、L1-L4 记忆配额均完整）即通过。
 
 **OS-KER-175**：升级/降级测试失败的版本禁止 release；`airy_migrate_caps` 迁移失败的 Agent 必须在迁移报告中显式列出，由人工介入处理。
 

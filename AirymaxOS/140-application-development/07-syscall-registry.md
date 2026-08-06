@@ -116,7 +116,7 @@ v1.0.1 Capability Folding 架构下，控制面精简为 4 核心 syscall，其�
 
 | 编号 | 宏定义 | 状态 | 说明 |
 |------|--------|------|------|
-| 552-571 | `AIRY_SYS_RESERVED_0` ~ `AIRY_SYS_RESERVED_19` | 预留 | 未来扩展。新增 syscall 需按 [§7 审批流程](#7-编号注册审批流程) 执行 |
+| 552-571 | `AIRY_SYS_RESERVED_BASE` ~ `AIRY_SYS_RESERVED_END`（`AIRY_SYS_SLOTS_MAX=24`） | 预留 | 未来扩展。新增 syscall 需按 [§7 审批流程](#7-编号注册审批流程) 执行 |
 
 ### 3.3 数据面（io_uring，零 syscall）
 
@@ -146,7 +146,9 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 
 `airy_sys_call(cap_t cap, const struct airy_ipc_msg_hdr *msg)` 通过 `msg->opcode` 分派：
 
-| op 码 | 操作名 | 功能 | 0.1.1 对应 syscall | 说明 |
+> **分派语义（以内核实现为权威）**：`kernel/kernel/syscalls/airy_syscalls.c`（SYSCALL 548）实际按 [SC] `ipc.h` 的 `AIRY_IPC_OP_*` 值分派（`AIRY_IPC_OP_SEND=0x0001` / `RECV=0x0002` / `SEND_BATCH=0x0003` / `CANCEL=0x0004` / `FREEZE=0x0005` / `CAP_REQUEST=0x0010` / `CAP_RESPONSE=0x0011`，未知 opcode 返回 `-EINVAL`）。下表 `AIRY_OP_*`（`COMPILE_BADGE` 等）为 **0.1.1 历史命名**（sec_d 管理操作的概念层标识），其数值（0x01-0x07）与 `AIRY_IPC_OP_*` 存在数值重叠（如 `AIRY_OP_COMPILE_BADGE=0x01` 与 `AIRY_IPC_OP_SEND=0x0001` 数值相同）——两者为不同命名空间，v1.0.1 实际分派以 `msg->opcode` + [SC] `ipc.h` 的 `AIRY_IPC_OP_*` 为权威；sec_d 管理操作（Badge 编译/撤销、LSM 策略、Wasm 加载）的最终 opcode 编号由本注册表统一（见 §6.2 模板标注）。
+
+| op 码（0.1.1 历史命名） | 操作名 | 功能 | 0.1.1 对应 syscall | 说明 |
 |-------|--------|------|-------------------|------|
 | `AIRY_OP_COMPILE_BADGE` | Badge 编译 | sec_d 编译 Capability Badge（Epoch + Random Tag + Perms） | `airy_sys_delegate` / `airy_sys_mint` | 集中到 sec_d，消除分散 mint/derive |
 | `AIRY_OP_REVOKE_BADGE` | Badge 撤销 | sec_d 撤销 Badge（1 行 per-agent epoch bump 立即生效） | `airy_sys_revoke` / `airy_sys_capability_revoke` | `airy_cap_epoch_bump(agent_id)` 递增 per-agent epoch，该 Agent 旧 Badge 失效（K9-1 主要机制） |
@@ -213,19 +215,21 @@ v1.0.1 的 4 核心 syscall 通过 **op-dispatch**（操作码分派）承载 0.
 
 ### 5.2 完整映射表
 
-| 应用层 API（SDK 封装） | 内核机制 | 生命周期状态转换 |
+| 应用层 API（SDK 封装） | 内核机制 | 生命周期状态转换（8 态 SSoT） |
 |----------------------|---------|----------------|
-| `airy_agent_register()` | `airy_sys_call(AIRY_OP_COMPILE_BADGE)` + io_uring ring 注册 | → REGISTERED |
-| `airy_agent_configure()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY)` + `airy_sys_rovol_ctl(AIRY_ROVOL_MGLRU_CONFIG)` | REGISTERED → CONFIGURED |
-| `airy_agent_start()` | io_uring `IORING_OP_URING_CMD`（激活 Agent ring） | CONFIGURED → RUNNING |
-| `airy_agent_pause()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_PRIORITY, prio=0)` | RUNNING → PAUSING → PAUSED |
-| `airy_agent_resume()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_PRIORITY, prio>0)` | PAUSED/SUSPENDED → RUNNING |
-| `airy_agent_stop()` | `airy_sys_call(AIRY_OP_REVOKE_BADGE)` + io_uring ring 注销 | RUNNING → TERMINATING → TERMINATED |
-| `airy_agent_migrate()` | `airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE)` + io_uring ring 迁移 | PAUSED → 迁移 → 目标节点 RUNNING |
+| `airy_agent_register()` | `airy_sys_call(AIRY_OP_COMPILE_BADGE)` + io_uring ring 注册 | → SPAWNING |
+| `airy_agent_configure()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY)` + `airy_sys_rovol_ctl(AIRY_ROVOL_MGLRU_CONFIG)` | SPAWNING → READY |
+| `airy_agent_start()` | io_uring `IORING_OP_URING_CMD`（激活 Agent ring） | READY → RUNNING |
+| `airy_agent_pause()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_PRIORITY, prio=0)` | RUNNING → STOPPING → STOPPED |
+| `airy_agent_resume()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_PRIORITY, prio>0)` | STOPPED/BLOCKED → RUNNING |
+| `airy_agent_stop()` | `airy_sys_call(AIRY_OP_REVOKE_BADGE)` + io_uring ring 注销 | RUNNING → STOPPING → DEAD |
+| `airy_agent_migrate()` | `airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE)` + io_uring ring 迁移 | STOPPED → 迁移 → 目标节点 RUNNING |
 | `airy_agent_get_state()` | io_uring `IORING_OP_URING_CMD`（查询 CQE 状态） | 查询当前状态 |
-| `airy_agent_set_token_budget()` | `airy_sys_clt_notify(AIRY_CLT_SET_MODE)`（Token 预算模式） | 设置 Token 预算 |
-| `airy_agent_get_token_budget()` | `airy_sys_clt_notify(AIRY_CLT_GET_METRICS)` | 查询 Token 预算 |
+| `airy_agent_set_token_budget()` | `airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY)`（Token 预算唯一入口，policy 序列化配置） | 设置 Token 预算 |
+| `airy_agent_get_token_budget()` | `airy_sys_sched_ctl(AIRY_SCHED_GET_POLICY)`（policy 回读预算状态） | 查询 Token 预算 |
 | `airy_cap_derive(AIRY_CAP_OP_REVOKE)` | `airy_sys_call(AIRY_OP_REVOKE_BADGE)` | 终止时递归撤销 capability |
+
+> **Token 预算入口统一**：Token 预算的**唯一系统调用入口为 `airy_sys_sched_ctl` (550)**（SET_POLICY/GET_POLICY，见 04-token-budget.md §8.1）；`airy_sys_clt_notify` 的 `AIRY_CLT_SET_MODE` 仅承载 Thinkdual 认知模式（见 §4.5），不承载 Token 预算。
 
 **映射设计决策理由**：
 1. **前缀分离**：`airy_agent_*` 是 SDK 应用层 API（用户友好），4 核心 syscall 是内核系统调用（机制层）。分离前缀遵循 K-1（机制在内核，策略在用户态）——SDK 层封装策略（重试、错误转换、日志），系统调用层仅提供机制。
@@ -318,9 +322,12 @@ extern "C" {
 /* ====================================================================
  * v1.0.1 Capability Folding：4 核心 syscall + 20 预留 = 24 槽位
  * 编号范围 548-571
+ *
+ * ⚠️ 本模板为说明性示例。宏名与编号以 [SC]
+ * kernel/include/uapi/linux/airymax/syscalls.h 实际定义为唯一权威
+ * （AIRY_SYS_RESERVED_BASE / AIRY_SYS_RESERVED_END / AIRY_SYS_SLOTS_MAX；
+ * syscalls.h 未定义 AIRY_SYS_BASE / AIRY_SYS_NR_* 等宏，勿在生产代码引用）。
  * ==================================================================== */
-
-#define AIRY_SYS_BASE            548  /* agentrt-linux 专用编号起始 */
 
 /* 4 核心 syscall（548-551） */
 #define AIRY_SYS_CALL            548  /* Capability Invocation（sec_d 专属管理） */
@@ -328,22 +335,18 @@ extern "C" {
 #define AIRY_SYS_SCHED_CTL       550  /* sched_tac 调度策略配置 */
 #define AIRY_SYS_CLT_NOTIFY      551  /* CoreLoopThree 阶段通知 + kthread */
 
-/* 20 预留槽位（552-571） */
-#define AIRY_SYS_RESERVED_0      552
-#define AIRY_SYS_RESERVED_1      553
-/* ... */
-#define AIRY_SYS_RESERVED_19     571
-
-#define AIRY_SYS_NR_CORE         4    /* 核心 syscall 数 */
-#define AIRY_SYS_NR_RESERVED     20   /* 预留槽位数 */
-#define AIRY_SYS_NR_TOTAL        24   /* 总槽位数（548-571） */
+/* 预留段（552-571，20 槽位）—— 宏名以 [SC] syscalls.h 为唯一权威 */
+#define AIRY_SYS_RESERVED_BASE   552
+#define AIRY_SYS_RESERVED_END    571
+#define AIRY_SYS_SLOTS_MAX       24    /* 4 core + 20 reserved */
 
 /* ====================================================================
  * op-dispatch 操作码（由各核心 syscall 的 op 参数携带）
  * opcode 在 MAJOR 版本内不可变更（OS-IRON-001）
  * ==================================================================== */
 
-/* airy_sys_call op 码（通过 msg->opcode 传递） */
+/* airy_sys_call op 码（通过 msg->opcode 传递）—— 0.1.1 历史命名；
+ * v1.0.1 实际分派以 [SC] ipc.h 的 AIRY_IPC_OP_* 为权威（见 §4.2） */
 #define AIRY_OP_COMPILE_BADGE    0x01
 #define AIRY_OP_REVOKE_BADGE     0x02
 #define AIRY_OP_LSM_CTL          0x03
@@ -352,7 +355,9 @@ extern "C" {
 #define AIRY_OP_CAP_INSPECT      0x06
 #define AIRY_OP_CAP_TRANSFER     0x07
 
-/* airy_sys_rovol_ctl op 码 */
+/* airy_sys_rovol_ctl op 码 —— 编号权威源：本节（0x01-0x0A）与 §4.3 为唯一权威；
+ * [SC] memory_types.h 尚未落地 AIRY_ROVOL_OP_* 枚举（10 op 待 [SC] 补齐，
+ * 见 docs-closed 执行视图 P1-2 计划），落地时须保持注册表 ↔ UAPI ↔ 内核三方一致 */
 #define AIRY_ROVOL_SNAPSHOT      0x01
 #define AIRY_ROVOL_RESTORE       0x02
 #define AIRY_ROVOL_MIGRATE       0x03
@@ -784,9 +789,9 @@ static void test_syscall_number_stability(struct kunit *test)
     KUNIT_EXPECT_EQ(test, AIRY_SYS_SCHED_CTL, 550);
     KUNIT_EXPECT_EQ(test, AIRY_SYS_CLT_NOTIFY, 551);
 
-    /* 编号段边界 */
-    KUNIT_EXPECT_EQ(test, AIRY_SYS_BASE, 548);
-    KUNIT_EXPECT_EQ(test, AIRY_SYS_RESERVED_19, 571);
+    /* 编号段边界（宏名以 [SC] syscalls.h 为权威） */
+    KUNIT_EXPECT_EQ(test, AIRY_SYS_CALL, 548);
+    KUNIT_EXPECT_EQ(test, AIRY_SYS_RESERVED_END, 571);
 
     /* op 码不可变性 */
     KUNIT_EXPECT_EQ(test, AIRY_OP_COMPILE_BADGE, 0x01);
@@ -872,12 +877,12 @@ static void test_syscall_number_stability(struct kunit *test)
 
 | 0.1.1 syscall | 0.1.1 编号 | v1.0.1 对应 | v1.0.1 编号/机制 |
 |---------------|-----------|------------|-----------------|
-| `airy_sys_call` | 512 | `airy_sys_call`（语义收窄） | 548 |
+| `airy_sys_call` | —（0.1.1 无同名 syscall；v1.0.1 收窄合并 TASK 段 512-531 各入口） | `airy_sys_call`（语义收窄） | 548 |
 | `airy_sys_send` | 513 | io_uring `IORING_OP_URING_CMD` | 数据面（零 syscall） |
 | `airy_sys_recv` | 514 | io_uring CQE | 数据面（零 syscall） |
 | `airy_sys_rovol_ctl` | 519 | `airy_sys_rovol_ctl` | 549 |
 | `airy_sys_sched_ctl` | 520 | `airy_sys_sched_ctl` | 550 |
-| `airy_sys_clt_notify` | 521 | `airy_sys_clt_notify` | 551 |
+| `airy_sys_clt_notify` | 612 | `airy_sys_clt_notify` | 551 |
 | `airy_sys_task_submit` | 512 | `airy_sys_call(COMPILE_BADGE)` + io_uring | 548 + 数据面 |
 | `airy_sys_task_register` | 516 | `airy_sys_call(COMPILE_BADGE)` | 548 |
 | `airy_sys_task_start` | 518 | io_uring `IORING_OP_URING_CMD` | 数据面 |
@@ -894,6 +899,8 @@ static void test_syscall_number_stability(struct kunit *test)
 | `airy_sys_clt_phase_notify` | 612 | `airy_sys_clt_notify(PHASE_NOTIFY)` | 551 |
 | `airy_sys_wasm_load_module` | 614 | `airy_sys_call(WASM_LOAD)` | 548 |
 
+> **编号重复修正说明**：A.2 前 6 行的 0.1.1 编号取自 0.1.1 §2.2 早期连续编号（512 起），与 A.3 的 6 段划分存在历史偏差；其中与后 15 行重复的编号（512/521）已修正——`airy_sys_call` 在 0.1.1 无同名 syscall（标注"—"，v1.0.1 收窄合并 TASK 段入口）、`airy_sys_clt_notify` 对应 CLT 段 612（与 §4.5 `AIRY_CLT_PHASE_NOTIFY=612` 一致）；513/514/519/520 等早期编号保留历史原貌，不再追溯。
+>
 > 完整迁移映射见 [01-syscalls.md §2.2.1](../30-interfaces/01-syscalls.md) 的 12→4 精确映射表与本注册表 §4 的 op-dispatch 操作映射表。
 
 ### A.3 0.1.1 6 类编号段（历史参考）

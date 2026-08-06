@@ -128,7 +128,7 @@ static void airy_ipc_ring_release(struct airy_ipc_ring *ring)
 
 > **v1.1 重构说明**（Capability Folding 集成版）：原则二的**目标不变**（控制面离线时数据面仍可校验），但**实现机制升级**——
 > - v1.0：`radix tree` 缓存查找 + TTL 过期 + 两层校验（fastpath 查缓存 / slowpath 查控制面）
-> - v1.0.1：`agent_caps[1024]` 静态数组 + 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
+> - v1.0.1：`agent_caps` 指针表（启动期 `alloc_pages_node` 分配）+ 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
 >
 > v1.0.1 Capability Folding 通过 Badge 模型天然满足离线校验要求：Badge 由 sec_d 在控制面在线时编译并写入 `agent_caps[src_task]`，控制面离线后 fastpath C-S9 仍可基于 `agent_caps[]` 内联校验（数组无锁多读者）。v1.0 的 `radix tree` 缓存、TTL 过期、`AIRY_ECAP_RADIX_MISS` 兜底码仅在 [DSL] 降级模式下作为 fallback 路径保留（H6）。v1.1 实现详情见 [03-capability-model.md §13.2](03-capability-model.md) 与 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)。
 >

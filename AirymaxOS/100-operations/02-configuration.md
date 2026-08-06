@@ -588,8 +588,8 @@ IRON-9 v3 四层共享模型将 agentrt（用户态运行时）与 agentrt-linux
 |------|------|------|
 | `/etc/agentrt/kernel/` 内核态配置 | 内核模块参数配置目录 | 否 |
 | `/etc/agentrt/security/` 安全配置 | Cupolas LSM 策略、capability 映射 | 否 |
-| sysctl 内核参数接口 | `kernel.agentrt.*`、`vm.agentrt.*` sysctl 树 | 否 |
-| procfs 状态导出 | `/proc/agentrt/` 运行时状态只读导出 | 否 |
+| sysctl 内核参数接口 | `kernel.airy.*`、`vm.airy.*` sysctl 树 | 否 |
+| procfs 状态导出 | `/proc/airy/` 运行时状态只读导出 | 否 |
 | 配置变更审计日志 | 90 天审计日志（OS-OPS-118） | 否 |
 | 系统级强制白名单 | `airymaxos-config-check` 白名单阻断 | 否 |
 
@@ -603,14 +603,14 @@ graph LR
         S2["ipc.h<br/>IPC 参数 ring/opcode/header_size"]
     end
     SC -->|"参数边界约束"| D["agentrt-linux /etc/agentrt/<br/>内核态配置目录"]
-    D -->|"sysctl 热更新"| E["sysctl kernel.agentrt.*<br/>运行时参数热更新"]
+    D -->|"sysctl 热更新"| E["sysctl kernel.airy.*<br/>运行时参数热更新"]
     style SC fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style A fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
     style D fill:#fff3e0,stroke:#e65100,stroke-width:2px
     style E fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
 ```
 
-配置协作流：agentrt 用户态使用 TOML 格式配置 daemons（`gateway.conf`、`cogn.conf` 等），配置参数的字段名与取值范围由 [SC] 层的 `sched.h`（调度参数）和 `ipc.h`（IPC 参数）头文件约束。agentrt-linux 在 `/etc/agentrt/` 系统级目录加载同源配置文件（[SS] 语义同源——文件名与字段名两端一致），通过 `airymaxos-config-check` 校验 [SC] 参数边界后，将内核态参数映射到 sysctl 接口（`kernel.agentrt.*`）实现运行时热更新（[IND] 完全独立——sysctl/procfs/审计日志为发行版固有责任）。两端通过同源配置语义实现无适配层互操作。
+配置协作流：agentrt 用户态使用 TOML 格式配置 daemons（`gateway.conf`、`cogn.conf` 等），配置参数的字段名与取值范围由 [SC] 层的 `sched.h`（调度参数）和 `ipc.h`（IPC 参数）头文件约束。agentrt-linux 在 `/etc/agentrt/` 系统级目录加载同源配置文件（[SS] 语义同源——文件名与字段名两端一致），通过 `airymaxos-config-check` 校验 [SC] 参数边界后，将内核态参数映射到 sysctl 接口（`kernel.airy.*`）实现运行时热更新（[IND] 完全独立——sysctl/procfs/审计日志为发行版固有责任）。两端通过同源配置语义实现无适配层互操作。
 
 ---
 

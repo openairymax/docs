@@ -108,7 +108,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 ALK-6.6 = Linux 6.6 LTS (vanilla)                       [IRON-7 基线]
          + 国产硬件驱动层（LAYER，复用 openEuler 硬件适配）  [架构可选，非核心子系统]
          + agentrt-linux 微内核化改造补丁（≤ 2 万行）        [核心子系统改造]
-         + [SC] 共享契约层（10 个头文件）
+         + [SC] 共享契约层（12 个头文件）
          + 4 核心 syscall（548-551）+ op-dispatch
          + io_uring 数据面（IORING_OP_URING_CMD）
          + 纯 C LSM（airy_lsm，H5 硬约束）
@@ -125,7 +125,7 @@ ALK-6.6 在 Linux 6.6 原生目录树基础上新增以下 agentrt-linux 专属�
 ```
 kernel/                          # Linux 6.6 内核源码树
 ├── include/
-│   ├── uapi/linux/airymax/      # [SC] 共享契约层（10 头文件 + syscall.xml）
+│   ├── uapi/linux/airymax/      # [SC] 共享契约层（12 头文件 + syscall.xml）
 │   │   ├── error.h              # A-UEF 统一错误码
 │   │   ├── log_types.h          # A-ULP 统一日志类型
 │   │   ├── ipc.h                # IPC magic + 128B 消息头
@@ -134,8 +134,10 @@ kernel/                          # Linux 6.6 内核源码树
 │   │   ├── security_types.h     # 44 cap（41 POSIX + 3 Airymax）+ Badge 访问宏
 │   │   ├── cognition_types.h    # 三阶段枚举
 │   │   ├── syscalls.h           # 4 核心 syscall 编号（548-551）
+│   │   ├── syscall.h            # syscall 语义/ABI 声明
 │   │   ├── uapi_compat.h        # __KERNEL__/__linux__ 桥接
-│   │   ├── lsm_types.h          # DEFINE_LSM(airy) 骨架
+│   │   ├── lsm_types.h          # DEFINE_LSM(airy) 骨架 + capability 槽位
+│   │   ├── bpf_struct_ops.h     # eBPF struct_ops 状态同步（可观测性用，H5 约束）
 │   │   └── syscall.xml          # codegen 契约源（R-01）
 │   └── airymax/                 # 内核内部头文件
 ├── kernel/
@@ -173,7 +175,7 @@ ALK-6.6 对 Linux 6.6 vanilla 的改造点清单：
 
 | #      | 改造区域                                     | 改造内容                                    | 新增/修改  | 代码预估           |
 | ------ | ---------------------------------------- | --------------------------------------- | ------ | -------------- |
-| 1      | `include/uapi/linux/airymax/`            | \[SC] 共享契约层 10 头文件 + syscall.xml        | 新增     | \~2,000 行      |
+| 1      | `include/uapi/linux/airymax/`            | \[SC] 共享契约层 12 头文件 + syscall.xml        | 新增     | \~2,000 行      |
 | 2      | `include/uapi/asm-generic/unistd.h`      | 新增 4 核心 syscall 编号（548-551）             | 修改     | \~10 行         |
 | 3      | `arch/x86/entry/syscalls/syscall_64.tbl` | 新增 4 核心 syscall 表项                      | 修改     | \~4 行          |
 | 4      | `kernel/superv/`                         | Micro-Supervisor（4 个 .c + Kbuild）       | 新增     | \~3,000 行      |
@@ -518,12 +520,12 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 
 | 层次               | 共享程度             | 内核内容                                                            | 物理宿主                          |
 | ---------------- | ---------------- | --------------------------------------------------------------- | ----------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码           | 10 个头文件                                                         | `include/uapi/linux/airymax/` |
+| **\[SC] 共享契约层**  | 完全共享代码           | 12 个头文件                                                         | `include/uapi/linux/airymax/` |
 | **\[SS] 语义同源层**  | 高层 API 语义同源      | sched\_tac / io\_uring 等 30+ 项（struct\_ops 仅用于可观测性，非核心架构，H5 约束） | 各自独立实现                        |
 | **\[IND] 完全独立层** | 完全独立             | syscall 表注册 / LSM 钩子 / KABI / Kbuild                            | 内核态专属                         |
 | **\[DSL] 降级生存层** | \[SC] 损坏时最小可运行子集 | 每个 \[SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块                    | 自包含                           |
 
-### 10.2 \[SC] 10 头文件清单
+### 10.2 \[SC] 12 头文件清单
 
 | #  | 头文件                 | 职责           | magic / 关键定义                            |
 | -- | ------------------- | ------------ | --------------------------------------- |
@@ -550,7 +552,7 @@ sched\_tac（sched\_tac = **sched**uling **t**hrough **a**gent **c**lasses）是
 | ---------------------------- | ---------- | ---------------- | --------------------- |
 | 内核核心（调度/IPC/capability/内存原语） | \~14,400 行 | 5-10 万行          | 每新增子系统需论证"无法在用户态安全实现" |
 | 微内核化改造补丁                     | —          | ≤ 2 万行           | VFS / 网络栈 / 驱动用户态化补丁  |
-| \[SC] 共享契约层                  | —          | 10 个头文件          | IRON-9 v3 单一数据源       |
+| \[SC] 共享契约层                  | —          | 12 个头文件          | IRON-9 v3 单一数据源       |
 | \[SS] 语义同源层                  | —          | 30+ 项高层 API 语义   | 实现独立，语义同源             |
 | \[IND] 独立层                   | —          | 15+ 项            | 内核态专属                 |
 

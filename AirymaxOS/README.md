@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 > **文档定位**：agentrt-linux（AirymaxOS 极境智能体操作系统）整体方案文档体系的总入口与纲领\
 > **文档版本**：v1.0.1\
-> **最后更新**： 2026-07-21\
+> **最后更新**： 2026-07-30\
 > **正式全称**：agentrt-linux（极境智能体操作系统，英文名：AirymaxOS）\
 > **仓库别名**：agentrt-linux（仓库名）\
 > **文档维护**：开源极境工程与规范委员会（OpenAirymax Engineering and Standardization Committee）
@@ -42,7 +42,7 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 
 | 层次    | 缩写     | 名称                             | 共享程度          | 内容                                                                                                                                                                                         | 组织方式                                       |
 | ----- | ------ | ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| 第 1 层 | \[SC]  | 共享契约层（Shared-Contract）         | 完全共享代码        | 10 个头文件（`include/uapi/linux/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `uapi_compat.h` / `lsm_types.h` | `include/uapi/linux/airymax/` 独立头文件库，两端共同依赖           |
+| 第 1 层 | \[SC]  | 共享契约层（Shared-Contract）         | 完全共享代码        | 12 个头文件（`include/uapi/linux/airymax/`）：`error.h` / `log_types.h` / `memory_types.h` / `security_types.h` / `cognition_types.h` / `sched.h` / `ipc.h` / `syscalls.h` / `syscall.h` / `uapi_compat.h` / `lsm_types.h` / `bpf_struct_ops.h` | `include/uapi/linux/airymax/` 独立头文件库，两端共同依赖           |
 | 第 2 层 | \[SS]  | 语义同源层（Shared-Semantics）        | API 签名相同，实现独立 | 调度语义、安全模型、IPC 传输、记忆模型、认知循环                                                                                                                                                                 | 各自独立实现，通过 \[SC] 保证互操作                      |
 | 第 3 层 | \[IND] | 完全独立层（Independent）             | 完全独立实现        | io\_uring fastpath、纯 C LSM（airy\_lsm，H5）、Kbuild/Kconfig、内核模块构建                                                                                                                                        | 各自独立实现，通过 \[SC] 保证互操作                      |
 | 第 4 层 | \[DSL] | 降级生存层（Degraded Survival Layer） | 自包含降级块        | `#ifdef AIRY_SC_FALLBACK` 降级块、最小可运行子集（38 POSIX 错误码 + printk LOG\_FATAL/ERROR + 最简 IPC）                                                                                                     | 每个 \[SC] 头文件底部的降级块，`.fallback_hashes` 独立校验 |
@@ -116,7 +116,7 @@ docs/AirymaxOS/
 | -------------------------------------------- | --------------------------------------------------------------------------------- | --- |
 | [00-requirements](00-requirements/README.md) | 需求分析（业务需求 + 功能需求 + 非功能需求）                                                         | 4   |
 | [10-architecture](10-architecture/README.md) | 架构设计（系统架构 + Unify Design 总纲 + IRON-9 v3 + \[DSL] 降级层 + 五维原则 + 微内核策略 + ADR + 工程基线） | 12  |
-| [20-modules](20-modules/README.md)           | 模块设计（8 子仓 + A-ULS/A-ULP/A-UCS + printk-bridge，\[SC] 10 头文件）                       | 14  |
+| [20-modules](20-modules/README.md)           | 模块设计（8 子仓 + A-ULS/A-ULP/A-UCS + printk-bridge，\[SC] 12 头文件）                       | 14  |
 | [30-interfaces](30-interfaces/README.md)     | 接口设计（系统调用 + AgentsIPC + SDK API + 编码标准）                                           | 文档  |
 | [40-dataflows](40-dataflows/README.md)       | 数据流程（认知 + 记忆 + IPC + 调度 + Ring Buffer + Logger Daemon + Panic 生存）                 | 8   |
 

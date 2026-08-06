@@ -82,7 +82,7 @@ Reconciliation 采用 **最终一致性（eventual consistency）**，而非强�
     ▼
 1. 扫描数据面状态（io_uring_cmd RECONCILE_SCAN）
     │  ├── 扫描所有存活 Ring（内核 Ring 表遍历）
-    │  ├── 扫描 Capability 状态（v1.1 `agent_caps[1024]` 静态数组遍历）
+    │  ├── 扫描 Capability 状态（v1.0.1 `agent_caps` 指针表遍历，`alloc_pages_node` 运行时分配）
     │  ├── 扫描离线队列（暂存消息）
     │  └── 读取 reconciliation log
     │

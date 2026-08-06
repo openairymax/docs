@@ -617,10 +617,10 @@ CBMC 将 `READ_ONCE`/`WRITE_ONCE`/`smp_store_release`/`smp_load_acquire` 建模�
 | 覆盖性 | 覆盖 N 步内具体执行路径 | 覆盖所有可能执行路径 |
 | 反例生成 | 自动生成反例（SAT/SMT 求解） | 需人工构造反例 |
 | 自动化程度 | 高（CI 全自动） | 低（人工证明 + Isabelle 交互） |
-| 投入成本 | 5-10 人年 | 200+ 人年（seL4 全内核） |
+| 投入成本 | 5-10 人年（8 属性整体）；单函数模块约 1 人月 | 200+ 人年（seL4 全内核） |
 | 验证深度 | 实现层 C 代码 | 抽象层 → 设计层 → 实现层 全链精化 |
 
-- **结论**：CBMC 验证提供"高置信度工程证据"（high-confidence engineering evidence），**不等价于** seL4 的"数学证明"（mathematical proof）。agentrt-linux v1.0.1 阶段以 CBMC 为 fastpath 验证主力，v1.2+ 引入 Isabelle/HOL 逐步精化证明（refinement）以缩小鸿沟。
+- **结论**：CBMC 验证提供"高置信度工程证据"（high-confidence engineering evidence），**不等价于** seL4 的"数学证明"（mathematical proof）。agentrt-linux v1.0.1 阶段以 CBMC 为 fastpath 验证主力，下一版本引入 Isabelle/HOL 逐步精化证明（refinement）以缩小鸿沟。
 
 ### 4.6 seL4 偏离分析专章
 
@@ -635,7 +635,7 @@ CBMC 将 `READ_ONCE`/`WRITE_ONCE`/`smp_store_release`/`smp_load_acquire` 建模�
 | 内核架构 | 真正微内核（~10KLOC） | Linux 6.6 + 微内核化改造（VFS/网络栈/驱动部分用户态化） | 改造方式差异 | 硬件兼容性 + 工程成本（ADR-012） |
 | Capability 存储 | CNode/CSpace/MDB 动态结构 | agent_caps[1024] 静态数组 + Badge 64-bit 折叠 | 简化落地 | O(1) 访问 + 锁-free fastpath（~10ns） |
 | IPC 机制 | seL4 Call/Send/Recv 系统调用 | io_uring IORING_OP_URING_CMD + SQE128 | 替代落地 | Linux 生态 + 零拷贝 + 128B 消息头 |
-| 形式化验证 | Isabelle/HOL 定理证明（数学证明） | CBMC 模型检验（高置信度工程证据） | 验证深度差异 | 工程成本（20 人年 vs 1 人月） |
+| 形式化验证 | Isabelle/HOL 定理证明（数学证明） | CBMC 模型检验（高置信度工程证据） | 验证深度差异 | 工程成本（seL4 全内核 200+ 人年 vs CBMC 单函数模块约 1 人月） |
 | 调度模型 | MCS（Mixed Criticality Systems） | sched_tac（SCHED_DEADLINE/FIFO/EEVDF + MCS 映射） | 映射落地 | Linux 调度器兼容 |
 | 故障处理 | handleFault() 内核回调 | airy_fault_enforce() + SIGKILL + Macro-Supervisor | 等价落地 | Linux 信号机制 + 用户态监管 |
 | 内存隔离 | 页表隔离 + capability 级联 | Landlock 沙箱 + Badge 撤销 + KASAN + Cupolas | 强化落地 | Linux 进程模型 + 多层防护 |
@@ -669,12 +669,12 @@ CBMC 将 `READ_ONCE`/`WRITE_ONCE`/`smp_store_release`/`smp_load_acquire` 建模�
 
 - **seL4**：Isabelle/HOL 定理证明，覆盖**所有可能执行路径**（数学证明）
 - **AirymaxOS**：CBMC 模型检验，覆盖**有限状态空间 + 有限步数**（模型检验）
-- **工程理由**：Isabelle/HOL 需要 20+ 人年（seL4 经验），CBMC 可在 1 人月内完成
+- **工程理由**：Isabelle/HOL 需要 20+ 人年（seL4 经验），CBMC 单函数模块可在约 1 人月内完成（全部 8 属性整体约 5-10 人年）
 - **本质鸿沟**：
   - CBMC 验证提供"高置信度工程证据"（覆盖 70%+ 常见漏洞）
   - seL4 Isabelle/HOL 提供"数学证明"（覆盖 100% 可能路径）
   - 两者在验证深度上有**本质区别**，不可等同
-- **升级路径**：1.0.1+ 可考虑引入 TLA+ 规约；1.4+ 可考虑 Coq/Isabelle 部分证明
+- **升级路径**：1.0.1 之后可考虑引入 TLA+ 规约；后续版本可考虑 Coq/Isabelle 部分证明
 
 **4.6.2.5 内存隔离偏离**
 
@@ -715,14 +715,14 @@ seL4 是首个完整形式化验证的微内核，其 l4v（L4.verified）框架
 | 设计规约 | Isabelle/HOL | 数据结构设计 | （未对标） |
 | 实现规约 | Isabelle/HOL | C 代码语义 | CBMC 模型检查 |
 | Capability 系统 | capDL | Capability 描述 | Coq 证明（airy_cap_check） |
-| 安全属性 | info-flow | 机密性/完整性 | （未对标，v1.2 规划） |
+| 安全属性 | info-flow | 机密性/完整性 | （未对标，下一版本规划） |
 
 ### 5.2 agentrt-linux 与 seL4 的差异
 
 | 维度 | seL4 | agentrt-linux |
 |------|------|---------------|
 | 验证范围 | 全内核 | 关键路径（3 项） |
-| 投入 | 200+ 人年 | 5-10 人年 |
+| 投入 | 200+ 人年（seL4 全内核） | 5-10 人年（关键路径整体）；单函数模块约 1 人月 |
 | 验证深度 | 抽象→设计→实现 全链精化 | 实现层 + 抽象层独立验证 |
 | 验证工具 | Isabelle/HOL 为主 | TLA+ / Coq / CBMC 多工具 |
 | 验证目标 | 通用微内核安全 | Agent 操作系统关键路径 |
@@ -736,7 +736,7 @@ agentrt-linux 借鉴 seL4 以下方法论：
 1. **抽象层先于实现层**：先验证 TLA+ 抽象规约，再验证 C 代码实现。
 2. **不变量优先**：优先证明不变量（safety），再证明活性（liveness）。
 3. **Capability 系统独立验证**：Capability 是安全核心，独立证明。
-4. **逐步精化**（refinement）：从抽象到实现逐步精化（v1.2 规划）。
+4. **逐步精化**（refinement）：从抽象到实现逐步精化（下一版本规划）。
 
 ---
 
@@ -990,9 +990,9 @@ All formal verification checks PASSED. PR is eligible for merge.
 ### 9.3 后续版本规划
 
 - v1.0.1：新增 IPC 状态机 TLA+ 规约（Ring 缓冲区无溢出、无丢消息）。
-- v1.2：新增 Isabelle/HOL 逐步精化证明（抽象层 → 实现层 refinement）。
-- v1.3：新增信息流安全属性（借鉴 seL4 info-flow，证明 Agent 间无未授权信息流）。
-- v1.4：形式化验证覆盖率从 3 项扩展至 10 项，覆盖所有 P0 + P1 关键路径。
+- 下一版本：新增 Isabelle/HOL 逐步精化证明（抽象层 → 实现层 refinement）。
+- 后续版本：新增信息流安全属性（借鉴 seL4 info-flow，证明 Agent 间无未授权信息流）。
+- 后续版本：形式化验证覆盖率从 3 项扩展至 10 项，覆盖所有 P0 + P1 关键路径。
 
 ### 9.4 CBMC 验证范围与边界声明（R3 补强：可信度边界显式化）
 
@@ -1040,9 +1040,9 @@ CBMC 验证的工程价值：
 |------|---------|---------|------|
 | v1.0.1（当前） | CBMC（model checking） | fastpath C-S9 11 属性 | 高置信度工程证据 |
 | v1.0.1 | CBMC + TLA+（IPC 状态机） | fastpath + IPC Ring 状态机 | 状态机无死锁证明 |
-| v1.2 | + Coq/Isabelle（逐步精化） | Capability 算法 refinement | 抽象→实现 精化证明 |
-| v1.3 | + TLA+ info-flow | Agent 间信息流 | 机密性/完整性证明 |
-| v1.4+ | 评估引入 TLA+ / Coq 全链精化 | fastpath 全链 | 接近 seL4 验证深度 |
+| 下一版本 | + Coq/Isabelle（逐步精化） | Capability 算法 refinement | 抽象→实现 精化证明 |
+| 后续版本 | + TLA+ info-flow | Agent 间信息流 | 机密性/完整性证明 |
+| 后续版本 | 评估引入 TLA+ / Coq 全链精化 | fastpath 全链 | 接近 seL4 验证深度 |
 
 > **OS-STD-123**（R3 新增）：CBMC 验证报告必须显式标注"高置信度工程证据"而非"数学证明"，避免对外宣传过度；本节"不在验证范围"清单必须随版本演进同步更新。
 

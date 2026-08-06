@@ -32,7 +32,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | MAJOR | 语义化版本的主版本号，破坏性变更时递增 |
 | MINOR | 语义化版本的次版本号，每 3 个月递增 |
 | PATCH | 语义化版本的修订号，每次 bug fix 发布递增 |
-| stable-vX.Y | 稳定分支命名，例如 `stable-v1.0` |
+| `release/*` | 稳定分支命名，例如 `release/1.0` |
 | RC | Release Candidate，发布候选 |
 | code freeze | 代码冻结，发布前禁止新功能合入 |
 | airy_defconfig | agentrt-linux 内核默认配置文件，锁定五大选型 |
@@ -47,29 +47,29 @@ agentrt-linux 采用每 3 个月一个 minor 版本的发布节奏，每年发�
 
 ```mermaid
 gantt
-    title agentrt-linux 2026 年发布节奏
+    title agentrt-linux 发布节奏（首个正式版 v1.0.1，2026-11-08 基于 130-roadmap 关键路径）
     dateFormat YYYY-MM-DD
     axisFormat %m-%d
-    section v1.0
-    code freeze       :2026-01-15, 7d
-    RC1 测试          :2026-01-22, 7d
-    RC2 测试          :2026-01-29, 7d
-    正式发布          :milestone, 2026-02-05, 0d
-    section v1.1
-    code freeze       :2026-04-15, 7d
-    RC1 测试          :2026-04-22, 7d
-    RC2 测试          :2026-04-29, 7d
-    正式发布          :milestone, 2026-05-06, 0d
-    section v1.2
-    code freeze       :2026-07-15, 7d
-    RC1 测试          :2026-07-22, 7d
-    RC2 测试          :2026-07-29, 7d
-    正式发布          :milestone, 2026-08-05, 0d
-    section v1.3
-    code freeze       :2026-10-15, 7d
-    RC1 测试          :2026-10-22, 7d
-    RC2 测试          :2026-10-29, 7d
-    正式发布          :milestone, 2026-11-05, 0d
+    section v1.0.1（首个正式版）
+    code freeze       :2026-10-18, 7d
+    RC1 测试          :2026-10-25, 7d
+    RC2 测试          :2026-11-01, 7d
+    正式发布          :milestone, 2026-11-08, 0d
+    section v1.1（示例）
+    code freeze       :2027-01-15, 7d
+    RC1 测试          :2027-01-22, 7d
+    RC2 测试          :2027-01-29, 7d
+    正式发布          :milestone, 2027-02-05, 0d
+    section v1.2（示例）
+    code freeze       :2027-04-15, 7d
+    RC1 测试          :2027-04-22, 7d
+    RC2 测试          :2027-04-29, 7d
+    正式发布          :milestone, 2027-05-05, 0d
+    section v1.3（示例）
+    code freeze       :2027-07-15, 7d
+    RC1 测试          :2027-07-22, 7d
+    RC2 测试          :2027-07-29, 7d
+    正式发布          :milestone, 2027-08-05, 0d
 ```
 
 ### 2.2 发布时间表
@@ -141,7 +141,7 @@ MAJOR.MINOR.PATCH
 
 ### 4.1 稳定分支命名
 
-- **格式**：`stable-vMAJOR.MINOR`，例如 `stable-v1.0`、`stable-v1.1`。
+- **格式**：`release/<MAJOR.MINOR>`，例如 `release/1.0`、`release/1.1`。
 - **创建时机**：正式发布时从 `main` 分支拉出。
 - **生命周期**：6 个月 bug fix 期 + 6 个月安全修复期 = 12 个月总支持期（见第 7 节）。
 
@@ -164,13 +164,13 @@ MAJOR.MINOR.PATCH
 bug fix 从 main 回溯到稳定分支的流程：
 
 1. **fix 在 main 合并**：bug fix 必须先在 main 合并，附带 `Fixes: <commit-hash>` 标签。
-2. **回溯请求**：由 stable 团队或用户在 `stable-vX.Y` 创建回溯 PR，PR 描述引用 main 上的 fix commit。
+2. **回溯请求**：由 stable 团队或用户在 `release/X.Y` 创建回溯 PR，PR 描述引用 main 上的 fix commit。
 3. **回溯审查**：stable 团队审查回溯 PR，确认：
    - fix 已在 main 合并。
    - fix 是 bug fix（非新功能）。
    - 回溯不引入冲突或行为变更。
    - 回溯通过 CI 全绿。
-4. **回溯合并**：审查通过后由 stable 团队合并到 `stable-vX.Y`。
+4. **回溯合并**：审查通过后由 stable 团队合并到 `release/X.Y`。
 5. **patch 版本发布**：积累一定数量的 bug fix 后，发布 patch 版本（如 v1.0.1）。
 
 ### 4.4 稳定分支管理规则
@@ -218,7 +218,7 @@ flowchart LR
 
 ### 5.3 步骤 2：RC 标记
 
-- **RC1**：T-14 天，从 `main` 拉出 `release/vMAJOR.MINOR` 分支，标记 `vMAJOR.MINOR-rc1` tag。
+- **RC1**：T-14 天，从 `main` 拉出 `release/<MAJOR.MINOR>` 分支，标记 `vMAJOR.MINOR-rc1` tag。
 - **RC2**：T-7 天，若 RC1 测试发现 P0/P1 缺陷，修复后标记 `vMAJOR.MINOR-rc2`。
 - **RC 数量**：通常 1-2 个 RC；超过 3 个 RC 由 SSoT 委员会决定是否延期。
 
@@ -246,8 +246,8 @@ RC 测试由 QA 团队执行，包括：
 
 ### 5.6 步骤 5：正式发布
 
-- **tag**：在 `release/vMAJOR.MINOR` 分支标记 `vMAJOR.MINOR.PATCH` tag（首个发布为 `vMAJOR.MINOR.0`）。
-- **拉出稳定分支**：从 `release/vMAJOR.MINOR` 拉出 `stable-vMAJOR.MINOR` 分支。
+- **tag**：在 `release/<MAJOR.MINOR>` 稳定分支标记 `vMAJOR.MINOR.PATCH` tag（首个发布为 `vMAJOR.MINOR.0`）。
+- **稳定分支**：`release/<MAJOR.MINOR>` 即稳定分支本身（等价 Linux -stable 树），无需再派生 `stable-vX.Y` 分支。
 - **构建物料**：
   - 源码 tarball：`agentrt-linux-MAJOR.MINOR.PATCH.tar.xz`。
   - RPM 包：12 daemon + kernel + devstation（共 14 个 RPM）。
@@ -344,12 +344,12 @@ SBOM（Software Bill of Materials）采用 CycloneDX 1.5 格式，内容包括�
 
 | 指标 | 基线 | 容差 | 测试方法 |
 |------|------|------|---------|
-| IPC 延迟（IORING_OP_URING_CMD） | v0.1.1 | ±5% | `ipc-latency-bench` |
-| 调度延迟（SCHED_DEADLINE） | v0.1.1 | ±5% | `sched-latency-bench` |
-| 内存分配延迟（alloc_pages） | v0.1.1 | ±5% | `mem-alloc-bench` |
-| 128B 日志吞吐（ring buffer） | v0.1.1 | ±5% | `log-throughput-bench` |
-| Agent 启动时间 | v0.1.1 | ±10% | `agent-startup-bench` |
-| 内核构建时间 | v0.1.1 | +10% 上限 | `kernel-build-bench` |
+| IPC 延迟（IORING_OP_URING_CMD） | v1.0.1-rc1 | ±5% | `ipc-latency-bench` |
+| 调度延迟（SCHED_DEADLINE） | v1.0.1-rc1 | ±5% | `sched-latency-bench` |
+| 内存分配延迟（alloc_pages） | v1.0.1-rc1 | ±5% | `mem-alloc-bench` |
+| 128B 日志吞吐（ring buffer） | v1.0.1-rc1 | ±5% | `log-throughput-bench` |
+| Agent 启动时间 | v1.0.1-rc1 | ±10% | `agent-startup-bench` |
+| 内核构建时间 | v1.0.1-rc1 | +10% 上限 | `kernel-build-bench` |
 
 ### 7.3 安全扫描标准
 
@@ -373,13 +373,13 @@ gantt
     title agentrt-linux minor 版本支持周期
     dateFormat YYYY-MM-DD
     axisFormat %m
-    section v1.0（示例）
-    Bug Fix 期（6 个月） :2026-02-01, 6M
-    安全修复期（6 个月） :2026-08-01, 6M
+    section v1.0.1（示例，首个正式版 2026-11-08）
+    Bug Fix 期（6 个月） :2026-11-08, 6M
+    安全修复期（6 个月） :2027-05-08, 6M
     section 里程碑
-    发布 :milestone, 2026-02-01, 0d
-    Bug Fix 截止 :milestone, 2026-08-01, 0d
-    安全修复截止 :milestone, 2027-02-01, 0d
+    发布 :milestone, 2026-11-08, 0d
+    Bug Fix 截止 :milestone, 2027-05-08, 0d
+    安全修复截止 :milestone, 2027-11-08, 0d
 ```
 
 ### 8.2 阶段一：Bug Fix 期（6 个月）
@@ -415,6 +415,8 @@ gantt
 - LTS 版本的支持周期为 5 年，远长于普通 minor 版本的 12 个月。
 - 例：v1.0、v1.4、v2.0、v2.4 可能是 LTS 候选（实际由 SSoT 委员会决议）。
 
+> **LTS 支持周期口径声明**：LTS 支持周期以本卷 **5 年**为准（2 年 bug fix + 3 年安全修复，详见 06-long-term-support.md §3 与 50-engineering-standards/05-development-process.md §LTS 维护周期）。`50-project-erp/README.md` 中"LTS 版本 4 年支持"为早期规划口径，与本卷及 06 卷、01 卷、50/05 的 5 年口径不一致，以 5 年为准。
+
 ---
 
 ## 9. 发布示例：v1.0.1
@@ -423,20 +425,21 @@ gantt
 
 ### 9.1 发布背景
 
-- v0.1.1 已于 2026-02-05 发布。
-- v0.1.1 发布后 1 个月内，社区报告 3 个 P1 缺陷 + 1 个 P2 缺陷。
+- 0.1.1 为**文档体系版本**（2026-07-13 完成，130-roadmap 基线），不含内核/OS 实施。
+- 1.0.1 为**实际开发版本**（首个正式版），按 [130-roadmap/02-milestones-and-timeline.md](../130-roadmap/02-milestones-and-timeline.md) 关键路径于 2026-11-08 发布。
+- RC 阶段（2026-10-25 ~ 11-07）社区报告 3 个 P1 缺陷 + 1 个 P2 缺陷。
 - 安全扫描发现 1 个中危 CVE（已在 main 修复）。
-- 决定发布 v1.0.1 patch 版本。
+- 决定按期发布 v1.0.1。
 
 ### 9.2 发布流程
 
-1. **回溯 fix**：将 main 上的 4 个 bug fix + 1 个 CVE 修复回溯到 `stable-v1.0` 分支。
-2. **创建发布 PR**：在 `stable-v1.0` 创建 `release/v1.0.1` 分支。
+1. **回溯 fix**：将 main 上的 4 个 bug fix + 1 个 CVE 修复回溯到 `release/1.0` 稳定分支。
+2. **创建发布 PR**：在 `release/1.0` 创建发布分支 `release/1.0.1`。
 3. **CI 校验**：`ci-kernel.yml` + `sc-dual-ci.yml` + `ssot-validate.yml` 全绿。
-4. **性能基准**：与 v0.1.1 对比，无回归。
+4. **性能基准**：与 RC1 基线对比，无回归。
 5. **安全扫描**：Trivy + Snyk + Coverity 全部通过。
 6. **签核**：SSoT 委员会 5 名成员 + 总维护者签核。
-7. **tag**：在 `release/v1.0.1` 标记 `v1.0.1` tag。
+7. **tag**：在 `release/1.0.1` 标记 `v1.0.1` tag。
 8. **构建物料**：源码 tarball + 14 个 RPM + SBOM + airy_defconfig + 文档快照。
 9. **签名**：GPG 签名所有物料。
 10. **发布**：上传到 AtomGit releases 与 RPM 仓库。
@@ -448,10 +451,10 @@ gantt
 ```markdown
 # agentrt-linux v1.0.1
 
-发布日期：2026-03-05
-类型：patch 版本（bug fix + 安全修复）
+发布日期：2026-11-08
+类型：正式版（首个可投产版本，M0-M8 全部里程碑完成）
 
-## 修复的缺陷
+## 修复的缺陷（RC 阶段）
 - [P1] sched: SCHED_DEADLINE 在高负载下错过截止时间（Fixes: a1b2c3d4）
 - [P1] ipc: IORING_OP_URING_CMD 在 EAGAIN 时未释放缓冲区（Fixes: e5f6a7b8）
 - [P1] mem: alloc_pages 在 NUMA 节点 0 之外分配失败（Fixes: c9d0e1f2）
@@ -460,10 +463,10 @@ gantt
 ## 安全修复
 - CVE-2026-1234（中危）：纯 C LSM 钩子在并发场景下存在 TOCTOU（Fixes: 7e8f9a0b）
 
-## 升级说明
-- 直接升级：v0.1.1 → v1.0.1（无破坏性变更）
-- airy_defconfig：无变更
-- ABI：完全兼容 v0.1.1
+## 安装说明
+- 全新安装：v1.0.1 为首个正式版本（路线图：130-roadmap/02-milestones-and-timeline.md）
+- airy_defconfig：首次发布锁定
+- ABI：首版基线
 
 ## 已知问题
 - 无
@@ -475,11 +478,11 @@ gantt
 
 | Unify 模块 | 发布关系 |
 |-----------|---------|
-| **A-UEF** | 发布前校验 A-UEF 错误码与 v0.1.1 兼容；新增错误码记入 release notes |
-| **A-ULP** | 发布前校验 A-ULP 128B 记录格式与 v0.1.1 兼容；格式变更记入 release notes |
+| **A-UEF** | 发布前校验 A-UEF 错误码与 v1.0.1 首发基线兼容；新增错误码记入 release notes |
+| **A-ULP** | 发布前校验 A-ULP 128B 记录格式与 v1.0.1 首发基线兼容；格式变更记入 release notes |
 | **A-UCS** | 发布前校验 `airy_defconfig` 锁定五大选型；config 变更记入 release notes |
-| **A-ULS** | 发布前校验纯 C LSM 模块与 v0.1.1 兼容；安全钩子变更记入 release notes |
-| **A-IPC** | 发布前校验 IORING_OP_URING_CMD 路径与 v0.1.1 兼容；IPC 协议变更记入 release notes |
+| **A-ULS** | 发布前校验纯 C LSM 模块与 v1.0.1 首发基线兼容；安全钩子变更记入 release notes |
+| **A-IPC** | 发布前校验 IORING_OP_URING_CMD 路径与 v1.0.1 首发基线兼容；IPC 协议变更记入 release notes |
 
 ---
 

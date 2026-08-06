@@ -224,8 +224,10 @@ func (s *AirymaxosShim) Start(ctx context.Context,
 		return nil, fmt.Errorf("set stc_agent failed: %w", err)
 	}
 
-	/* 3. 更新内核 Agent 状态为 Ready */
-	if err := updateAgentState(container.AgentID, "Ready"); err != nil {
+	/* 3. 更新内核 Agent 状态为 Running（A-ULS 8 态：AIRY_AGENT_RUNNING=3，
+	 *    见 30-interfaces/10-sc-sched-extension.md §2；runc start 已返回、
+	 *    进程已在 CPU 上运行，状态不再停留在 READY） */
+	if err := updateAgentState(container.AgentID, "Running"); err != nil {
 		return nil, fmt.Errorf("update state failed: %w", err)
 	}
 
@@ -605,15 +607,15 @@ func cleanupAgentRegistration(agentID uint32) {
 
 ### 7.2 状态一致性保证
 
-shim 维护本地容器状态与内核 Agent 状态的一致性：
+shim 维护本地容器状态与内核 Agent 状态的一致性（内核侧以 A-ULS 8 态为准，见 [30-interfaces/10-sc-sched-extension.md §2](../30-interfaces/10-sc-sched-extension.md)）：
 
-| 容器状态 | 内核 Agent 状态 | 触发动作 |
-|----------|------------------|----------|
-| created | Registered | 注册完成 |
-| running | Running | sched_tac 调度切换 |
-| paused | Suspended | 预算暂停 |
-| stopped | Terminating | 优雅销毁 |
-| deleted | Dead | 资源回收 |
+| 容器状态 | 内核 Agent 状态（8 态） | 触发动作 |
+|----------|--------------------------|----------|
+| created | SPAWNING（=1） | 注册完成 |
+| running | RUNNING（=3） | sched_tac 调度切换 |
+| paused | BLOCKED（=4） | 预算暂停 |
+| stopping | STOPPING（=5） | 优雅销毁 |
+| deleted | DEAD（=7） | 资源回收 |
 
 ---
 

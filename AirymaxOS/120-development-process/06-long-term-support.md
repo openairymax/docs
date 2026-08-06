@@ -55,13 +55,15 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | LTS 版本 | 发布日期 | LTS 起始 | LTS 终止（5 年后） | 上游 Linux LTS |
 |---------|---------|---------|------------------|----------------|
-| v1.0 | 2026-02-05 | 2026-02-05 | 2031-02-05 | Linux 6.6 LTS |
-| v1.4（规划） | 2027-02-05 | 2027-02-05 | 2032-02-05 | Linux 6.6 LTS / 6.12 LTS |
-| v2.0（规划） | 2028-02-05 | 2028-02-05 | 2033-02-05 | Linux 6.12 LTS / 6.18 LTS |
+| v1.0（首发 v1.0.1） | 2026-11-08 | 2026-11-08 | 2031-11-08 | Linux 6.6 LTS |
+| v1.4（规划） | 2027-11-05 | 2027-11-05 | 2032-11-05 | Linux 6.6 LTS / 6.12 LTS |
+| v2.0（规划） | 2028-11-05 | 2028-11-05 | 2033-11-05 | Linux 6.12 LTS / 6.18 LTS |
+
+> **发布日期口径**：v1.0 系列首发为 **v1.0.1（2026-11-08，首个正式版）**，按 [130-roadmap/02-milestones-and-timeline.md](../130-roadmap/02-milestones-and-timeline.md) 关键路径；后续 LTS 候选（每 4 个 minor 选 1）基于 3 个月 minor 节奏推算。
 
 ### 2.3 LTS 标记
 
-- **分支**：从 `stable-vX.Y` 重命名为 `lts-vX.Y`（保留 `stable-vX.Y` 作为别名）。
+- **分支**：从 `release/<MAJOR.MINOR>` 稳定分支派生 `lts-vX.Y`（保留 `release/<MAJOR.MINOR>` 作为稳定分支）。
 - **tag**：在 LTS 起始时标记 `vX.Y.0-lts`。
 - **文档**：在 README 与 release notes 中标记该版本为 LTS。
 - **RPM**：LTS 版本的 RPM 包名附加 `-lts` 后缀，例如 `agentrt-linux-kernel-lts-0.1.1`。
@@ -74,17 +76,17 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ```mermaid
 gantt
-    title agentrt-linux v1.0 LTS 5 年支持周期
+    title agentrt-linux v1.0（首发 v1.0.1）LTS 5 年支持周期
     dateFormat YYYY-MM-DD
     axisFormat %Y-%m
     section 阶段一：Bug Fix（2 年）
-    Bug Fix + 安全修复 :2026-02-05, 2Y
+    Bug Fix + 安全修复 :2026-11-08, 2Y
     section 阶段二：安全修复（3 年）
-    仅安全修复 :2028-02-05, 3Y
+    仅安全修复 :2028-11-08, 3Y
     section 里程碑
-    LTS 发布 :milestone, 2026-02-05, 0d
-    Bug Fix 截止 :milestone, 2028-02-05, 0d
-    LTS EOL :milestone, 2031-02-05, 0d
+    LTS 发布 :milestone, 2026-11-08, 0d
+    Bug Fix 截止 :milestone, 2028-11-08, 0d
+    LTS EOL :milestone, 2031-11-08, 0d
 ```
 
 ### 3.2 阶段一：Bug Fix 期（2 年）

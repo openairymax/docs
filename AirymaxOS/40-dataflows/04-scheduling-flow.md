@@ -194,12 +194,12 @@ static struct task_struct *eevdf_pick_next_task(struct rq *rq) {
 
 ```bash
 # 查看 EEVDF 调度参数
-cat /proc/sys/kernel/sched_base_slice_ns        # 基础时间片（默认 1ms）
+cat /proc/sys/kernel/sched_base_slice        # 基础时间片（默认 3ms）
 cat /proc/sys/kernel/sched_wakeup_granularity_ns # 唤醒粒度（默认 1ms）
 cat /proc/sys/kernel/sched_latency_ns           # 调度延迟（默认 6ms）
 
 # 调整基础时间片（影响吞吐 vs 延迟权衡）
-echo 500000 > /proc/sys/kernel/sched_base_slice_ns  # 0.5ms
+echo 500000 > /proc/sys/kernel/sched_base_slice  # 0.5ms
 ```
 
 ---
@@ -289,35 +289,32 @@ sched_tac 调度策略是 agentrt-linux 基于 SCHED_DEADLINE/SCHED_FIFO/EEVDF �
 #define AIRY_STC_POLICY_NAME  "stc_agent"  /* 用户态策略名称，非调度类编号 */
 
 /**
- * @brief Agent 任务描述符（调度上下文扩展视图）
+ * @brief Agent 任务描述符（SSoT 完整 12 字段）
  * @note SSoT: 50-engineering-standards/120-cross-project-code-sharing.md §2.6 sched.h
- *       权威定义仅含 magic/prio/_pad/vtime 4 字段（__u32/__u16/airy_vtime_t）
- *       以下为调度数据流场景扩展视图，含 task_id/trace_id/deadline_ns/role 等调度专用字段
- * @note IRON-9 v3 [SC] 共享契约层：核心字段（magic/prio/_pad/vtime）同源
- * @note IRON-9 v3 [IND] 独立层：调度专用扩展字段（version/task_id/trace_id/cpu_affinity/role 等）各自独立
+ *       权威定义含全部 12 字段（magic/prio/_pad/runtime_ns/deadline_ns/period_ns/
+ *       vtime/agent_id/sched_policy/weight/state/_reserved[12]，64B，v1.0.1-fix
+ *       对齐实现：原文档"仅 4 字段"与 SSoT 不符，已修正）
+ * @note IRON-9 v3 [SC] 共享契约层：全部 12 字段同源
  * @note magic 0x41475453 'AGTS' 独立于 IPC 消息头 0x41524531 'ARE1'
  * @note [SC] 字段顺序和类型必须与 SSoT（120-cross-project-code-sharing.md §2.6 sched.h）完全一致
  */
 struct airy_task_desc {
-	/* [SC] 共享契约层字段（SSoT：120-cross-project-code-sharing.md §2.6） */
-	uint32_t	magic;		/* 0x41475453 'AGTS' — [SC] 同源（任务描述符，独立于 IPC 消息头） */
-	uint16_t	prio;		/* 优先级 0-139（0 最高）— [SC] 同源 */
-	uint16_t	_pad;		/* 填充至 4 字节对齐 — [SC] 同源 */
-	airy_vtime_t	vtime;		/* Q16.16 定点虚拟时间 — [SC] 同源 */
-	/* [IND] 独立层扩展字段（调度专用） */
-	uint16_t	version;		/* [IND] 扩展字段：描述符版本 */
-	uint32_t	flags;			/* [IND] 扩展字段：标志位 */
-	uint64_t	task_id;		/* [IND] 扩展字段：任务 ID */
-	uint64_t	trace_id;		/* [IND] 扩展字段：链路追踪 ID */
-	uint64_t	deadline_ns;		/* [IND] 扩展字段：截止时间（纳秒，0 表示无） */
-	uint32_t	max_retries;		/* [IND] 扩展字段：最大重试次数 */
-	uint32_t	cpu_affinity;		/* [IND] 扩展字段：CPU 亲和性掩码 */
-	char		role[32];		/* [IND] 扩展字段：Agent 角色（researcher/assistant/...） */
-	uint8_t		reserved[32];		/* [IND] 扩展字段：保留 */
+	__u32		magic;		/* offset  0: 0x41475453 'AGTS' — [SC] 同源 */
+	__u16		prio;		/* offset  4: 优先级 0-139 — [SC] 同源 */
+	__u16		_pad;		/* offset  6: 对齐填充 — [SC] 同源 */
+	__u64		runtime_ns;	/* offset  8: runtime 预算（ns） — [SC] 同源 */
+	__u64		deadline_ns;	/* offset 16: 截止时间（ns） — [SC] 同源 */
+	__u64		period_ns;	/* offset 24: 周期（ns） — [SC] 同源 */
+	airy_vtime_t	vtime;		/* offset 32: Q16.16 定点虚拟时间 — [SC] 同源 */
+	__u32		agent_id;	/* offset 36: agent 标识 [0,1023] — [SC] 同源 */
+	__u32		sched_policy;	/* offset 40: SCHED_DEADLINE/FIFO/EEVDF — [SC] 同源 */
+	__u32		weight;		/* offset 44: EEVDF 权重 — [SC] 同源 */
+	__u32		state;		/* offset 48: 生命周期状态 — [SC] 同源 */
+	__u8		_reserved[12];	/* offset 52: 保留（下划线前缀） — [SC] 同源 */
 };
 
-/* AIRY_SLICE_DFL 默认时间片 20ms（sched_tac 默认值） */
-#define AIRY_SLICE_DFL  (20 * 1000000ULL)
+/* AIRY_SLICE_DFL 默认时间片 20（ms，sched.h 单位；sched_tac 默认值） */
+#define AIRY_SLICE_DFL  20
 ```
 
 ### 6.2 sched_tac 用户态调度器程序
@@ -341,7 +338,7 @@ sched_tac 用户态调度器实现 `struct airy_sched_ops` 的关键回调（非
 #include <errno.h>
 #include <stdlib.h>
 #include <airymax/sched.h>  /* [SC] 共享契约层 */
-#include <airymax/airy_q16.h>
+#include <airymax/cognition_types.h>  /* airy_q16_t（Q16.16）定义；原 <airymax/airy_q16.h> 不存在 */
 
 #define SHARED_Q 0  /* 全局 vtime 队列 */
 
@@ -835,7 +832,7 @@ cat /sys/fs/cgroup/agentrt/sched.state /sys/fs/cgroup/agentrt/sched.ops
 
 | 参数 | 路径 | 默认值 | 说明 |
 |---|---|---|---|
-| `sched_base_slice_ns` | `/proc/sys/kernel/` | 1ms | EEVDF 基础时间片（调优示例 0.5ms） |
+| `sched_base_slice` | `/proc/sys/kernel/` | 3ms | EEVDF 基础时间片（调优示例 0.5ms；原文档 `sched_base_slice_ns` 为虚构名，已修正为 Linux 6.6 实际 sysctl） |
 | `sched_wakeup_granularity_ns` | `/proc/sys/kernel/` | 1ms | EEVDF 唤醒粒度 |
 | `sched_latency_ns` | `/proc/sys/kernel/` | 6ms | EEVDF 调度延迟 |
 | `agent_priority_threshold` | `/sys/fs/cgroup/agentrt/sched/` | 100 | sched_tac 实时优先级阈值 |
@@ -921,12 +918,12 @@ agentrt 与 agentrt-linux 完全共享的契约定义：
 | 调度类 | 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF | `include/uapi/linux/sched.h`（内核）|
 | 策略名称 | `AIRY_STC_POLICY_NAME "stc_agent"` | `include/uapi/linux/airymax/sched.h` |
 | 任务描述符 magic | `0x41475453 'AGTS'` | `include/uapi/linux/airymax/sched.h` |
-| 任务描述符结构 | `struct airy_task_desc`（[SC] 8 字节核心视图，对齐 SSoT §2.6；[IND] 扩展视图见 §6.1） | `include/uapi/linux/airymax/sched.h` |
+| 任务描述符结构 | `struct airy_task_desc`（[SC] 完整 12 字段 64B，对齐 SSoT §2.6，见 §6.1） | `include/uapi/linux/airymax/sched.h` |
 | 默认时间片 | `AIRY_SLICE_DFL`（20ms） | `include/uapi/linux/airymax/sched.h` |
 | 权重范围 | `[1..10000]` | `include/uapi/linux/airymax/sched.h` |
 | 优先级范围 | 0-139（实时 0-49 / 标准 50-99 / 后台 100-139） | `include/uapi/linux/airymax/sched.h` |
 | vtime 类型 | `airy_vtime_t`（`__s32`，Q16.16 定点，对齐 SSoT §2.6 + `-mno-80387` 约束） | `include/uapi/linux/airymax/sched.h` |
-| vtime 衰减公式 | `airy_vtime_decay(vtime, consumed, weight)` | `include/uapi/linux/airymax/sched.h` |
+| vtime 衰减公式 | `airy_vtime_decay(vtime, weight)`（2 参，Q16.16 递增，对齐 SSoT sched.h；原文档 3 参 `(vtime, consumed, weight)` 与实现不符，已修正） | `include/uapi/linux/airymax/sched.h` |
 
 ### 14.2 [SS] 语义同源层（高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进）
 

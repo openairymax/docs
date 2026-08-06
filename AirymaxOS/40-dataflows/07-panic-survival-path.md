@@ -210,8 +210,8 @@ static int airy_panic_ring_write_best_effort(const char *fmt, ...)
 
     /* 4. 填充记录（raw binary，不格式化） */
     rec->magic = AIRY_LOG_MAGIC;
-    rec->level = LOG_FATAL;
-    rec->facility = AIRY_FAC_KERNEL;
+    rec->level = AIRY_LOG_FATAL;
+    rec->facility = AIRY_LOG_FAC_KERN;
     rec->timestamp_ns = ktime_get_real_ns();
     rec->caller_id = 0;  /* Panic 上下文 */
 
@@ -234,8 +234,8 @@ static int airy_panic_ring_write_best_effort(const char *fmt, ...)
                 rec = (struct airy_log_record *)((char *)hdr + sizeof(*hdr)
                         + idx * hdr->record_size);
                 rec->magic = AIRY_LOG_MAGIC;
-                rec->level = LOG_FATAL;
-                rec->facility = AIRY_FAC_KERNEL;
+                rec->level = AIRY_LOG_FATAL;
+                rec->facility = AIRY_LOG_FAC_KERN;
                 rec->timestamp_ns = ktime_get_real_ns();
                 rec->caller_id = 0;
                 va_start(args, fmt);

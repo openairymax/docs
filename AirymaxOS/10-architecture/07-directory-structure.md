@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **理论根基**：乔布斯/艾夫"简约就是美"设计哲学 + seL4 Liedtke minimality principle + Linux 6.6 内核基线工程思想\
 > **编号权威**：[09-ssot-registry.md §3](../50-engineering-standards/09-ssot-registry.md)\
 > **SPDX-License-Identifier**：CC-BY-NC-4.0\
-> **SSoT 依赖声明**：本文件引用 IRON-9 v3 四层模型（权威源 [06-iron9-shared-model.md](06-iron9-shared-model.md)）、Unify Design 5 模块（权威源 [10-unify-design.md](10-unify-design.md)）、[SC] 10 头文件物理宿主（权威源 [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md)）、12 daemon 命名规范（权威源 [90-terminology.md](../50-engineering-standards/90-terminology.md)）、Micro-Supervisor 内核模块（权威源 [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md)）、纯 C LSM 设计（权威源 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)）。
+> **SSoT 依赖声明**：本文件引用 IRON-9 v3 四层模型（权威源 [06-iron9-shared-model.md](06-iron9-shared-model.md)）、Unify Design 5 模块（权威源 [10-unify-design.md](10-unify-design.md)）、[SC] 12 头文件物理宿主（权威源 [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md)）、12 daemon 命名规范（权威源 [90-terminology.md](../50-engineering-standards/90-terminology.md)）、Micro-Supervisor 内核模块（权威源 [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md)）、纯 C LSM 设计（权威源 [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)）。
 
 ---
 
@@ -23,14 +23,14 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|---------|------|
 | v1.0 | 2026-07-10 | 初版目录结构，8 子仓 + 文件级树 | 已废弃 |
 | v1.1 | 2026-07-14 | 增加 [SC] 头文件宿主说明、daemon 命名表 | 已废弃 |
-| **v1.0.1** | **2026-07-18** | **基于乔布斯/艾夫"简约就是美"哲学重构；9 个设计决策全部解决；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 四层模型落地；12 daemon 命名统一为 `_d` 后缀；ALK 6.6 内核子仓内部结构；与 agentrt 对比；工程美学自评；SSoT 登记** | **当前权威** |
+| **v1.0.1** | **2026-07-18** | **基于乔布斯/艾夫"简约就是美"哲学重构；9 个设计决策全部解决；§0-§12 完整结构；[SC] 12 头文件清单；IRON-9 v3 四层模型落地；12 daemon 命名统一为 `_d` 后缀；ALK 6.6 内核子仓内部结构；与 agentrt 对比；工程美学自评；SSoT 登记** | **当前权威** |
 
 ### 0.2 v1.1 → v1.0.1 主要差异
 
 1. **结构重整**：从 §1-§6 扩展为 §0-§12 共 13 节，覆盖设计哲学、顶层结构、设计决策、8 子仓详树、[SC] 头文件清单、IRON-9 v3 落地、daemon 命名、跨子仓依赖图、ALK 6.6 内核内部、agentrt 对比、工程美学自评、SSoT 登记。
 2. **9 决策闭环**：v1.1 仅解决 5 个问题（A-E），v1.0.1 补齐 4 个决策（F-I），覆盖 [SC] 头文件补齐、最小可编译骨架、scripts/tools 划分、跨子仓共享代码组织。
 3. **daemon 命名统一**：v1.1 存在 `macro_superv` / `logger_daemon` / `config_daemon` 与 `*_d` 混用问题，v1.0.1 统一为 12 个 `_d` 后缀。
-4. **[SC] 10 头文件清单**：v1.1 截断于 ipc.h 第 3 行，v1.0.1 完整列出 10 头文件的物理宿主、职责、magic、include 路径。
+4. **[SC] 12 头文件清单**：v1.1 截断于 ipc.h 第 3 行，v1.0.1 完整列出 12 头文件的物理宿主、职责、magic、include 路径。
 5. **IRON-9 v3 落地**：新增 §6 详细说明 [SC]+[SS]+[IND]+[DSL] 四层在目录结构中的物理映射。
 6. **ALK 6.6 内核内部**：新增 §9 详述 Model A 完整 fork 的目录组织（arch/ + include/ + corekern/ + kernel/kernel/superv/ + ...）。
 7. **工程美学自评**：新增 §11 基于 5 条简约原则对目录结构进行自评，量化每条原则的达成度。
@@ -289,19 +289,19 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 **问题陈述**：v1.1 仅 error.h 实际创建（195 行），其余 9 个 [SC] 头文件缺失，违反 IRON-2 禁止桩文件与 IRON-9 v3 [SC] 层定义。
 
 **备选方案**：
-- E1（全量创建 10 头文件）：在 kernel/include/uapi/linux/airymax/ 下创建全部 10 个 [SC] 头文件，0.1.1 内完成
+- E1（全量创建 12 头文件）：在 kernel/include/uapi/linux/airymax/ 下创建全部 12 个 [SC] 头文件，0.1.1 内完成
 - E2（分批创建）：0.1.1 创建 5 个，1.0.1 创建 5 个
 - E3（仅创建 error.h）：保持现状
 
 **决策依据**：
-1. IRON-9 v3 [SC] 层定义 10 头文件为"完全共享代码"（约束 1）
+1. IRON-9 v3 [SC] 层定义 12 头文件为"完全共享代码"（约束 1）
 2. IRON-2 禁止桩函数/桩文件，但允许"最小可编译实现"
 3. 0.1.1 是唯一奠基版本（约束 14），必须完成全部 [SC] 头文件
-4. 120-cross-project-code-sharing.md 已提供全部 10 头文件的完整 C 代码
+4. 120-cross-project-code-sharing.md 已提供全部 12 头文件的完整 C 代码
 
-**最终选择：E1（全量创建 10 头文件）**
+**最终选择：E1（全量创建 12 头文件）**
 
-**落地约束**：10 头文件在 0.1.1 内全部创建于 `kernel/include/uapi/linux/airymax/`（详见 §5）：
+**落地约束**：12 头文件在 0.1.1 内全部创建于 `kernel/include/uapi/linux/airymax/`（详见 §5）：
 1. error.h（A-UEF，~195 行）
 2. log_types.h（A-ULP，~80 行）
 3. ipc.h（A-IPC，magic 0x41524531，~150 行）
@@ -432,7 +432,7 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 **最终选择：I1（四层共享模型）**
 
 **落地约束**：
-1. **[SC] 共享层**：10 头文件物理宿主 kernel/include/uapi/linux/airymax/，各子仓 -I 引用
+1. **[SC] 共享层**：12 头文件物理宿主 kernel/include/uapi/linux/airymax/，各子仓 -I 引用
 2. **[SS] 语义同源层**：各子仓独立实现同名 API，签名可独立演进（如 agentrt `airy_ipc_send()` 与 agentrt-linux `airy_ipc_send()` 签名不同但语义同源）
 3. **[IND] 完全独立层**：各子仓自有代码，无任何共享
 4. **禁止**：
@@ -449,7 +449,7 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 | B | cloudnative vs system | B1 职责本质 | cloudnative=编排，system=OS 基础 |
 | C | daemon 命名 | C1 统一 _d | 12 daemon 全部 *_d |
 | D | daemon 与 agentrt 重叠 | D1 [SS]+[IND] | 3 [SS] + 9 [IND] |
-| E | [SC] 头文件缺失 | E1 全量创建 | 0.1.1 内 10 头文件 |
+| E | [SC] 头文件缺失 | E1 全量创建 | 0.1.1 内 12 头文件 |
 | F | 子仓纯桩 | F1 最小可编译骨架 | 非桩，真实代码 |
 | G | [SC] 引用关系 | G1 -I 引用 | 禁止物理副本 |
 | H | scripts vs tools | H1 按用途 | scripts=流程，tools=分析 |
@@ -461,8 +461,8 @@ agentrt-linux/                       # 管理仓（独立 git repo，内含 8 �
 
 ### 4.1 子仓 1：kernel（ALK 6.6 内核）
 
-> **职责**：Linux 6.6 LTS 完整 fork（Model A，直接写入上游源码树，无 patch 隔离）+ [SC] 10 头文件物理宿主 + Micro-Supervisor 内核模块 + sched_tac 内核侧 + io_uring IPC 内核侧 + airy_lsm 内核侧。
-> **IRON-9 主层**：[SC]（10 头文件）+ [IND]（内核专属实现）
+> **职责**：Linux 6.6 LTS 完整 fork（Model A，直接写入上游源码树，无 patch 隔离）+ [SC] 12 头文件物理宿主 + Micro-Supervisor 内核模块 + sched_tac 内核侧 + io_uring IPC 内核侧 + airy_lsm 内核侧。
+> **IRON-9 主层**：[SC]（12 头文件）+ [IND]（内核专属实现）
 > **许可证**：GPL-2.0-only（与 Linux 内核一致）
 
 ```
@@ -477,7 +477,7 @@ kernel/
 ├── Documentation/                    # ALK 文档
 │   ├── README.md
 │   ├── alk-fork-model.md            # Model A 完整 fork 说明
-│   ├── sc-host-manifest.md          # [SC] 10 头文件宿主清单
+│   ├── sc-host-manifest.md          # [SC] 12 头文件宿主清单
 │   └── upstream-sync.md             # 上游同步策略
 │
 ├── arch/                             # Linux 6.6 原生（Model A 直接写入）
@@ -496,7 +496,7 @@ kernel/
 │   │   ├── linux/
 │   │   │   ├── sched.h              # SCHED_NORMAL=0...SCHED_DEADLINE=6（原生）
 │   │   │   ├── io_uring.h           # IORING_OP_URING_CMD 等（原生，D-8 对齐参考）
-│   │   │   ├── airymax/             # ★ [SC] 10 头文件唯一物理宿主（OS-IRON-014，D-8 修复后对齐 OLK 6.6 UAPI 标准路径）
+│   │   │   ├── airymax/             # ★ [SC] 12 头文件唯一物理宿主（OS-IRON-014，D-8 修复后对齐 OLK 6.6 UAPI 标准路径）
 │   │   │   │   ├── error.h          # 1. A-UEF 统一错误码
 │   │   │   │   ├── log_types.h      # 2. A-ULP 统一日志类型
 │   │   │   │   ├── ipc.h            # 3. A-IPC（magic 0x41524531）
@@ -1289,13 +1289,13 @@ tests-linux/
 
 ---
 
-## §5 [SC] 10 头文件清单（物理宿主与引用）
+## §5 [SC] 12 头文件清单（物理宿主与引用）
 
 > **权威源**：[120-cross-project-code-sharing.md §2](../50-engineering-standards/120-cross-project-code-sharing.md)、[06-iron9-shared-model.md §2](06-iron9-shared-model.md)、[10-unify-design.md](10-unify-design.md)
 
 ### 5.1 物理宿主与引用规则
 
-**唯一物理宿主**：`kernel/include/uapi/linux/airymax/`（10 个头文件全部在此目录）
+**唯一物理宿主**：`kernel/include/uapi/linux/airymax/`（12 个头文件全部在此目录）
 
 **引用方式**：
 - CMake 子仓：`include_directories(${CMAKE_SOURCE_DIR}/../kernel/include)`
@@ -1315,26 +1315,30 @@ sc-dual-ci:
         fi
 ```
 
-### 5.2 10 头文件清单
+### 5.2 12 头文件清单
 
 | # | 头文件 | 模块归属 | magic / 标识 | 物理路径 | 职责 |
 |---|--------|---------|-------------|---------|------|
-| 1 | `error.h` | A-UEF | — | `kernel/include/uapi/linux/airymax/error.h` | 统一错误码（5 子空间：[-1,-40] POSIX / [-41,-70] IPC / [-71,-100] Capability / [-101,-200] [SC] / [-201,-300] [DSL]）+ Fault 码（0x1000+）+ [DSL] 降级块（38 POSIX 码） |
+| 1 | `error.h` | A-UEF | — | `kernel/include/uapi/linux/airymax/error.h` | 统一错误码（10 子空间：POSIX 1-35 / IPC 41-70 / Capability 71-100 / Config 101-120 / Sched 121-140 / MemoryRoVol 141-160 / Cognition 161-180 / Log 181-200 / Object 201-220 / Syscall 221-240，241-300 预留）+ Fault 码（0x1001-0x1006）+ [DSL] 降级块（38 POSIX 码 → 5 核心码） |
 | 2 | `log_types.h` | A-ULP | — | `kernel/include/uapi/linux/airymax/log_types.h` | 128B 固定日志记录 + 5 级日志枚举 + printk 8 级映射 |
 | 3 | `ipc.h` | A-IPC | `0x41524531` ('ARE1') | `kernel/include/uapi/linux/airymax/ipc.h` | IPC 消息头（128B `struct airy_ipc_msg_hdr`，11 字段，D-9 修复后 `__attribute__((aligned(64)))`（移除 packed），`_Static_assert(sizeof==128)` + `_Static_assert(offsetof(capability_badge)==40)`）+ SQE/CQE 操作码与标志位 + Ring 常量（DEF=256, MAX=32768） |
-| 4 | `sched.h` | A-ULS | `0x41475453` ('AGTS') | `kernel/include/uapi/linux/airymax/sched.h` | 任务描述符（magic/prio/_pad/vtime）+ `airy_vtime_decay()` inline + AIRY_CAP_MAX_AGENTS=1024 + AIRY_SLICE_DFL=20 + 优先级 0-139 + 权重 1-10000 |
+| 4 | `sched.h` | A-ULS | `0x41475453` ('AGTS') | `kernel/include/uapi/linux/airymax/sched.h` | 任务描述符（12 字段，64B：magic/prio/_pad/runtime_ns/deadline_ns/period_ns/vtime/agent_id/sched_policy/weight/state/_reserved[12]）+ `airy_vtime_decay()` inline + AIRY_CAP_MAX_AGENTS=1024 + AIRY_SLICE_DFL=20 + 优先级 0-139 + 权重 1-10000 |
 | 5 | `memory_types.h` | MemoryRovol | — | `kernel/include/uapi/linux/airymax/memory_types.h` | L1-L4 enum（HOT/WARM/COLD/PMEM）+ GFP 掩码语义（AIRY_GFP_HOT/WARM/COLD/PMEM） |
-| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `cap_idx_t`(`uint32_t` 索引，ARCH-1) |
+| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `__u64`（64-bit，v1.0.1 无 cap_idx_t） |
 | 7 | `cognition_types.h` | A-UCS | — | `kernel/include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t`（= `__s32`，Q16.16 定点数，因 -mno-80387 禁 FPU）+ `enum airy_cog_phase`（PERCEPT/THINK/ACT）+ `enum airy_think_mode`（FAST/SLOW） |
 | 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.0.1: 4 核心系统调用（AIRY_SYS_CALL=548 ... AIRY_SYS_CLT_NOTIFY=551）+ 20 预留（552-571）= 24 槽位 |
-| 9 | `uapi_compat.h` | 桥接 | — | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`），确保 [SC] 头文件跨平台逐字节相同编译 |
-| 10 | `lsm_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/lsm_types.h` | `struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构 |
+| 9 | `syscall.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscall.h` | `airy_sys_*` syscall 语义/ABI 声明（与 syscalls.h 编号表配套） |
+| 10 | `uapi_compat.h` | 桥接 | — | `kernel/include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`#ifdef __KERNEL__` / `#elif defined(__linux__)` / `#else`），确保 [SC] 头文件跨平台逐字节相同编译 |
+| 11 | `lsm_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/lsm_types.h` | `struct airy_task_sec` + `struct airy_cap_slot`（80B，含 MDB 派生树）+ `airy_capability_check()` 回调原型 |
+| 12 | `bpf_struct_ops.h` | 可观测性 | — | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | BPF struct_ops 状态管理共享结构（`struct airy_struct_ops_value` + `enum airy_struct_ops_state`），仅可观测性用（H5 约束，非核心架构） |
 
-### 5.3 补充共享文件（非 [SC] 核心）
+### 5.3 补充共享资源（非 [SC] 头文件）
 
-| 文件 | 路径 | 说明 |
+| 资源 | 路径 | 说明 |
 |------|------|------|
-| `bpf_struct_ops.h` | `kernel/include/uapi/linux/airymax/bpf_struct_ops.h` | BPF struct_ops 状态管理共享结构（`struct airy_struct_ops_value` + `enum airy_struct_ops_state`），两端共享但**不属于** 10 个 [SC] 核心头文件 |
+| `syscall.xml` | `kernel/include/uapi/linux/airymax/syscall.xml` | codegen 契约源（R-01），生成 syscall 编号表与 ABI 检查工具输入 |
+
+> 注：v1.0.1 起 `bpf_struct_ops.h` 已列入 §5.2 [SC] 12 头文件清单（可观测性用，H5 约束）。
 
 ### 5.4 [DSL] 降级生存层
 
@@ -1360,14 +1364,14 @@ sc-dual-ci:
 
 | 层次 | 缩写 | 共享程度 | 物理目录落地 | 内容 |
 |------|------|---------|------------|------|
-| **共享契约层** | [SC] | 完全共享代码 | `kernel/include/uapi/linux/airymax/`（10 头文件） | 10 个头文件，逐字节相同，两端共同依赖 |
+| **共享契约层** | [SC] | 完全共享代码 | `kernel/include/uapi/linux/airymax/`（12 头文件） | 12 个头文件，逐字节相同，两端共同依赖 |
 | **语义同源层** | [SS] | 高层 API 语义同源，签名独立演进 | 各子仓独立实现（如 services/daemons/gateway_d/） | 调度语义、安全模型、IPC 传输、记忆模型 |
 | **完全独立层** | [IND] | 完全独立 | 各子仓独立仓库 | 内核驱动/Kbuild（agentrt-linux）；跨平台用户态/SDK 4 语言（agentrt） |
 | **降级生存层** | [DSL] | 自包含降级块 | [SC] 头文件内 `#ifdef AIRY_SC_FALLBACK` | [SC] 损坏时的最小可运行子集 |
 
 ### 6.2 [SC] 共享契约层落地
 
-**物理宿主**：`kernel/include/uapi/linux/airymax/`（10 头文件，详见 §5）
+**物理宿主**：`kernel/include/uapi/linux/airymax/`（12 头文件，详见 §5）
 
 **两端引用方式**：
 - agentrt-linux 子仓：`-I../kernel/include`（决策 G1）
@@ -1427,18 +1431,18 @@ sc-dual-ci:
 
 #include <airymax/uapi_compat.h>
 
-/* 完整错误码体系（5 子空间 + Fault 码）*/
+/* 完整错误码体系（10 子空间 + Fault 码）*/
 typedef int32_t airy_err_t;
 #define AIRY_EOK 0
-#define AIRY_EINVAL (-22)
-/* ... 完整定义 ... */
+#define AIRY_EINVAL 5   /* 正数幅值，返回 -AIRY_EINVAL */
+/* ... 完整定义见 [SC] error.h（10 子空间） ... */
 
 #ifdef AIRY_SC_FALLBACK
-/* [DSL] 降级块：仅保留 38 个 POSIX 标准错误码 */
+/* [DSL] 降级块：38 个 POSIX 码以 AIRY_DSL_* 别名映射到 5 核心码 */
 #undef AIRY_EOK
 #define AIRY_EOK 0
-#define AIRY_EINVAL (-22)
-/* ... 38 个 POSIX 码 ... */
+#define AIRY_EINVAL 5
+/* ... AIRY_DSL_E2BIG → AIRY_EINVAL 等 38 个别名映射（见 error.h [DSL] 块） ... */
 #endif /* AIRY_SC_FALLBACK */
 
 #endif /* _AIRY_ERROR_H */
@@ -1509,7 +1513,7 @@ typedef int32_t airy_err_t;
 
 | 规则 | 说明 |
 |------|------|
-| R1 | 所有子仓通过 `-I../kernel/include` 引用 [SC] 10 头文件（决策 G1） |
+| R1 | 所有子仓通过 `-I../kernel/include` 引用 [SC] 12 头文件（决策 G1） |
 | R2 | 子仓间禁止 `#include` 对方非 [SC] 头文件（决策 I1） |
 | R3 | 子仓间禁止链接对方 .o/.a（决策 I1） |
 | R4 | 跨子仓通信仅通过 IPC（io_uring）或系统调用 |
@@ -1531,7 +1535,7 @@ graph TD
     end
 
     subgraph "[SC] 共享层"
-        SC[kernel/include/uapi/linux/airymax/<br/>10 头文件]
+        SC[kernel/include/uapi/linux/airymax/<br/>12 头文件]
     end
 
     subgraph "agentrt（外部）"
@@ -1575,18 +1579,18 @@ graph TD
 
 | 源子仓 | 目标子仓 | 依赖类型 | 说明 |
 |--------|---------|---------|------|
-| kernel | [SC] 10 头文件 | 物理宿主 | 唯一宿主 |
-| services | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| kernel | [SC] 12 头文件 | 物理宿主 | 唯一宿主 |
+| services | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | services | kernel | IPC + 系统调用 | daemon 通过 io_uring 与内核通信 |
-| security | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| security | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | security | kernel | 系统调用 + LSM 注册 | airy_lsm 注册到内核 LSM 框架 |
-| memory | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| memory | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | memory | kernel | 内核模块 + 系统调用 | MemoryRovol 作为内核模块加载 |
-| cognition | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| cognition | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | cognition | kernel | kthread + 系统调用 | CoreLoopThree kthread 运行于内核 |
-| cloudnative | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| cloudnative | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | cloudnative | services | IPC | agentctl 通过 IPC 与 daemon 通信 |
-| system | [SC] 10 头文件 | -I 引用 | 决策 G1 |
+| system | [SC] 12 头文件 | -I 引用 | 决策 G1 |
 | system | kernel | 读取状态 | airymaxmon 读取内核状态 |
 | tests-linux | 全部子仓 | 测试 | 测试覆盖所有子仓 |
 
@@ -1615,13 +1619,13 @@ graph TD
 
 ### 9.2 kernel/ 目录详解（Model A）
 
-> **D-8 OLK 6.6 UAPI 路径对齐说明**：OLK 6.6 内核 UAPI 头文件标准路径为 `include/uapi/linux/`（参考 `include/uapi/linux/io_uring.h`、`include/uapi/linux/sched.h`）。Airymax 10 个 [SC] 共享契约头文件属用户态可见的 UAPI（agentrt 用户态与 agentrt-linux 内核双端共享），故物理宿主为 `include/uapi/linux/airymax/`。Airymax 内核内部头文件（`maintainer_types.h`/`build_types.h`/`kconfig_types.h` 等，[IND] 独立层）保留在 `include/airymax/`（非 UAPI）。
+> **D-8 OLK 6.6 UAPI 路径对齐说明**：OLK 6.6 内核 UAPI 头文件标准路径为 `include/uapi/linux/`（参考 `include/uapi/linux/io_uring.h`、`include/uapi/linux/sched.h`）。Airymax 12 个 [SC] 共享契约头文件属用户态可见的 UAPI（agentrt 用户态与 agentrt-linux 内核双端共享），故物理宿主为 `include/uapi/linux/airymax/`。Airymax 内核内部头文件（`maintainer_types.h`/`build_types.h`/`kconfig_types.h` 等，[IND] 独立层）保留在 `include/airymax/`（非 UAPI）。
 
 | 目录 | 来源 | 说明 |
 |------|------|------|
 | `arch/` | Linux 6.6 原生 | x86/arm64/riscv 等架构相关 |
 | `include/uapi/` | Linux 6.6 原生 | 用户空间 API（含 SCHED_* 定义） |
-| `include/uapi/linux/airymax/` | ★ Airymax 新增（D-8 对齐 OLK 6.6 UAPI 标准路径） | [SC] 10 头文件唯一物理宿主（用户态可见，与 agentrt 共享） |
+| `include/uapi/linux/airymax/` | ★ Airymax 新增（D-8 对齐 OLK 6.6 UAPI 标准路径） | [SC] 12 头文件唯一物理宿主（用户态可见，与 agentrt 共享） |
 | `include/asm-generic/` | Linux 6.6 原生 | 通用汇编头 |
 | `include/kernel/` | Linux 6.6 原生 | 内核内部头 |
 | `include/airymax/` | ★ Airymax 新增 | 内核内部头（[IND] 独立层，非 UAPI；如 `maintainer_types.h`/`build_types.h`/`kconfig_types.h`） |
@@ -1737,7 +1741,7 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 ### 10.2 [SC] 头文件宿主关系
 
 ```
-agentrt-linux/kernel/include/uapi/linux/airymax/    ← 唯一物理宿主（10 头文件）
+agentrt-linux/kernel/include/uapi/linux/airymax/    ← 唯一物理宿主（12 头文件）
             ↑
             | -I 引用（禁止物理副本）
             |
@@ -1781,7 +1785,7 @@ agentrt/          agentrt-linux/
 |------|--------|---------|---------|
 | **P1 本质优先** | ★★★★★ | 8 子仓均对应不可合并的职责域，每子仓一句话可说明 | 无 |
 | **P2 原子不可分** | ★★★★★ | services 内部分层不拆分（保持 8 子仓），保持职责清晰 | 无 |
-| **P3 单一宿主** | ★★★★★ | [SC] 10 头文件唯一物理宿主 kernel/include/uapi/linux/airymax/，禁止物理副本 | 无 |
+| **P3 单一宿主** | ★★★★★ | [SC] 12 头文件唯一物理宿主 kernel/include/uapi/linux/airymax/，禁止物理副本 | 无 |
 | **P4 内外一致** | ★★★★★ | 子仓公共骨架统一（README/LICENSE/MAINTAINERS/...），daemon 命名统一 `_d`（v1.0.1 决策已落地，90-terminology.md 已将 macro_superv/logger_daemon/config_daemon 标注为 旧称/禁止使用） | 无 |
 | **P5 无冗余** | ★★★★★ | 跨子仓共享代码仅 [SC] 层，[IND] 完全独立，禁止共享库 | 无 |
 
@@ -1823,7 +1827,7 @@ agentrt/          agentrt-linux/
 | 权威源 | 本文件 | — | agentrt-linux 目录结构唯一权威 |
 | 引用文档 | [06-iron9-shared-model.md](06-iron9-shared-model.md) | IRON-9 v3 四层模型 | 权威源 |
 | 引用文档 | [10-unify-design.md](10-unify-design.md) | Unify Design 5 模块 | 权威源 |
-| 引用文档 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) | [SC] 10 头文件物理宿主 | 权威源 |
+| 引用文档 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) | [SC] 12 头文件物理宿主 | 权威源 |
 | 引用文档 | [90-terminology.md](../50-engineering-standards/90-terminology.md) | 12 daemon 命名 | 权威源 |
 | 引用文档 | [09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md) | Micro-Supervisor 内核模块 | 权威源 |
 | 引用文档 | [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) | 纯 C LSM 设计 | 权威源 |
@@ -1855,7 +1859,7 @@ agentrt/          agentrt-linux/
 |------|------|---------|--------|
 | 2026-07-10 | v1.0 | 初版目录结构 | 架构委员会 |
 | 2026-07-14 | v1.1 | 增加 [SC] 头文件宿主说明、daemon 命名表 | 架构委员会 |
-| 2026-07-18 | v1.0.1 | 基于乔布斯/艾夫"简约就是美"哲学重构；9 决策闭环；§0-§12 完整结构；[SC] 10 头文件清单；IRON-9 v3 落地；12 daemon 命名统一 `_d`；ALK 6.6 内核内部；agentrt 对比；工程美学自评；SSoT 登记 | 架构委员会 |
+| 2026-07-18 | v1.0.1 | 基于乔布斯/艾夫"简约就是美"哲学重构；9 决策闭环；§0-§12 完整结构；[SC] 12 头文件清单；IRON-9 v3 落地；12 daemon 命名统一 `_d`；ALK 6.6 内核内部；agentrt 对比；工程美学自评；SSoT 登记 | 架构委员会 |
 
 ### 12.4 后续演进路线
 

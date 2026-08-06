@@ -156,7 +156,7 @@ SPDX 2.3 JSON 顶层结构包含以下必填字段：
     {
       "SPDXID": "SPDXRef-Package-kernel",
       "name": "agentrt-linux-kernel",
-      "versionInfo": "1.0.1+linux6.6.1-airymax",
+      "versionInfo": "1.0.1+linux6.6.0-airy.1",
       "supplier": "Organization: SPHARX Ltd.",
       "originator": "Organization: SPHARX Ltd.",
       "downloadLocation": "git+https://atomgit.com/openairymax/agentrt-linux.git@7f3a2c9b8e#kernel",
@@ -187,6 +187,30 @@ SPDX 2.3 JSON 顶层结构包含以下必填字段：
           "comment": "airymax:scLayer=[SC]"
         }
       ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-memory",
+      "name": "agentrt-linux-memory",
+      "versionInfo": "1.0.1",
+      "supplier": "Organization: SPHARX Ltd.",
+      "originator": "Organization: SPHARX Ltd.",
+      "downloadLocation": "git+https://atomgit.com/openairymax/agentrt-linux.git@7f3a2c9b8e#memory",
+      "filesAnalyzed": true,
+      "licenseConcluded": "AGPL-3.0-or-later OR Apache-2.0",
+      "licenseDeclared": "AGPL-3.0-or-later OR Apache-2.0",
+      "copyrightText": "Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cognition",
+      "name": "agentrt-linux-cognition",
+      "versionInfo": "1.0.1",
+      "supplier": "Organization: SPHARX Ltd.",
+      "originator": "Organization: SPHARX Ltd.",
+      "downloadLocation": "git+https://atomgit.com/openairymax/agentrt-linux.git@7f3a2c9b8e#cognition",
+      "filesAnalyzed": true,
+      "licenseConcluded": "AGPL-3.0-or-later OR Apache-2.0",
+      "licenseDeclared": "AGPL-3.0-or-later OR Apache-2.0",
+      "copyrightText": "Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved."
     }
   ],
   "relationships": [
@@ -320,13 +344,12 @@ agentrt-linux 通过 git submodule 管理 8 个子仓。每个子仓作为 SPDX 
 
 #### 3.1.1 kernel 子仓详细清单
 
-kernel 子仓是 agentrt-linux 的内核基线，包含以下 4 类组件：
+kernel 子仓是 agentrt-linux 的内核基线，包含以下 3 类组件：
 
 | 组件类别 | 路径 | 许可证 | 说明 |
 |---------|------|--------|------|
-| Linux 6.6 上游源码 | `kernel/linux-6.6/` | `GPL-2.0-only` | 完整 fork（Model A）保留上游许可证 |
-| Airymax 修改源码 | `kernel/airymax/` | `AGPL-3.0-or-later OR Apache-2.0` | agentrt-linux 专属修改 |
-| corekern 子组件 | `kernel/corekern/` | `AGPL-3.0-or-later OR Apache-2.0` | 微核心架构组件 |
+| Linux 6.6 上游源码 | `kernel/`（Linux 6.6 基线根目录） | `GPL-2.0-only` | 完整 fork（Model A）保留上游许可证 |
+| Airymax 修改源码（corekern） | `kernel/kernel/corekern/` | `AGPL-3.0-or-later OR Apache-2.0` | agentrt-linux 专属修改 + 微核心架构组件（sched_tac / A-IPC / [SC] 实现等） |
 | [SC] 共享头文件 | `kernel/include/uapi/linux/airymax/` | `AGPL-3.0-or-later OR Apache-2.0` | IRON-9 v3 [SC] 共享契约层 |
 
 #### 3.1.2 services 子仓详细清单

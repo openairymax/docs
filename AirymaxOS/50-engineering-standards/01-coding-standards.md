@@ -95,7 +95,7 @@ fn airy_task_is_pending(t: &Task) -> bool;
 
 ### 1.6 agentrt-linux 专属前缀
 
-> **OS-STD-CODE-005**： `airy_*` 前缀保留给 agentrt 同源 API；`airy_*` 前缀用于 agentrt-linux 内核 / 发行版专属 API。两者共享 Airymax 同源语义（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），但代码归属与 ABI 边界不同，前缀隔离确保无适配层互操作时不冲突。
+> **前缀隔离**（权威定义：`10-coding-style/coding_conventions.md` Part IV §4.4；编号登记见 09 §4.1，注意 OS-STD-CODE-005 为"代码重复抽出"）： `airy_*` 前缀保留给 agentrt 同源 API；`airy_*` 前缀用于 agentrt-linux 内核 / 发行版专属 API。两者共享 Airymax 同源语义（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），但代码归属与 ABI 边界不同，前缀隔离确保无适配层互操作时不冲突。
 
 ```c
 int airy_ipc_send(u32 ch, const void *msg, size_t len);     /* agentrt 同源 */
@@ -110,11 +110,11 @@ int airy_lsm_hook_register(const struct security_hook_list *hooks); /* OS 专属
 
 ### 2.1 函数长度
 
-> **OS-STD-CODE-006**： 函数一屏可读（≤80×24），局部变量 ≤5–10 个。复杂度与长度成反比：200 行的简单 `switch` 调度器可接受，200 行胶水函数不可接受。局部变量超 10 个应拆分。
+> **函数长度**（编号：OS-KER-015 / OS-KER-123；注意 OS-STD-CODE-006 为"4 层接口稳定性分级"，见 09 §4.1）： 函数一屏可读（≤80×24），局部变量 ≤5–10 个。复杂度与长度成反比：200 行的简单 `switch` 调度器可接受，200 行胶水函数不可接受。局部变量超 10 个应拆分。
 
 ### 2.2 函数原型元素顺序
 
-> **OS-STD-CODE-007**： 原型元素固定顺序：storage class → storage class attributes → return type → return type attributes → name → parameters → parameter attributes → behavior attributes。
+> **原型元素顺序**（注意 OS-STD-CODE-007 为"跨语言 FFI 边界显式声明"，见 09 §4.1）： 原型元素固定顺序：storage class → storage class attributes → return type → return type attributes → name → parameters → parameter attributes → behavior attributes。
 
 ```c
 /* 声明：参数属性在参数表后 */
@@ -633,9 +633,9 @@ config AIRY_DEVMEM_RW
 | --------------- | --- | --------------------------------------- |
 | OS-STD-CODE-001 | 标准  | 全局符号描述性命名                                |
 | OS-BAN-001      | 禁止  | 敏感术语 master/slave、blacklist/whitelist   |
-| OS-STD-CODE-005 | 标准  | `airy_*` 与 `airy_*` 前缀隔离           |
-| OS-STD-CODE-006 | 标准  | 函数 ≤80×24，局部变量 ≤5–10                    |
-| OS-STD-CODE-007 | 标准  | 函数原型元素固定顺序                              |
+| OS-STD-CODE-005 | 标准  | 代码重复 3 处以上应抽出到 lib/ 或 commons/（§1.3） |
+| OS-STD-CODE-006 | 标准  | agentrt-linux 4 层接口稳定性分级（§5.4） |
+| OS-STD-CODE-007 | 标准  | 跨语言 FFI 边界显式声明（§8.3） |
 | OS-STD-CODE-008 | 标准  | 原型必须含参数名                                |
 | OS-BAN-007      | 禁止  | 函数声明禁止 `extern`                         |
 | OS-STD-CODE-009 | 标准  | EXPORT\_SYMBOL 紧跟右大括号                   |
@@ -1352,7 +1352,7 @@ struct airy_sched_ops airy_agent_sched = {
 
 ### 2.3 sched_tac 用户态调度器作为极端范式（OS-KER-122）
 
-**OS-KER-122**：kernel 的 `sched_tac` 用户态调度器策略必须基于 SCHED_DEADLINE/SCHED_FIFO/EEVDF 实现——这是策略机制分离的最纯粹形态。用户态调度器在用户态编写、动态加载、热替换，而无需内核重新编译或重启。任何把调度策略硬编码进 `kernel/sched/` 的 PR 直接拒绝。
+**OS-KER-122**：禁 sched_ext 立场——`sched_tac` 必须基于原生调度类（SCHED_DEADLINE/SCHED_FIFO/EEVDF）实现，禁止 SCHED_AGENT 宏（标准 Linux 6.6 主线不含 sched_ext，禁止 backport）。用户态调度器在用户态编写、动态加载、热替换，而无需内核重新编译或重启。任何把调度策略硬编码进 `kernel/sched/` 或引入 sched_ext 的 PR 直接拒绝。
 
 ### 2.4 agentrt-linux 专属：K-4 可插拔策略原则映射
 

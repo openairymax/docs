@@ -398,7 +398,7 @@ func (r *AgentReconciler) handleCreate(ctx context.Context,
 
 	/* 更新 CR 状态为 Registered */
 	agent.Status.State = "Registered"
-	agent.Status.AgentId = allocateAgentID()
+	agent.Status.AgentID = allocateAgentID()
 	if err := r.Status().Update(ctx, agent); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -417,6 +417,12 @@ func (r *AgentReconciler) buildAgentPod(agent *agentv1.Agent,
 				"app":                      "agentrt-agent",
 				"agent.airymaxos.dev/name": agent.Name,
 			},
+			/* Annotations 与 §4.3 handlePodCreate 读取的键保持一致 */
+			Annotations: map[string]string{
+				"agentrt.agent/id":         fmt.Sprintf("%d", agent.Status.AgentID),
+				"agentrt.token/budget":     fmt.Sprintf("%d", agent.Spec.TokenBudget.Total),
+				"agentrt.cognition/scheduler": agent.Spec.Cognition.Scheduler,
+			},
 		},
 		Spec: corev1.PodSpec{
 			NodeName:  nodeName,
@@ -429,7 +435,7 @@ func (r *AgentReconciler) buildAgentPod(agent *agentv1.Agent,
 				},
 				Env: []corev1.EnvVar{
 					{Name: "AIRY_AGENT_ID",
-					 Value: fmt.Sprintf("%d", agent.Status.AgentId)},
+					 Value: fmt.Sprintf("%d", agent.Status.AgentID)},
 					{Name: "AIRY_TOKEN_BUDGET",
 					 Value: fmt.Sprintf("%d",
 						agent.Spec.TokenBudget.Total)},
@@ -647,9 +653,12 @@ var (
 
 ## 7. 弹性伸缩
 
-### 7.1 HPA 配置
+### 7.1 弹性伸缩
 
-基于 Token 预算消耗的 HPA 自动伸缩：
+基于 Token 预算消耗的弹性伸缩。**先决条件修正**：标准 HPA 要求 `scaleTargetRef` 指向的 CRD 实现 `/scale` 子资源（`subresources.scale`）且 spec 含 `replicas` 字段；当前 Agent CRD 定义（§2.1）**未声明 `subresources`、无 `replicas` 字段**，直接引用 HPA 无效。采用以下任一方案：
+
+- **方案 A（自定义伸缩 controller，推荐）**：Agent 为单实例实体（一个 Agent CR 对应一个 Pod），由自定义 Token 感知伸缩 controller 依据外部指标 `airy_agent_token_utilization` 增删 Agent 副本，不依赖 HPA `/scale` 子资源。
+- **方案 B（标准 HPA）**：如需使用 HPA，须先在 §2.1 CRD 定义中增加 `spec.replicas`（integer，最小 1）与 `subresources.scale`（`specReplicasPath: .spec.replicas` / `statusReplicasPath: .status.replicas`），下方 HPA 方可生效。
 
 ```yaml
 apiVersion: autoscaling/v2

@@ -116,7 +116,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 本章不再镜像 09-ssot-registry.md 的完整内容（2026-07-12 SSoT 重新设计：取消三层镜像，消除 ~200 行重复）。请直接查阅 [09-ssot-registry.md](./09-ssot-registry.md) 获取：
 
 - §2 OS-IRON 工程铁律（16 条）
-- §3 OS-KER 内核工程规则（001-155 + 211/221）
+- §3 OS-KER 内核工程规则（001-229）
 - §4 OS-STD 标准规则（CODE/FMT/STY/GOV/DOC/CHK 子域）
 - §5 OS-BAN 禁止规则（11 条）
 - §6 OS-ACC 验收标准
@@ -157,7 +157,7 @@ agentrt-linux 工程标准由 4 主题文档构成，本手册为其总索引与
 > - 原 §3.4 OS-BAN 禁止规则汇总（11 条）→ 见 09 §5
 > - 原 §3.5 OS-FMT 格式规则汇总（已废除）→ 已并入 OS-STD-FMT 子域
 > - 原 §3.6 OS-ABI 接口稳定性规则 → 见 09 §6
-> - 原 §3.7 OS-ACC 验收标准（5 条）→ 见 09 §7
+> - 原 §3.7 OS-ACC 验收标准（5 条）→ 见 09 §6
 > - 原 §3.8 SSoT 交叉引用映射表（OS-KER/OS-BAN/OS-ACC 技术点映射）→ 2026-07-12 全量消解完成，映射表退役
 > - 原 §3.9 编号申请流程 → 已合并至本节 §3.2
 
@@ -182,7 +182,7 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 
 | 头文件 | 共享内容 | IRON-9 v3 层次 |
 |--------|---------|---------------|
-| `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位） | [SC] |
+| `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.0.1: 4 核心 + 20 预留 = 24 槽位） | [SC] |
 | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | [SC] |
 | `include/uapi/linux/airymax/security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决结果 4 值枚举 | [SC] |
 | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + CoreLoopThree 上下文结构 + Token 能效指标结构 + GPU/NPU 能力描述符 | [SC] |

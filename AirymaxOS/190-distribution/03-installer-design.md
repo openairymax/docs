@@ -158,7 +158,7 @@ agentrt-linux 默认采用 Btrfs 子卷方案，支持快照回滚：
 | `lv_root` | `/` | XFS | 100GB |
 | `lv_home` | `/home` | XFS | 50GB |
 | `lv_var` | `/var` | XFS | 200GB |
-| `lv_var_lib_agentrt` | `/var/lib/agentrt` | Btrfs | 剩余空间 |
+| `lv_var_lib_airymaxos` | `/var/lib/airymaxos` | Btrfs | 剩余空间 |
 | `lv_swap` | swap | swap | 16GB |
 | `lv_log` | `/var/log` | XFS | 20GB |
 | `lv_tmp` | `/tmp` | XFS | 20GB |
@@ -169,7 +169,7 @@ agentrt-linux 默认采用 Btrfs 子卷方案，支持快照回滚：
 
 | 分区 | 挂载点 | 文件系统 | 大小 | 说明 |
 |------|--------|----------|------|------|
-| `/dev/pmem0` | `/var/lib/agentrt/memory_rovol/L1_raw` | XFS (DAX) | 800GB | MemoryRovol L1 |
+| `/dev/pmem0` | `/var/lib/airymaxos/memory_rovol/L1_raw` | XFS (DAX) | 800GB | MemoryRovol L1 |
 
 PMEM 与 CXL 自动检测脚本：
 
@@ -309,8 +309,8 @@ openssl req -new -x509 -newkey rsa:2048 \
 
 # 2. 签名内核
 sbsign --key db.key --cert db.crt \
-    --output /boot/vmlinuz-1.0.1-1.signed \
-    /boot/vmlinuz-1.0.1-1
+    --output /boot/vmlinuz-6.6.0-agentrt.signed \
+    /boot/vmlinuz-6.6.0-agentrt
 
 # 3. 注册密钥到 UEFI 固件
 mokutil --import PK.crt
@@ -504,12 +504,12 @@ reboot
 PMEM_DEV=$(ndctl list -R | jq -r '.[0].dev' | sed 's/namespace/pmem/')
 
 if [ -n "$PMEM_DEV" ]; then
-    mkfs.xfs -m dax=indev /dev/${PMEM_DEV}p1
-    mkdir -p /var/lib/agentrt/memory_rovol/L1_raw
-    echo "/dev/${PMEM_DEV}p1 /var/lib/agentrt/memory_rovol/L1_raw xfs dax 0 0" \
+    mkfs.xfs -m dax=inode /dev/${PMEM_DEV}p1
+    mkdir -p /var/lib/airymaxos/memory_rovol/L1_raw
+    echo "/dev/${PMEM_DEV}p1 /var/lib/airymaxos/memory_rovol/L1_raw xfs dax 0 0" \
         >> /etc/fstab
-    mount /var/lib/agentrt/memory_rovol/L1_raw
-    xfs_io -c "statx -v" /var/lib/agentrt/memory_rovol/L1_raw \
+    mount /var/lib/airymaxos/memory_rovol/L1_raw
+    xfs_io -c "statx -v" /var/lib/airymaxos/memory_rovol/L1_raw \
         | grep STATX_ATTR_DAX
 fi
 %end

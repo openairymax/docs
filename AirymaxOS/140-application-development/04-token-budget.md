@@ -38,7 +38,7 @@ Token 预算契约是 agentrt-linux 的**第一公民资源管理机制**——�
 
 1. **预算精确计量**：每个 Agent 的 Token 消耗 100% 可追溯，精度到单 Token
 2. **突发控制**：令牌桶算法防止突发消耗导致其他 Agent 饥饿
-3. **优雅降级**：预算耗尽时 Agent 进入 SUSPENDED 而非直接终止，保存记忆快照
+3. **优雅降级**：预算耗尽时 Agent 进入 BLOCKED 挂起而非直接终止，保存记忆快照
 4. **调度感知**：预算水位影响调度权重——低水位 Agent 获得更高调度优先级以尽快完成
 5. **多级预算**：支持租户级 → Agent 级 → 任务级三级预算层级
 
@@ -74,10 +74,10 @@ Token 预算采用**令牌桶算法**（Token Bucket），类似 Linux CFS 带�
         return OK
     else:
         if current_tokens <= critical_threshold:
-            触发 TERMINATING（临界耗尽）
+            触发 STOPPING（临界耗尽，强制终止流程，见 §6.1 状态机）
         elif current_tokens <= warning_threshold:
-            触发 SUSPENDED（警告耗尽）
-        return -AIRY_EBUDGET_EXHAUSTED
+            警告计数 +1（连续 3 次警告未恢复 → 触发 BLOCKED 挂起，见 §6.1 状态机）
+        return -AIRY_ESCHED_BUDGET
 
 定时补充（每 refill_period_ms 毫秒）:
     current_tokens = min(max_tokens, current_tokens + refill_rate * refill_period_ms)
@@ -105,8 +105,8 @@ current_tokens(t) = min(max_tokens, current_tokens(t₀) + refill_rate × (t - t
 | 阈值 | 触发条件（占 max_tokens 比例） | 响应动作 | Agent 状态 |
 |------|------------------------------|---------|-----------|
 | 正常 | > 50% | 正常运行 | RUNNING |
-| 警告（warning） | ≤ 20% | 触发 SUSPENDED + 保存记忆 | SUSPENDED |
-| 临界（critical） | ≤ 5% | 触发 TERMINATING + 资源回收 | TERMINATING |
+| 警告（warning） | ≤ 20% | 连续 3 次警告未恢复 → 触发 BLOCKED 挂起 + 保存记忆 | BLOCKED |
+| 临界（critical） | ≤ 5% | 触发 STOPPING → DEAD（强制终止）+ 资源回收 | STOPPING / DEAD |
 
 **设计决策理由**：三级阈值而非单一耗尽判断，确保 Agent 有足够时间进行优雅降级——20% 警告阈值时 Agent 仍可运行（但调度权重提升以加速完成），5% 临界阈值时强制终止避免资源泄漏。这参考了 seL4 MCS 调度上下文的预算耗尽处理模式。
 
@@ -124,8 +124,8 @@ current_tokens(t) = min(max_tokens, current_tokens(t₀) + refill_rate × (t - t
  * @max_tokens:        预算上限（桶容量）
  * @refill_rate:       补充速率（tokens/ms）
  * @last_refill_ts:    上次补充时间戳（ns，CLOCK_MONOTONIC）
- * @warning_threshold: 警告阈值（低于此值触发 SUSPENDED）
- * @critical_threshold:临界阈值（低于此值触发 TERMINATING）
+ * @warning_threshold: 警告阈值（低于此值且连续 3 次触发 BLOCKED 挂起）
+ * @critical_threshold:临界阈值（低于此值触发 STOPPING 终止流程）
  * @total_consumed:    累计消耗 Token 数
  * @peak_rate:         峰值消耗速率（tokens/ms）
  * @suspend_count:     因预算不足挂起次数
@@ -244,7 +244,7 @@ graph TD
 **层级规则**：
 - 子级预算总和不超过父级预算上限
 - 子级预算耗尽时，向父级借用（若 `AIRY_BUDGET_FLAG_BORROW` 已设置）
-- 父级预算耗尽时，所有子级进入 SUSPENDED
+- 父级预算耗尽时，所有子级进入 BLOCKED（预算挂起）
 
 ### 4.2 初始预算分配
 
@@ -328,7 +328,7 @@ Token 消费通过两种路径上报：
  * @tokens:   消费 Token 数
  * @usage:    消费记录（可选，NULL 则不记录详细日志）
  *
- * 返回: 0 成功，-AIRY_EBUDGET_EXHAUSTED 预算不足，
+ * 返回: 0 成功，-AIRY_ESCHED_BUDGET 预算不足，
  *       -AIRY_ENOENT Agent 不存在
  *
  * 消费前先执行惰性补充（lazy refill），更新 current_tokens。
@@ -346,10 +346,10 @@ int airy_budget_consume(uint32_t agent_id, uint32_t tokens,
 [TIMESTAMP] BUDGET_CONSUME agent_id=42 task_id=128 tokens=150 \
     phase=THINKING model=GPT-4 latency=850ms remaining=8420
 [TIMESTAMP] BUDGET_WARNING agent_id=42 remaining=8420 threshold=20000 \
-    pct=8.4% (SUSPENDED triggered)
+    pct=8.4% (BLOCKED triggered)
 [TIMESTAMP] BUDGET_REFILL agent_id=42 added=1000 new_total=9420
 [TIMESTAMP] BUDGET_EXHAUSTED agent_id=42 total_consumed=100000 \
-    suspend_count=3 (TERMINATING triggered)
+    suspend_count=3 (STOPPING triggered)
 ```
 
 ### 5.4 统计数据导出
@@ -381,28 +381,21 @@ refill_count:    92
 stateDiagram-v2
     [*] --> RUNNING: 预算充足（> 20%）
 
-    RUNNING --> WARNING: current ≤ warning_threshold（≤ 20%）
-    WARNING --> RUNNING: 预算补充恢复（> 20%）
-    WARNING --> SUSPENDED: 连续 3 次警告未恢复
-    WARNING --> CRITICAL: current ≤ critical_threshold（≤ 5%）
+    RUNNING --> BLOCKED: current ≤ warning_threshold（≤ 20%）且连续 3 次警告未恢复
+    BLOCKED --> RUNNING: 预算补充恢复（> 20%）
+    RUNNING --> STOPPING: current ≤ critical_threshold（≤ 5%，强制终止）
+    STOPPING --> DEAD: 资源回收完成
+    DEAD --> [*]
 
-    SUSPENDED --> RUNNING: 预算补充恢复 + airy_sys_sched_ctl(SET_POLICY) + io_uring 重激活
-    SUSPENDED --> CRITICAL: current ≤ critical_threshold
-
-    CRITICAL --> TERMINATING: 强制终止（资源回收）
-    CRITICAL --> SUSPENDED: 手动注入预算（airy_sys_sched_ctl(SET_POLICY)）
-
-    TERMINATING --> TERMINATED: 资源回收完成
-    TERMINATED --> [*]
-
-    note right of WARNING
-        调度权重提升（token_factor=0x10000）
-        加速完成当前任务
+    note right of BLOCKED
+        挂起语义对应 8 态 SSoT 的 BLOCKED
+        （见 01-agent-lifecycle.md §1.1）：
+        保存 MemoryRovol 快照，等待预算补充
     end note
 
-    note right of SUSPENDED
-        保存 MemoryRovol 快照
-        等待预算补充
+    note right of RUNNING
+        WARNING / CRITICAL 为预算水位（非生命周期态）：
+        水位触发 token_factor 权重调整与状态迁移
     end note
 ```
 
@@ -412,8 +405,8 @@ stateDiagram-v2
 |------|---------|---------|-----------|---------|
 | 正常 | current > 20% max | 无 | RUNNING | 正常权重 |
 | 警告 | current ≤ 20% max | 调度权重提升 + 日志告警 | RUNNING | token_factor=0x10000 |
-| 挂起 | current ≤ warning 且连续 3 次 | 保存记忆 + 进入 SUSPENDED | SUSPENDED | 不参与调度 |
-| 临界 | current ≤ 5% max | 强制终止 + 资源回收 | TERMINATING | 不参与调度 |
+| 挂起 | current ≤ warning 且连续 3 次警告未恢复 | 保存记忆 + 进入 BLOCKED | BLOCKED | 不参与调度 |
+| 临界 | current ≤ 5% max | 强制终止 + 资源回收 | STOPPING → DEAD | 不参与调度 |
 
 ### 6.3 退出码设计
 
@@ -421,8 +414,8 @@ stateDiagram-v2
 
 | 退出码 | 含义 | 触发条件 | 可恢复 |
 |--------|------|---------|--------|
-| `AGENT_EXIT_TOKEN_EXHAUSTED` (0x0001) | Token 预算耗尽 | critical 阈值触发 TERMINATING | 否（需重启） |
-| `AGENT_EXIT_BUDGET_SUSPENDED` (0x0006) | 预算挂起 | warning 阈值触发 SUSPENDED | 是（补充后恢复） |
+| `AGENT_EXIT_TOKEN_EXHAUSTED` (0x0001) | Token 预算耗尽 | critical 阈值触发 STOPPING → DEAD | 否（需重启） |
+| `AGENT_EXIT_BUDGET_SUSPENDED` (0x0006) | 预算挂起 | warning 阈值触发 BLOCKED | 是（补充后恢复） |
 
 ---
 
@@ -463,12 +456,9 @@ static void airy_budget_refill(struct airy_token_budget *budget)
 管理员或调度器可通过系统调用手动注入预算：
 
 ```c
-/* 手动注入 10000 Token */
-struct airy_token_budget_config cfg = {
-    .max_tokens = 100000,
-    .refill_rate = 1000,
-};
-airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_id, (uint64_t)&cfg);
+/* 手动注入 10000 Token（v1.0.1: Token 预算配置封装入 policy 参数，JSON 序列化） */
+const char *budget_policy = "{\"max_tokens\":100000,\"refill_rate\":1000}";
+airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_cgroup_path, budget_policy);
 ```
 
 ### 7.3 预算借用
@@ -501,22 +491,28 @@ int airy_budget_borrow(struct airy_token_budget *child,
 
 Token 预算通过 v1.0.1 Capability Folding 架构的 `airy_sys_sched_ctl` (550) op-dispatch 管理（编号定义见 [07-syscall-registry.md](07-syscall-registry.md)）：
 
+> **唯一入口声明**：Token 预算管理的唯一系统调用入口为 `airy_sys_sched_ctl` (550)。`airy_sys_clt_notify` (551) 的 `SET_MODE` 仅承载 Thinkdual 认知模式，不承载 Token 预算（见 07-syscall-registry.md §4.5 与 §5.2 映射表）。
+
 | 编号 | 系统调用 | op | 功能 |
 |------|---------|-----|------|
-| 550 | `airy_sys_sched_ctl` | `AIRY_SCHED_SET_POLICY` | 设置/更新 Agent Token 预算 |
-| 550 | `airy_sys_sched_ctl` | `AIRY_SCHED_GET_LATENCY` | 查询 Agent Token 预算状态 |
+| 550 | `airy_sys_sched_ctl` | `AIRY_SCHED_SET_POLICY` | 设置 Agent Token 预算（policy 序列化配置） |
+| 550 | `airy_sys_sched_ctl` | `AIRY_SCHED_GET_POLICY` | 查询 Agent Token 预算状态（policy 回读） |
 
 ### 8.2 设置预算 C 接口
 
 ```c
 /**
  * airy_sys_sched_ctl - 设置 Agent Token 预算（op=AIRY_SCHED_SET_POLICY）
- * @op:       AIRY_SCHED_SET_POLICY
- * @agent_id: Agent ID
- * @arg:      预算配置指针（struct airy_token_budget_config *，转为 uint64_t）
+ * @op:          AIRY_SCHED_SET_POLICY
+ * @cgroup_path: 目标 Agent 的 cgroup v2 路径（字符串，用户态指针）
+ * @policy:      Token 预算配置序列化字符串（JSON，对应 struct airy_token_budget_config）
+ *
+ * 签名对齐 [SC] 内核实现（SYSCALL_DEFINE3(airy_sys_sched_ctl, __u32 op,
+ * const char __user *cgroup_path, const char __user *policy)）——
+ * Token 预算配置封装入 policy 参数（序列化），不设独立 arg 参数。
  *
  * 返回: 0 成功，-AIRY_EINVAL 参数无效，
- *       -AIRY_ENOENT Agent 不存在，-AIRY_EPERM 权限不足
+ *       -AIRY_ENOENT cgroup/Agent 不存在，-AIRY_EPERM 权限不足
  *
  * 设置预算时保留当前 total_consumed 统计，仅重置
  * current_tokens 和补充参数。
@@ -525,20 +521,20 @@ Token 预算通过 v1.0.1 Capability Folding 架构的 `airy_sys_sched_ctl` (550
  */
 AIRY_API int airy_sys_sched_ctl(
     uint32_t op,
-    uint32_t agent_id,
-    uint64_t arg);
+    const char *cgroup_path,
+    const char *policy);
 ```
 
 ### 8.3 查询预算 C 接口
 
 ```c
 /**
- * airy_sys_sched_ctl - 查询 Agent Token 预算状态（op=AIRY_SCHED_GET_LATENCY）
- * @op:         AIRY_SCHED_GET_LATENCY
- * @agent_id:   Agent ID
- * @arg:        预算状态输出指针（struct airy_token_budget *，转为 uint64_t）
+ * airy_sys_sched_ctl - 查询 Agent Token 预算状态（op=AIRY_SCHED_GET_POLICY）
+ * @op:          AIRY_SCHED_GET_POLICY
+ * @cgroup_path: 目标 Agent 的 cgroup v2 路径（字符串，用户态指针）
+ * @policy:      输出缓冲区，回读序列化预算状态（JSON，含 current_tokens 等）
  *
- * 返回: 0 成功，-AIRY_ENOENT Agent 不存在
+ * 返回: 0 成功，-AIRY_ENOENT cgroup/Agent 不存在
  *
  * 查询前执行惰性补充，返回最新状态。
  *
@@ -546,8 +542,8 @@ AIRY_API int airy_sys_sched_ctl(
  */
 AIRY_API int airy_sys_sched_ctl(
     uint32_t op,
-    uint32_t agent_id,
-    uint64_t arg);
+    const char *cgroup_path,
+    char *policy);
 ```
 
 ### 8.4 内核侧预算消费接口
@@ -561,7 +557,7 @@ AIRY_API int airy_sys_sched_ctl(
  * @tokens:   消费数量
  * @usage:    消费记录（可选）
  *
- * 返回: 0 成功，-AIRY_EBUDGET_EXHAUSTED 预算不足
+ * 返回: 0 成功，-AIRY_ESCHED_BUDGET 预算不足
  *
  * 内核侧接口，非 UAPI。LLM 守护进程通过 kfunc 调用。
  */
@@ -638,10 +634,10 @@ try:
     result = client.process(prompt="分析这段代码")
     # SDK 内部自动管理 token 消耗
 except AgentrtError as e:
-    if e.code == -401:  # AIRY_EBUDGET_EXHAUSTED
+    if e.code == -122:  # -AIRY_ESCHED_BUDGET（预算耗尽）
         print(f"Token 预算耗尽，已使用 {client.tokens_used}/{client.token_budget}")
         # 执行优雅降级：保存上下文、通知用户
-    elif e.code == -701:  # AIRY_EPERM
+    elif e.code == -12:  # -AIRY_EPERM
         print("权限不足")
 ```
 
@@ -672,7 +668,7 @@ class CognitionClient:
     def process(self, prompt: str, **kwargs) -> dict:
         # 1. 检查预算
         if self._tokens_used >= self._token_budget:
-            raise AgentrtError(-401)  # AIRY_EBUDGET_EXHAUSTED
+            raise AgentrtError(-122)  # -AIRY_ESCHED_BUDGET（预算耗尽）
 
         # 2. 传递剩余预算给后端
         payload = json.dumps({
@@ -711,7 +707,7 @@ class CognitionClient:
 | `airy_budget_consume()` | < 1 μs | perf trace |
 | `airy_budget_refill()` | < 500 ns | perf trace |
 | `airy_sys_sched_ctl(SET_POLICY)` | < 1 μs | perf trace |
-| `airy_sys_sched_ctl(GET_LATENCY)` | < 1 μs | perf trace |
+| `airy_sys_sched_ctl(GET_POLICY)` | < 1 μs | perf trace |
 
 ### 11.3 性能回归保护
 
@@ -727,9 +723,9 @@ class CognitionClient:
 
 Token 预算引入一个新错误码，追加到 [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) 第 6 章错误码表末尾：
 
-| 错误码 | 值 | 含义 | 触发场景 | 可重试 |
-|--------|-----|------|---------|--------|
-| `AIRY_EBUDGET_EXHAUSTED` | -15 | Token 预算耗尽 | current_tokens < 请求量 | 是（等待补充后） |
+| 错误码 | 值（幅值） | 含义 | 触发场景 | 可重试 |
+|--------|-----------|------|---------|--------|
+| `AIRY_ESCHED_BUDGET` | 122 | Token 预算耗尽（error.h A-ULS 子空间；本文档旧名 `AIRY_EBUDGET_EXHAUSTED` 全部统一为本码，返回 `-AIRY_ESCHED_BUDGET`） | current_tokens < 请求量 | 是（等待补充后） |
 
 ### 12.2 SDK 错误码统一
 
@@ -737,20 +733,20 @@ Token 预算引入一个新错误码，追加到 [30-interfaces/01-syscalls.md](
 
 | SDK 层错误码 | 系统调用错误码 | 统一说明 |
 |-------------|--------------|---------|
-| `-401` (SDK 旧) | `-15` (AIRY_EBUDGET_EXHAUSTED) | SDK 层通过 `airy_errno_to_app()` 转换 |
-| `-701` (SDK 旧) | `-4` (AIRY_EPERM) | SDK 层通过 `airy_errno_to_app()` 转换 |
+| `-401` (SDK 旧) | `-AIRY_ESCHED_BUDGET`（幅值 122） | SDK 层通过 `airy_errno_to_app()` 转换 |
+| `-701` (SDK 旧) | `-AIRY_EPERM`（幅值 12） | SDK 层通过 `airy_errno_to_app()` 转换 |
 
-**统一约束**：SDK 层错误码是应用层错误码（`airy_app_*`），通过 `airy_errno_to_app()` 从系统调用错误码转换而来。系统调用层统一使用 `AIRY_E*` 前缀（值 -1 ~ -15）。
+**统一约束**：SDK 层错误码是应用层错误码（`airy_app_*`），通过 `airy_errno_to_app()` 从系统调用错误码转换而来。系统调用层统一使用 `AIRY_E*` 前缀（error.h 正数幅值，调用返回 `-AIRY_E*` 负值）。
 
 ### 12.3 错误处理规范
 
 ```c
 /* 正确：检查预算错误并优雅降级 */
 int ret = airy_budget_consume(agent_id, tokens, &usage);
-if (ret == -AIRY_EBUDGET_EXHAUSTED) {
+if (ret == -AIRY_ESCHED_BUDGET) {
     log_write(LOG_WARN, "token budget exhausted, agent=%u", agent_id);
-    /* 触发 SUSPENDED：保存记忆快照 */
-    airy_sys_sched_ctl(AIRY_SCHED_YIELD, agent_id, AIRY_PAUSE_SAVE_MEMORY);
+    /* 触发 BLOCKED 挂起：保存记忆快照（8 态语义，见 01-agent-lifecycle.md §1.1） */
+    airy_sys_sched_ctl(AIRY_SCHED_YIELD, agent_cgroup_path, "SAVE_MEMORY");
     return ret;
 } else if (ret < 0) {
     log_write(LOG_ERROR, "budget_consume failed: %d (%s)",
@@ -769,38 +765,27 @@ if (ret == -AIRY_EBUDGET_EXHAUSTED) {
 #include <agentrt/syscalls.h>
 #include <agentrt/budget.h>
 
-int create_budgeted_agent(void)
+int create_budgeted_agent(const char *agent_cgroup_path)
 {
-    struct airy_task_config task_cfg = {
-        .size = sizeof(task_cfg),
-        .version = 0x0100,
-        .name = "cognition-agent-01",
-        .type = AGENT_TYPE_COGNITION,
-        .initial_token_budget = 100000,
-    };
-    struct airy_token_budget_config budget_cfg = {
-        .size = sizeof(budget_cfg),
-        .version = 0x0100,
-        .max_tokens = 100000,
-        .refill_rate = 1000,        /* 1000 tokens/ms */
-        .refill_period_ms = 1000,  /* 1s 补充周期 */
-        .warning_pct = 20,         /* 20% 警告 */
-        .critical_pct = 5,         /* 5% 临界 */
-        .flags = AIRY_BUDGET_FLAG_AUTOSUSPEND,
-    };
+    /* v1.0.1: Token 预算配置序列化为 JSON 字符串，经 sched_ctl(550) policy 参数传入 */
+    const char *budget_policy =
+        "{\"max_tokens\":100000,\"refill_rate\":1000,"
+        "\"warning_pct\":20,\"critical_pct\":5,\"flags\":\"AUTOSUSPEND\"}";
     uint32_t agent_id;
     int ret;
 
-    /* 1. 注册 Agent（v1.0.1: 通过 COMPILE_BADGE 编译 Badge + 注册） */
-    ret = airy_sys_call(AIRY_OP_COMPILE_BADGE, &task_cfg, &agent_id, NULL);
+    /* 1. 注册 Agent（v1.0.1: airy_sys_call(548) 两参 (cap, msg)，经 msg->opcode 分派；
+     *    CAP_REQUEST 为引导期 capability 请求 opcode（[SC] ipc.h）） */
+    struct airy_ipc_msg_hdr reg_msg = {
+        .magic = AIRY_IPC_MAGIC,
+        .opcode = AIRY_IPC_OP_CAP_REQUEST,
+    };
+    ret = airy_sys_call(sec_d_cap, &reg_msg);
     if (ret < 0) return ret;
 
-    /* 2. 设置预算（v1.0.1: 通过 SCHED_CTL SET_POLICY） */
-    ret = airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_id, (uint64_t)&budget_cfg);
-    if (ret < 0) {
-        airy_sys_call(AIRY_OP_REVOKE_BADGE, &agent_id, NULL, NULL);
-        return ret;
-    }
+    /* 2. 设置预算（v1.0.1: 通过 SCHED_CTL(550) SET_POLICY，预算配置封装入 policy） */
+    ret = airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_cgroup_path, budget_policy);
+    if (ret < 0) return ret;
 
     /* 3. 启动 Agent（v1.0.1: 通过 io_uring 激活 ring） */
     ret = io_uring_register(ring_fd, IORING_REGISTER_AIRY_AGENT, &agent_id, 0);
@@ -811,21 +796,25 @@ int create_budgeted_agent(void)
 ### 13.2 预算监控
 
 ```c
-void monitor_agent_budget(uint32_t agent_id)
+void monitor_agent_budget(const char *agent_cgroup_path)
 {
+    char policy_out[512];
     struct airy_token_budget budget;
 
-    if (airy_sys_sched_ctl(AIRY_SCHED_GET_LATENCY, agent_id, (uint64_t)&budget) == 0) {
+    /* v1.0.1: GET_POLICY 回读 policy（JSON 含 current_tokens 等预算状态） */
+    if (airy_sys_sched_ctl(AIRY_SCHED_GET_POLICY, agent_cgroup_path,
+                           policy_out) == 0) {
+        airy_budget_parse_policy(policy_out, &budget);
         uint32_t pct = (budget.current_tokens * 100) / budget.max_tokens;
 
-        log_write(LOG_INFO, "agent=%u tokens=%u/%u (%u%%) consumed=%llu",
-                  agent_id, budget.current_tokens, budget.max_tokens,
+        log_write(LOG_INFO, "agent=%s tokens=%u/%u (%u%%) consumed=%llu",
+                  agent_cgroup_path, budget.current_tokens, budget.max_tokens,
                   pct, (unsigned long long)budget.total_consumed);
 
         if (pct <= 20)
-            log_write(LOG_WARN, "budget warning: agent=%u at %u%%", agent_id, pct);
+            log_write(LOG_WARN, "budget warning: agent=%s at %u%%", agent_cgroup_path, pct);
         if (pct <= 5)
-            log_write(LOG_ERROR, "budget critical: agent=%u at %u%%", agent_id, pct);
+            log_write(LOG_ERROR, "budget critical: agent=%s at %u%%", agent_cgroup_path, pct);
     }
 }
 ```
@@ -833,32 +822,26 @@ void monitor_agent_budget(uint32_t agent_id)
 ### 13.3 耗尽恢复
 
 ```c
-int handle_budget_exhaustion(uint32_t agent_id)
+int handle_budget_exhaustion(const char *agent_cgroup_path)
 {
-    struct airy_token_budget_config new_budget = {
-        .size = sizeof(new_budget),
-        .version = 0x0100,
-        .max_tokens = 200000,       /* 增加预算 */
-        .refill_rate = 2000,        /* 提高补充速率 */
-        .refill_period_ms = 1000,
-        .warning_pct = 20,
-        .critical_pct = 5,
-        .flags = AIRY_BUDGET_FLAG_AUTOSUSPEND,
-    };
+    /* v1.0.1: Token 预算配置序列化为 JSON，经 sched_ctl(550) policy 参数传入 */
+    const char *policy = "{\"max_tokens\":200000,\"refill_rate\":2000,"
+                         "\"warning_pct\":20,\"critical_pct\":5,"
+                         "\"flags\":\"AUTOSUSPEND\"}";
 
     /* 1. 手动注入新预算（v1.0.1: sched_ctl SET_POLICY） */
-    int ret = airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_id,
-                                  (uint64_t)&new_budget);
+    int ret = airy_sys_sched_ctl(AIRY_SCHED_SET_POLICY, agent_cgroup_path,
+                                 policy);
     if (ret < 0) return ret;
 
-    /* 2. 恢复 Agent（从 SUSPENDED 到 RUNNING，v1.0.1: io_uring 重激活） */
-    ret = io_uring_register(ring_fd, IORING_REGISTER_AIRY_AGENT, &agent_id, 0);
+    /* 2. 恢复 Agent（从 BLOCKED 到 RUNNING，v1.0.1: io_uring 重激活） */
+    ret = io_uring_register(ring_fd, IORING_REGISTER_AIRY_AGENT, agent_cgroup_path, 0);
     if (ret < 0) {
         log_write(LOG_ERROR, "resume failed: %d", ret);
         return ret;
     }
 
-    log_write(LOG_INFO, "agent %u budget restored and resumed", agent_id);
+    log_write(LOG_INFO, "agent %s budget restored and resumed", agent_cgroup_path);
     return AIRY_EOK;
 }
 ```
@@ -949,7 +932,7 @@ static void test_token_bucket_refill(struct kunit *test)
     KUNIT_EXPECT_EQ(test, budget.refill_count, 1);
 }
 
-/* KUnit 测试：预算耗尽触发 SUSPENDED */
+/* KUnit 测试：预算耗尽触发 BLOCKED 挂起 */
 static void test_budget_exhaustion(struct kunit *test)
 {
     struct airy_token_budget budget = {
@@ -983,7 +966,7 @@ static void test_budget_exhaustion(struct kunit *test)
 | 预算模型 | 用户态令牌桶 | 内核态令牌桶 | 算法语义一致 |
 | 预算配置 | `airy_token_budget_config` | 同结构体 | [SC] 共享结构体 |
 | 消费接口 | `airy_budget_consume()` | 内核 kfunc | 语义一致 |
-| 耗尽处理 | 应用层 SUSPENDED | 内核态 SUSPENDED | 状态语义一致 |
+| 耗尽处理 | 应用层 BLOCKED 挂起 | 内核态 BLOCKED 挂起 | 状态语义一致（8 态 SSoT） |
 
 ### 15.2 [SC] 层共享
 
@@ -1002,11 +985,11 @@ agentrt-linux 独有的维度：
 
 ### 16.1 问题 P1-BUD-01: SDK 错误码与系统调用错误码不一致
 
-**问题描述**：[02-sdk-integration.md](02-sdk-integration.md) 使用 `-401`（AIRY_EBUDGET_EXHAUSTED）和 `-701`（权限错误），而系统调用错误码表（[30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) 第 6 章）使用 `-15` 和 `-4`。
+**问题描述**：[02-sdk-integration.md](02-sdk-integration.md) 使用 `-401`（预算耗尽）和 `-701`（权限错误），而 [SC] error.h 错误码体系为正数幅值（预算耗尽对应 A-ULS 子空间 `AIRY_ESCHED_BUDGET=122`，权限错误对应 `AIRY_EPERM=12`，调用返回 `-AIRY_E*`）。
 
 **严重程度**：P1（错误码一致性）
 
-**修复指引**：SDK 层错误码是应用层错误码（`airy_app_*`），通过 `airy_errno_to_app()` 从系统调用错误码转换。需在 SDK 文档中明确标注转换关系。系统调用层新增 `AIRY_EBUDGET_EXHAUSTED = -15` 到错误码表。
+**修复指引**：SDK 层错误码是应用层错误码（`airy_app_*`），通过 `airy_errno_to_app()` 从系统调用错误码转换。需在 SDK 文档中明确标注转换关系。系统调用层统一使用 [SC] error.h 错误码（`-AIRY_ESCHED_BUDGET` / `-AIRY_EPERM`），旧名 `AIRY_EBUDGET_EXHAUSTED` 废弃。
 
 ---
 
@@ -1061,7 +1044,7 @@ agentrt-linux 独有的维度：
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。定义令牌桶算法、三级阈值设计、核心数据结构（`airy_token_budget` + `airy_token_budget_config` + `airy_token_usage`）、三级预算层级、消耗计量与审计、耗尽状态机、恢复机制（自动补充 + 手动注入 + 借用）、系统调用集成（523/524）、调度集成（token_factor Q16.16）、SDK 集成（四语言）、性能约束（Token/Watt/Latency）、错误码统一（AIRY_EBUDGET_EXHAUSTED = -15）、KUnit 测试 |
-| 1.0.1 | 2027-XX-XX | 内核实现完成，自适应补充算法落地，多级预算层级支持，性能基准达标 |
+| v1.0.1 | 2026-11-08 | 内核实现完成，自适应补充算法落地，多级预算层级支持，性能基准达标 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---

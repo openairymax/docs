@@ -2950,43 +2950,31 @@ AIRY_<类别>_<名称>
 > **⚠️ 本节已废弃（方案 C，v3.0 SSoT 统一收敛）**
 >
 > 本节原包含方案 C 错误码数值（-2/-4/-6 等自定义序列），与 AirymaxOS 错误码体系存在数值冲突与不一致。
-> **v3.0 SSoT 统一收敛后，唯一权威方案为方案 A（POSIX errno 负值）**，权威定义见：
+> **v3.0 SSoT 统一收敛后，唯一权威方案为 [SC] `error.h`（AIRY_E* 正数幅值，POSIX errno 风格；调用方返回 `-AIRY_E*`）**，权威定义见：
+> - [SC] 头文件 `kernel/include/uapi/linux/airymax/error.h`（SSoT 物理宿主）
 > - [跨项目代码共享 §2.5](../120-cross-project-code-sharing.md)（SSoT 声明）
-> - `agentrt/commons/include/airy_types.h`（`airy_err_t` 类型 + `AIRY_E*` POSIX 码）
-> - `agentrt/commons/utils/error/include/error.h`（`AIRY_ERR_*` 扩展码）
+> - `agentrt/commons/include/airy_types.h`（`airy_err_t` 类型）
 >
-> 以下为方案 A 权威值（POSIX errno 负值），**禁止在新代码中使用方案 C 的旧数值**：
+> 以下为 [SC] error.h 权威值（正数幅值），**禁止在新代码中使用方案 C 的旧负值**：
 
 ```c
-// 方案 A 权威值（POSIX errno 负值），定义于 agentrt/commons/include/airy_types.h
-#define AIRY_EOK         (0)     // 成功
-#define AIRY_EPERM       (-1)    // 权限不足（POSIX EPERM=1）
-#define AIRY_ENOENT      (-2)    // 资源不存在（POSIX ENOENT=2）
-#define AIRY_EIO         (-5)    // I/O 错误（POSIX EIO=5）
-#define AIRY_EAGAIN      (-11)   // 资源暂时不可用（POSIX EAGAIN=11）
-#define AIRY_ENOMEM      (-12)   // 内存不足（POSIX ENOMEM=12）
-#define AIRY_EACCES      (-13)   // 权限拒绝（POSIX EACCES=13）
-#define AIRY_EBUSY       (-16)   // 资源忙碌（POSIX EBUSY=16）
-#define AIRY_EEXIST      (-17)   // 资源已存在（POSIX EEXIST=17）
-#define AIRY_EINVAL      (-22)   // 参数无效（POSIX EINVAL=22）
-#define AIRY_ENOSPC      (-28)   // 空间不足（POSIX ENOSPC=28）
-#define AIRY_ERANGE      (-34)   // 数值范围错误（POSIX ERANGE=34）
-#define AIRY_EDEADLK     (-35)   // 死锁（POSIX EDEADLK=35）
-#define AIRY_EPROTO      (-71)   // 协议错误（POSIX EPROTO=71）
-#define AIRY_EOVERFLOW   (-75)   // 溢出错误（POSIX EOVERFLOW=75）
-#define AIRY_EMSGSIZE    (-90)   // 消息过长（POSIX EMSGSIZE=90）
-#define AIRY_ENOTSUP     (-95)   // 操作不支持（POSIX ENOTSUP=95）
-#define AIRY_ECONNRESET  (-104)  // 连接重置（POSIX ECONNRESET=104）
-#define AIRY_ENOTCONN    (-107)  // 未连接（POSIX ENOTCONN=107）
-#define AIRY_ETIMEDOUT   (-110)  // 操作超时（POSIX ETIMEDOUT=110）
-#define AIRY_ECONNREFUSED (-111) // 连接被拒绝（POSIX ECONNREFUSED=111）
-// 以下为自定义错误码（无 POSIX 对应，保留自定义负值）
-#define AIRY_ENOTINIT     (-9)   // 引擎未初始化（自定义）
-#define AIRY_ECANCELLED   (-10)  // 操作已取消（自定义）
-#define AIRY_EPLATFORM    (-27)  // 平台未初始化（自定义）
-#define AIRY_EPROTONOSUPPORT (-93) // 协议/命令不支持（POSIX EPROTONOSUPPORT=93）
-#define AIRY_ESERVICE     (-29)  // 服务不可用（自定义）
-#define AIRY_EUNKNOWN     (-99)  // 未知错误（自定义）
+// [SC] error.h 权威值（AIRY_E* 正数幅值，POSIX errno 风格；调用方返回 -AIRY_E*）
+#define AIRY_EOK         0     // 成功
+#define AIRY_EACCES      1     // 权限拒绝
+#define AIRY_EEXIST      2     // 资源已存在
+#define AIRY_EINVAL      5     // 参数无效
+#define AIRY_EIO         6     // I/O 错误
+#define AIRY_ENOENT      8     // 资源不存在
+#define AIRY_ENOMEM      9     // 内存不足
+#define AIRY_ENOSPC      10    // 空间不足
+#define AIRY_ENOTSUP     11    // 操作不支持
+#define AIRY_EPERM       12    // 权限不足
+#define AIRY_ERANGE      13    // 数值范围错误
+#define AIRY_EBUSY       16    // 资源忙碌
+#define AIRY_ECANCELED   19    // 操作取消
+#define AIRY_EAGAIN      35    // 资源暂时不可用
+```
+（注：原方案 C 的其余负值定义（ENOTSUP/ECONNRESET/ENOTCONN/ETIMEDOUT/自定义码等）已废弃删除——一律以 [SC] error.h 正数幅值为准，调用方返回 -AIRY_E*）
 ```
 
 #### 7.3 模块级错误码（config 模块示例）

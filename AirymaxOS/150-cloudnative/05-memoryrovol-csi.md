@@ -73,17 +73,18 @@ MemoryRovol CSI 驱动遵循 CSI v1.9 规范，实现三阶段 gRPC 服务：
                    │  [IND]              │
                    ├─────────────────────┤
                    │ 内核系统调用         │
-                   │  552 snapshot       │
-                   │  553 restore        │
-                   │  554 migrate        │
-                   │  557 list           │
-                   │  558 delete         │
+                   │  airy_sys_rovol_ctl │
+                   │  (549) op 子命令：  │
+                   │  snapshot/restore/  │
+                   │  migrate/list/...   │
                    ├─────────────────────┤
                    │ [SC] 共享契约层      │
                    │  memory_types.h     │
                    │  L1-L4 数据结构     │
                    └─────────────────────┘
 ```
+
+> **修正说明**：MemoryRoVol 控制面统一走 `AIRY_SYS_ROVOL_CTL`（549）的 op 子命令分发（快照/恢复/迁移/列表/删除等）；syscalls.h SSoT 中 552-571 为**保留段**，不分配独立 syscall 编号（原文档虚构的 552/553/554/557/558 独立 syscall 已废弃）。
 
 ### 2.2 驱动组件
 
@@ -386,10 +387,20 @@ L4 是持久同调模式，以 Block 设备模式只读挂载：
 
 ### 7.5 多层组合挂载
 
-Agent 容器通常同时挂载多层。通过 CSI 卷参数 `layers` 指定：
+Agent 容器通常同时挂载多层。通过 **StorageClass 的 `parameters`** 指定（K8s 中 `parameters` 属于 StorageClass，PVC 的 `spec` 中不存在 `parameters` 字段，仅通过 `storageClassName` 引用）：
 
 ```yaml
-# Agent PVC 请求全部 4 层
+# StorageClass：定义多层参数（parameters 只能出现在 StorageClass）
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: memoryrovol
+provisioner: memoryrovol.csi.airymaxos.dev
+parameters:
+  airymaxos.agent.memory-rovol.layers: "L1,L2,L3,L4"
+  airymaxos.agent.memory-rovol.cxl-pool: "0"
+---
+# Agent PVC：仅声明存储需求并引用 StorageClass
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -400,9 +411,6 @@ spec:
     requests:
       storage: 100Gi
   storageClassName: memoryrovol
-  parameters:
-    airymaxos.agent.memory-rovol.layers: "L1,L2,L3,L4"
-    airymaxos.agent.memory-rovol.cxl-pool: "0"
 ```
 
 ---

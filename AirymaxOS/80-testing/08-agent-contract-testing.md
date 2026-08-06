@@ -91,7 +91,7 @@ flowchart TB
 
 | 载体 | 工具 | 契约类别 | 反馈时机 |
 |------|------|---------|---------|
-| KUnit | `airy_agent_contract_*_test.c` | 状态机 / Token / 记忆 / 认知循环 | 开发期（毫秒级） |
+| KUnit | `airy_agent_contract_*_test.c`（**规划，未实现**） | 状态机 / Token / 记忆 / 认知循环 | 开发期（毫秒级） |
 | kselftest | `airy_agent_contract/` 子目录 | 状态机 / 记忆 / daemon 交互 | 系统级（秒级） |
 | ftrace tracepoint | `airy_agent_contract_violation` tracepoint | 全部契约 | 运行时（实时） |
 
@@ -180,12 +180,12 @@ const int airy_agent_transition_legal_table[8][8] = {
 
 ### 3.1 KUnit 状态机契约测试
 
-`kernel/airymaxos/contract/airy_agent_contract_state_test.c` 验证状态机契约：
+`kernel/airymaxos/contract/airy_agent_contract_state_test.c`（**规划，未实现**）验证状态机契约：
 
 ```c
-/* kernel/airymaxos/contract/airy_agent_contract_state_test.c */
+/* kernel/airymaxos/contract/airy_agent_contract_state_test.c（规划，未实现） */
 #include <kunit/test.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 /* 测试 1：验证所有 14 条合法转换均可执行 */
 KUNIT_DEFINE_TEST(airy_contract_legal_transitions)
@@ -365,9 +365,9 @@ struct airy_token_budget {
 ### 4.2 Token 预算契约 KUnit 测试
 
 ```c
-/* kernel/airymaxos/contract/airy_agent_contract_token_test.c */
+/* kernel/airymaxos/contract/airy_agent_contract_token_test.c（规划，未实现） */
 #include <kunit/test.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_token_consume_within_budget)
 {
@@ -464,9 +464,9 @@ struct airy_memory_quota {
 ### 5.2 记忆配额契约 KUnit 测试
 
 ```c
-/* kernel/airymaxos/contract/airy_agent_contract_mem_test.c */
+/* kernel/airymaxos/contract/airy_agent_contract_mem_test.c（规划，未实现） */
 #include <kunit/test.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_mem_l1_self_access)
 {
@@ -561,9 +561,9 @@ enum airy_cogn_loop_phase {
 ### 6.2 CoreLoopThree 契约 KUnit 测试
 
 ```c
-/* kernel/airymaxos/contract/airy_agent_contract_cogn_test.c */
+/* kernel/airymaxos/contract/airy_agent_contract_cogn_test.c（规划，未实现） */
 #include <kunit/test.h>
-#include <uapi/airymax/sched.h>
+#include <uapi/linux/airymax/sched.h>
 
 KUNIT_DEFINE_TEST(airy_contract_cogn_phase_order)
 {
@@ -768,7 +768,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with KUnit
         run: |
-          make ARCH=um defconfig airy_kunit_defconfig
+          # UML 无 airy_kunit_defconfig：defconfig + KCONFIG fragment 叠加（fragment 为规划项）
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
       - name: Run Agent contract KUnit tests
         run: |
@@ -788,7 +791,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build with kselftest
         run: |
-          make ARCH=um defconfig airy_defconfig
+          # UML 无 airy_defconfig 变体：defconfig + merge_config 叠加 x86 airy_defconfig
+          make ARCH=um defconfig
+          ./scripts/kconfig/merge_config.sh -m .config arch/x86_64/configs/airy_defconfig
+          make ARCH=um olddefconfig
           make ARCH=um -j$(nproc)
           make -C tools/testing/selftests TARGETS="airy_agent_contract"
       - name: Run Agent contract kselftest
@@ -910,8 +916,8 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 ### 11.3 后续版本规划
 
 - v1.0.1：新增 IPC 契约（契约 18-22，覆盖 IORING_OP_URING_CMD fastpath 行为）。
-- v1.2：新增 Capability 契约（契约 23-30，覆盖 41 ID 权限校验）。
-- v1.3：将契约定义导入 10-formal-verification，进行 TLA+ 形式化证明。
+- 下一版本：新增 Capability 契约（契约 23-30，覆盖 Badge 权限校验）。
+- 后续版本：将契约定义导入 10-formal-verification，进行 TLA+ 形式化证明。
 
 ---
 
@@ -992,12 +998,13 @@ esac
 echo "Injected $SCENARIO, waiting for recovery..."
 ```
 
-`airy_fault_inject` 内核模块（`kernel/airymaxos/testing/airy_fault_inject.c`）提供更精细的故障注入：
+`airy_fault_inject` 内核模块（`kernel/airymaxos/testing/airy_fault_inject.c`，**规划，未实现**）提供更精细的故障注入：
 
 ```c
-/* kernel/airymaxos/testing/airy_fault_inject.c */
+/* kernel/airymaxos/testing/airy_fault_inject.c（规划，未实现） */
 #include <linux/debugfs.h>
-#include <uapi/airymax/daemon.h>
+/* [SC] 12 个头文件中无 daemon.h：daemon 交互类型经 ipc.h 桥接（规划） */
+#include <uapi/linux/airymax/ipc.h>
 
 /* 通过 debugfs 触发 daemon 故障模拟 */
 static ssize_t airy_fault_inject_write(struct file *f, const char __user *buf,

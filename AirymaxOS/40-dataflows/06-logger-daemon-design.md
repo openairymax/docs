@@ -134,7 +134,7 @@ mmap 映射首部是 Ring Buffer 元数据头（`struct airy_log_ring_header`）
 /* services/daemons/logger_d/ring.h —— Ring Buffer 用户态视图 */
 struct airy_log_ring_header {
     __u64 head;           /* 生产者 reserve 位置（原子，仅读） */
-    __u64 commit;         /* 生产者 commit 位置（原子，仅读）—— P0-D1 修复 */
+    __u64 committed_head; /* 生产者 commit 位置（原子，仅读）—— P0-D1 修复，对齐实现字段名 */
     __u64 tail;           /* 消费者 read 位置（Logger Daemon 写） */
     __u32 capacity;       /* Ring 容量（记录数） */
     __u32 record_size;    /* 单条记录大小（128B） */
@@ -144,14 +144,14 @@ struct airy_log_ring_header {
 
 struct airy_log_record {
     __u32 magic;           /* AIRY_LOG_MAGIC = 0x414C4F47 */
-    __u16 level;           /* LOG_DEBUG ~ LOG_FATAL */
-    __u16 facility;        /* 设施编号 */
-    __u64 timestamp_ns;    /* 纳秒时间戳 */
+    __u16 level;           /* AIRY_LOG_DEBUG ~ AIRY_LOG_FATAL（5 级，log_types.h） */
+    __u16 facility;        /* 设施编号（AIRY_LOG_FAC_*，7 设施） */
+    __u64 timestamp_ns;    /* 纳秒时间戳（monotonic） */
     __u32 caller_id;       /* 调用者 ID（pid/kmod id） */
     __u32 payload_len;     /* payload 有效长度 */
-    char  payload[96];     /* 原始二进制 payload */
-    __u64 reserved;        /* 预留对齐 */
-} __attribute__((aligned(64)));
+    __u8  payload[96];     /* 原始二进制 payload */
+    __u8  reserved[8];     /* 预留（对齐 log_types.h 实际 __u8 reserved[8]） */
+} AIRY_ALIGNED(64);
 ```
 
 ### 2.3 批量消费流程
@@ -162,17 +162,17 @@ Logger Daemon 通过 io_uring 注册 eventfd 读事件，被唤醒后批量消�
 /* services/daemons/logger_d/main.c —— 批量消费 */
 static void logger_consume(struct airy_log_ring_header *hdr)
 {
-    __u64 commit, tail;
-    /* P0-D1 修复：消费者读取 commit 索引（而非 head），只消费已提交的记录。
-     * commit 仅在 128B 数据完全写入后推进，确保不会读到半成品数据。
+    __u64 committed_head, tail;
+    /* P0-D1 修复：消费者读取 committed_head 索引（而非 head），只消费已提交的记录。
+     * committed_head 仅在 128B 数据完全写入后推进，确保不会读到半成品数据。
      * do-while 防止生产者在消费期间新增提交导致漏消费 */
     do {
-        /* smp_load_acquire 确保读到最新 commit（对应内核 smp_store_release） */
-        commit = __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE);
+        /* smp_load_acquire 确保读到最新 committed_head（对应内核 smp_store_release） */
+        committed_head = __atomic_load_n(&hdr->committed_head, __ATOMIC_ACQUIRE);
         tail = hdr->tail;
-        while (tail < commit) {
+        while (tail < committed_head) {
             struct airy_log_record *rec = record_at(hdr, tail % hdr->capacity);
-            /* P0-D1 修复后 commit 已保证数据完整，magic 校验保留为防御性检查 */
+            /* P0-D1 修复后 committed_head 已保证数据完整，magic 校验保留为防御性检查 */
             if (likely(rec->magic == AIRY_LOG_MAGIC)) {
                 logger_format_and_write(rec);
             }
@@ -180,7 +180,7 @@ static void logger_consume(struct airy_log_ring_header *hdr)
         }
         /* 更新 tail 索引，通知生产者可覆盖旧记录 */
         __atomic_store_n(&hdr->tail, tail, __ATOMIC_RELEASE);
-    } while (commit != __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE));
+    } while (committed_head != __atomic_load_n(&hdr->committed_head, __ATOMIC_ACQUIRE));
 }
 ```
 
@@ -188,8 +188,8 @@ static void logger_consume(struct airy_log_ring_header *hdr)
 
 x86_64 架构下 CPU 默认缓存一致，Logger Daemon 通过 `mmap(PROT_READ | PROT_WRITE, MAP_SHARED)`（P0-D3 修复：原 PROT_READ 导致写 tail 时 SIGSEGV）读取到的数据即为内核写入的最新数据。可见性由以下保证：
 
-- **内核侧**：commit 时 `smp_store_release(&hdr->commit)` 确保 128B 写入在 commit 更新前完成（P0-D1 修复：原写 head，现写 commit）
-- **用户态侧**：读取 commit 使用 `__ATOMIC_ACQUIRE` 确保读到 commit 后的记录数据已可见
+- **内核侧**：commit 时 `smp_store_release(&hdr->committed_head)` 确保 128B 写入在 committed_head 更新前完成（P0-D1 修复：原写 head，现写 committed_head）
+- **用户态侧**：读取 committed_head 使用 `__ATOMIC_ACQUIRE` 确保读到 committed_head 后的记录数据已可见
 - **无需 cache flush**：缓存一致架构无需 `flush_cache_range` 等昂贵操作
 
 ---
@@ -209,26 +209,26 @@ x86_64 架构下 CPU 默认缓存一致，Logger Daemon 通过 `mmap(PROT_READ |
 ```c
 /* services/daemons/logger_d/formatter.c —— 格式化引擎 */
 static const char *level_str[] = {
-    [LOG_DEBUG]   = "DEBUG",
-    [LOG_INFO]    = "INFO",
-    [LOG_WARNING] = "WARNING",
-    [LOG_ERROR]   = "ERROR",
-    [LOG_FATAL]   = "FATAL",
+    [AIRY_LOG_DEBUG]  = "DEBUG",
+    [AIRY_LOG_INFO]   = "INFO",
+    [AIRY_LOG_WARN]   = "WARN",
+    [AIRY_LOG_ERROR]  = "ERROR",
+    [AIRY_LOG_FATAL]  = "FATAL",
 };
 
 static const char *facility_str[] = {
-    [AIRY_FAC_KERNEL]  = "KERNEL",
-    [AIRY_FAC_IPC]     = "IPC",
-    [AIRY_FAC_SUPERV]  = "SUPERV",
-    [AIRY_FAC_COGNITION] = "COGNITION",
-    /* ... */
+    [AIRY_LOG_FAC_KERN]    = "KERNEL",
+    [AIRY_LOG_FAC_IPC]     = "IPC",
+    [AIRY_LOG_FAC_SECURITY] = "SECURITY",
+    [AIRY_LOG_FAC_SCHED]   = "SCHED",
+    /* ... 其余 AIRY_LOG_FAC_*（USER/DAEMON/MEMORY） */
 };
 
 /* payload 解析表：按 facility 选择不同的 payload 解析器 */
 static const struct payload_parser parsers[] = {
-    [AIRY_FAC_IPC]     = ipc_payload_format,
-    [AIRY_FAC_SUPERV]  = superv_payload_format,
-    [AIRY_FAC_KERNEL]  = kernel_payload_format,
+    [AIRY_LOG_FAC_IPC]     = ipc_payload_format,
+    [AIRY_LOG_FAC_SCHED]   = superv_payload_format,
+    [AIRY_LOG_FAC_KERN]    = kernel_payload_format,
 };
 
 int logger_format_record(struct airy_log_record *rec, char *buf, size_t bufsz)
@@ -281,8 +281,8 @@ Logger Daemon 支持三级过滤，由 A-UCS 配置管理（`/etc/agentrt/logger
 
 | 过滤维度 | 字段 | 配置项 | 示例 |
 |---------|------|--------|------|
-| 级别过滤 | `rec->level` | `min_level` | `min_level=LOG_INFO`（丢弃 DEBUG） |
-| 设施过滤 | `rec->facility` | `include_facilities` / `exclude_facilities` | `exclude_facilities=[COGNITION]` |
+| 级别过滤 | `rec->level` | `min_level` | `min_level=AIRY_LOG_INFO`（丢弃 DEBUG） |
+| 设施过滤 | `rec->facility` | `include_facilities` / `exclude_facilities` | `exclude_facilities=[SECURITY]`（7 设施：KERN/USER/DAEMON/SECURITY/SCHED/IPC/MEMORY，见 log_types.h） |
 | 调用者过滤 | `rec->caller_id` | `include_callers` / `exclude_callers` | `include_callers=[1234,5678]` |
 
 ### 4.2 过滤实现
@@ -417,7 +417,7 @@ static void sink_cleanup_old(const char *dir, time_t max_age, off_t max_total)
 
 A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日志文件可能被攻击者篡改（如本地 root 攻击、磁盘离线篡改）。本节新增 SHA3-256 哈希链 + Ed25519 签名机制，确保审计日志的完整性与可追溯性。本机制由 sec_d 与 Logger Daemon 协作完成：sec_d 持有签名密钥并触发链尾签名，Logger Daemon 在落盘前追加 `prev_hash` 字段。
 
-> **OS-SEC-130**（R4 新增）：所有 `AIRY_FAC_SECURITY` facility 的审计日志记录必须经过哈希链完整性保护；审计日志读取方必须重新计算哈希链验证完整性，链断裂即视为日志被篡改，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 [08-sc-error-contract.md §3.1](../30-interfaces/08-sc-error-contract.md) 注册；注：原计划使用 0x1008，但该值已分配给 `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED`，故追加至 0x100B）。
+> **OS-SEC-130**（R4 新增）：所有 `AIRY_LOG_FAC_SECURITY` facility 的审计日志记录必须经过哈希链完整性保护；审计日志读取方必须重新计算哈希链验证完整性，链断裂即视为日志被篡改，触发 `AIRY_FAULT_AUDIT_TAMPER`（**规划**：`0x100B` 不在 SSoT `error.h` 定义——error.h 仅定义 `0x1001-0x1006` 六个 Fault 码，`0x1007+` 均为 v1.1+ 计划扩展，需先注册 SSoT 再使用；注：原计划使用 0x1008，但该值已分配给 `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED` 计划项，故追加至 0x100B，仍为规划值）。
 
 #### 5.5.1 威胁模型
 
@@ -484,7 +484,7 @@ A-ULP 审计日志是合规与安全分析的关键证据，但落盘后的日�
 struct airy_audit_record {
     struct airy_log_record log;             /* 128B：A-ULP 标准 128B 日志记录 */
     uint8_t prev_hash[AIRY_SHA3_256_LEN];   /* 32B：前一条记录的 SHA3-256 哈希 */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 /* sizeof(struct airy_audit_record) == 160 */
 
 /* 链尾签名记录（独立文件 audit_chain.sig） */
@@ -608,7 +608,7 @@ int airy_audit_chain_verify(const struct airy_audit_record *records,
 | v1.1+ | + 跨节点审计日志聚合签名 | 多节点审计链跨节点验证（与 gateway_d 协作） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
-> **OS-SEC-131**（R4 新增）：v0.1.1 必须实现 SHA3-256 哈希链（基础完整性保护）；v1.0.1 必须集成 Ed25519 签名 + TPM 2.0 密钥密封；任一审计日志记录缺失 `prev_hash` 即视为完整性破坏，触发 `AIRY_FAULT_AUDIT_TAMPER = 0x100B`（已在 08-sc-error-contract.md §3.1 注册）。
+> **OS-SEC-131**（R4 新增）：v0.1.1 必须实现 SHA3-256 哈希链（基础完整性保护）；v1.0.1 必须集成 Ed25519 签名 + TPM 2.0 密钥密封；任一审计日志记录缺失 `prev_hash` 即视为完整性破坏，触发 `AIRY_FAULT_AUDIT_TAMPER`（**规划**：`0x100B` 为规划值，SSoT `error.h` 未定义，需先注册，见 §5.5 OS-SEC-130 标注）。
 
 ---
 
@@ -663,17 +663,17 @@ Logger Daemon 重启后通过以下步骤恢复消费状态：
 /* services/daemons/logger_d/main.c —— 重启后恢复 */
 static int logger_recover_state(struct airy_log_ring_header *hdr)
 {
-    /* P0-D1 修复：使用 commit 索引判断可消费范围（而非 head）
-     * 1. 读取当前 commit/tail 索引 */
-    __u64 commit = __atomic_load_n(&hdr->commit, __ATOMIC_ACQUIRE);
+    /* P0-D1 修复：使用 committed_head 索引判断可消费范围（而非 head）
+     * 1. 读取当前 committed_head/tail 索引 */
+    __u64 committed_head = __atomic_load_n(&hdr->committed_head, __ATOMIC_ACQUIRE);
     __u64 tail = hdr->tail;
 
-    /* 2. 若 commit - tail > capacity，说明崩溃期间数据已被覆盖，
-     *    将 tail 对齐到 commit - capacity，跳过已丢失记录 */
-    if (commit - tail > hdr->capacity) {
-        tail = commit - hdr->capacity;
+    /* 2. 若 committed_head - tail > capacity，说明崩溃期间数据已被覆盖，
+     *    将 tail 对齐到 committed_head - capacity，跳过已丢失记录 */
+    if (committed_head - tail > hdr->capacity) {
+        tail = committed_head - hdr->capacity;
         syslog(LOG_WARNING, "airy: logger recovered, skipped %llu lost records",
-               (unsigned long long)(commit - tail - hdr->capacity));
+               (unsigned long long)(committed_head - tail - hdr->capacity));
     }
 
     /* 3. 从 tail 开始消费，记录消费位置 */

@@ -227,8 +227,8 @@ int airy_user_str_width(const char *s, size_t len, bool cjk_locale)
 ```c
 #include <stdio.h>
 #include <string.h>
-#include <airymax/airy_utf8.h>
-#include <airymax/airy_cjk.h>
+#include <airymax/airy_utf8.h>   /* 规划态：见 02-encoding-spec.md §2.3，[SC] 暂无此头 */
+#include <airymax/airy_cjk.h>    /* 规划态：airy_cjk 原语库待 [IND] 实现 */
 
 int main(void)
 {
@@ -250,8 +250,8 @@ int main(void)
 		airy_cjk_str_width(mix, strlen(mix), false));
 
 	/* 输出示例：
-	 * zh width = 12 (6 个 CJK 字符 × 2 + 全角标点 × 2 = 14，实际为 12)
-	 * ja width = 14 (7 字符，5×2 + 2×2)
+	 * zh width = 12 (6 个全角字符 × 2 = 12，含 2 个全角标点「，」「！」)
+	 * ja width = 14 (7 字符，5 假名 × 2 + 2 汉字 × 2)
 	 * ko width = 12 (6 字符 × 2)
 	 * mix width (CJK locale) = 19
 	 * mix width (non-CJK locale) = 17

@@ -160,23 +160,29 @@ A-UEF 的核心设计是将"可恢复的错误"与"不可恢复的故障"分离�
 
 | 维度 | Error（错误） | Fault（故障） |
 |------|--------------|--------------|
-| **码空间** | 负数 `[-300, -1]` | 正数 `[0x1000, 0x1FFF]` |
+| **码空间** | 正数幅值 `[1, 300]`（返回 `-AIRY_E*` 产生负错误值） | 正数 `[0x1001, 0x1006]` |
 | **可恢复性** | 可恢复，函数返回值 | 不可恢复，触发 Fault Handler |
 | **处置方式** | 调用方处理 | Micro-Supervisor 立即接管 |
 | **传递路径** | 函数返回值 / IPC 响应码 | eventfd 通知 / Fault Handler |
-| **示例** | `AIRY_EPERM=-1`（权限不足） | `AIRY_FAULT_CAP_FORGED=0x1001`（Badge 伪造） |
+| **示例** | `AIRY_EPERM=12`（权限不足，返回 -12） | `AIRY_FAULT_CAP_FORGED=0x1001`（Badge 伪造） |
 
-### 4.2 Error 码空间分配
+### 4.2 Error 码空间分配（10 子空间，SSoT：error.h）
 
-Error 码空间按来源分层分配，每个分层有明确的值域与语义：
+Error 码空间按来源分层分配，每个子空间有明确的值域与语义（**正数幅值**，调用方返回 `-AIRY_E*`）：
 
-| 分层 | 值域 | 来源 | 数量 |
+| 子空间 | 值域 | 来源 | 已定义 |
 |------|------|------|------|
-| POSIX 码 | `[-1, -40]` | 对齐 Linux errno | 40 |
-| IPC 码 | `[-41, -70]` | A-IPC 协议层 | 30 |
-| Capability 码 | `[-71, -100]` | 安全子系统 | 30 |
-| [SC] 码 | `[-101, -200]` | [SC] 共享契约层 | 100 |
-| [DSL] 码 | `[-201, -300]` | [DSL] 降级生存层 | 100 |
+| POSIX 对齐 | `[1, 35]` | 对齐 Linux errno（EACCES=1 / EINVAL=5 / ENOMEM=9 / EPERM=12 / EBUSY=16 / ECANCELED=19 / EAGAIN=35） | 16 |
+| IPC | `[41, 70]` | A-IPC 协议层（C-S0~C-S12 检查链） | 13 |
+| Capability | `[71, 100]` | 安全子系统（含 Badge 校验码 EPOCH/FORGED/PERM/FROZEN） | 14 |
+| Config | `[101, 120]` | 配置/版本（AIRY_ECFGVERSION=101 等） | 5 |
+| Sched | `[121, 140]` | A-ULS 调度/生命周期（policy/budget/deadline/state） | 10 |
+| MemoryRoVol | `[141, 160]` | 记忆卷载（tier/GFP/PMEM/CXL/OOM） | 8 |
+| Cognition | `[161, 180]` | A-UCS 认知（phase/mode/Q16/timeout） | 6 |
+| Log | `[181, 200]` | A-ULP 日志（ring/full/level/facility/persist/magic） | 6 |
+| Object | `[201, 220]` | 对象/句柄（handle/refcount/type/gone） | 4 |
+| Syscall | `[221, 240]` | syscall 面（number/args/disabled/ABI） | 4 |
+| Reserved | `[241, 300]` | 预留 | — |
 
 ### 4.3 Fault 码空间分配
 
@@ -573,7 +579,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 
 [DSL] 降级时的最小可运行子集包括：
 
-- **错误码**：仅保留 38 个 POSIX 码 + 1 个 `AIRY_ECFGVERSION`
+- **错误码**：38 个 POSIX 码以 `AIRY_DSL_*` 别名映射到 5 核心码（EINVAL/ENOMEM/EBUSY/ECANCELED/EAGAIN）+ 1 个 `AIRY_ECFGVERSION`
 - **IPC 消息头**：Layout C v4 128B 消息头（`capability_badge=0`，跳过 C-S9 Badge 校验，H6）
 - **调度**：EEVDF 默认调度（不依赖 SCHED_DEADLINE / SCHED_FIFO 配置）
 - **日志**：printk_safe 原生路径（不依赖 Ring Buffer）
@@ -585,7 +591,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 
 ### 9.5 [DSL] 错误码空间（v1.0.1 新增）
 
-[DSL] 错误码空间 `[-201, -300]`，详见 [30-interfaces/08-sc-error-contract.md §2.6](../30-interfaces/08-sc-error-contract.md)。
+[DSL] 模式下 38 个 POSIX 码以 `AIRY_DSL_*` 别名折叠到 5 核心码（EINVAL/ENOMEM/EBUSY/ECANCELED/EAGAIN，另含 EEXIST/ENOTSUP 透传），详见 [30-interfaces/08-sc-error-contract.md §2.6](../30-interfaces/08-sc-error-contract.md)。
 
 ---
 
@@ -600,7 +606,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 > - IPC（v1.0.1 升级）：Capability Folding 单平面架构——io_uring `IORING_OP_URING_CMD` + registered buffer + mmap + fastpath C-S9 Badge 内联校验，不使用 page flipping，无双平面、无独立 capability syscall
 > - 安全：纯 C LSM 模块（对齐 openEuler），不使用 BPF LSM；Badge 校验是 fastpath 内联（H5）
 > - 日志内存：alloc_pages(GFP_KERNEL) + mmap，不使用 DMA 一致性内存
-> - [SC] 物理宿主：`kernel/include/uapi/linux/airymax/`，共 10 个头文件
+> - [SC] 物理宿主：`kernel/include/uapi/linux/airymax/`，共 12 个头文件
 >
 > **v1.0.1 Capability Folding 决策权威声明**（A-IPC 第一块基石）：
 > - 6 条硬约束 H1-H6 不可妥协（详见 §8.2）

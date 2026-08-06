@@ -57,7 +57,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 
 | 子仓 | 系统调用 | IPC 协议 | SDK API | 编码规范 | [SC] 共享契约 |
 |------|---------|---------|---------|---------|--------------|
-| kernel | `AIRY_SYS_TASK_*` / `IPC_*` / `ROVOL_*` / `SCHED_*` / `CAP_*` / `CLT_*` | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/uapi/linux/airymax/`（10 个头文件） |
+| kernel | `AIRY_SYS_TASK_*` / `IPC_*` / `ROVOL_*` / `SCHED_*` / `CAP_*` / `CLT_*` | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/uapi/linux/airymax/`（12 个头文件） |
 | services | 通过系统调用 + IPC | 128B 消息头用户态 + 4 通信原语 | daemon 客户端 | C 风格 + 日志 | `#include <airymax/*.h>` 引用 |
 | security | `AIRY_SYS_CAP_*` / `LSM_*` | capability 携带 | SafetyClient | C 风格 + 安全编码 | `lsm_types.h` / `security_types.h` |
 | memory | `AIRY_SYS_ROVOL_*` / `CXL_*` / `MGLRU_*` | MemoryRovol 迁移消息 | MemoryClient（嵌套） | C 风格 + 内存安全 | `memory_types.h` |
@@ -76,7 +76,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 
 - **显式契约**: 所有接口以 C 头文件 + Doxygen 注释形式给出显式契约，包括参数语义、返回值、错误码、并发约束。
 - **ABI 稳定**: 系统调用编号、IPC 消息头布局、capability 令牌格式在 MAJOR 版本内保持 ABI 稳定，破坏性变更必须升级 MAJOR 版本。
-- **版本协商**: IPC 消息头携带 `version` 字段（当前 0x0100），支持协议版本协商。
+- **版本协商**: 128B IPC 消息头**无 `version` 字段**（Layout C v4，见 [02-ipc-protocol.md](02-ipc-protocol.md) §2.1）；协议版本协商为 v2.0+ 预留（见 [04-ipc-versioning.md](../160-compatibility/04-ipc-versioning.md)）。
 - **错误码对齐**: 全部接口错误码对齐 `include/uapi/linux/airymax/error.h`（[SC] SSoT），与 agentrt 同源且部分代码共享（IRON-9 v3）。
 - **并发约束显式**: 所有接口在 Doxygen 注释中显式声明线程安全性与可重入性（thread-safe / reentrant / async-signal-safe）。
 
@@ -125,7 +125,7 @@ agentrt-linux 接口与 agentrt 接口遵循 IRON-9 v3"四层共享模型"原则
 | capability | 应用权限模型 | seL4 风格 capability 系统 + 纯 C LSM | 同源语义，OS 级升级 | [SC]（`security_types.h`）+ [IND] |
 | 调度 | MicroCoreRT 用户态调度 | sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF + seL4 MCS 映射） | 同源语义，内核态实现 | [SC]（`sched.h`）+ [IND] |
 | 错误码 | `AIRY_E*` 用户态 | `AIRY_E*` + `AIRY_FAULT_*` 内核态 | 语义同源，内核态扩展 Fault | [SC]（`error.h`） |
-| 日志 | `LOG_*` 用户态 | `LOG_*` + 128B Ring Buffer 内核态 | 语义同源，内核态扩展 Ring | [SC]（`log_types.h`） |
+| 日志 | `AIRY_LOG_*` 用户态 | `AIRY_LOG_*` + 128B Ring Buffer 内核态 | 语义同源，内核态扩展 Ring | [SC]（`log_types.h`） |
 | 记忆 | MemoryRovol 用户态 | MemoryRovol 内核态 | 同源语义，内核态升级 | [SC]（`memory_types.h`） |
 | 认知循环 | CoreLoopThree 用户态 | CoreLoopThree kthread | 同源语义，内核态加速 | [SC]（`cognition_types.h`） |
 
@@ -148,7 +148,7 @@ agentrt-linux 接口采用语义化版本 + ABI 兼容承诺的演进策略：
 - **MAJOR 版本**: 不兼容的接口变更，需重新评审全部契约，触发 K-2 契约重签。
 - **MINOR 版本**: 向后兼容的新增接口（新系统调用编号、新 IPC payload 类型），不影响既有调用方。
 - **PATCH 版本**: 缺陷修复与文档完善，不改变契约。
-- **IPC 协商**: 接收方读取消息头 `version` 字段，若版本高于本端支持则返回 `AIRY_ENOTSUP`，由发送方降级重试。
+- **IPC 协商**: 消息头无 `version` 字段，版本一致性由 [SC] 双端 CI 逐字节校验保证；v2.0+ 主版本变更时启用版本协商（见 [04-ipc-versioning.md](../160-compatibility/04-ipc-versioning.md)）。
 - **废弃流程**: 废弃接口保留 2 个 MAJOR 版本，标注 `@deprecated` 并提供迁移指引，期满后移除。
 
 接口变更统一在 `kernel/include/uapi/` 头文件中体现，并通过接口评审（API Review）把关，确保与 8 子仓设计文档（[20-modules/README.md](../20-modules/README.md)）一致。

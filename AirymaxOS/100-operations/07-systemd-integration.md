@@ -20,7 +20,7 @@ AirymaxOS 12 个系统 daemon 统一由 systemd 管理生命周期。systemd 集
 3. **健康监控**：通过 `Type=notify` + `WatchdogSec=` 实现 daemon 活性检测。
 4. **资源隔离**：通过 `MemoryMax=`/`CPUQuota=`/`TasksMax=` 限制每个 daemon 资源。
 5. **故障恢复**：通过 `Restart=`/`RestartSec=`/`StartLimitBurst=` 控制故障恢复策略。
-6. **统一启动**：通过 `airy-os.target` 聚合所有 daemon，支持一键启动 / 停止整个 AirymaxOS。
+6. **统一启动**：通过 `agentrt.target` 聚合所有 daemon，支持一键启动 / 停止整个 AirymaxOS。
 
 ### 1.2 与 A-ULS 模块的关系
 
@@ -41,7 +41,7 @@ systemd 提供基础的进程级监管，macro_d 提供业务级监管，两者�
 
 - **sched_tac（不使用 sched_ext）**：通过 systemd 的 `IOSchedulingClass=`/`IOSchedulingPriority=` 控制 IO 调度，不依赖 BPF。
 - **纯 C LSM**：systemd 单元的 `ProtectSystem=`/`ProtectHome=`/`PrivateDevices=` 等安全选项与 LSM 协同。
-- **IRON-9 v3 [DSL] 层**：降级模式通过切换 systemd target 实现（`airy-dsl.target`）。
+- **IRON-9 v3 [DSL] 层**：降级模式通过切换 systemd target 实现（`agentrt-dsl.target`）。
 - **io_uring**：systemd 252+ 支持 `LimitNOFILE=` 等 io_uring 所需资源限制。
 
 ---
@@ -54,20 +54,22 @@ AirymaxOS 共有 14 个 systemd 单元（12 daemon + 1 target + 1 降级 target�
 
 | 单元名 | 类型 | 功能 | 启动顺序 |
 |--------|------|------|----------|
-| `airy-os.target` | target | 聚合所有 daemon | 最后 |
-| `airy-dsl.target` | target | 降级模式聚合 | 仅 DSL 时 |
-| `macro_d.service` | service | 统一监管 | 1 |
-| `logger_d.service` | service | 统一日志 | 2 |
-| `config_d.service` | service | 统一配置 | 2 |
-| `gateway_d.service` | service | 网关 | 3 |
-| `sched_d.service` | service | 调度 | 3 |
-| `vfs_d.service` | service | 文件系统 | 3 |
-| `net_d.service` | service | 网络 | 3 |
-| `mem_d.service` | service | 内存 | 3 |
-| `cogn_d.service` | service | 认知 | 4 |
-| `sec_d.service` | service | 安全 | 3 |
-| `audit_d.service` | service | 审计聚合 | 4 |
-| `dev_d.service` | service | 设备管理 | 4 |
+| `agentrt.target` | target | 聚合所有 daemon | 最后 |
+| `agentrt-dsl.target` | target | 降级模式聚合 | 仅 DSL 时 |
+| `agentrt-gateway.service` | service | 网关 | 1 |
+| `agentrt-cogn.service` | service | 认知 | 2 |
+| `agentrt-dev.service` | service | 设备管理 | 3 |
+| `agentrt-sched.service` | service | 调度 | 4 |
+| `agentrt-macro-superv.service` | service | 统一监管 | 5 |
+| `agentrt-audit.service` | service | 审计聚合 | 6 |
+| `agentrt-net.service` | service | 网络 | 7 |
+| `agentrt-mem.service` | service | 内存 | 8 |
+| `agentrt-sec.service` | service | 安全 | 9 |
+| `agentrt-logger.service` | service | 统一日志 | 10 |
+| `agentrt-vfs.service` | service | 文件系统 | 11 |
+| `agentrt-config.service` | service | 统一配置 | 12 |
+
+> **启动顺序**：与 [01-deployment.md §13.4.1](01-deployment.md) 依赖排序表一致（分层启动，编号即 `After=` 顺序）。
 
 ### 2.2 单元文件位置
 
@@ -79,30 +81,30 @@ AirymaxOS 共有 14 个 systemd 单元（12 daemon + 1 target + 1 降级 target�
 
 ---
 
-## 3. macro_d.service
+## 3. agentrt-macro-superv.service
 
 ### 3.1 单元文件
 
 ```ini
-# /usr/lib/systemd/system/macro_d.service
+# /usr/lib/systemd/system/agentrt-macro-superv.service
 [Unit]
 Description=AirymaxOS Unified Supervision Daemon (A-ULS)
 Documentation=man:macro_d(8)
 After=systemd-journald.service
-Before=logger_d.service config_d.service
+Before=agentrt-logger.service agentrt-config.service
 Requires=systemd-journald.service
-PartOf=airy-os.target
+PartOf=agentrt.target
 
 [Service]
 Type=notify
 NotifyAccess=main
-ExecStart=/usr/sbin/macro_d --config=/etc/airy/daemons/macro_d.conf
+ExecStart=/usr/sbin/macro_d --config=/etc/agentrt/daemons/macro_d.conf
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1s
 StartLimitBurst=3
 StartLimitIntervalSec=300
-WatchdogSec=10
+WatchdogSec=30
 TimeoutStartSec=30
 TimeoutStopSec=15
 KillMode=mixed
@@ -140,7 +142,7 @@ SyslogIdentifier=macro_d
 LogLevelMax=info
 
 [Install]
-WantedBy=airy-os.target
+WantedBy=agentrt.target
 ```
 
 ### 3.2 关键参数说明
@@ -149,13 +151,13 @@ WantedBy=airy-os.target
 - **Restart=always**：进程退出后总是重启（无论退出码）。
 - **RestartSec=1s**：重启间隔 1 秒，避免雪崩。
 - **StartLimitBurst=3 / StartLimitIntervalSec=300**：5 分钟内最多重启 3 次，超过则进入 failed 状态，由 audit_d 触发 P0 事件。
-- **WatchdogSec=10**：macro_d 每 5 秒发送 `sd_notify("WATCHDOG=1")`，超过 10 秒未收到则 systemd 强制重启。
+- **WatchdogSec=30**：macro_d 每 5 秒发送 `sd_notify("WATCHDOG=1")`，超过 10 秒未收到则 systemd 强制重启。
 - **KillMode=mixed**：主进程收到 SIGTERM，子进程收到 SIGKILL，确保干净退出。
 - **MemoryMax=512M**：硬限制，超过则 OOM kill。
 - **MemoryHigh=400M**：软限制，超过则触发回收。
 - **CPUQuota=200%**：最多使用 2 个 CPU。
 - **TasksMax=512**：进程+线程数上限。
-- **ProtectSystem=strict**：文件系统只读（除 `/var/lib/airy/` 等显式可写目录）。
+- **ProtectSystem=strict**：文件系统只读（除 `/var/lib/agentrt/` 等显式可写目录）。
 - **CapabilityBoundingSet**：限制 capability 集，仅保留监管所需的 `CAP_SYS_PTRACE`/`CAP_KILL`。
 
 ### 3.3 sd_notify 集成
@@ -173,29 +175,29 @@ macro_d 在以下事件中调用 sd_notify：
 
 ---
 
-## 4. logger_d.service
+## 4. agentrt-logger.service
 
 ### 4.1 单元文件
 
 ```ini
-# /usr/lib/systemd/system/logger_d.service
+# /usr/lib/systemd/system/agentrt-logger.service
 [Unit]
 Description=AirymaxOS Unified Log Processing System (A-ULP)
 Documentation=man:logger_d(8)
-After=macro_d.service
-Requires=macro_d.service
-PartOf=airy-os.target
+After=agentrt-macro-superv.service
+Requires=agentrt-macro-superv.service
+PartOf=agentrt.target
 
 [Service]
 Type=notify
 NotifyAccess=main
-ExecStart=/usr/sbin/logger_d --config=/etc/airy/daemons/logger_d.conf
+ExecStart=/usr/sbin/logger_d --config=/etc/agentrt/daemons/logger_d.conf
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=1s
 StartLimitBurst=5
 StartLimitIntervalSec=300
-WatchdogSec=15
+WatchdogSec=30
 TimeoutStartSec=20
 TimeoutStopSec=10
 KillMode=control-group
@@ -213,7 +215,7 @@ LimitNOFILE=131072
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-ReadWritePaths=/var/log/airy /var/lib/airy/log
+ReadWritePaths=/var/log/agentrt /var/lib/agentrt/log
 NoNewPrivileges=yes
 CapabilityBoundingSet=
 AmbientCapabilities=
@@ -221,37 +223,37 @@ AmbientCapabilities=
 SyslogIdentifier=logger_d
 
 [Install]
-WantedBy=airy-os.target
+WantedBy=agentrt.target
 ```
 
 ### 4.2 关键差异
 
-- **WatchdogSec=15**：日志处理可能涉及大量 IO，watchdog 周期放宽到 15 秒。
+- **WatchdogSec=30**：与 OS-OPS-026 强制值一致；日志处理涉及大量 IO，心跳上报间隔保持 15 秒，超时 30 秒 systemd 自动重启。
 - **MemoryMax=1G**：Ring Buffer 占用较大，内存上限高于 macro_d。
 - **LimitNOFILE=131072**：支持大量日志文件并发写入。
-- **ReadWritePaths**：仅 `/var/log/airy` 与 `/var/lib/airy/log` 可写。
+- **ReadWritePaths**：仅 `/var/log/agentrt` 与 `/var/lib/agentrt/log` 可写。
 - **CapabilityBoundingSet=**（空）：logger_d 不需要任何 capability，最小权限原则。
 
 ---
 
-## 5. config_d.service
+## 5. agentrt-config.service
 
 ### 5.1 单元文件
 
 ```ini
-# /usr/lib/systemd/system/config_d.service
+# /usr/lib/systemd/system/agentrt-config.service
 [Unit]
 Description=AirymaxOS Unified Configuration Subsystem (A-UCS)
 Documentation=man:config_d(8)
-After=macro_d.service
-Requires=macro_d.service
-Before=gateway_d.service sched_d.service vfs_d.service net_d.service mem_d.service cogn_d.service sec_d.service audit_d.service dev_d.service
-PartOf=airy-os.target
+After=agentrt-macro-superv.service
+Requires=agentrt-macro-superv.service
+Before=agentrt-gateway.service agentrt-sched.service agentrt-vfs.service agentrt-net.service agentrt-mem.service agentrt-cogn.service agentrt-sec.service agentrt-audit.service agentrt-dev.service
+PartOf=agentrt.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/sbin/config_d --load --config=/etc/airy/airy.conf
+ExecStart=/usr/sbin/config_d --load --config=/etc/agentrt/airy.conf
 ExecReload=/usr/sbin/config_d --reload
 ExecStop=/bin/true
 
@@ -266,13 +268,13 @@ TasksMax=128
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-ReadWritePaths=/etc/airy /var/lib/airy/config
+ReadWritePaths=/etc/agentrt /var/lib/agentrt/config
 NoNewPrivileges=yes
 
 SyslogIdentifier=config_d
 
 [Install]
-WantedBy=airy-os.target
+WantedBy=agentrt.target
 ```
 
 ### 5.2 关键差异
@@ -296,14 +298,14 @@ gateway_d / sched_d / vfs_d / net_d / mem_d / cogn_d / sec_d / audit_d / dev_d �
 [Unit]
 Description=AirymaxOS <功能> Daemon (<模块>)
 Documentation=man:<daemon>(8)
-After=macro_d.service logger_d.service config_d.service
-Requires=macro_d.service logger_d.service config_d.service
-PartOf=airy-os.target
+After=agentrt-macro-superv.service agentrt-logger.service agentrt-config.service
+Requires=agentrt-macro-superv.service agentrt-logger.service agentrt-config.service
+PartOf=agentrt.target
 
 [Service]
 Type=notify
 NotifyAccess=main
-ExecStart=/usr/sbin/<daemon> --config=/etc/airy/daemons/<daemon>.conf
+ExecStart=/usr/sbin/<daemon> --config=/etc/agentrt/daemons/<daemon>.conf
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=2s
@@ -335,40 +337,42 @@ AmbientCapabilities=<ambient>
 SyslogIdentifier=<daemon>
 
 [Install]
-WantedBy=airy-os.target
+WantedBy=agentrt.target
 ```
 
 ### 6.2 各 daemon 参数差异
 
 | Daemon | WatchdogSec | MemoryMax | CPUQuota | TasksMax | SupplementaryGroups | CapabilityBoundingSet |
 |--------|-------------|-----------|----------|----------|----------------------|----------------------|
-| gateway_d | 10s | 1G | 200% | 1024 | airy-net | CAP_NET_BIND_SERVICE CAP_NET_RAW |
-| sched_d | 5s | 256M | 100% | 128 | airy-sched | CAP_SYS_NICE CAP_SYS_RESOURCE |
-| vfs_d | 15s | 1G | 100% | 512 | airy-vfs | CAP_DAC_OVERRIDE |
-| net_d | 10s | 1G | 200% | 1024 | airy-net | CAP_NET_ADMIN CAP_NET_RAW |
-| mem_d | 10s | 2G | 100% | 256 | airy-memory | (无) |
+| gateway_d | 30s | 1G | 200% | 1024 | airy-net | CAP_NET_BIND_SERVICE CAP_NET_RAW |
+| sched_d | 30s | 256M | 100% | 128 | airy-sched | CAP_SYS_NICE CAP_SYS_RESOURCE |
+| vfs_d | 30s | 1G | 100% | 512 | airy-vfs | CAP_DAC_OVERRIDE |
+| net_d | 30s | 1G | 200% | 1024 | airy-net | CAP_NET_ADMIN CAP_NET_RAW |
+| mem_d | 30s | 2G | 100% | 256 | airy-memory | (无) |
 | cogn_d | 30s | 4G | 400% | 256 | airy-cogn | (无) |
-| sec_d | 5s | 512M | 100% | 256 | airy-security airy-alert | CAP_MAC_ADMIN CAP_SYSLOG CAP_SETUID |
-| audit_d | 15s | 1G | 200% | 512 | airy-monitor airy-backup | (无) |
+| sec_d | 30s | 512M | 100% | 256 | airy-security airy-alert | CAP_MAC_ADMIN CAP_SYSLOG CAP_SETUID |
+| audit_d | 30s | 1G | 200% | 512 | airy-monitor airy-backup | (无) |
 | dev_d | 30s | 256M | 50% | 128 | airy-dev | CAP_SYS_ADMIN CAP_MKNOD |
+
+> **WatchdogSec 统一为 30s**（OS-OPS-026 强制值，见 [01-deployment.md §13.4.4](01-deployment.md)）：所有 12 daemons 的 `WatchdogSec` 必须为 `30s`，daemon 通过 `sd_notify(WATCHDOG=1, "READY=1")` 每 15 秒上报心跳；30 秒无心跳 systemd 自动重启并输出 `DAEMON_E_WATCHDOG` 诊断码。
 
 ### 6.3 ReadWritePaths 配置
 
 | Daemon | ReadWritePaths |
 |--------|----------------|
-| gateway_d | `/var/lib/airy/gateway` |
-| sched_d | `/var/lib/airy/sched` |
-| vfs_d | `/var/lib/airy/vfs` `/var/lib/airy/agents` |
-| net_d | `/var/lib/airy/net` |
-| mem_d | `/var/lib/airy/memory` `/var/lib/airy/agents` |
-| cogn_d | `/var/lib/airy/cogn` |
-| sec_d | `/etc/airy/keys` `/var/log/airy` `/var/lib/airy/security` |
-| audit_d | `/var/lib/airy/monitor` `/var/lib/airy/incidents` `/var/lib/airy/backup` `/var/lib/airy/alerts` |
-| dev_d | `/var/lib/airy/devices` `/dev` |
+| gateway_d | `/var/lib/agentrt/gateway` |
+| sched_d | `/var/lib/agentrt/sched` |
+| vfs_d | `/var/lib/agentrt/vfs` `/var/lib/agentrt/agents` |
+| net_d | `/var/lib/agentrt/net` |
+| mem_d | `/var/lib/agentrt/memory` `/var/lib/agentrt/agents` |
+| cogn_d | `/var/lib/agentrt/cogn` |
+| sec_d | `/etc/agentrt/keys` `/var/log/agentrt` `/var/lib/agentrt/security` |
+| audit_d | `/var/lib/agentrt/monitor` `/var/lib/agentrt/incidents` `/var/lib/agentrt/backup` `/var/lib/agentrt/alerts` |
+| dev_d | `/var/lib/agentrt/devices` `/dev` |
 
 ### 6.4 特殊 daemon 说明
 
-#### 6.4.1 sec_d.service
+#### 6.4.1 agentrt-sec.service
 
 sec_d 因安全职责特殊，需额外配置：
 
@@ -385,7 +389,7 @@ IOSchedulingClass=realtime
 IOSchedulingPriority=1
 ```
 
-#### 6.4.2 audit_d.service
+#### 6.4.2 agentrt-audit.service
 
 audit_d 是聚合层，需较高资源：
 
@@ -406,76 +410,67 @@ ExecStartPost=/usr/sbin/audit_d --restore
 ### 7.1 启动依赖图
 
 ```
-                    systemd-journald.service
-                              │
-                              ▼
-                       macro_d.service
-                       │           │
-              ┌────────┘           └────────┐
-              ▼                              ▼
-       logger_d.service        config_d.service
-              │                              │
-              └──────────────┬───────────────┘
-                             │
-       ┌─────────────────────┼─────────────────────┐
-       ▼                     ▼                     ▼
-  sec_d.service        sched_d.service         net_d.service
-       │                     │                     │
-       ▼                     ▼                     ▼
-  vfs_d.service         mem_d.service         gateway_d.service
-                             │
-                             ▼
-                       cogn_d.service
-                             │
-                             ▼
-                       audit_d.service
-                             │
-                             ▼
-                        dev_d.service
-                             │
-                             ▼
-                      airy-os.target
+启动分层（与 01-deployment.md §13.4.1 依赖排序表一致，编号即 After= 顺序）:
+
+  L1 (1)  gateway_d ──► network-online.target
+             │
+     ┌───────┼───────────┐
+     ▼       ▼           ▼
+  L2 (2) cogn_d   (3) dev_d   (4) sched_d
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+  L3 (5) macro_d   (6) audit_d   (7) net_d   (8) mem_d
+                          │
+                 ┌────────┼────────┐
+                 ▼        ▼        ▼
+  L4 (9) sec_d   (10) logger_d   (7) net_d / (8) mem_d 的 Wants 依赖
+                 │
+                 ▼
+  L5 (11) vfs_d ──► (12) config_d
+
+  agentrt.target ◄── 所有 daemon WantedBy
 ```
 
-### 7.2 依赖矩阵
+### 7.2 依赖矩阵（对齐 01-deployment.md §13.4.1）
 
-| 单元 | Requires | After | Before |
-|------|----------|-------|--------|
-| macro_d | systemd-journald | systemd-journald | logger_d, config_d |
-| logger_d | macro_d | macro_d | (业务 daemon) |
-| config_d | macro_d | macro_d | (业务 daemon) |
-| sec_d | macro_d, logger_d, config_d | macro_d, logger_d, config_d | vfs_d, mem_d |
-| sched_d | macro_d, logger_d, config_d | macro_d, logger_d, config_d | mem_d, cogn_d |
-| net_d | macro_d, logger_d, config_d | macro_d, logger_d, config_d | gateway_d |
-| vfs_d | sec_d | sec_d | mem_d |
-| mem_d | sec_d, sched_d | sec_d, sched_d | cogn_d |
-| gateway_d | net_d | net_d | (无) |
-| cogn_d | mem_d | mem_d | audit_d |
-| audit_d | cogn_d | cogn_d | dev_d |
-| dev_d | audit_d | audit_d | (无) |
+| 序号 | daemon | systemd unit | After= | Requires= | Wants= |
+|------|--------|--------------|--------|-----------|--------|
+| 1 | `gateway_d` | `agentrt-gateway.service` | `network-online.target` | — | — |
+| 2 | `cogn_d` | `agentrt-cogn.service` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 3 | `dev_d` | `agentrt-dev.service` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 4 | `sched_d` | `agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-gateway.service` | — |
+| 5 | `macro_d` | `agentrt-macro-superv.service` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 6 | `audit_d` | `agentrt-audit.service` | `agentrt-sched.service` | `agentrt-sched.service` | `agentrt-gateway.service` |
+| 7 | `net_d` | `agentrt-net.service` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 8 | `mem_d` | `agentrt-mem.service` | `agentrt-gateway.service agentrt-sched.service` | `agentrt-gateway.service` | `agentrt-sched.service` |
+| 9 | `sec_d` | `agentrt-sec.service` | `agentrt-audit.service` | `agentrt-audit.service` | — |
+| 10 | `logger_d` | `agentrt-logger.service` | `agentrt-audit.service` | `agentrt-audit.service` | — |
+| 11 | `vfs_d` | `agentrt-vfs.service` | `agentrt-net.service agentrt-sec.service` | — | `agentrt-net.service agentrt-sec.service` |
+| 12 | `config_d` | `agentrt-config.service` | `agentrt-vfs.service` | — | `agentrt-vfs.service` |
 
 ### 7.3 PartOf 关系
 
-所有 daemon 单元均声明 `PartOf=airy-os.target`，停止 target 时所有 daemon 一并停止：
+所有 daemon 单元均声明 `PartOf=agentrt.target`，停止 target 时所有 daemon 一并停止：
 
 ```bash
-systemctl stop airy-os.target   # 停止所有 AirymaxOS daemon
-systemctl start airy-os.target  # 启动所有 AirymaxOS daemon
-systemctl restart airy-os.target  # 重启所有 AirymaxOS daemon
+systemctl stop agentrt.target   # 停止所有 AirymaxOS daemon
+systemctl start agentrt.target  # 启动所有 AirymaxOS daemon
+systemctl restart agentrt.target  # 重启所有 AirymaxOS daemon
 ```
 
 ---
 
 ## 8. systemd target
 
-### 8.1 airy-os.target
+### 8.1 agentrt.target
 
 ```ini
-# /usr/lib/systemd/system/airy-os.target
+# /usr/lib/systemd/system/agentrt.target
 [Unit]
 Description=AirymaxOS Complete Stack
-Documentation=https://docs.airy-os.local/100-operations/07-systemd-integration
-Requires=macro_d.service logger_d.service config_d.service gateway_d.service sched_d.service vfs_d.service net_d.service mem_d.service cogn_d.service sec_d.service audit_d.service dev_d.service
+Documentation=https://docs.agentrt.local/100-operations/07-systemd-integration
+Requires=agentrt-macro-superv.service agentrt-logger.service agentrt-config.service agentrt-gateway.service agentrt-sched.service agentrt-vfs.service agentrt-net.service agentrt-mem.service agentrt-cogn.service agentrt-sec.service agentrt-audit.service agentrt-dev.service
 After=network-online.target
 AllowIsolate=yes
 
@@ -486,20 +481,20 @@ WantedBy=multi-user.target
 启用方式：
 
 ```bash
-systemctl enable airy-os.target
-systemctl start airy-os.target
+systemctl enable agentrt.target
+systemctl start agentrt.target
 ```
 
-### 8.2 airy-dsl.target
+### 8.2 agentrt-dsl.target
 
 降级模式专用 target，仅启动最小可运行子集：
 
 ```ini
-# /usr/lib/systemd/system/airy-dsl.target
+# /usr/lib/systemd/system/agentrt-dsl.target
 [Unit]
 Description=AirymaxOS Degraded Service Layer (DSL)
-Requires=macro_d.service logger_d.service config_d.service sec_d.service audit_d.service mem_d.service
-Conflicts=airy-os.target
+Requires=agentrt-macro-superv.service agentrt-logger.service agentrt-config.service agentrt-sec.service agentrt-audit.service agentrt-mem.service
+Conflicts=agentrt.target
 AllowIsolate=yes
 
 [Install]
@@ -509,18 +504,18 @@ WantedBy=multi-user.target
 切换到降级模式：
 
 ```bash
-systemctl isolate airy-dsl.target
+systemctl isolate agentrt-dsl.target
 ```
 
 退出降级模式：
 
 ```bash
-systemctl isolate airy-os.target
+systemctl isolate agentrt.target
 ```
 
 ### 8.3 target 切换语义
 
-- `airy-os.target` ↔ `airy-dsl.target` 互斥（`Conflicts=`）。
+- `agentrt.target` ↔ `agentrt-dsl.target` 互斥（`Conflicts=`）。
 - 切换时 systemd 自动停止不在新 target 中的单元，启动新 target 中的单元。
 - macro_d 监听 target 切换事件，触发相应的业务级降级/恢复逻辑。
 
@@ -560,15 +555,15 @@ systemctl isolate airy-os.target
 
 ```bash
 # 调整 cogn_d 内存上限到 8G
-mkdir -p /etc/systemd/system/cogn_d.service.d
-cat > /etc/systemd/system/cogn_d.service.d/memory.conf << 'EOF'
+mkdir -p /etc/systemd/system/agentrt-cogn.service.d
+cat > /etc/systemd/system/agentrt-cogn.service.d/memory.conf << 'EOF'
 [Service]
 MemoryMax=8G
 MemoryHigh=6G
 EOF
 
 systemctl daemon-reload
-systemctl restart cogn_d.service
+systemctl restart agentrt-cogn.service
 ```
 
 ### 9.4 OOM 处理
@@ -753,7 +748,7 @@ systemd 的重启策略与事件响应的自动重启互补，详见 [05-inciden
 
 ### 15.1 v0.1.1 → v1.0.1 变更
 
-- 新增 `airy-dsl.target`，支持降级模式快速切换。
+- 新增 `agentrt-dsl.target`，支持降级模式快速切换。
 - 所有 daemon 增加 `MemoryHigh` 软限制，提前触发回收。
 - sec_d 单元改为 `ProtectSystem=no`，满足全系统监控需求。
 - 新增 `OnFailure=airy-incident@%n.service` 级联机制。
@@ -761,7 +756,7 @@ systemd 的重启策略与事件响应的自动重启互补，详见 [05-inciden
 ### 15.2 后续规划（v1.1.0）
 
 - 支持 systemd portable services（便携式单元），便于跨节点部署。
-- 引入 systemd-cryptsetup 加密 /var/lib/airy/。
+- 引入 systemd-cryptsetup 加密 /var/lib/agentrt/。
 - 集成 systemd-homed 管理运维用户。
 
 ---

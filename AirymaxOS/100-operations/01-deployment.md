@@ -165,7 +165,7 @@ initramfs 承载早期用户态（内核启动后、根文件系统挂载前运�
 Kickstart 是 agentrt-linux 自动化安装的核心机制，文件由命令段、包段、脚本段构成：
 
 ```kickstart
-# agentrt-linux-0.1.1-aarch64.ks
+# agentrt-linux-v1.0.1-aarch64.ks
 text
 lang en_US.UTF-8
 timezone Asia/Shanghai --isUtc
@@ -282,18 +282,20 @@ agentrt 的 12 个 daemons 在 agentrt-linux 中以 systemd 服务运行，遵�
 
 | 二进制 | systemd unit | 职责 | 启动顺序 |
 |--------|--------------|------|---------|
-| `macro_d` | `agentrt-macro-superv.service` | 主监管守护进程 | 1 |
-| `logger_d` | `agentrt-logger.service` | 日志消费守护进程 | 2 |
-| `config_d` | `agentrt-config.service` | 配置管理守护进程 | 3 |
 | `gateway_d` | `agentrt-gateway.service` | 网关，对外入口（含 Agent 注册） | 1 |
-| `sched_d` | `agentrt-sched.service` | 调度守护进程 | 1 |
-| `vfs_d` | `agentrt-vfs.service` | VFS 用户态服务守护进程 | 2 |
-| `net_d` | `agentrt-net.service` | 网络策略守护进程 | 2 |
-| `mem_d` | `agentrt-mem.service` | 记忆管理守护进程 | 4 |
 | `cogn_d` | `agentrt-cogn.service` | 认知调度守护进程 | 2 |
-| `sec_d` | `agentrt-sec.service` | 安全策略守护进程 | 5 |
-| `audit_d` | `agentrt-audit.service` | 审计守护进程 | 4 |
 | `dev_d` | `agentrt-dev.service` | 设备驱动守护进程 | 3 |
+| `sched_d` | `agentrt-sched.service` | 调度守护进程 | 4 |
+| `macro_d` | `agentrt-macro-superv.service` | 主监管守护进程 | 5 |
+| `audit_d` | `agentrt-audit.service` | 审计守护进程 | 6 |
+| `net_d` | `agentrt-net.service` | 网络策略守护进程 | 7 |
+| `mem_d` | `agentrt-mem.service` | 记忆管理守护进程 | 8 |
+| `sec_d` | `agentrt-sec.service` | 安全策略守护进程 | 9 |
+| `logger_d` | `agentrt-logger.service` | 日志消费守护进程 | 10 |
+| `vfs_d` | `agentrt-vfs.service` | VFS 用户态服务守护进程 | 11 |
+| `config_d` | `agentrt-config.service` | 配置管理守护进程 | 12 |
+
+> **启动顺序**：本表与 §13.4.1 依赖排序表一致（分层启动，编号即 `After=` 顺序）。
 
 ### 8.2 daemon systemd unit 模板
 

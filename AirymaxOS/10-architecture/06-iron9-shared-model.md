@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **Airymax IRON-9 v3 跨端共享模型** 的唯一权威源（AirymaxOS 侧）。[SC] / [SS] / [IND] / [DSL] 四层定义、10 个 [SC] 头文件清单、四层模型应用归属均以本文件为唯一权威定义。
+> **单一权威源声明**：本文件是 **Airymax IRON-9 v3 跨端共享模型** 的唯一权威源（AirymaxOS 侧）。[SC] / [SS] / [IND] / [DSL] 四层定义、12 个 [SC] 头文件清单、四层模型应用归属均以本文件为唯一权威定义。
 >
 > IRON-9 v3 相比 v2 新增 **[DSL] 第四层**（降级生存层），确保 [SC] 头文件损坏/缺失时的最小可运行子集。本模型遵循 [10-unify-design.md](10-unify-design.md) 的技术选型（sched_tac + IORING_OP_URING_CMD + 纯 C LSM + alloc_pages/mmap）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 
@@ -70,7 +70,7 @@ IRON-9 v2（三层）                    IRON-9 v3（四层）
 
 ---
 
-## §2 [SC] 共享契约层：物理宿主 kernel/include/uapi/linux/airymax/，10 个头文件
+## §2 [SC] 共享契约层：物理宿主 kernel/include/uapi/linux/airymax/，12 个头文件
 
 ### 2.1 [SC] 层定义
 
@@ -84,11 +84,11 @@ IRON-9 v2（三层）                    IRON-9 v3（四层）
 - 使用内核 UAPI 类型（`__u32`/`__u16`/`__u64`/`__u8`），不使用 `uint32_t` 等 C 标准库类型
 - **禁止使用 `float` 类型**——内核态不支持浮点运算
 
-### 2.2 10 个 [SC] 头文件清单
+### 2.2 12 个 [SC] 头文件清单
 
-> **D-8 OLK 6.6 UAPI 路径对齐说明**：OLK 6.6 内核 UAPI 头文件标准路径为 `include/uapi/linux/`（参考 `include/uapi/linux/io_uring.h`、`include/uapi/linux/sched.h`）。Airymax 10 个 [SC] 共享契约头文件属用户态可见的 UAPI（agentrt 用户态与 agentrt-linux 内核双端共享），故物理宿主为 `include/uapi/linux/airymax/`。Airymax 内核内部头文件（`maintainer_types.h`/`build_types.h`/`kconfig_types.h` 等，[IND] 独立层）保留在 `include/airymax/`（非 UAPI）。
+> **D-8 OLK 6.6 UAPI 路径对齐说明**：OLK 6.6 内核 UAPI 头文件标准路径为 `include/uapi/linux/`（参考 `include/uapi/linux/io_uring.h`、`include/uapi/linux/sched.h`）。Airymax 12 个 [SC] 共享契约头文件属用户态可见的 UAPI（agentrt 用户态与 agentrt-linux 内核双端共享），故物理宿主为 `include/uapi/linux/airymax/`。Airymax 内核内部头文件（`maintainer_types.h`/`build_types.h`/`kconfig_types.h` 等，[IND] 独立层）保留在 `include/airymax/`（非 UAPI）。
 
-v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **10 个**，新增 `error.h`、`log_types.h`、`uapi_compat.h`、`lsm_types.h`：
+v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **12 个**（v1.0.1 补全 `syscall.h` / `bpf_struct_ops.h`）：
 
 | # | 头文件 | 物理路径 | 共享内容 | 关联模块 | 契约文档 |
 |---|--------|---------|---------|---------|---------|
@@ -99,9 +99,11 @@ v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **10 个**，新增 `error.
 | 5 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 接口 | 记忆 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
 | 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID + Cupolas blob 布局 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
 | 7 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 三阶段 + Thinkdual 模式 | 认知 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
-| 8 | `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.1: 4 核心 + 20 预留 = 24 槽位） | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
-| 9 | `uapi_compat.h` | `include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 | [11-sc-header-type-bridging.md](../50-engineering-standards/11-sc-header-type-bridging.md) |
-| 10 | `lsm_types.h` | `include/uapi/linux/airymax/lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | A-ULS/A-IPC | [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) |
+| 8 | `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位） | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
+| 9 | `syscall.h` | `include/uapi/linux/airymax/syscall.h` | `airy_sys_*` syscall 语义/ABI 声明 | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
+| 10 | `uapi_compat.h` | `include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 | [11-sc-header-type-bridging.md](../50-engineering-standards/11-sc-header-type-bridging.md) |
+| 11 | `lsm_types.h` | `include/uapi/linux/airymax/lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | A-ULS/A-IPC | [07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) |
+| 12 | `bpf_struct_ops.h` | `include/uapi/linux/airymax/bpf_struct_ops.h` | eBPF struct\_ops 状态机（可观测性用，非核心架构，H5 约束） | 可观测性 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
 
 ### 2.3 [SC] 头文件的 [DSL] 降级块
 
@@ -112,14 +114,16 @@ v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **10 个**，新增 `error.
 | 时期 | [SC] 数量 | 头文件 | 变化原因 |
 |------|----------|--------|---------|
 | v2 | 6 个 | memory_types/security_types/cognition_types/sched/ipc/syscalls | v2 基线 |
-| **v3** | **10 个** | v2 的 6 个 + **error.h / log_types.h / uapi_compat.h / lsm_types.h** | Unify Design 5 模块需要独立的 [SC] 契约 |
+| **v3** | **12 个** | v2 的 6 个 + **error.h / log_types.h / uapi_compat.h / lsm_types.h / syscall.h / bpf_struct_ops.h** | Unify Design 5 模块需要独立的 [SC] 契约（v1.0.1 补全 syscall.h / bpf_struct_ops.h） |
 
-v3 新增 4 个 [SC] 头文件的原因：
+v3 新增 6 个 [SC] 头文件的原因：
 
 - `error.h`：A-UEF 模块需要独立的错误码 [SC] 契约（v2 时错误码散落在 agentrt 仓库，未统一）
 - `log_types.h`：A-ULP 模块需要独立的日志类型 [SC] 契约（v2 时 128B 记录格式多处定义）
 - `uapi_compat.h`：IRON-9 三路类型桥接需要独立 [SC] 头文件
 - `lsm_types.h`：纯 C LSM（不使用 BPF LSM）需要独立的类型 [SC] 契约
+- `syscall.h`：`airy_sys_*` syscall 语义声明与 `syscalls.h` 编号表配套（v1.0.1 补全）
+- `bpf_struct_ops.h`：eBPF struct\_ops 状态同步（仅可观测性用，非核心架构，H5 约束）
 
 ---
 
@@ -206,9 +210,9 @@ A-UCS 模块的配置也属于 [SS] 层——内核侧 Kconfig/sysctl 与用户�
 
 | 维度 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
-| 错误码 | 5 子空间（300 码） | 38 个 POSIX 码 + 1 个配置码 |
+| 错误码 | 10 子空间（300 码） | 38 个 POSIX 码 → 5 核心码 + 1 个配置码 |
 | 日志 | Ring Buffer + Logger Daemon | printk 原生（仅 LOG_FATAL + LOG_ERROR） |
-| IPC | 完整 128B 消息头 + 3 操作 | 最简 128B 消息头 + 2 操作 |
+| IPC | 完整 128B 消息头 + 7 操作（0x0001-0x0011） | 最简 128B 消息头 + 2 操作（SEND/RECV） |
 | 调度 | sched_tac 三层 | EEVDF 默认 |
 | 安全 | 纯 C LSM 完整校验 | 仅 POSIX capability |
 | Fault | Fault Handler 优雅处理 | 统一 Panic |
@@ -274,9 +278,9 @@ A-UCS 模块的配置也属于 [SS] 层——内核侧 Kconfig/sysctl 与用户�
 
 | # | 校验项 | 校验方法 | 校验 workflow |
 |---|--------|---------|--------------|
-| 1 | [SC] 头文件逐字节一致 | `diff` 两端 10 个头文件 | `sc-dual-ci.yml` |
-| 2 | [SC] 数量为 10 | `ls include/uapi/linux/airymax/*.h \| wc -l == 10` | `ssot-validate.yml` |
-| 3 | 每个 [SC] 有 [DSL] 降级块 | `grep -l AIRY_SC_FALLBACK include/uapi/linux/airymax/*.h \| wc -l == 10` | `ssot-validate.yml` |
+| 1 | [SC] 头文件逐字节一致 | `diff` 两端 12 个头文件 | `sc-dual-ci.yml` |
+| 2 | [SC] 数量为 12 | `ls include/uapi/linux/airymax/*.h \| wc -l == 12` | `ssot-validate.yml` |
+| 3 | 每个 [SC] 有 [DSL] 降级块 | `grep -l AIRY_SC_FALLBACK include/uapi/linux/airymax/*.h \| wc -l == 12` | `ssot-validate.yml` |
 | 4 | IPC magic 一致 | 两端均为 `0x41524531` | `sc-dual-ci.yml` |
 | 5 | 错误码值一致 | 两端 `error.h` 逐字节相同 | `sc-dual-ci.yml` |
 | 6 | 日志 magic 一致 | 两端均为 `0x414C4F47` | `sc-dual-ci.yml` |

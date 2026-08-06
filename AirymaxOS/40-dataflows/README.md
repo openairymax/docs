@@ -27,7 +27,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 技术选型声明
 
-本目录的数据流设计以 agentrt-linux v1.0 五大技术选型为基线：
+本目录的数据流设计以 agentrt-linux v1.0.1 五大技术选型为基线：
 
 | # | 技术维度 | 选定方案 | 明确不采用的方案 | 数据流影响 |
 |---|---------|---------|----------------|---------|
@@ -118,13 +118,13 @@ agentrt-linux v1.0 **彻底废弃** `AIRY_SCHED_AGENT` 术语（2026-07-18 用�
 
 | # | 文档 | 数据流 | Unify 模块 | 核心内容 | 版本 | 状态 |
 |---|------|--------|-----------|---------|------|------|
-| 1 | [01-cognition-flow.md](01-cognition-flow.md) | 认知循环 | **A-UEF** | System 1/2 双系统 + CoreLoopThree kthread + 增量规划 + 补偿事务 | v1.0 | 维护中 |
-| 2 | [02-memory-flow.md](02-memory-flow.md) | 记忆卷载 | — | L1→L4 四层递进 + CXL 池化 + MGLRU 多代 LRU（alloc_pages + mmap）+ 遗忘机制 | v1.0 | 维护中 |
-| 3 | [03-ipc-flow.md](03-ipc-flow.md) | IPC 消息 | **A-IPC** | io_uring（IORING_OP_URING_CMD）零拷贝 + 128B 消息头 + 5 种 payload + 跨节点 IPC | v1.0 | 维护中 |
-| 4 | [04-scheduling-flow.md](04-scheduling-flow.md) | 调度 | **A-ULS** | sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 策略可插拔（**AIRY_SCHED_AGENT 已废弃**） | v1.0 | 维护中 |
-| 5 | [05-ring-buffer-logging.md](05-ring-buffer-logging.md) | 日志 Ring Buffer | **A-ULP** | 内核 trace_printk/printk → Ring Buffer → 用户态消费 + 结构化 JSON 日志 + ANSI 颜色 | v1.0 | 维护中 |
-| 6 | [06-logger-daemon-design.md](06-logger-daemon-design.md) | Logger Daemon | **A-ULP** | Logger Daemon 消费 Ring Buffer + 结构化日志输出 + 多后端持久化 | v1.0 | 维护中 |
-| 7 | [07-panic-survival-path.md](07-panic-survival-path.md) | Panic 生存 | **A-ULP + A-ULS** | 内核 Panic → printk-bridge 落盘 → Logger Daemon 持久化 → 重启恢复 | v1.0 | 维护中 |
+| 1 | [01-cognition-flow.md](01-cognition-flow.md) | 认知循环 | **A-UEF** | System 1/2 双系统 + CoreLoopThree kthread + 增量规划 + 补偿事务 | v1.0.1 | 维护中 |
+| 2 | [02-memory-flow.md](02-memory-flow.md) | 记忆卷载 | — | L1→L4 四层递进 + CXL 池化 + MGLRU 多代 LRU（alloc_pages + mmap）+ 遗忘机制 | v1.0.1 | 维护中 |
+| 3 | [03-ipc-flow.md](03-ipc-flow.md) | IPC 消息 | **A-IPC** | io_uring（IORING_OP_URING_CMD）零拷贝 + 128B 消息头 + 5 种 payload + 跨节点 IPC | v1.0.1 | 维护中 |
+| 4 | [04-scheduling-flow.md](04-scheduling-flow.md) | 调度 | **A-ULS** | sched_tac（SCHED_DEADLINE/SCHED_FIFO/EEVDF）+ 策略可插拔（**AIRY_SCHED_AGENT 已废弃**） | v1.0.1 | 维护中 |
+| 5 | [05-ring-buffer-logging.md](05-ring-buffer-logging.md) | 日志 Ring Buffer | **A-ULP** | 内核 trace_printk/printk → Ring Buffer → 用户态消费 + 结构化 JSON 日志 + ANSI 颜色 | v1.0.1 | 维护中 |
+| 6 | [06-logger-daemon-design.md](06-logger-daemon-design.md) | Logger Daemon | **A-ULP** | Logger Daemon 消费 Ring Buffer + 结构化日志输出 + 多后端持久化 | v1.0.1 | 维护中 |
+| 7 | [07-panic-survival-path.md](07-panic-survival-path.md) | Panic 生存 | **A-ULP + A-ULS** | 内核 Panic → printk-bridge 落盘 → Logger Daemon 持久化 → 重启恢复 | v1.0.1 | 维护中 |
 
 每个文档均包含：
 
@@ -193,7 +193,7 @@ agentrt-linux 数据流设计与 agentrt 数据流保持「同源且部分代码
 
 ## 9. 相关文档
 
-- [agentrt-linux 总览](../README.md)：v1.0 设计文档体系总览与技术选型声明
+- [agentrt-linux 总览](../README.md)：v1.0.1 设计文档体系总览与技术选型声明
 - [接口设计层](../30-interfaces/README.md)：syscall / A-IPC IPC / SDK / 编码规范
 - [模块设计层](../20-modules/README.md)：8 子仓 + A-ULS/A-ULP/A-UCS 详细设计
 - [架构设计层](../10-architecture/README.md)：系统架构 + Unify Design 总纲 + IRON-9 v3 + [DSL] 降级层

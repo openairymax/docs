@@ -21,6 +21,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## §1 设计目标：将 Linux 6.6 原生 printk 桥接到 Airymax Ring Buffer
 
+> **实现现状（v1.0.1）**：`kernel/kernel/log/airy_log_kern.c` 已承担 printk 桥接角色（printk 8 级 → A-ULP 5 级映射 `airy_log_kern_to_level()` 已导出），Ring Buffer（`airy_log_ring.o`）与持久化（`airy_log_persist.o`）已列入 `kernel/kernel/log/Kbuild` 构建目标但**尚未接线**（M 阶段实现，本文件为设计契约，实际写入路径以源码为准）。
+
 ### 1.1 桥接必要性
 
 Linux 6.6 原生 `printk()` 将内核日志写入 `log_buf`（`printk/log.c`），由用户态 `klogctl(2)` / `dmesg` 读取。AirymaxOS 的 A-ULP 模块统一采用 Ring Buffer + `logger_d` 架构（见 [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md)），若原生 printk 与 Airymax Ring Buffer 各自独立，会产生双轨日志：内核驱动/子系统的 printk 日志进 `log_buf`，Airymax 模块的 `LOG_*` 日志进 Ring Buffer，两者时间戳不同步、检索割裂。
@@ -60,7 +62,7 @@ Linux 6.6 printk 主路径
                 ▼
         ┌───────────────────┐
         │ 1. 128B 记录格式化  │  printk 8 级 → LOG_* 5 级映射
-        │    + caller_id     │  facility = AIRY_FAC_KERNEL
+        │    + caller_id     │  facility = AIRY_LOG_FAC_KERN
         │    + payload_len   │  填充 payload[96] + reserved
         └───────────────────┘
                 │
@@ -101,7 +103,7 @@ printk 的可变长文本需格式化为 Airymax 128B 定长记录。格式化�
 |--------------|------|------|------|------|
 | `magic` | 0 | 4B | 固定 `0x414C4F47`（'ALOG'） | [SC] log_types.h 共享 |
 | `level` | 4 | 2B | printk 8 级 → `LOG_*` 5 级映射 | 见下表 |
-| `facility` | 6 | 2B | `AIRY_FAC_KERNEL`（内核子系统） | printk 桥接统一标记为 kernel facility |
+| `facility` | 6 | 2B | `AIRY_LOG_FAC_KERN`（内核子系统） | printk 桥接统一标记为 kernel facility |
 | `timestamp_ns` | 8 | 8B | `printk` 的 `ts_nsec` | 复用 printk 已采集的纳秒时间戳，保证与 log_buf 同步 |
 | `caller_id` | 16 | 4B | `smp_processor_id()` + 上下文标识 | printk 调用所在 CPU / kmod id（SSoT 字段名：`caller_id`，**非 `cpu`**） |
 | `payload_len` | 20 | 4B | `min(text_len, 96)` | payload 有效长度（≤96），缺失则置 0 |
@@ -112,20 +114,21 @@ printk 的可变长文本需格式化为 Airymax 128B 定长记录。格式化�
 
 ### 2.4 facility 枚举对齐
 
-printk 桥接产出记录的 facility 字段必须使用 `AIRY_FAC_*` 前缀（[SC] log_types.h `airy_log_facility` 枚举），**禁止使用旧版 `LOG_FACILITY_*` 前缀**：
+printk 桥接产出记录的 facility 字段必须使用 `AIRY_LOG_FAC_*` 前缀（[SC] log_types.h 宏定义），**禁止使用旧版 `AIRY_FAC_*` / `LOG_FACILITY_*` 前缀**：
 
-| 新前缀（[SC] 权威） | 值 | 适用场景 | 旧前缀对应位（已废弃） |
-|-------------------|----|---------|---------------------|
-| `AIRY_FAC_KERNEL` | 0 | printk 桥接默认 facility | KERN 位 |
-| `AIRY_FAC_USER` | — | 用户态进程日志（保留位） | USER 位 |
-| `AIRY_FAC_AGENT` | — | Agent 运行时日志（保留位） | AGENT 位 |
-| `AIRY_FAC_SECURITY` | 6 | sec_d / 纯 C LSM 审计日志 | SEC 位 |
-| `AIRY_FAC_MEMORY` | 7 | mem_d 记忆卷载日志 | MEM 位 |
-| `AIRY_FAC_COGNITION` | 8 | cogn_d 认知循环日志 | COG 位 |
+| 宏（[SC] 权威） | 值 | 适用场景 |
+|-------------------|----|---------|
+| `AIRY_LOG_FAC_KERN` | 0x0001 | printk 桥接默认 facility |
+| `AIRY_LOG_FAC_USER` | 0x0002 | 用户态进程日志 |
+| `AIRY_LOG_FAC_DAEMON` | 0x0003 | daemon 日志（cogn_d 等） |
+| `AIRY_LOG_FAC_SECURITY` | 0x0004 | sec_d / 纯 C LSM 审计日志 |
+| `AIRY_LOG_FAC_SCHED` | 0x0005 | sched_d 调度策略日志 |
+| `AIRY_LOG_FAC_IPC` | 0x0006 | IPC 子系统日志 |
+| `AIRY_LOG_FAC_MEMORY` | 0x0007 | mem_d 记忆卷载日志 |
 
-> **旧前缀废弃说明**：原 `LOG_FACILITY_*` 前缀（含 KERN/USER/AGENT/SEC/MEM/COG 等位）已整体废弃，统一替换为 `AIRY_FAC_*` 前缀。旧前缀与新前缀的完整对应关系见 [SC] log_types.h `airy_log_facility` 枚举注释。
+> **旧前缀废弃说明**：原 `AIRY_FAC_*` / `LOG_FACILITY_*` 前缀（含 KERNEL=0/SECURITY=6/MEMORY=7/COGNITION=8 等位）已整体废弃，统一替换为 [SC] log_types.h `AIRY_LOG_FAC_*`（0x0001-0x0007，无 COGNITION 独立位——cognition 使用 DAEMON facility）。
 
-printk 桥接路径固定写入 `AIRY_FAC_KERNEL`，其他 facility 由各 daemon 直接通过 `airy_log_write()` API 写入 Ring Buffer（不经过 printk 桥接）。
+printk 桥接路径固定写入 `AIRY_LOG_FAC_KERN`，其他 facility 由各 daemon 直接通过 `airy_log_write()` API 写入 Ring Buffer（不经过 printk 桥接）。
 
 **printk 8 级 → LOG_* 5 级映射**（权威源 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) §4）：
 
@@ -161,7 +164,7 @@ static void airy_printk_to_ring(int level, u64 ts_nsec,
     /* 2. 填充 128B 记录（字段命名对齐 [SC] log_types.h §2.2） */
     rec->magic        = AIRY_LOG_MAGIC;
     rec->level        = airy_lvl;
-    rec->facility     = AIRY_FAC_KERNEL;       /* printk 桥接固定 facility */
+    rec->facility     = AIRY_LOG_FAC_KERN;       /* printk 桥接固定 facility */
     rec->timestamp_ns = ts_nsec;
     rec->caller_id    = smp_processor_id();    /* SSoT 字段名：caller_id（非 cpu） */
     rec->payload_len  = payload_len;           /* payload 有效长度 */
@@ -265,8 +268,8 @@ Panic notifier 注册优先级低于 console 刷新，确保 console 通路优�
 
 | 协作点 | 触发条件 | 桥接行为 |
 |--------|---------|---------|
-| printk 正常镜像 | 内核子系统调用 `printk()` | 写入 `AIRY_FAC_KERNEL` facility 记录，`caller_id = smp_processor_id()` |
-| sec_d 审计日志镜像 | `sec_d` 检测到 Badge 校验失败 | `sec_d` 通过 `airy_log_write()` 写入 `AIRY_FAC_SECURITY` facility 记录（不经过 printk 桥接） |
+| printk 正常镜像 | 内核子系统调用 `printk()` | 写入 `AIRY_LOG_FAC_KERN` facility 记录，`caller_id = smp_processor_id()` |
+| sec_d 审计日志镜像 | `sec_d` 检测到 Badge 校验失败 | `sec_d` 通过 `airy_log_write()` 写入 `AIRY_LOG_FAC_SECURITY` facility 记录（不经过 printk 桥接） |
 | Badge Epoch 跃迁 | `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent） | 桥接进入降级模式，仅写 log_buf 不写 Ring Buffer（避免脏数据） |
 
 ### 4.2 Badge 校验失败事件的日志记录
@@ -366,7 +369,7 @@ A-ULP（统一日志与打印系统）是 Airymax Unify Design 五模块之一�
 
 printk 桥接是 A-ULP 的**兼容层**，而非 A-ULP 的核心组件。核心组件（Ring Buffer + `logger_d`）定义了 Airymax 原生日志链路；printk 桥接负责将既有的 Linux 内核日志（驱动、子系统、第三方模块的 printk）纳入这条链路，避免双轨。这一兼容层定位决定了：
 
-- **不新增日志语义**：桥接不引入新的日志级别或 facility，仅做 printk → `LOG_*` 的格式转换（`AIRY_FAC_KERNEL`）
+- **不新增日志语义**：桥接不引入新的日志级别或 facility，仅做 printk → `LOG_*` 的格式转换（`AIRY_LOG_FAC_KERN`）
 - **可禁用**：通过 Kconfig `CONFIG_AIRY_PRINTK_BRIDGE` 可关闭桥接，系统退化为"Airymax 模块走 Ring Buffer，其余走 log_buf"的双轨模式（功能完整，仅割裂）
 - **不替代 printk**：桥接是镜像，原生 printk/log_buf/dmesg 工具链全部保留
 - **不参与 Badge 校验**：桥接路径不持有 Badge，Badge 校验由 `sec_d` 与 `logger_d` 协作完成（§4.2）
@@ -385,7 +388,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，printk 桥接涉及
 
 | 层 | 头文件/资源 | printk 桥接使用方式 |
 |----|----------|---------------------|
-| [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_FAC_KERNEL` facility |
+| [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_LOG_FAC_KERN` facility |
 | [SC] | `error.h` | `AIRY_ECAP_FROZEN`、`AIRY_ESEC_D_THROTTLED`（间接，由 `logger_d` 消费时识别） |
 | [IND] | `airy_printk_bridge.c` 实现 | 桥接 hook 注册、reserve/commit 写入 |
 | [DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块 | log_types.h 损坏时的桥接降级路径 |
@@ -399,7 +402,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，printk 桥接涉及
 | 桥接状态 | 启用（printk 镜像至 Ring Buffer） | **禁用**（桥接自动让位 printk_safe） |
 | 日志通路 | printk → log_buf + printk_hook → Ring Buffer → `logger_d` | printk → log_buf + printk_safe → console |
 | 日志级别映射 | printk 8 级 → `LOG_*` 5 级 | printk 8 级原样保留（仅 `LOG_FATAL` + `LOG_ERROR` 落地） |
-| facility 字段 | `AIRY_FAC_KERNEL` | 退化（不填充 facility） |
+| facility 字段 | `AIRY_LOG_FAC_KERN` | 退化（不填充 facility） |
 | 128B 记录格式 | 完整 8 字段（含 `caller_id` / `payload_len` / `reserved`） | 退化为 printk 原生文本（无 128B 包装） |
 | Badge 校验 | fastpath C-S9 协作 | 跳过（降级模式不可靠） |
 
@@ -422,8 +425,8 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，printk 桥接涉及
 #define LOG_INFO    LOG_ERROR
 #define LOG_WARN    LOG_ERROR
 
-/* [DSL] 仅保留 AIRY_FAC_KERNEL */
-#define AIRY_FAC_KERNEL  0
+/* [DSL] 仅保留 AIRY_LOG_FAC_KERN */
+#define AIRY_LOG_FAC_KERN  0x0001
 
 #endif /* AIRY_SC_FALLBACK */
 ```
@@ -447,15 +450,15 @@ printk 桥接是内核态组件，不直接参与 12 daemon 协作，但其产�
 
 | 协作方 | 协作方向 | 接口 | 协作内容 |
 |--------|---------|------|---------|
-| `logger_d` | 单向（消费者） | Ring Buffer mmap | `logger_d` 消费桥接产出的 128B 记录（`AIRY_FAC_KERNEL` facility） |
+| `logger_d` | 单向（消费者） | Ring Buffer mmap | `logger_d` 消费桥接产出的 128B 记录（`AIRY_LOG_FAC_KERN` facility） |
 | `sec_d` | 间接（同源） | Ring Buffer | `sec_d` 通过 `airy_log_write()` 写入 Badge 校验日志（不经过桥接），与桥接产出的 kernel 日志统一汇聚到 Ring Buffer |
-| `audit_d` | 间接（审计读取） | 落盘文件 | `audit_d` 校验审计哈希链时，桥接产出的 `AIRY_FAC_KERNEL` 记录不参与哈希链（仅 `AIRY_FAC_SECURITY` facility 参与） |
+| `audit_d` | 间接（审计读取） | 落盘文件 | `audit_d` 校验审计哈希链时，桥接产出的 `AIRY_LOG_FAC_KERN` 记录不参与哈希链（仅 `AIRY_LOG_FAC_SECURITY` facility 参与） |
 | `macro_d` | 间接（监管） | systemd | `macro_d` 通过 systemd 监管 `logger_d`，间接保证桥接产出的日志被消费 |
 | `config_d` | 间接（配置） | SIGHUP | `config_d` 修改 `logger_d.yaml` 的 `level.min` 影响 `logger_d` 消费桥接记录时的过滤策略 |
-| `cogn_d` | 间接（同源生产者） | Ring Buffer | `cogn_d` 写入 `AIRY_FAC_COGNITION` 日志，与桥接产出的 kernel 日志统一汇聚 |
-| `mem_d` | 间接（同源生产者） | Ring Buffer | `mem_d` 写入 `AIRY_FAC_MEMORY` 日志，与桥接产出的 kernel 日志统一汇聚 |
+| `cogn_d` | 间接（同源生产者） | Ring Buffer | `cogn_d` 写入 `AIRY_LOG_FAC_DAEMON` 日志，与桥接产出的 kernel 日志统一汇聚 |
+| `mem_d` | 间接（同源生产者） | Ring Buffer | `mem_d` 写入 `AIRY_LOG_FAC_MEMORY` 日志，与桥接产出的 kernel 日志统一汇聚 |
 | `gateway_d` | 间接（同源生产者） | Ring Buffer | `gateway_d` 写入跨节点 IPC 日志，与桥接产出的 kernel 日志统一汇聚 |
-| `sched_d` | 间接（同源生产者） | Ring Buffer | `sched_d` 写入 `AIRY_FAC_SCHED` 日志，与桥接产出的 kernel 日志统一汇聚 |
+| `sched_d` | 间接（同源生产者） | Ring Buffer | `sched_d` 写入 `AIRY_LOG_FAC_SCHED` 日志，与桥接产出的 kernel 日志统一汇聚 |
 | `dev_d` | 间接（同源生产者） | Ring Buffer | `dev_d` 写入设备驱动日志，与桥接产出的 kernel 日志统一汇聚 |
 | `net_d` | 间接（同源生产者） | Ring Buffer | `net_d` 写入网络栈日志，与桥接产出的 kernel 日志统一汇聚 |
 | `vfs_d` | 间接（同源生产者） | Ring Buffer | `vfs_d` 写入 VFS 日志，与桥接产出的 kernel 日志统一汇聚 |
@@ -477,7 +480,7 @@ vfs_d（VFS 用户态化）                  config_d（统一配置管理）
 
 - [10-unify-design.md](../10-architecture/10-unify-design.md) —— Airymax Unify Design 总纲（A-ULP 模块定位）
 - [05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) —— Ring Buffer reserve/commit 两阶段写入权威源
-- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式（含 `caller_id` / `payload_len` / `reserved`）+ printk 8 级映射 + `AIRY_FAC_*` 枚举 [SC] 契约
+- [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— 128B 记录格式（含 `caller_id` / `payload_len` / `reserved`）+ printk 8 级映射 + `AIRY_LOG_FAC_*` 宏 [SC] 契约
 - [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) —— IPC 字段命名规范（`caller_id` 命名 SSoT）
 - [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— `AIRY_ECAP_FROZEN` / `AIRY_ESEC_D_THROTTLED` 错误码注册
 - [12-logger-daemon-module.md](12-logger-daemon-module.md) —— `logger_d` 模块设计（日志链路下游）

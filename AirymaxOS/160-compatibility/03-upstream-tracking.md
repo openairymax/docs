@@ -133,7 +133,7 @@ agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-
 | 同步源 | https://atomgit.com/openeuler/kernel.git（分支 OLK-6.6） |
 | 同步频率 | 跟随 openEuler LTS 节奏（约每月一次） |
 | 同步范围 | 仅 `drivers/`、`arch/` 硬件适配层（排除 `kernel/sched/`、`security/` 核心子系统修改） |
-| 版本对齐 | openEuler OLK-6.6 当前同步到 6.6.144，与 AirymaxOS vanilla 6.6.144 在 `6.6.0-144` 段完全对齐 |
+| 版本对齐 | openEuler OLK-6.6 当前同步到 6.6.148，与 AirymaxOS vanilla 6.6.148 在 `6.6.0-148` 段完全对齐 |
 | IRON-7 保障 | openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值 |
 | KABI 标记剥离 | openeuler_defconfig 中引用 `__KABI_*` 宏的 CONFIG 剥离后保留功能、去除 KABI 占位 |
 
@@ -351,7 +351,7 @@ echo "After resolving, run: git cherry-pick --continue"
    ├── NVD 发布 CVE-2024-XXXX
    ├── CVSS 评分 8.5（高危）
    ├── 影响：本地提权至 root
-   └── 影响版本：Linux 6.6.x < 6.6.45
+   └── 影响版本：Linux 6.6.x < 6.6.148
         |
         v
 [第 1 天] 影响评估
@@ -387,7 +387,7 @@ echo "After resolving, run: git cherry-pick --continue"
         |
         v
 [第 7 天] 发布
-   ├── 发布 agentrt-linux-6.6.45-airymax.1
+   ├── 发布 agentrt-linux-6.6.148-airymax.1
    ├── 发布安全公告（AIRYMAX-SA-2024-XX）
    ├── 更新 CVE 影响文档
    ├── 通知用户升级
@@ -445,8 +445,8 @@ int main(void)
 ## 漏洞信息
 - CVE ID: CVE-2024-XXXX
 - CVSS 评分: 8.5（高危）
-- 影响版本: agentrt-linux < 6.6.45-airymax.1
-- 修复版本: agentrt-linux 6.6.45-airymax.1
+- 影响版本: agentrt-linux < 6.6.148-airymax.1
+- 修复版本: agentrt-linux 6.6.148-airymax.1
 
 ## 漏洞描述
 Linux 内核 netfilter 子系统存在本地提权漏洞...
@@ -456,7 +456,7 @@ Linux 内核 netfilter 子系统存在本地提权漏洞...
 本地低权限用户可利用此漏洞提权至 root...
 
 ## 修复方案
-升级至 agentrt-linux 6.6.45-airymax.1 或更高版本
+升级至 agentrt-linux 6.6.148-airymax.1 或更高版本
 
 ## 补丁来源
 上游修复 commit: a1b2c3d4
@@ -529,7 +529,7 @@ echo "=== capability 系统测试 ==="
 ./test_capability --all
 
 echo "=== ABI 兼容性测试 ==="
-./test_abi_compat --old-version=6.6.44 --new-version=6.6.45
+./test_abi_compat --old-version=6.6.147 --new-version=6.6.148
 
 echo "=== POSIX 兼容性测试 ==="
 ./test_posix_compat --suite=PCTS
@@ -601,16 +601,16 @@ agentrt-linux 采用以下版本号格式：
 <kernel_version>-airymax.<airy_release>[.<patch>]
 
 示例：
-6.6.45-airymax.1          # 基于 Linux 6.6.45 的第 1 次发布
-6.6.45-airymax.1.1         # 第 1 次发布的第 1 个补丁
-6.6.45-airymax.2           # 基于 Linux 6.6.45 的第 2 次发布
+6.6.148-airymax.1          # 基于 Linux 6.6.148 的第 1 次发布
+6.6.148-airymax.1.1         # 第 1 次发布的第 1 个补丁
+6.6.148-airymax.2           # 基于 Linux 6.6.148 的第 2 次发布
 ```
 
 ### 8.2 版本号语义
 
 | 版本段 | 含义 | 变更触发 |
 |--------|------|----------|
-| `6.6.45` | 上游 Linux stable 版本 | 上游 minor merge |
+| `6.6.148` | 上游 Linux stable 版本 | 上游 minor merge |
 | `airymax.1` | agentrt-linux 发布号 | 每次 stable 发布 |
 | `.1` | 补丁号 | 安全补丁或紧急修复 |
 
@@ -634,7 +634,7 @@ agentrt-linux 采用以下版本号格式：
 
 ```bash
 # 验证回滚机制
-./test_rollback --from=6.6.45-airymax.1 --to=6.6.44-airymax.5
+./test_rollback --from=6.6.148-airymax.1 --to=6.6.147-airymax.5
 # 预期：成功回滚，数据完整
 ```
 

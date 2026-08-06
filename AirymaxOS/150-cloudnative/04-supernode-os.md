@@ -107,7 +107,9 @@ void sched_init_numa(int offline_node)
 /**
  * @brief 超节点拓扑描述符
  * @since 1.0.1
- * @location include/uapi/linux/airymax/supernode.h
+ * @location 规划态：include/uapi/linux/airymax/ 下不存在 supernode.h
+ *           （[SC] 12 个头文件中无此文件），以下为设计草案，
+ *           待超节点子系统在 [SC] 注册后回填实际定义。
  */
 typedef struct airy_supernode_topology {
     uint32_t supernode_id;          /* 超节点 ID */
@@ -536,6 +538,8 @@ stateDiagram-v2
 ## 9. 接口定义
 
 ### 9.1 agentctl supernode 子命令
+
+> **规划态声明**：以下 `agentctl supernode *` 子命令为**规划功能**。当前 `cloudnative/agentctl/agentctl.c` 仅实现 `-h/-v/-s` 三选项（无子命令），`supernode` 子命令待后续版本落地后生效。
 
 ```bash
 # 查看超节点拓扑

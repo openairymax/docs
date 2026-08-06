@@ -487,7 +487,7 @@ relationships:
 
 ## Part II: agentrt-linux 统一错误码参考
 
-> **SSoT 声明**： 本文档的错误码规范以方案 A（POSIX errno 负值）为唯一权威方案。[SC] 共享契约层权威源文件：`include/uapi/linux/airymax/error.h`（定义 `AIRY_E*` POSIX 码 + [DSL] 降级映射）。C 内核首要体系使用 `AIRY_E*` 前缀（唯一主名称），SDK 次要体系使用 `AIRY_ERROR_*` 前缀。旧版 `AIRY_ERR_*` 前缀已废弃，新代码禁止使用。详见 [跨项目代码共享](../120-cross-project-code-sharing.md) §2.5。
+> **SSoT 声明**： 本文档的错误码规范以 [SC] `include/uapi/linux/airymax/error.h` 为唯一权威方案（`AIRY_E*` 常量正数幅值，POSIX errno 风格；调用方返回 `-AIRY_E*`）。[SC] 共享契约层权威源文件：`include/uapi/linux/airymax/error.h`（定义 `AIRY_E*` POSIX 码 + [DSL] 降级映射）。C 内核首要体系使用 `AIRY_E*` 前缀（唯一主名称），SDK 次要体系使用 `AIRY_ERROR_*` 前缀。旧版 `AIRY_ERR_*` 前缀已废弃，新代码禁止使用。详见 [跨项目代码共享](../120-cross-project-code-sharing.md) §2.5。
 
 ---
 
@@ -538,27 +538,27 @@ agentrt-linux（AirymaxOS）采用双错误码体系的核心原因在于内核�
 
 #### 2.2 内核态错误码：负整数体系
 
-内核态错误码采用负整数表示，与 Linux 内核 errno 风格一致。**所有内核态错误码的权威定义以 [SC] `include/uapi/linux/airymax/error.h` 为唯一 SSoT**（详见 [08-sc-error-contract.md](../../30-interfaces/08-sc-error-contract.md)）。本节仅给出子空间分配概览，具体宏定义、典型场景与 C-S 检查链对齐关系以 `error.h` 与该契约文档为准。
+内核态错误码以 [SC] `error.h` 为唯一 SSoT——`AIRY_E*` 常量采用**正数幅值**（POSIX errno 风格），调用方通过 `return -AIRY_E*` 产生负值错误值。**所有内核态错误码的权威定义以 [SC] `include/uapi/linux/airymax/error.h` 为唯一 SSoT**（详见 [08-sc-error-contract.md](../../30-interfaces/08-sc-error-contract.md)）。本节仅给出子空间分配概览，具体宏定义、典型场景与 C-S 检查链对齐关系以 `error.h` 与该契约文档为准。
 
-> **⚠️ P0-NEW-37 修复说明**（v1.0.1-fix）：原 §2.2.1~2.2.9 定义的 9 个错误码分段（-1~-99 通用 / -100~-199 系统 / -300~-399 IPC / -400~-499 内存 / -500~-599 安全 / -600~-699 认知 / -700~-799 驱动 / -800~-899 网络）与 `error.h` SSoT 的 10 子空间分配**严重冲突**：例如原"通用 -1~-99"侵占了 SSoT 的 IPC 码 `[-41,-70]` 与 Capability 码 `[-71,-100]`；原"IPC -300~-399"与 SSoT IPC 码 `[-41,-70]` 完全错位；原"安全 -500~-599"与 SSoT Capability 码 `[-71,-100]` 完全错位。修复方案：删除全部 9 个冲突分段，替换为 SSoT 实际定义的 10 子空间分配表。原分段中使用的 `E_SYS_*` / `E_IPC_*` / `E_MEM_*` / `E_SEC_*` / `E_COG_*` / `E_DRV_*` / `E_NET_*` 前缀已废弃，统一使用 `AIRY_E*` / `AIRY_EIPC_*` / `AIRY_ECAP_*` / `AIRY_ECFG*` / `AIRY_ESCHED_*` / `AIRY_EMEM_*` / `AIRY_ECOG_*` / `AIRY_ELOG_*` / `AIRY_EOBJ_*` / `AIRY_ESYS_*` 前缀（对齐 `error.h`）。
+> **⚠️ P0-NEW-37 修复说明**（v1.0.1）：原 §2.2.1~2.2.9 定义的 9 个错误码分段（-1~-99 通用 / -100~-199 系统 / -300~-399 IPC / -400~-499 内存 / -500~-599 安全 / -600~-699 认知 / -700~-799 驱动 / -800~-899 网络）与 `error.h` SSoT 的 10 子空间分配**严重冲突**：例如原"通用 -1~-99"侵占了 SSoT 的 IPC 码 `[-41,-70]` 与 Capability 码 `[-71,-100]`；原"IPC -300~-399"与 SSoT IPC 码 `[-41,-70]` 完全错位；原"安全 -500~-599"与 SSoT Capability 码 `[-71,-100]` 完全错位。修复方案：删除全部 9 个冲突分段，替换为 SSoT 实际定义的 10 子空间分配表。原分段中使用的 `E_SYS_*` / `E_IPC_*` / `E_SCHED_*` / `E_MEM_*` / `E_SEC_*` / `E_COG_*` / `E_DRV_*` / `E_NET_*` 前缀已废弃，统一使用 `AIRY_E*` / `AIRY_EIPC_*` / `AIRY_ECAP_*` / `AIRY_ECFG*` / `AIRY_ESCHED_*` / `AIRY_EMEM_*` / `AIRY_ECOG_*` / `AIRY_ELOG_*` / `AIRY_EOBJ_*` / `AIRY_ESYS_*` 前缀（对齐 `error.h`）。
 
 ##### 2.2.1 error.h SSoT 10 子空间分配
 
 下表为 [SC] `include/uapi/linux/airymax/error.h` 定义的内核态错误码 10 子空间分配（权威源：[08-sc-error-contract.md](../../30-interfaces/08-sc-error-contract.md) §2）：
 
-| 子空间 | 值域 | 来源 | 已定义数 | 命名风格 |
+| 子空间 | 值域（常量正数幅值；返回值 `-AIRY_E*`） | 来源 | 已定义数 | 命名风格 |
 |--------|------|------|---------|---------|
-| POSIX 码 | `[-1, -40]` | 对齐 Linux errno | 16 | `AIRY_E*`（对齐 `E*` errno 名） |
-| IPC 码 | `[-41, -70]` | A-IPC 协议层（Capability Folding fastpath C-S0~C-S12） | 13 | `AIRY_EIPC_*` |
-| Capability 码 | `[-71, -100]` | 安全子系统（含 Capability Folding Badge 校验） | 13 | `AIRY_ECAP_*` / `AIRY_ESEC_*` |
-| Config 码 | `[-101, -120]` | A-UCS 配置管理 | 5 | `AIRY_ECFG*` |
-| A-ULS 码 | `[-121, -140]` | A-ULS 调度/生命周期 | 10 | `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*` |
-| MemoryRoVol 码 | `[-141, -160]` | MemoryRoVol 内存子系统 | 8 | `AIRY_EMEM_*` |
-| Cognition 码 | `[-161, -180]` | A-UCS 认知子系统 | 6 | `AIRY_ECOG_*` |
-| Log 码 | `[-181, -200]` | A-ULP 日志子系统 | 6 | `AIRY_ELOG_*` |
-| Object 码 | `[-201, -220]` | Airymax Object 系统 | 4 | `AIRY_EOBJ_*` |
-| Syscall 码 | `[-221, -240]` | Airymax syscall 表面 | 4 | `AIRY_ESYS_*` |
-| 预留 | `[-241, -300]` | 未来扩展 | 0 | — |
+| POSIX 码 | `[1, 40]` | 对齐 Linux errno | 16 | `AIRY_E*`（对齐 `E*` errno 名） |
+| IPC 码 | `[41, 70]` | A-IPC 协议层（Capability Folding fastpath C-S0~C-S12） | 13 | `AIRY_EIPC_*` |
+| Capability 码 | `[71, 100]` | 安全子系统（含 Capability Folding Badge 校验） | 13 | `AIRY_ECAP_*` / `AIRY_ESEC_*` |
+| Config 码 | `[101, 120]` | 配置/版本管理 | 5 | `AIRY_ECFG*` |
+| A-ULS 码 | `[121, 140]` | A-ULS 调度/生命周期 | 10 | `AIRY_ESCHED_*` / `AIRY_ELIFECYCLE_*` |
+| MemoryRoVol 码 | `[141, 160]` | MemoryRoVol 内存子系统 | 8 | `AIRY_EMEM_*` |
+| Cognition 码 | `[161, 180]` | A-UCS 认知子系统 | 6 | `AIRY_ECOG_*` |
+| Log 码 | `[181, 200]` | A-ULP 日志子系统 | 6 | `AIRY_ELOG_*` |
+| Object 码 | `[201, 220]` | Airymax Object 系统 | 4 | `AIRY_EOBJ_*` |
+| Syscall 码 | `[221, 240]` | Airymax syscall 表面 | 4 | `AIRY_ESYS_*` |
+| 预留 | `[241, 300]` | 未来扩展 | 0 | — |
 
 ##### 2.2.2 详细定义查询路径
 
@@ -678,16 +678,18 @@ agentrt-linux（AirymaxOS）采用双错误码体系的核心原因在于内核�
 
 #### 3.3 错误码双向映射表（[SS] 层）
 
+> **⚠️ 废弃说明**：下表 [SS] 映射中的 `E_SCHED_*`（-200 段）、`E_SEC_*`（-500 段）、`E_COG_*`（-600 段）、`E_MEM_*`（-400 段）均为**废弃前缀**（旧命名，负值自定义序列），已统一迁移至 [SC] `error.h` 的 `AIRY_E*` 正数幅值体系（如调度错误 → `AIRY_ESCHED_POLICY`=121、能力拒绝 → `AIRY_ECAP_LSM_DENIED`=75、认知超时 → `AIRY_ECOG_TIMEOUT`=164、记忆写入 → `AIRY_EMEM_ALLOC`=147 等）。下表仅作历史映射参考，新代码禁止使用。
+
 | agentrt 错误码 | 语义 | agentrt-linux 错误码 | 转换方向 |
 |----------------|------|----------------------|----------|
-| CORESCHED_ERR_INVALID | 调度参数无效 | -E_SCHED_CLASS_INVALID (-200) | 双向 |
-| CORESCHED_ERR_TIMEOUT | 调度超时 | -E_SCHED_DEADLINE_MISSED (-212) | 双向 |
-| CUPOLAS_ERR_DENIED | 权限拒绝 | -E_SEC_CAPABILITY_DENIED (-500) | 双向 |
-| CUPOLAS_ERR_INVALID_CAP | 无效 capability | -E_SEC_CAPABILITY_INVALID (-501) | 双向 |
-| LOOP3_ERR_TIMEOUT | 认知循环超时 | -E_COG_CORELOOP_TIMEOUT (-601) | 双向 |
-| LOOP3_ERR_PLAN_FAIL | 规划失败 | -E_COG_PLAN_DAG_FAIL (-605) | 双向 |
-| MEMROVOL_ERR_WRITE | 记忆写入失败 | -E_MEM_L1_WRITE_FAIL (-400) | 双向 |
-| MEMROVOL_ERR_READ | 记忆读取失败 | -E_MEM_L1_READ_FAIL (-401) | 双向 |
+| CORESCHED_ERR_INVALID | 调度参数无效 | ~~-E_SCHED_CLASS_INVALID (-200)~~ → `AIRY_ESCHED_POLICY`(121) | 双向 |
+| CORESCHED_ERR_TIMEOUT | 调度超时 | ~~-E_SCHED_DEADLINE_MISSED (-212)~~ → `AIRY_ESCHED_DEADLINE`(123) | 双向 |
+| CUPOLAS_ERR_DENIED | 权限拒绝 | ~~-E_SEC_CAPABILITY_DENIED (-500)~~ → `AIRY_ECAP_LSM_DENIED`(75) | 双向 |
+| CUPOLAS_ERR_INVALID_CAP | 无效 capability | ~~-E_SEC_CAPABILITY_INVALID (-501)~~ → `AIRY_ECAP_MISMATCH`(74) | 双向 |
+| LOOP3_ERR_TIMEOUT | 认知循环超时 | ~~-E_COG_CORELOOP_TIMEOUT (-601)~~ → `AIRY_ECOG_TIMEOUT`(164) | 双向 |
+| LOOP3_ERR_PLAN_FAIL | 规划失败 | ~~-E_COG_PLAN_DAG_FAIL (-605)~~ → `AIRY_ECOG_PHASE`(161) | 双向 |
+| MEMROVOL_ERR_WRITE | 记忆写入失败 | ~~-E_MEM_L1_WRITE_FAIL (-400)~~ → `AIRY_EMEM_ALLOC`(147) | 双向 |
+| MEMROVOL_ERR_READ | 记忆读取失败 | ~~-E_MEM_L1_READ_FAIL (-401)~~ → `AIRY_EMEM_PAGE_CLASS`(145) | 双向 |
 
 ---
 
@@ -730,19 +732,18 @@ agentrt-linux（AirymaxOS）采用双错误码体系的核心原因在于内核�
 
 ##### 4.1.2 用户态错误码定义模板
 
-> **注意**：以下十六进制值（`0x00010000` 等）属于 **ERP 位掩码分类方案（方案 D）**，用于 SDK/外部接口的十六进制分段错误码体系（次要体系），**非 C 内核错误码方案**。C 内核首要体系使用方案 A（POSIX errno 负值，如 `AIRY_EINVAL=-22`），权威定义见 `agentrt/commons/include/airy_types.h`。方案 D 不可与方案 A 混用。
+> **注意**：以下十六进制值（`0x00010000` 等）属于 **ERP 位掩码分类方案（方案 D）**，用于 SDK/外部接口的十六进制分段错误码体系（次要体系），**非 C 内核错误码方案**。C 内核首要体系为 [SC] `error.h`（`AIRY_E*` 正数幅值，如 `AIRY_EINVAL=5`；调用方返回 `-AIRY_E*`）。方案 D 不可与首要体系混用。
 
 ```c
 /**
  * @brief 错误码宏定义 — 用户态（SDK 十六进制次要体系，非 C 内核首要体系）
  * @file include/uapi/linux/airymax/ipc.h（[SC] 共享契约层）
  * @since 1.0.1
- * @note 以下十六进制值为 ERP 位掩码分类（方案 D），非 C 内核错误码（方案 A）。
- *       C 内核错误码使用方案 A（POSIX errno 负值），见 agentrt/commons/include/airy_types.h。
+ * @note 以下十六进制值为 ERP 位掩码分类（方案 D），非 C 内核错误码。C 内核错误码以 [SC] error.h 为准（AIRY_E* 正数幅值，调用方返回 -AIRY_E*）。
  */
 
 /* === 通用用户态错误码（0x00XX0000，ERP 位掩码分类，非 C 内核错误码） === */
-#define AIRY_ERROR_INVALID_PARAM    0x00010000  /**< 参数无效（SDK 十六进制，非 C 内核 -22） */
+#define AIRY_ERROR_INVALID_PARAM    0x00010000  /**< 参数无效（SDK 十六进制，非 C 内核 AIRY_EINVAL=5） */
 #define AIRY_ERROR_OUT_OF_MEMORY    0x00020000  /**< 内存不足 */
 #define AIRY_ERROR_PERMISSION_DENIED 0x00030000 /**< 权限不足 */
 #define AIRY_ERROR_TIMEOUT          0x00040000  /**< 操作超时 */
@@ -1050,21 +1051,21 @@ IRON-9 v2 硬件平台提供了丰富的扩展接口，agentrt-linux（AirymaxOS
 - 禁止使用root权限运行不必要的服务
 - 服务间通信必须启用消息完整性校验
 
-**12个守护进程清单**
+**12个守护进程清单**（统一命名，权威见 90-terminology.md 与 30-runtime-interfaces §4.1）
 | 守护进程名 | 功能描述 |
 |-----------|----------|
-| agentlaunchd | Agent生命周期管理 |
-| agentipcd | io_uring IPC 通信仲裁 |
-| agentdevd | 设备抽象与访问代理 |
-| agentctxd | Agent上下文保存与恢复 |
-| agentmonitord | 系统健康监控与告警 |
-| agentlogd | Agent日志采集与聚合 |
-| agentresourced | 资源分配与配额管理 |
-| agentnetd | 网络代理与流量管理 |
-| agentstoraged | Agent存储后端抽象 |
-| agentconfigd | 配置管理与分发 |
-| agentlicensed | 许可证与服务注册 |
-| agentupgraded | 在线升级与热补丁 |
+| macro_d | Macro-Supervisor 监管（温情裁决） |
+| logger_d | 日志守护：结构化日志收集和轮转 |
+| config_d | 配置管理守护 |
+| gateway_d | 网关守护：HTTP/gRPC 入口和路由 |
+| sched_d | 调度守护：sched_tac 用户态策略 |
+| vfs_d | VFS 用户态服务守护 |
+| net_d | 网络策略守护（DPDK/AF_XDP） |
+| mem_d | 记忆管理守护（MemoryRovol L1-L4） |
+| cogn_d | 认知调度守护（LLM 推理代理） |
+| sec_d | 安全策略守护（Cupolas 用户态策略） |
+| audit_d | 审计守护（监控/指标/追踪/告警） |
+| dev_d | 工具调用代理（注册/执行/验证，含设备驱动） |
 
 ---
 
@@ -1499,7 +1500,7 @@ agentrt-linux（AirymaxOS）是一个面向实时智能体的轻量级操作系�
 | D4 | 合规维度 | 许可证、出口管制、安全审计的合规检查 |
 | D5 | 版本维度 | 跨仓库的版本兼容性与升级路径 |
 
-通过五维正交的资源管理模型，agentrt-linux（AirymaxOS）能够在每个维度上独立演进，互不耦合，从而降低多仓库协同的复杂度。所有资源的分配、审计与回收均通过 agentrt-linux 管理仓库统一编排，基于 IRON-9 v3 流水线引擎执行自动化调度。
+通过五维正交的资源管理模型，agentrt-linux（AirymaxOS）能够在每个维度上独立演进，互不耦合，从而降低多仓库协同的复杂度。所有资源的分配、审计与回收均通过 agentrt-linux 管理仓库统一编排，基于 CI 引擎（IRON-9 v3 四层共享模型下的自动化流水线）执行自动化调度。
 
 ---
 
@@ -2027,7 +2028,7 @@ agentrt-linux（AirymaxOS）的资源监控基于以下三层架构：
 | agentrt-linux（AirymaxOS） | 面向实时智能体的轻量级操作系统发行版，项目核心术语 |
 | agentrt-linux | agentrt-linux（AirymaxOS）的顶层管理仓库，负责八子仓库的编排与集成 |
 | 五维正交 | 子系统、依赖、生命周期、合规、版本五个独立维度的资源治理模型 |
-| IRON-9 v3 | SPHARX 内部 CI/CD 流水线引擎，负责自动化构建、测试、扫描与部署 |
+| IRON-9 v3 | 同源且部分代码共享的四层共享模型（[SC]/[SS]/[IND]/[DSL]）——CI/CD 自动化由 CI 引擎（IRON-9 流水线，专名）承载，勿与四层共享模型混淆 |
 | 八子仓库 | agentrt-linux 管理的八个独立 Git 仓库，按功能领域正交划分 |
 | 主流 Linux 发行版标准 | 兼容性标准接口规范，用于跨发行版互操作 |
 

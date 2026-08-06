@@ -198,7 +198,7 @@ static __initdata const char *chosen_major_lsm;       /* 来自 security= 引导
 static __initconst const char *const builtin_lsm_order = CONFIG_LSM;  /* 编译期默认 */
 ```
 
-agentrt-linux 的 `CONFIG_LSM` 默认配置为：`capability,landlock,yama,airy`（其中 capability 与 integrity 分别由 `LSM_ORDER_FIRST` / `LSM_ORDER_LAST` 强制首尾；airy 使用 `LSM_ORDER_MUTABLE`（默认值），通过 `CONFIG_LSM` 列表置于 `capability` 之后、其他 LSM 之前，capability 永远在 airy 之前执行——OLK 6.6 `include/linux/lsm_hooks.h:113` 注释明确 `LSM_ORDER_FIRST` 仅用于 capabilities，airy 不滥用之）。详见 [07-airy-lsm-design.md](07-airy-lsm-design.md) §2.1。
+agentrt-linux 的 `CONFIG_LSM` **需显式配置**包含 `airy`（当前 defconfig 未设置 `CONFIG_LSM` 行，见 known-caveats），示例：`CONFIG_LSM="capability,landlock,yama,airy"`（其中 capability 与 integrity 分别由 `LSM_ORDER_FIRST` / `LSM_ORDER_LAST` 强制首尾；airy 使用 `LSM_ORDER_MUTABLE`（默认值），通过 `CONFIG_LSM` 列表置于 `capability` 之后、其他 LSM 之前，capability 永远在 airy 之前执行——OLK 6.6 `include/linux/lsm_hooks.h:113` 注释明确 `LSM_ORDER_FIRST` 仅用于 capabilities，airy 不滥用之）。详见 [07-airy-lsm-design.md](07-airy-lsm-design.md) §2.1。
 
 ### 4.2 排序解析流程
 
@@ -760,7 +760,7 @@ struct airy_ipc_msg_hdr hdr = {
 
 | 规则编号 | 类型 | 描述 |
 |----------|------|------|
-| OS-IRON-001 | 铁律 | `security_hook_heads` 字段集为永久 ABI，导出后不可破坏 |
+| OS-IRON-001 | 铁律 | 用户空间 ABI 永不破坏（`security_hook_heads` 属内核内部结构，非用户空间 ABI，不受 OS-IRON-001 约束；其导出稳定性由 KABI 白名单管理，见 [160-compatibility/01-abi-stability.md](../160-compatibility/01-abi-stability.md)） |
 | OS-IRON-002 | 铁律 | `lsm_hook_defs.h` 钩子签名改动必须修复所有调用点 |
 | OS-IRON-003 | 铁律 | Cupolas 与 agentrt 安全 API 同源且部分代码共享维护 |
 | OS-KER-086 | 内核契约 | `security_hook_heads` 由 `__ro_after_init` 保护 |
@@ -1163,9 +1163,9 @@ static void __init lsm_set_blob_size(int *need, int *lbs);
  * @LSM_ORDER_LAST:    强制最后位（integrity 使用）
  */
 enum lsm_order {
-    LSM_ORDER_FIRST  = 0,
-    LSM_ORDER_MUTABLE = 1,
-    LSM_ORDER_LAST   = 2,
+    LSM_ORDER_FIRST   = -1,  /* 强制第一位（OLK 6.6 硬编码，仅用于 capabilities；airy 不使用此值） */
+    LSM_ORDER_MUTABLE = 0,   /* 可配置顺序（Landlock/Yama/airy 使用，airy 通过 CONFIG_LSM 列表置于 capability 之后） */
+    LSM_ORDER_LAST    = 1,   /* 强制最后位（integrity 使用） */
 };
 ```
 

@@ -539,15 +539,16 @@ graph TD
 
 ### 15.1 兼容性错误码
 
-跨发行版兼容性错误码纳入发行版错误段（-1000~-1099，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
+跨发行版兼容性错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，[SC] 共享契约层）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**；[SC] error.h 中**不存在** `AIRY_DIST_*` 专用段（原虚构的 -1000~-1099 段已废弃），兼容性场景复用既有段映射：
 
-| 错误码 | 数值 | 含义 |
-|--------|------|------|
-| AIRY_DIST_ENODISTRO | -1020 | 不支持的发行版 |
-| AIRY_DIST_ENOKERN | -1021 | 内核版本过低 |
-| AIRY_DIST_ENOGLIBC | -1022 | glibc 版本过低 |
-| AIRY_DIST_ENOMOD | -1023 | 内核模块加载失败 |
-| AIRY_DIST_ENOFALLBACK | -1024 | 无可用降级路径 |
+| 错误码 | 数值 | 含义 | 原文档符号（已废弃） |
+|--------|------|------|---------------------|
+| AIRY_EINVAL | 5 | 不支持的发行版（POSIX 段） | AIRY_DIST_ENODISTRO (-1020) |
+| AIRY_ENOTSUP | 11 | 内核/glibc 版本过低（操作不支持） | AIRY_DIST_ENOKERN/ENOGLIBC (-1021/-1022) |
+| AIRY_ENOENT | 8 | 内核模块加载失败（模块不存在） | AIRY_DIST_ENOMOD (-1023) |
+| AIRY_ECFGVERSION | 101 | 无可用降级路径（配置版本不匹配，Config 段） | AIRY_DIST_ENOFALLBACK (-1024) |
+
+> **说明**：若未来需要区分发行版兼容性细粒度错误，应在 error.h 保留段（241-300）申请分配，并同步更新 `30-interfaces/08-sc-error-contract.md`，不得自建 -1000 段。
 
 ### 15.2 错误诊断
 

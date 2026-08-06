@@ -85,11 +85,11 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 
 **A1 内核内存空间**：包括内核代码段、数据段、堆栈、slab/slub 缓存。内核内存是 L1 信任根的物理载体，任何向用户态泄露内核地址（`copy_to_user` 含内核指针）或未初始化内存的行为均违反 OS-SEC-125/126。防护依赖 `copy_from_user`/`copy_to_user` 边界检查（OS-SEC-111）、`memzero_explicit`/`kfree_sensitive` 敏感数据清零（OS-SEC-127）与 KASLR。
 
-**A2 \[SC] 共享契约层头文件（10 个）**：10 个 [SC] 核心头文件（`error.h`、`log_types.h`、`memory_types.h`、`security_types.h`、`cognition_types.h`、`sched.h`、`ipc.h`、`syscalls.h`、`uapi_compat.h`、`lsm_types.h`）+ 1 个补充共享文件（`bpf_struct_ops.h`），唯一物理宿主于 `kernel/include/uapi/linux/airymax/`。OS-IRON-014 强制其为单一数据源，禁止物理副本。任何篡改将导致 agentrt 用户态与 agentrt-linux 内核态契约不一致，引发 ABI 破坏与内存破坏。
+**A2 \[SC] 共享契约层头文件（12 个）**：12 个 [SC] 头文件（`error.h`、`log_types.h`、`memory_types.h`、`security_types.h`、`cognition_types.h`、`sched.h`、`ipc.h`、`syscalls.h`、`syscall.h`、`uapi_compat.h`、`lsm_types.h`、`bpf_struct_ops.h`），唯一物理宿主于 `kernel/include/uapi/linux/airymax/`。OS-IRON-014 强制其为单一数据源，禁止物理副本。任何篡改将导致 agentrt 用户态与 agentrt-linux 内核态契约不一致，引发 ABI 破坏与内存破坏。
 
 **A3 Capability 表**：seL4 风格 CNode 表 + POSIX 41 ID capability（编号 0-40，`CAP_LAST_CAP=CAP_CHECKPOINT_RESTORE=40`）+ 3 个 Airymax 专属（编号 41-43，`AIRY_CAP_AGENT_SPAWN` 等）。capability 使用 `LSM_ORDER_FIRST`（OLK 6.6 硬编码，仅用于 capabilities），永远在 Landlock/Cupolas 之前执行；airy_lsm 使用 `LSM_ORDER_MUTABLE` + `CONFIG_LSM` 首位置于 capability 之后。伪造或绕过 capability 检查直接导致权限提升（OS-SEC-121）。
 
-**A4 IPC 消息通道**：128B 消息头 `struct airy_ipc_msg_hdr`，magic `0x41524531`（'ARE1'），5 种 payload type，4 种操作码（SEND/RECV/SEND\_BATCH/CANCEL）。magic 与 checksum 共同保证消息完整性，`trace_id` 支持全链路追踪。IPC 是 Agent 间通信的唯一合法通道，篡改将导致跨租户越权。
+**A4 IPC 消息通道**：128B 消息头 `struct airy_ipc_msg_hdr`（magic `0x41524531` 'ARE1'，`capability_badge`@offset 40），7 种操作码（SEND/RECV/SEND\_BATCH/CANCEL/FREEZE/CAP\_REQUEST/CAP\_RESPONSE，0x0001~0x0011）。magic 与 crc32 共同保证消息完整性，`trace_id` 支持全链路追踪。IPC 是 Agent 间通信的唯一合法通道，篡改将导致跨租户越权。
 
 **A5 Agent 任务描述符**：`struct airy_task_desc`，magic `0x41475453`（'AGTS'），sched_tac 调度策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF），优先级 0-139，`AIRY_CAP_MAX_AGENTS=1024`。描述符伪造将导致 Agent 身份冒充，绕过 capability 授权。
 
@@ -257,20 +257,23 @@ IPC 是 Agent 间通信的唯一合法通道，安全设计见 [`30-interfaces/0
 #### 4.3.1 128B 消息头完整性校验
 
 ```c
+/* [SC] ipc.h struct airy_ipc_msg_hdr —— Layout C v4，128B（SSoT 权威） */
 struct airy_ipc_msg_hdr {
-    __u32 magic;          /* 魔数 'ARE1'（0x41524531） */
-    __u16 opcode;         /* 操作码 SEND/RECV/SEND_BATCH/CANCEL */
-    __u16 flags;          /* 标志位（含 AIRY_IPC_FLAG_CAP_CARRY） */
-    __u32 src_task;       /* 发送方任务 ID（内核填充，禁止用户态设置） */
-    __u32 dst_task;       /* 接收方任务 ID */
-    __u64 trace_id;       /* 全链路追踪 ID */
-    __u32 checksum;       /* 校验和 */
-    __u32 payload_type;   /* 5 种 payload type */
-    /* ... 其余字段填充至 128B ... */
-};
+    __u32   magic;             /* offset  0: 魔数 'ARE1'（0x41524531） */
+    __u16   opcode;            /* offset  4: 7 种操作码（0x0001~0x0011） */
+    __u16   flags;             /* offset  6: 5 个 active 标志位（ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL） */
+    __u64   trace_id;          /* offset  8: 全链路追踪 ID */
+    __u64   timestamp_ns;      /* offset 16: monotonic ns 时间戳 */
+    __u64   src_task;          /* offset 24: 发送方任务 ID（内核填充，禁止用户态设置） */
+    __u64   dst_task;          /* offset 32: 接收方任务 ID */
+    __u64   capability_badge;  /* offset 40: Capability Folding 64-bit Badge */
+    __u32   payload_len;       /* offset 48: payload 长度（字节） */
+    __u32   crc32;             /* offset 52: payload CRC32 校验和 */
+    __u8    reserved[72];      /* offset 56: 预留（C-S4 校验必须全零） */
+} __aligned(64);               /* 总大小 128B */
 ```
 
-完整性校验：magic `0x41524531` + checksum 双重校验。magic 不匹配直接丢弃；checksum 校验 payload 完整性，失败丢弃并告警。
+完整性校验：magic `0x41524531` + crc32（offset 52）双重校验。magic 不匹配直接丢弃；crc32 校验 payload 完整性，失败丢弃并告警。
 
 #### 4.3.2 trace\_id 全链路追踪
 
@@ -280,16 +283,19 @@ struct airy_ipc_msg_hdr {
 
 `src_task` 字段由内核填充，禁止用户态设置。接收方校验 `src_task` 对应 Agent 是否持有向本 Agent 发送消息的 capability（IPC 端点 capability `AIRY_CAP_TYPE_ENDPOINT`）。无 capability 的消息返回 `-EACCES`，对抗 S（身份伪造）。
 
-#### 4.3.4 IPC 操作码 4 种
+#### 4.3.4 IPC 操作码 7 种（[SC] ipc.h 权威）
 
-| 操作码 | 名称                       | 语义         | 安全检查                                  |
-| --- | ------------------------ | ---------- | ------------------------------------- |
-| 0   | `AIRY_IPC_OP_SEND`       | 单条发送       | src/dst capability + magic + checksum |
-| 1   | `AIRY_IPC_OP_RECV`       | 接收         | 接收方 capability                        |
-| 2   | `AIRY_IPC_OP_SEND_BATCH` | 批量发送（≥2 条） | 每条独立校验 + 速率限制                         |
-| 3   | `AIRY_IPC_OP_CANCEL`     | 取消已提交请求    | 原提交方 capability                       |
+| 操作码      | 名称                       | 语义               | 安全检查                                  |
+| ------- | ------------------------ | ---------------- | ------------------------------------- |
+| 0x0001  | `AIRY_IPC_OP_SEND`       | 单条发送             | src/dst capability + magic + crc32    |
+| 0x0002  | `AIRY_IPC_OP_RECV`       | 接收               | 接收方 capability                        |
+| 0x0003  | `AIRY_IPC_OP_SEND_BATCH` | 批量发送（≥2 条）       | 每条独立校验 + 速率限制                         |
+| 0x0004  | `AIRY_IPC_OP_CANCEL`     | 取消已提交请求          | 原提交方 capability                       |
+| 0x0005  | `AIRY_IPC_OP_FREEZE`     | 冻结 IPC ring      | Micro-Supervisor 权限                    |
+| 0x0010  | `AIRY_IPC_OP_CAP_REQUEST`  | capability 自举请求   | Badge 校验（sec_d 签发）                     |
+| 0x0011  | `AIRY_IPC_OP_CAP_RESPONSE` | capability 自举响应   | Badge 校验（sec_d 签发）                     |
 
-状态机内部状态编号不进入 UAPI（ABI 稳定），对外契约仅 4 操作码与返回码。
+状态机内部状态编号不进入 UAPI（ABI 稳定），对外契约仅 7 操作码与返回码。
 
 ### 4.4 机密计算
 
@@ -337,7 +343,7 @@ CVM 启动时生成硬件 attestation report，由远程证明服务验证 VM �
 | 属性                   | 内容                                | 依据规则                      | 保证机制                                                          |
 | -------------------- | --------------------------------- | ------------------------- | ------------------------------------------------------------- |
 | **用户空间 ABI 稳定性**     | 用户空间 ABI 永不破坏                     | OS-IRON-001               | \[SC] 共享契约 + CI 双端一致性检查 + syscall 编号 seL4 syscall.xml 式单一来源管理 |
-| **\[SC] 头文件单一数据源**   | 10 个 [SC] 核心头文件单一物理宿主         | OS-IRON-014               | 物理宿主 `kernel/include/uapi/linux/airymax/` + 禁止物理副本 + CI 强制               |
+| **\[SC] 头文件单一数据源**   | 12 个 [SC] 核心头文件单一物理宿主         | OS-IRON-014               | 物理宿主 `kernel/include/uapi/linux/airymax/` + 禁止物理副本 + CI 强制               |
 | **Capability 隔离**    | Agent 间 CSpace 隔离，capability 不可伪造 | OS-SEC-001\~099           | seL4 风格 opaque handle + `LSM_ORDER_FIRST` + MDB 派生链递归撤销       |
 | **IPC 消息完整性**        | 128B 消息头 magic + checksum 完整性     | OS-IFACE-003/004          | magic `0x41524531` + checksum + src\_task 内核填充                |
 | **沙箱不可降级**           | Agent 启动必须沙箱，失败即终止                | OS-STD-SEC-011、OS-SEC-015 | 沙箱施加前置条件 + `landlock_restrict_self` fork 后立即调用                |
@@ -382,7 +388,7 @@ agentrt-linux 集成 syzkaller 风格的内核 fuzzing：
 | Fuzzing 目标      | 覆盖 syscall                   | 关注威胁    |
 | --------------- | ---------------------------- | ------- |
 | `airy_sys_call` | 4 核心 syscall 全覆盖（v1.0.1）            | S/T/E   |
-| IPC 操作码         | SEND/RECV/SEND\_BATCH/CANCEL | T/D     |
+| IPC 操作码         | SEND/RECV/SEND\_BATCH/CANCEL/FREEZE/CAP\_REQUEST/CAP\_RESPONSE | T/D     |
 | capability 操作   | mint/mintcopy/derive/revoke  | E       |
 | Landlock 域施加    | fork 后 restrict\_self 时序     | E（沙箱逃逸） |
 

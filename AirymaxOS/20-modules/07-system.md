@@ -52,7 +52,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 数据流 | 系统切入点 | 同源标注 |
 |--------|-----------|----------|
-| 调度数据流 | sysctl 调度参数（sched_tac 通过 `airy_sys_sched_ctl(514)` 配置）+ airymaxmon sched_tac 统计 | [SC] |
+| 调度数据流 | sysctl 调度参数（sched_tac 通过 `airy_sys_sched_ctl(550)` 配置）+ airymaxmon sched_tac 统计 | [SC] |
 | IPC 数据流 | DevStation io_uring 通道 + 128B 消息头 | [SC] |
 | eBPF 数据流 | bpftrace 动态追踪 + airymaxmon struct_ops 状态 | [SC] |
 | 记忆卷载数据流 | airymaxmon MemoryRovol L1-L4 指标监控 | [SC] |
@@ -65,7 +65,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次 | 共享程度 | 系统子系统内容 | 组织方式 |
 |------|---------|---------------|---------|
-| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value；sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举（安全配置工具引用）；v1.0.1 `agent_caps[1024]` 静态数组（128KB）+ 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用）；v1.0.1 Syscall 24 槽位（4 核心 + 20 预留） | `include/uapi/linux/airymax/` 10 个头文件（与 kernel/services/security/memory/cognition 共享），清单见 §6.1 |
+| **[SC] 共享契约层** | 完全共享代码 | airymaxmon 读取的 struct_ops 状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value；sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止定义 SCHED_AGENT 宏）+ task_desc（magic 0x41475453 'AGTS'）+ vtime 类型；MemoryRovol L1-L4 数据结构 + GFP 掩码语义；capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举（安全配置工具引用）；v1.0.1 `agent_caps[1024]` 静态数组（128KB）+ 64-bit Badge 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`）；IPC 消息头（magic 0x41524531 'ARE1'）+ 128B msg_hdr（DevStation 通信）；CoreLoopThree 阶段枚举 + Thinkdual 模式枚举（DevStation 调用 LLM 引用）；v1.0.1 Syscall 24 槽位（4 核心 548-551 + 20 预留 552-571） | `include/uapi/linux/airymax/` 12 个头文件（与 kernel/services/security/memory/cognition 共享），清单见 §6.1 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | commons 公共工具语义（agentrt commons → system 工具）、监控 API（agentrt monitoring → top/htop/perf/airymaxmon）、配置管理语义（agentrt config → config_d/sysctl/systemd-config）、AI 助手语义（agentrt assistant → DevStation）、日志语义（agentrt log_write → journald/syslog）等 8+ 项 | 各自独立实现 |
 | **[IND] 完全独立层** | 完全独立 | RPM + dnf 包管理实现、glibc + musl 基础库实现、bash/fish/zsh shell 实现、sysctl/systemd-config 实现细节、top/htop/perf/bpftrace/sysstat 工具实现、DevStation OS 级实现（auto-fix/code-gen/knowledge-base）、config_d 实现细节（YAML/TOML 解析、热重载） | 各自独立仓库 |
 | **[DSL] 降级生存层** | 降级模式下最小可用 | config_d 配置源不可达时降级为内置默认配置 + 只读运行；airymaxmon 在 struct_ops 状态不可读时降级为 Prometheus 拉取模式；DevStation 在 LLM 通道断开时降级为规则引擎模式（仅本地知识库匹配） | 各自独立实现，但共享降级触发语义 |
@@ -210,7 +210,7 @@ gpgcheck=1
 ```ini
 # /etc/sysctl.d/99-airymaxos.conf
 # 调度优化（sched_tac [SC]：SCHED_DEADLINE/SCHED_FIFO，ADR-013 禁止 sched_ext / SCHED_AGENT）
-# 注：sched_tac 不暴露 sched_agent_enabled sysctl，调度策略通过 airy_sys_sched_ctl(514) 配置
+# 注：sched_tac 不暴露 sched_agent_enabled sysctl，调度策略通过 airy_sys_sched_ctl(550) 配置
 
 # 内存优化（MemoryRovol L1-L4 [SC]）
 vm.swappiness = 10
@@ -338,7 +338,7 @@ config_d 是 agentrt-linux 12 daemon 之一（完整名单见 §6.7），负责�
 
 **config_d 与 sec_d 协作**（v1.0.1 Capability Folding）：
 - config_d 加载 `agent_caps[1024]` 容量与 Badge Epoch 步进参数，通过 sysfs 推送至内核。
-- sec_d 读取 sysfs 参数，按配置编译 Badge（`Epoch<<48 | RandomTag<<16 | Perms`）写入 `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=128 字节）。
+- sec_d 读取 sysfs 参数，按配置编译 Badge（`Epoch<<48 | RandomTag<<16 | Perms`）写入 `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节）。
 - config_d 热重载时通知 sec_d 推进 Epoch，触发 O(1) 撤销旧 Badge。
 - fastpath C-S9 内联校验（~10ns）+ slowpath airy_lsm 钩子（`LSM_ORDER_MUTABLE`）的启用状态由 config_d 控制。
 
@@ -382,13 +382,13 @@ airymaxmon 通过 [SC] 共享契约层读取内核子系统状态，确保监控
 
 ## 6. IRON-9 v3 四层共享模型落地
 
-### 6.1 [SC] 共享契约层——10 个头文件
+### 6.1 [SC] 共享契约层——12 个头文件
 
-系统模块的 [SC] 层通过 10 个核心头文件与 agentrt 共享（airymaxmon + DevStation + config_d 消费，SSoT 见 `50-engineering-standards/120-cross-project-code-sharing.md`）：
+系统模块的 [SC] 层通过 12 个共享头文件与 agentrt 共享（airymaxmon + DevStation + config_d 消费，SSoT 见 `50-engineering-standards/120-cross-project-code-sharing.md`）：
 
 | 头文件 | 共享内容 | 系统使用场景 |
 |--------|---------|-------------|
-| `include/uapi/linux/airymax/error.h` | 扩展错误码（`AIRY_ESEC_D_THROTTLED = -83`、`AIRY_ECAP_FROZEN = -82`、`AIRY_FAULT_URING_MALFORMED = 0x100A`、`AIRY_FAULT_AUDIT_TAMPER = 0x100B`） | airymaxmon 错误码映射 + DevStation 诊断建议 |
+| `include/uapi/linux/airymax/error.h` | 扩展错误码（`AIRY_ESEC_D_THROTTLED = 83`、`AIRY_ECAP_FROZEN = 82`；`AIRY_FAULT_URING_MALFORMED = 0x100A`、`AIRY_FAULT_AUDIT_TAMPER = 0x100B` 为 v1.0.1 预留，需先注册） | airymaxmon 错误码映射 + DevStation 诊断建议 |
 | `include/uapi/linux/airymax/log_types.h` | trace_id + 结构化日志类型枚举 | journald + airymaxmon 日志聚合 |
 | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | airymaxmon 监控分级内存 |
 | `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展） 枚举 + LSM 钩子 250 ID + Cupolas blob 布局 + v1.0.1 `agent_caps[1024]` 静态数组定义 + 64-bit Badge 布局 | airymaxmon 安全监控 + config_d 推送 capability 配置 + 安全配置工具 |

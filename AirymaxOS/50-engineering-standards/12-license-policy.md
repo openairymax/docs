@@ -12,6 +12,7 @@
 
 本文档是 Airymax 项目的**许可证策略单一真相来源**（Single Source of Truth, SSoT）。
 所有子仓库、子目录、源代码文件、文档的许可证选择必须以本文档为准。
+其他工程标准文档（09-ssot-registry.md §14.9 LC、00-handbook §4.3、05-development-process.md Part IV OS-STD-SPDX、50-project-erp）中的许可证条款均为本文档对应层的引用镜像；发现冲突时以本文档为准，并在 §十 历史决策中登记裁决。
 
 **适用范围**:
 - airymaxhub 伞仓及其下所有子仓库（29 仓拆分后的全部仓库）

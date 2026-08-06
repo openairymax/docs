@@ -154,17 +154,17 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 
 | # | 技术点 | Tier | 唯一权威源文档 | 物理宿主 / 编号载体 |
 |---|--------|------|--------------|-------------------|
-| 1 | 错误码（`AIRY_E*`）+ 故障码（`AIRY_FAULT_*`） | Tier 0 | [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) | [SC] `error.h`（`kernel/include/uapi/linux/airymax/error.h`） |
-| 2 | 日志类型（`LOG_*` 5 级 + 128B 记录 + printk 8 级映射） | Tier 0 | [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) | [SC] `log_types.h` |
+| 1 | 错误码（`AIRY_E*` 正数幅值，POSIX errno 风格，调用方返回 `-AIRY_E*`）+ 故障码（`AIRY_FAULT_*` 正数 0x1000+ 不可恢复） | Tier 0 | [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) | [SC] `error.h`（`kernel/include/uapi/linux/airymax/error.h`） |
+| 2 | 日志类型（`AIRY_LOG_*` 5 级枚举 + 7 设施码 + 128B 记录 + printk 8 级映射） | Tier 0 | [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) | [SC] `log_types.h` |
 | 3 | IPC 协议（128B 消息头 + magic 0x41524531 + 操作码） | Tier 0 | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) | [SC] `ipc.h` |
-| 4 | 调度策略（sched_tac：SCHED_DEADLINE/SCHED_FIFO/EEVDF） | Tier 1 | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) | [SC] `sched.h` |
+| 4 | 调度策略（sched_tac：SCHED_DEADLINE/SCHED_FIFO/EEVDF，禁 sched_ext）+ Agent 8 态生命周期（`enum airy_agent_state`） | Tier 1 | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) | [SC] `sched.h` |
 | 5 | 安全模型（capability 44 ID = 41 POSIX + 3 Airymax 扩展 + LSM 钩子 + Cupolas blob） | Tier 1 | [03-capability-model.md](../110-security/03-capability-model.md) | [SC] `security_types.h` + `lsm_types.h` |
 | 6 | 微内核策略（seL4 思想分布落地 + 机制策略分离） | Tier 1 | [03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) | OS-ARCH-005 / OS-ARCH-006 |
 | 7 | IRON-9 模型（[SC]/[SS]/[IND]/[DSL] 四层） | Tier 1 | [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) | OS-IRON-008 / OS-IRON-014 |
 | 8 | Unify Design（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC 5 模块） | Tier 1 | [10-unify-design.md](../10-architecture/10-unify-design.md) | — |
 | 9 | [DSL] 降级生存层（[SC] 损坏时最小可运行子集） | Tier 1 | [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) | 每个 [SC] 头文件 `#ifdef AIRY_SC_FALLBACK` 块 |
 | 10 | 内核基线（1.x.x Linux 6.6 LTS / 2.x.x Linux 7.1） | Tier 1 | [04-engineering-baseline.md](../10-architecture/04-engineering-baseline.md) | ADR-013 |
-| 11 | Agent 8 态生命周期 | Tier 1 | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) §2.1 + [01-agent-lifecycle.md](../140-application-development/01-agent-lifecycle.md) | [SC] `sched.h`（`enum airy_agent_state`） |
+| 11 | [SC] 头文件物理宿主与目录结构（TP-011） | Tier 1 | [07-directory-structure.md](../10-architecture/07-directory-structure.md) | [SC] 物理宿主 `kernel/include/uapi/linux/airymax/`（10 个头文件，OS-IRON-014 禁止物理副本） |
 
 **使用规则**：
 
@@ -179,7 +179,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | # | CI Workflow | 校验内容 | 覆盖层级 | 失败动作 |
 |---|------------|---------|---------|---------|
 | 1 | `ci-kernel.yml` | kernel Kbuild 18 配置矩阵 + checkpatch + sparse + Coccinelle + KUnit + kselftest | Tier 0/1 | 阻断合入 |
-| 2 | `sc-dual-ci.yml` | agentrt 与 AirymaxOS 两端 [SC] 头文件逐字节一致 + 编译器无关性 + Tier 0 权威源逐字节哈希校验（[SC] 10 头文件 + magic 值）+ 禁止新增 `AIRY_LOG_*` 调用 / `AIRY_ERR_*` 引用（对齐日志收敛/错误码迁移阶段 3+） | Tier 0/1 | 阻断合入，Tier 0 变更要求 TSC 评审 |
+| 2 | `sc-dual-ci.yml` | agentrt 与 AirymaxOS 两端 [SC] 头文件逐字节一致 + 编译器无关性 + Tier 0 权威源逐字节哈希校验（[SC] 10 头文件 + magic 值）+ 禁止新增 `AIRY_ERR_*` 双轨引用（错误码以 `AIRY_E*` 正数幅值为准，对齐错误码迁移阶段 3+） | Tier 0/1 | 阻断合入，Tier 0 变更要求 TSC 评审 |
 | 3 | `ssot-validate.yml` | §1.7 权威源清单引用一致性 + [SC] 头文件数量为 10 + 每个 [SC] 有 [DSL] 降级块 + [SS] 语义映射文档存在 + [IND] 实现未泄露到 [SC]/[SS] + Unify Design 5 模块边界一致性 + sched_tac 调度选型（禁 sched_ext）+ IPC 零拷贝选型（禁 page flipping）+ 内存选型（禁 DMA 一致性内存用于日志/IPC） | Tier 0/1 | 阻断合入 |
 | 4 | `mgmt-orchestrator.yml` | SSoT 规则 ID 校验 + 本注册表登记的 `OS-*` / agentrt 编号唯一性 + 主题文档引用编号均在注册表覆盖范围内 + 文件完整性（8 子仓 submodule 指针 + [SC] 10 头文件物理存在）+ 子仓 CI 状态聚合 + 文档格式（markdownlint + 版权头 + 链接有效性） | Tier 1/2 | 阻断合入 |
 | 5 | `nightly.yml` | develop 夜间构建（L5/L6 连接/协议验证）+ 性能回归检测 | — | 标记回退 |
@@ -234,7 +234,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 
 ## 第 3 章 OS-KER 内核工程规则
 
-> **编号区间说明**：001-010 由 01-coding-standards.md 权威定义；011-021 由 C\_Cpp\_coding\_style.md Part I 权威定义；022-029 由 02-kconfig-system.md 权威定义；046 由 C\_Cpp\_coding\_style.md Part I 权威定义；053-056 由 01-coding-standards.md 权威定义；060-069 由 04-engineering-philosophy.md 权威定义；071-085 由各主题文档权威定义；086-155 为历史冲突消解后的唯一编号（2026-07-12 全量消解）。（2026-07-13 更新：C\_coding\_style\_standard.md 已合并入 C\_Cpp\_coding\_style.md Part I）
+> **编号区间说明**：OS-KER-001\~229 共 229 条，按区间摘要登记（与 ssot-registry.yaml Ch 3 range 001-229 一致）。其中 001-010 由 01-coding-standards.md 权威定义；011-021 由 C\_Cpp\_coding\_style.md Part I 权威定义；022-029 由 02-kconfig-system.md 权威定义；046 由 C\_Cpp\_coding\_style.md Part I 权威定义；053-056 由 01-coding-standards.md 权威定义；060-069 由 04-engineering-philosophy.md 权威定义；071-085 由各主题文档权威定义；086-155 为历史冲突消解后的唯一编号（2026-07-12 全量消解）。（2026-07-13 更新：C\_coding\_style\_standard.md 已合并入 C\_Cpp\_coding\_style.md Part I）
 
 ### 3.1 01-coding-standards.md 权威定义（001-010, 053, 056）
 
@@ -408,7 +408,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-KER-119 | 不维护跨平台 HAL（E-4 原则）          | OS-KER-023 |
 | OS-KER-120 | 内核只提供能力，策略外移                | OS-KER-024 |
 | OS-KER-121 | 策略可在不重编译内核下替换               | OS-KER-025 |
-| OS-KER-122 | SCHED\_AGENT 基于 sched\_ext  | OS-KER-026 |
+| OS-KER-122 | 禁 sched\_ext 立场：sched\_tac 基于原生调度类（SCHED\_DEADLINE/SCHED\_FIFO/EEVDF），禁 SCHED\_AGENT 宏 | OS-KER-026 |
 | OS-KER-123 | 函数长度一屏可读                    | OS-KER-027 |
 | OS-KER-124 | 相信编译器，不写 \_\_always\_inline | OS-KER-028 |
 | OS-KER-125 | 禁止 .c 内 #ifdef 切割函数体        | OS-KER-029 |
@@ -583,6 +583,9 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-STD-044 | extern "C" FFI 边界                          | Part I §8.1   |
 | OS-STD-045 | FFI 类型映射——`core::ffi`/`kernel::ffi` C 兼容类型 | Part I §8.2   |
 | OS-STD-046 | FFI 所有权语义——`#[ownership]` 标注               | Part I §8.3   |
+| OS-STD-047 | 工具链要求（rustfmt/clippy/rustdoc/Miri，CI 阻断）        | Part I §1.3   |
+| OS-STD-048 | 设备模型集成（device model integration）            | Part III §1.3 |
+| OS-STD-049 | 交叉编译支持（cross-compilation）                  | Part III §3.3 |
 | OS-STD-050 | 驱动注册模型（kernel::module! 宏）                  | Part III §1.1 |
 | OS-STD-051 | 驱动 Trait 约定                                | Part III §1.2 |
 | OS-STD-052 | 驱动 unsafe 审计标准（SAFETY 注释）                  | Part III §2.1 |
@@ -660,7 +663,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 
 > **权威定义文档**：闭源总纲（`agentrt-linux基本工程标准规范.md`）§3 代码格式
 >
-> **来源说明**：OS-FMT 为闭源总纲定义的格式子域前缀（FMT = Format），承载 C 内核代码格式规则。本节将其登记到 SSoT 注册表以建立跨开源/闭源的编号一致性。注意：本节 OS-FMT-001\~007（闭源总纲 §3）与 §4.2 OS-STD-FMT（开源 `01-coding-standards.md` Part II，29 条）为两套独立编号系列——前者源自闭源总纲，后者源自开源编码标准；二者内容有重叠但编号体系不同，引用时须明确区分。
+> **来源说明**：OS-FMT 为闭源总纲定义的格式子域前缀（FMT = Format），承载 C 内核代码格式规则。本节将其登记到 SSoT 注册表以建立跨开源/闭源的编号一致性。注意：本节 OS-FMT-001\~007（闭源总纲 §3）与 §4.2 OS-STD-FMT（开源 `01-coding-standards.md` Part II，30 条）为两套独立编号系列——前者源自闭源总纲，后者源自开源编码标准；二者内容有重叠但编号体系不同，引用时须明确区分。
 
 | 编号         | 规则                                                              | 章节定位      |
 | ---------- | --------------------------------------------------------------- | --------- |
@@ -761,7 +764,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 
 > **权威定义文档**：130-roadmap/06-acceptance-criteria.md
 >
-> **SSoT 对齐说明（v0.2.5 已消解）**：历史 00-handbook §3.7 与 07-governance §10 中定义的 OS-ACC-001\~005 与 130-roadmap 中的 OS-ACC 编号存在语义冲突（同一编号指代不同验收项）。现已完成消解：本注册表 §7 确认 130-roadmap/06-acceptance-criteria.md 为 OS-ACC 的唯一权威定义文档；00-handbook §3.7 已改为引用本注册表 §7（见 00-handbook L151）；07-governance §10.6 已改为引用本注册表 §7（见 07-governance L645）。OS-ACC 编号体系单源权威已建立。
+> **SSoT 对齐说明（v0.2.5 已消解）**：历史 00-handbook §3.7 与 07-governance §10 中定义的 OS-ACC-001\~005 与 130-roadmap 中的 OS-ACC 编号存在语义冲突（同一编号指代不同验收项）。现已完成消解：本注册表 §6 确认 130-roadmap/06-acceptance-criteria.md 为 OS-ACC 的唯一权威定义文档；00-handbook §3.7 已改为引用本注册表 §6（见 00-handbook L151）；07-governance §10.6 已改为引用本注册表 §6（见 07-governance L645）。OS-ACC 编号体系单源权威已建立。
 >
 > **摘要登记覆盖声明（2026-07-15 补全）**：OS-ACC-001\~110 全部 110 条验收标准采用摘要登记方式，覆盖范围见 §1.5 摘要登记覆盖声明表。权威定义为 `130-roadmap/06-acceptance-criteria.md`。本节不逐条列举，避免与权威定义文档内容重复；编号分配权属于本注册表，详细说明由权威定义文档承载。
 
@@ -1103,7 +1106,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | C-S11   | `preempt_disable()` 准备（保护 kfifo 操作）                               | 07-ipc-fastpath §3.1 L214 |
 | C-S12   | CRC32 完整性校验（覆盖 `header[0:52) + payload`，投递前）                   | 07-ipc-fastpath §3.1 L215 |
 
-> **注**：C-S9 包含三个子状态 `C-S9.EPOCH` / `C-S9.RANDTAG` / `C-S9.PERMS`（v1.1 术语统一，废弃早期 `C-S9a`/`C-S9b`/`C-S9c` 命名）。C-S 编号一经分配不得复用，遵循 OS-IRON-015。
+> **注**：C-S9 包含三个子状态 `C-S9.EPOCH` / `C-S9.RANDTAG` / `C-S9.PERMS`（v1.0.1 术语统一，废弃早期 `C-S9a`/`C-S9b`/`C-S9c` 命名）。C-S 编号一经分配不得复用，遵循 OS-IRON-015。
 
 ### 13.3 OS-CHK-DOC 文档检查规则（OS-CHK-DOC-01\~08, 18\~19）
 
@@ -1588,4 +1591,4 @@ agentrt 规则编号新增须遵循以下流程（与 AirymaxOS `OS-*` 编号流
 | 2026-07-15 | 0.1.1 | **SSoT 升级：AirymaxOS → Airymax 全局**——标题从"AirymaxOS 全局规则编号注册表"升级为"Airymax 全局规则 SSoT 注册表"；文档定位扩展为"Airymax 全项目（agentrt 用户态运行时 + AirymaxOS/agentrt-linux 操作系统）"；头部新增双编号体系声明（AirymaxOS `OS-*` 前缀第 2-9 章 + agentrt 无前缀第 10 章）+ IRON-9 v3 四层共享模型引用；§1.1-§1.3 扩展核心原则/使用规则/编号格式覆盖双编号体系，§1.2 新增"编号体系隔离"规则禁止 `OS-IRON-001` 与 `IRON-1` 混用，§1.3 新增 agentrt 编号格式 `<前缀>-<NN>` 声明；新增第 10 章 agentrt 规则编号体系（§10.1-§10.18 共 18 节），全量登记 17 类规则：IRON-1\~10（10 条全量）/BAN-001\~361（摘要 16 区间）/STD-01\~08（8 条全量，含 STD-02 IPC 128 字节消息头）/ACC 149 项（摘要 6 区间）/FOUND-01\~10（10 条全量）/SPLIT-01\~08（8 条全量）/PROD-01\~06（6 条全量）/ARC-01\~08（8 条全量，含方案 A 接口反转）/LC-01\~08（8 条全量，含 AGPL+Apache 双许可证）/PRT-01\~18（摘要 3 区间）/LOG-01\~26（摘要 6 区间）/PATH-BAN-1\~5（5 条全量）/L-01\~53（摘要 2 区间）/CROSS-01\~06（6 条全量）/REQ-01\~08（8 条全量）/W01-W30（摘要 3 区间）/SP01-SP37（摘要 3 区间）；小类全量登记 10 类共 77 条（IRON 10/STD 8/FOUND 10/SPLIT 8/PROD 6/ARC 8/LC 8/PATH-BAN 5/CROSS 6/REQ 8）+ 大类摘要登记 7 类共 674 条（BAN 361/ACC 149/PRT 18/LOG 26/L 53/W 30/SP 37）= 总计 17 类 751 条 agentrt 规则；§10.18 新增 agentrt 规则编号新增流程（RFC→评审→注册三步）+ 双编号体系同步声明（agentrt 新增规则与 AirymaxOS 存在语义同源关系时须同时登记 `OS-*` 编号） | SPHARX 工程标准组 |
 | 2026-07-15 | 0.1.1 | **P0 修复：补登 42 个未在 SSoT 登记的规则编号 + 重编号原 §10 → §13**——深层审查发现 OS-ARCH-001\~010（10-architecture/ 5 文档）/ OS-IFACE-001\~010（30-interfaces/ 5 文档）/ OS-TEST-001\~022（80-testing/ 2 文档 + 10-architecture/07-directory-structure.md L329 引用 OS-TEST-010）共 42 个 `OS-*` 前缀规则编号在主题文档中使用但完全未在 SSoT 登记，构成 P0 级 SSoT 违规（违反 §1.2"编号分配权"——所有编号分配权仅属于 SSoT）。修复方案：① 新增 §10 OS-ARCH 架构工程规则章节摘要登记 OS-ARCH-001\~010；② 新增 §11 OS-IFACE 接口工程规则章节摘要登记 OS-IFACE-001\~010；③ 新增 §12 OS-TEST 测试工程规则章节摘要登记 OS-TEST-001\~022；④ 原 §10 agentrt 规则编号体系重编号为 §13（§10.1-§10.18 共 18 个子章节标题 + 17 个总览表引用全部同步更新）；⑤ 头部双编号体系声明更新为"AirymaxOS 第 2-12 章 + agentrt 第 13 章"；⑥ TOC 同步追加 §10/§11/§12/§13 四个条目；⑦ 00-engineering-standards-handbook.md §3 章节引用列表同步追加 §10-§13。本次修复使 AirymaxOS `OS-*` 编号体系（OS-IRON/OS-KER/OS-STD/OS-BAN/OS-ACC/OS-ABI/OS-SEC/OS-ARCH/OS-IFACE/OS-TEST 共 10 个系列）与 agentrt 17 类无前缀编号体系（IRON/BAN/STD/ACC/FOUND/SPLIT/PROD/ARC/LC/PRT/LOG/PATH-BAN/L/CROSS/REQ/W/SP）在 SSoT 中获得完全登记覆盖，根除"主题文档使用未登记编号"的系统性 SSoT 违规                                                                                                                               | SPHARX 工程标准组 |
 
-| 2026-07-17 | 0.2.0 | **v0.2.0 升级：SSoT 三层模型 + 技术点单一权威源清单 + CI 强制校验机制**——(1) 新增 §1.6 SSoT 三层模型（Tier 0 不可变权威源 / Tier 1 强权威源 / Tier 2 常规权威源），定义层级判定规则与层间优先级。(2) 新增 §1.7 技术点单一权威源清单，登记 11 个核心技术点（错误码/日志类型/IPC 协议/调度策略/安全模型/微内核策略/IRON-9 模型/Unify Design/[DSL] 降级层/内核基线/SCHED_AGENT）的 Tier 层级与唯一权威文档。(3) 新增 §1.8 CI 强制校验机制，登记 6 个 CI workflow（ci-kernel/sc-dual-ci/ssot-validate/mgmt-orchestrator/nightly/release）覆盖三层模型强制力。本次升级配套创建 P2 级文档：20-modules/12-logger-daemon-module.md（Logger Daemon 模块设计）+ 20-modules/13-printk-bridge.md（printk 桥接设计）+ agentrt 50-engineering-standards/11-log-convergence-plan.md（日志收敛计划）+ 12-error-code-migration-plan.md（错误码迁移计划）；升级 03-microkernel-strategy.md / 07-ipc-fastpath.md / 03-capability-model.md 至 v1.0（新增附录：Unify Design 5 模块融入 + sched_tac + [DSL] 降级层 + Capability 缓存/Reconciliation/MDB 完整性约束） | SPHARX 工程标准组 |
+| 2026-07-17 | 0.2.0 | **v0.2.0 升级：SSoT 三层模型 + 技术点单一权威源清单 + CI 强制校验机制**——(1) 新增 §1.6 SSoT 三层模型（Tier 0 不可变权威源 / Tier 1 强权威源 / Tier 2 常规权威源），定义层级判定规则与层间优先级。(2) 新增 §1.7 技术点单一权威源清单，登记 11 个核心技术点（错误码/日志类型/IPC 协议/调度策略/安全模型/微内核策略/IRON-9 模型/Unify Design/[DSL] 降级层/内核基线/[SC] 头文件物理宿主与目录结构）的 Tier 层级与唯一权威文档。(3) 新增 §1.8 CI 强制校验机制，登记 6 个 CI workflow（ci-kernel/sc-dual-ci/ssot-validate/mgmt-orchestrator/nightly/release）覆盖三层模型强制力。本次升级配套创建 P2 级文档：20-modules/12-logger-daemon-module.md（Logger Daemon 模块设计）+ 20-modules/13-printk-bridge.md（printk 桥接设计）+ agentrt 50-engineering-standards/11-log-convergence-plan.md（日志收敛计划）+ 12-error-code-migration-plan.md（错误码迁移计划）；升级 03-microkernel-strategy.md / 07-ipc-fastpath.md / 03-capability-model.md 至 v1.0（新增附录：Unify Design 5 模块融入 + sched_tac + [DSL] 降级层 + Capability 缓存/Reconciliation/MDB 完整性约束） | SPHARX 工程标准组 |

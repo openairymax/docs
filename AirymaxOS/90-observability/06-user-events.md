@@ -29,15 +29,15 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 1.1 定位
 
-user_events 是 Linux 6.6 内核基线提供的用户态事件追踪框架，允许用户态进程通过 `ioctl()` 注册事件并将其直接写入 ftrace ring buffer，无需经过 `write()` 系统调用或额外的数据拷贝。agentrt-linux 选择 user_events 作为可观测性 L5 层（用户态桥接），原因有三：
+user_events 是 Linux 6.6 内核基线提供的用户态事件追踪框架，允许用户态进程通过 `ioctl()` 注册事件，并通过 `write()` 到 `/sys/kernel/tracing/user_events_data` 投递事件数据；`enabled` 启用位通过 `mmap()` 共享，用户态零拷贝检查启用状态。agentrt-linux 选择 user_events 作为可观测性 L5 层（用户态桥接），原因有三：
 
-1. **零拷贝写入**：user_events 通过 `mmap()` 将 ftrace ring buffer 的写指针暴露给用户态，用户态直接填充事件数据，内核态仅做启用状态检查，单事件开销 < 10ns，远低于 `write()` 路径的 1-2μs。
+1. **启用位 mmap 零拷贝检查 + write() 投递**：user_events 将 `enabled` 位通过 `mmap()` 暴露给用户态，用户态原子读检查（无需系统调用），命中后经 `write()` 到 `user_events_data` 投递事件（单次 syscall，非零拷贝写入），单事件开销 < 10ns（enabled 检查 ~1.2ns + write 投递），远低于 A-ULP 日志路径的 ~500ns。
 2. **与 ftrace 统一**：user_events 事件与内核 tracepoint 事件共享同一 ring buffer 与同一 `events/` 目录结构，可在同一 trace 输出中混合查看，符合 A-ULS 模块 macro_d 的"统一观测面"原则。
 3. **与 logger_d 解耦**：user_events 用于实时追踪（短期、高频率），logger_d 用于持久化日志（长期、结构化）；二者职责清晰，不互相替代。
 
 **OS-OBS-061: user_events 是 agentrt-linux 可观测性 L5 层的强制基线，用户态守护进程上报追踪事件必须经 user_events，不得自创 ioctl/netlink/共享内存替代方案。**
 
-**OS-KER-151: kernel 的 defconfig 必须开启 CONFIG_USER_EVENTS；agentrt.ko 必须在 module_init 阶段验证 `/sys/kernel/tracing/user_events` 文件存在。**
+**OS-KER-151: kernel 的 defconfig 必须开启 CONFIG_USER_EVENTS；部署时须验证 `/sys/kernel/tracing/user_events` 文件存在（内建 Airy LSM，非 agentrt.ko）。**
 
 ### 1.2 框架组成
 
@@ -75,8 +75,8 @@ graph LR
     B --> C[ioctl DIAG_IOCSREG 注册事件]
     C --> D[内核 user_events 子系统]
     D --> E[events/airy/ 目录创建]
-    D --> F[mmap 写指针]
-    A --> G[直接写入 ring buffer]
+    D --> F[mmap 共享 enabled 位]
+    A --> G[write() 投递到 user_events_data]
     G --> H[ftrace ring buffer]
     H --> I[trace 文件读取]
     H --> J[perf stat/record]
@@ -108,17 +108,17 @@ struct user_reg reg = {
 };
 
 ioctl(fd, DIAG_IOCSREG, &reg);
-/* reg.write_index 返回写索引，用于直接写入 ring buffer */
+/* reg.write_index 返回写索引，用于 write() 投递时定位事件 */
 ```
 
 ### 2.3 事件写入流程
 
-注册后，用户态进程通过 mmap 的写指针直接写入 ring buffer：
+注册后，用户态进程通过 `write()` 到 `user_events_data` 投递事件；`enabled` 启用位经 mmap 共享（零拷贝检查）：
 
 ```c
-/* 检查事件是否启用（无需系统调用） */
+/* 检查事件是否启用（enabled 位 mmap 共享，无需系统调用） */
 if (__atomic_load_n(&event_data->enabled, __ATOMIC_RELAXED) & (1 << 0)) {
-    /* 事件已启用，直接写入 */
+    /* 事件已启用，构造 entry 后 write() 投递 */
     struct {
         int common_type;
         int common_pid;
@@ -130,7 +130,7 @@ if (__atomic_load_n(&event_data->enabled, __ATOMIC_RELAXED) & (1 << 0)) {
         .agent_id = 42,
         .input_tokens = 234,
     };
-    /* 通过 user_events 写入接口 */
+    /* 经 user_events_data 文件 write() 投递（一次 syscall） */
     airy_user_event_write(fd, &entry, sizeof(entry));
 }
 ```
@@ -162,7 +162,7 @@ cat /sys/kernel/tracing/trace
 agentrt-linux 提供封装 API `airy_user_event_register()`，供 12 daemon 与 Agent 运行时使用：
 
 ```c
-/* include/uapi/linux/airymax/user_events.h（v1.1 计划实现，当前未创建） */
+/* include/uapi/linux/airymax/user_events.h（v1.0.1 计划实现，当前未创建） */
 
 struct airy_user_event {
     int fd;
@@ -400,8 +400,10 @@ void macro_d_on_enforce(u32 agent_id, u32 action, u32 reason)
     };
     airy_user_event_write(&superv_enforce_ev, &ev, sizeof(ev));
 
-    /* 2. 写入 A-ULP Ring Buffer（持久化） */
-    airy_log_write(AIRY_LOG_NOTICE, AIRY_MOD_USV,
+    /* 2. 写入 A-ULP Ring Buffer（持久化）
+     * 注：AIRY_LOG_NOTICE 不存在——[SC] log_types.h 仅定义 5 级
+     * （DEBUG/INFO/WARN/ERROR/FATAL），此处用 WARN 表达监管执法事件 */
+    airy_log_write(AIRY_LOG_WARN, AIRY_MOD_USV,
         "enforce agent=%u action=%u reason=%u",
         agent_id, action, reason);
 }

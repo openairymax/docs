@@ -52,9 +52,9 @@ AirymaxOS 备份对象分为五大类：
 |------|------|------|--------|
 | Agent 状态 | Agent 元数据、运行状态、调度参数 | `/var/lib/airy/agents/<id>/` | P0 |
 | 记忆数据 | MemoryRovol L3/L4 记忆 | `/var/lib/airy/memory/l3/`、`/var/lib/airy/memory/l4/` | P0 |
-| 配置文件 | 系统配置、daemon 配置、阈值 | `/etc/airy/` | P0 |
+| 配置文件 | 系统配置、daemon 配置、阈值 | `/etc/agentrt/` | P0 |
 | 监控数据 | audit_d 聚合数据、事件日志 | `/var/lib/airy/monitor/`、`/var/lib/airy/incidents/` | P1 |
-| 安全数据 | sec_d 密钥库、审计日志 | `/etc/airy/keys/`、`/var/log/airy/` | P0 |
+| 安全数据 | sec_d 密钥库、审计日志 | `/etc/agentrt/keys/`、`/var/log/airy/` | P0 |
 
 ### 2.2 不备份的对象
 
@@ -99,10 +99,10 @@ L3 采用增量备份，记录自上次备份后变更的"记忆块"（默认 4K
 
 ### 2.5 配置文件备份
 
-`/etc/airy/` 下的配置文件：
+`/etc/agentrt/` 下的配置文件：
 
 ```
-/etc/airy/
+/etc/agentrt/
 ├── airy.conf                  # 主配置
 ├── daemons/                   # 各 daemon 配置
 │   ├── macro_d.conf
@@ -122,7 +122,7 @@ L3 采用增量备份，记录自上次备份后变更的"记忆块"（默认 4K
     └── audit_d.pem
 ```
 
-配置文件采用全量备份（每次打包整个 `/etc/airy/`），密钥目录单独加密备份。
+配置文件采用全量备份（每次打包整个 `/etc/agentrt/`），密钥目录单独加密备份。
 
 ---
 
@@ -283,13 +283,13 @@ sha256sum -c full_20260718.sha256
 每个备份由 audit_d 使用自身私钥签名（私钥由 sec_d 颁发），签名独立存储为 `.sig` 文件：
 
 ```bash
-openssl dgst -sha256 -sign /etc/airy/keys/audit_d.key full_20260718.tar.zst > full_20260718.sig
+openssl dgst -sha256 -sign /etc/agentrt/keys/audit_d.key full_20260718.tar.zst > full_20260718.sig
 ```
 
 恢复前验证签名：
 
 ```bash
-openssl dgst -sha256 -verify /etc/airy/keys/audit_d.pub -signature full_20260718.sig full_20260718.tar.zst
+openssl dgst -sha256 -verify /etc/agentrt/keys/audit_d.pub -signature full_20260718.sig full_20260718.tar.zst
 ```
 
 签名验证失败表示备份被篡改，禁止恢复，触发 CRITICAL 告警。
@@ -370,9 +370,9 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 
 恢复的第一阶段是恢复配置：
 
-1. config_d 接收恢复指令，读取备份中的 `/etc/airy/` 内容。
+1. config_d 接收恢复指令，读取备份中的 `/etc/agentrt/` 内容。
 2. 校验配置文件完整性（SHA256 与备份 manifest 一致）。
-3. 备份当前（损坏的）配置到 `/etc/airy.corrupt.<timestamp>/`。
+3. 备份当前（损坏的）配置到 `/etc/agentrt.corrupt.<timestamp>/`。
 4. 替换为备份中的配置。
 5. 触发 SIGHUP 通知所有 daemon 重新加载配置。
 6. config_d 上报恢复完成。
@@ -468,7 +468,7 @@ airyctl recover --agent-id 42 --backup-id FULL-20260718-001
 
 降级模式下按以下顺序逐步恢复：
 
-1. **配置恢复**：config_d 恢复 `/etc/airy/`。
+1. **配置恢复**：config_d 恢复 `/etc/agentrt/`。
 2. **密钥恢复**：sec_d 恢复密钥库。
 3. **记忆恢复**：mem_d 恢复 L4 → L3。
 4. **核心 daemon 启动**：sched_d、vfs_d、net_d 启动。

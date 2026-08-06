@@ -38,7 +38,7 @@ debugfs 与 tracefs 是 Linux 6.6 内核基线提供的调试与追踪专用伪�
 
 **OS-OBS-051: debugfs 与 tracefs 是 agentrt-linux 可观测性 L4 层调试接口的强制基线，调试信息必须经 debugfs 导出，不得在生产 sysfs 中混入调试字段。**
 
-**OS-KER-141: kernel 的 defconfig 必须开启 CONFIG_DEBUG_FS、CONFIG_TRACING、CONFIG_EVENT_TRACING；agentrt.ko 必须在 module_init 阶段完成 debugfs 子目录注册（仅当 debugfs 已挂载时）。**
+**OS-KER-141: kernel 的 defconfig 必须开启 CONFIG_DEBUG_FS、CONFIG_TRACING、CONFIG_EVENT_TRACING；内建 Airy LSM 必须在 `airy_init()` 阶段完成 debugfs 子目录注册（仅当 debugfs 已挂载时，非 agentrt.ko）。**
 
 ### 1.2 框架组成
 
@@ -102,7 +102,7 @@ debugfs 与 tracefs 是 Linux 6.6 内核基线提供的调试与追踪专用伪�
 │   ├── lsm_hook_log         # 最近 1000 次 LSM 钩子调用
 │   ├── cap_check_log        # 最近 1000 次 capability 校验
 │   └── denial_details       # 拒绝详情
-└── internals/               # agentrt.ko 内部状态
+└── internals/               # 内建 Airy LSM 内部状态
     ├── kobject_tree         # kobject 树
     ├── refcount_audit       # 引用计数审计
     └── leak_detector        # 内存泄漏检测器
@@ -110,10 +110,10 @@ debugfs 与 tracefs 是 Linux 6.6 内核基线提供的调试与追踪专用伪�
 
 ### 2.2 debugfs 注册流程
 
-agentrt.ko 在 `airy_init()` 中检查 debugfs 是否挂载，若挂载则注册子目录：
+内建 Airy LSM 在 `airy_init()` 中检查 debugfs 是否挂载，若挂载则注册子目录：
 
 ```c
-/* kernel/agentrt/airy_debugfs.c */
+/* kernel/corekern/airy/airy_debugfs.c（规划：内建 LSM 载体） */
 static struct dentry *airy_debugfs_root;
 
 static int __init airy_debugfs_init(void)
@@ -144,7 +144,7 @@ static void __exit airy_debugfs_exit(void)
 }
 ```
 
-**OS-KER-142: agentrt.ko 必须在 `airy_debugfs_init()` 中检查 `dbg_fs_root` 是否为 NULL；若 debugfs 未挂载，跳过注册而非报错，保证生产构建可正常加载。**
+**OS-KER-142: 内建 Airy LSM 必须在 `airy_debugfs_init()` 中检查 `dbg_fs_root` 是否为 NULL；若 debugfs 未挂载，跳过注册而非报错，保证生产构建可正常初始化。**
 
 ### 2.3 debugfs 文件创建规范
 
@@ -176,14 +176,14 @@ Agent 状态机的完整历史：
 ```bash
 $ cat /sys/kernel/debug/airy/agents/42/state_machine
 agent_id: 42
-current_state: COGNITION_RUNNING
+current_state: RUNNING
 state_history (last 20):
-  [1784328868912] CREATED → COGNITION_RUNNING
-  [1784328958912] COGNITION_RUNNING → PLANNING
-  [1784328968912] PLANNING → SCHEDULING
-  [1784328978912] SCHEDULING → EXECUTING
-  [1784328988912] EXECUTING → BLOCKED
-  [1784328998912] BLOCKED → COGNITION_RUNNING
+  [1784328868912] READY → RUNNING
+  [1784328958912] RUNNING → BLOCKED
+  [1784328968912] BLOCKED → READY
+  [1784328978912] READY → RUNNING
+  [1784328988912] RUNNING → BLOCKED
+  [1784328998912] BLOCKED → RUNNING
   ...
 transitions_total: 5678
 avg_state_duration_ms: 12.3
@@ -468,7 +468,7 @@ echo 0 > /sys/kernel/tracing/events/airy/sched_switch/enable
 echo 'agent_id == 42' > /sys/kernel/tracing/events/airy/sched_switch/filter
 
 # 组合条件
-echo 'agent_id == 42 && prev_state == COGNITION_RUNNING' \
+echo 'agent_id == 42 && prev_state == RUNNING' \
     > /sys/kernel/tracing/events/airy/sched_switch/filter
 
 # 清除过滤器
@@ -500,13 +500,15 @@ print fmt: "agent=%u prev=%u next=%u class=%u latency=%lluns",
     REC->sched_class, REC->latency_ns
 ```
 
-**OS-KER-143: agentrt.ko 必须通过 `TRACE_EVENT` 宏定义所有 airy 子系统事件；事件格式必须稳定，不得在 patch 版本间变更字段顺序。**
+**OS-KER-143: 内建 Airy LSM 规划通过 `TRACE_EVENT` 宏定义所有 airy 子系统事件（当前 kernel 源码中 `include/trace/events/airy.h` **尚未实现**，见第 7 章"规划"标注）；事件格式必须稳定，不得在 patch 版本间变更字段顺序。**
 
 ---
 
 ## 第 7 章 agentrt-linux 事件追踪
 
-### 7.1 airy_sched_switch 事件
+> **⚠️ 规划标注**：本章 6 个 `TRACE_EVENT`（airy_sched_switch / airy_ipc_send / airy_agent_state_change / airy_cognition_enter / airy_cognition_exit / airy_memory_access）在**当前 kernel 源码中均不存在**（`include/trace/events/airy.h` 未创建），属**规划设计**。落地时需新增 `include/trace/events/airy.h` 并注册到 `kernel/trace/Makefile` 的 `TRACE_EVENT` 编译列表。Agent 生命周期事件字段应对齐 [SC] `sched.h` `enum airy_agent_state` 8 态。
+
+### 7.1 airy_sched_switch 事件（规划）
 
 Agent 调度切换事件，记录sched_tac 三层调度类切换：
 
@@ -620,7 +622,7 @@ $ cat /sys/kernel/tracing/trace | tail -10
 #           TASK-PID     CPU#  ||||    TIMESTAMP  FUNCTION
 #              | |        |   ||||       |         |
   cogn_d-1234  [000] d... 1784328868.912345: airy_cognition_enter: agent=42 input_tokens=234
-  sched_d-1235 [001] d... 1784328868.912346: airy_sched_switch: agent=42 prev=COGNITION_RUNNING next=PLANNING class=DL latency=1234ns
+  sched_d-1235 [001] d... 1784328868.912346: airy_sched_switch: agent=42 prev=RUNNING next=BLOCKED class=DL latency=1234ns
   gateway_d-1236 [002] d... 1784328868.912347: airy_ipc_send: src=42 dst=43 op=SEARCH fastpath=1 latency=1234ns
   cogn_d-1234  [000] d... 1784328868.912348: airy_cognition_exit: agent=42 output_tokens=456 latency=1500000ns
 ```

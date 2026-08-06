@@ -236,9 +236,12 @@ BRANCH=airymaxos/1.0/x86_64
 echo "[1/5] 初始化 ostree 仓库"
 ostree init --repo=/sysroot/ostree/repo --mode=archive-z2
 
-echo "[2/5] 添加远程仓库"
+echo "[2/5] 添加远程仓库（GPG 签名验证）"
 ostree remote add --repo=/sysroot/ostree/repo airymaxos \
-    "$REMOTE_URL" --no-gpg-verify
+    "$REMOTE_URL" --gpg-verify \
+    --gpg-import=/usr/share/airymaxos/rpm-gpg/AIRYMAXOS-GPG-KEY
+# 说明：rpm-ostree/ostree 更新链路强制 GPG 校验（与本文档 GPG 签名承诺一致），
+# 不使用 --no-gpg-verify；密钥由 airymaxos-gpg-keys 包随系统安装。
 
 echo "[3/5] 拉取初始操作系统树"
 ostree pull --repo=/sysroot/ostree/repo airymaxos:"$BRANCH"

@@ -37,15 +37,15 @@ Token 效率监控是 agentrt-linux 专属的可观测性 L8 层，专门追踪�
 
 **OS-OBS-071: Token 效率监控是 agentrt-linux 可观测性 L8 层的强制基线，所有 Agent 必须接受 Token 消耗追踪，不得存在"匿名 Token 消费"路径。**
 
-**OS-KER-161: kernel 的 defconfig 必须开启 CONFIG_AIRY_TOKEN_MONITOR；agentrt.ko 必须在 module_init 阶段注册 Token 追踪数据结构。**
+**OS-KER-161: Token 监控规划配置项 `CONFIG_AIRY_TOKEN_MONITOR`（**当前 kernel 源码中不存在，属规划**）；落地时由内建 Airy LSM（非 agentrt.ko）在 `airy_init()` 阶段注册 Token 追踪数据结构。**
 
 ### 1.2 框架组成
 
 | 组件 | 实现位置 | 职责 |
 |------|----------|------|
-| Token 计数器 | `kernel/agentrt/airy_token.c` | per-Agent Token 消耗计数 |
+| Token 计数器 | `kernel/corekern/airy/airy_token.c`（规划） | per-Agent Token 消耗计数 |
 | cogn_d 上报 | `daemons/cogn_d/token_reporter.c` | 用户态 Token 消耗上报 |
-| procfs 接口 | `kernel/agentrt/airy_token_procfs.c` | `/proc/airy/agents/[id]/token_stats` |
+| procfs 接口 | `kernel/corekern/airy/airy_token_procfs.c`（规划） | `/proc/airy/agents/[id]/token_stats` |
 | A-ULS 监管 | `daemons/macro_d/token_superv.c` | 预算溢出告警与执法 |
 | A-ULP 持久化 | `daemons/logger_d/token_persister.c` | 历史趋势落盘 |
 | user_events | `daemons/cogn_d/user_events.c` | 实时 Token 事件上报 |
@@ -147,7 +147,7 @@ void cogn_d_on_llm_complete(u32 agent_id,
 内核态在收到 cogn_d 上报后，更新 Agent 的 Token 统计：
 
 ```c
-/* kernel/agentrt/airy_token.c */
+/* kernel/corekern/airy/airy_token.c（规划） */
 int airy_token_report(u32 agent_id, struct airy_token_delta *delta)
 {
     struct airy_agent_token *token;
@@ -251,7 +251,7 @@ budget_ratio: 22.22%       # 222222 ppm
 === 效率指标 ===
 output_input_ratio: 0.80    # 800000 ppm（优秀）
 effective_ratio: 0.44       # 444444 ppm（良好）
-cache_hit_ratio: 0.75       # 750000 ppm（优秀）
+cache_hit_ratio: 0.55       # 548600 ppm（良好；= 1500000/(1234567+1500000)，对齐 §3.1 公式）
 reasoning_overhead: 0.17    # 170000 ppm（良好）
 
 === 警告状态 ===
@@ -278,7 +278,8 @@ A-ULS（Unified Supervision）模块的 macro_d daemon 负责 Token 预算监管
 ### 4.2 告警触发流程
 
 ```c
-/* kernel/agentrt/airy_token.c */
+/* kernel/corekern/airy/airy_token.c（规划）——⚠️ Token 预算门卫待实现（里程碑 M2-M5，见 130-roadmap）；
+ * 当前 kernel 源码中无此实现，下述逻辑为设计示意 */
 static void airy_token_check_budget(struct airy_agent_token *token)
 {
     u32 ratio = token->stats.budget_ratio_ppm;
@@ -325,7 +326,7 @@ macro_d 收到 Token 预算告警后，执行对应执法动作：
 |---------|------------------|---------|
 | L1 告警（80%） | 向 cogn_d 发送 `OPTIMIZE_PROMPT` 建议 | cogn_d 启动提示工程优化 |
 | L2 降级（95%） | `sched_setscheduler()` 将 Agent 从 SCHED_DEADLINE 降级至 SCHED_FIFO | 调度类切换，tracepoint 记录 |
-| L3 终止（100%） | `kill(SIGTERM)` 终止 Agent，回收资源 | Agent 进入 TERMINATED 状态 |
+| L3 终止（100%） | `kill(SIGTERM)` 终止 Agent，回收资源 | Agent 进入 DEAD 状态（EXIT_ZOMBIE，等待回收） |
 
 ### 4.4 告警历史记录
 
@@ -381,9 +382,9 @@ budget_consumption_rate: 37.04 tokens/s
 === 效率指标 ===
 output_input_ratio: 0.8000       # 800000 ppm
 effective_ratio: 0.4444          # 444444 ppm
-cache_hit_ratio: 0.7500          # 750000 ppm
+cache_hit_ratio: 0.5491          # 549100 ppm（= 28571/(23456+28571)，对齐 §3.1 公式）
 reasoning_overhead: 0.1700       # 170000 ppm
-efficiency_grade: EXCELLENT      # EXCELLENT / GOOD / WARNING / CRITICAL
+efficiency_grade: GOOD           # EXCELLENT / GOOD / WARNING / CRITICAL（cache_hit_ratio < 0.7，未达优秀线）
 
 === 警告状态 ===
 alert_state: NORMAL              # NORMAL / ALERT / EXCEEDED
@@ -402,7 +403,7 @@ last_alert_time_ns: 0
 ### 5.3 procfs 实现规范
 
 ```c
-/* kernel/agentrt/airy_token_procfs.c */
+/* kernel/corekern/airy/airy_token_procfs.c（规划） */
 static int token_stats_show(struct seq_file *m, void *v)
 {
     struct airy_agent_token *token = m->private;

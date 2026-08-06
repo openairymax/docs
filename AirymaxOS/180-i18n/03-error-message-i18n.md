@@ -47,116 +47,67 @@ agentrt-linux 采用双错误码体系，分别适用于不同场景：
 
 | 体系 | 适用场景 | 格式 | 权威源 |
 |------|----------|------|--------|
-| **C 负整数体系**（首要） | C 内核和 Daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=-1` | `include/uapi/linux/airymax/error.h` |
-| **SDK 十六进制体系**（次要） | SDK 和外部接口 | `0x0000`-`0x7FFF` 分段 | `include/uapi/linux/airymax/error.h` |
+| **C 错误码体系**（首要） | C 内核和 Daemon 层 | `AIRY_EOK=0`、`AIRY_EINVAL=5`（**正数幅值**，返回 `-AIRY_EINVAL` 产生负值） | `include/uapi/linux/airymax/error.h` |
+| **SDK 十六进制体系**（次要，规划态） | SDK 和外部接口 | `0x0000`-`0x7FFF` 分段（设计规划，未在 [SC] 注册） | `include/uapi/linux/airymax/error.h` |
 
-### 2.2 C 负整数体系分段
+### 2.2 C 错误码体系分段（正数幅值）
 
-C 负整数体系按子系统分段，定义于 [SC] 共享契约层：
+C 错误码体系按子系统分段，定义于 [SC] 共享契约层：
 
 ```c
 /* include/uapi/linux/airymax/error.h [SC] — 错误码 SSoT（单一数据源）
- * airy_err_t 类型定义见 airy_types.h:41，此处通过 #include 获取 */
-#ifndef _AIRY_ERROR_H
-#define _AIRY_ERROR_H
-
-#include <airymax/uapi_compat.h>
-#include "airy_types.h"  /* airy_err_t = int32_t（定义于 airy_types.h:41） */
+ * airy_err_t 为 __s32；AIRY_E* 常量为正数幅值（如 POSIX errno），
+ * 调用方返回 -AIRY_E* 产生负错误值。完整定义含 [DSL] AIRY_SC_FALLBACK
+ * 降级块（38 个 POSIX 码映射到 5 核心码），本节仅摘录分段结构。
+ */
+typedef __s32 airy_err_t;
 
 /* 成功 */
-#define AIRY_EOK               0
+#define AIRY_EOK              0
 
-/* 通用错误（-1 ~ -99），SSoT 对齐 30-interfaces/01-syscalls.md §6 */
-#define AIRY_EINVAL          (-1)   /* 无效参数 */
-#define AIRY_ENOMEM          (-2)   /* 内存不足 */
-#define AIRY_ENOSYS          (-3)   /* 未实现 */
-#define AIRY_EPERM           (-4)   /* 权限不足 */
-#define AIRY_ENOENT          (-5)   /* 资源不存在 */
-#define AIRY_EAGAIN          (-6)   /* 重试 */
-#define AIRY_EMSGSIZE        (-7)   /* 消息过大 */
-#define AIRY_EBADF           (-8)   /* 描述符错误 */
-#define AIRY_EBUSY           (-9)   /* 资源繁忙 */
-#define AIRY_ENOTSUP         (-10)  /* 不支持 */
-#define AIRY_ETIMEDOUT        (-11)  /* 超时 */
-#define AIRY_ECONFLICT       (-12)  /* 状态冲突 */
-#define AIRY_EGENERIC        (-13)  /* 通用错误（兜底） */
-#define AIRY_EACCES          (-14)  /* 访问拒绝 */
-#define AIRY_EIO             (-15)  /* I/O 错误 */
+/* POSIX 对齐段（1-40，正数幅值） */
+#define AIRY_EACCES           1     /* Operation not permitted */
+#define AIRY_EEXIST           2     /* File exists */
+#define AIRY_EFAULT           3     /* Bad address */
+#define AIRY_EINTR            4     /* Interrupted system call */
+#define AIRY_EINVAL           5     /* Invalid argument */
+#define AIRY_EIO              6     /* I/O error */
+#define AIRY_EISDIR           7     /* Is a directory */
+#define AIRY_ENOENT           8     /* No such file or directory */
+#define AIRY_ENOMEM           9     /* Out of memory */
+#define AIRY_ENOSPC           10    /* No space left on device */
+#define AIRY_ENOTSUP          11    /* Operation not supported */
+#define AIRY_EPERM            12    /* Operation not permitted (POSIX) */
+#define AIRY_ERANGE           13    /* Result too large */
+#define AIRY_EBUSY            16    /* Device or resource busy */
+#define AIRY_ECANCELED        19    /* Operation canceled */
+#define AIRY_EAGAIN           35    /* Try again */
 
-/* 系统级错误（-100 ~ -199） */
-#define AIRY_SYS_EBOOT       (-100)
-#define AIRY_SYS_ESHUTDOWN   (-101)
-#define AIRY_SYS_ESERVICE    (-102)
-#define AIRY_SYS_ECONFIG     (-103)
+/* 子系统段（41-240，正数幅值）：
+ *   IPC 41-70 / Capability 71-100 / Config 101-120 /
+ *   Sched+Lifecycle 121-140 / Mem 141-160 / Cognition 161-180 /
+ *   Log 181-200 / Object 201-220 / Syscall 221-240
+ */
+#define AIRY_EIPC_FROZEN      53    /* 示例：IPC 段（Ring 冻结） */
+#define AIRY_ESCHED_DEADLINE  123   /* 示例：Sched 段（Deadline missed） */
+#define AIRY_EMEM_OOM         148   /* 示例：Mem 段（agent-scoped OOM） */
 
-/* 内核错误（-200 ~ -299） */
-#define AIRY_KERN_EBPF       (-200)
-#define AIRY_KERN_ESCHED     (-201)
-#define AIRY_KERN_EIPC       (-202)
-#define AIRY_KERN_EMEM       (-203)
-#define AIRY_KERN_ENODIE     (-210)  /* die 不存在（超节点） */
-#define AIRY_KERN_ECXL       (-211)  /* CXL 操作失败（超节点） */
-#define AIRY_KERN_ESNAPSHOT  (-212)  /* 快照失败（超节点） */
-
-/* 服务错误（-300 ~ -399） */
-#define AIRY_SVC_EGATEWAY    (-300)
-#define AIRY_SVC_ELLM        (-301)
-#define AIRY_SVC_ETOOL       (-302)
-#define AIRY_SVC_ESCHED      (-303)
-
-/* LLM 推理错误（-400 ~ -499） */
-#define AIRY_LLM_EPROVIDER   (-400)
-#define AIRY_LLM_ECONTEXT    (-401)
-#define AIRY_LLM_ETOKEN      (-402)
-#define AIRY_LLM_ERATE       (-403)
-
-/* 执行错误（-500 ~ -599） */
-#define AIRY_EXEC_ETASK      (-500)
-#define AIRY_EXEC_ECOMPENSATE (-501)
-#define AIRY_EXEC_EDAG_DEADLOCK  (-510)  /* DAG 死锁（编排） */
-#define AIRY_EXEC_ENOCONSENSUS   (-511)  /* 共识未达成（编排） */
-
-/* 记忆错误（-600 ~ -699） */
-#define AIRY_MEM_EROVOL      (-600)
-#define AIRY_MEM_ESWAP       (-601)
-#define AIRY_MEM_EFORGET     (-602)
-
-/* 安全错误（-700 ~ -799） */
-#define AIRY_SEC_ECAP        (-700)
-#define AIRY_SEC_ESANDBOX    (-701)
-#define AIRY_SEC_EAUDIT      (-702)
-
-/* 协议错误（-800 ~ -899） */
-#define AIRY_PROTO_EMCP      (-800)
-#define AIRY_PROTO_EA2A      (-801)
-
-/* i18n 错误（-900 ~ -999） */
-#define AIRY_I18N_ELOCALE    (-900)
-#define AIRY_I18N_EENCODING  (-901)
-
-/* 发行版错误（-1000 ~ -1099） */
-#define AIRY_DIST_EPKG_BUILD       (-1000)  /* 包构建失败 */
-#define AIRY_DIST_EPKG_INSTALL    (-1001)  /* 包安装失败 */
-#define AIRY_DIST_EPKG_DEP        (-1002)  /* 依赖冲突 */
-#define AIRY_DIST_EPKG_VERIFY     (-1003)  /* GPG 验证失败 */
-#define AIRY_DIST_EPKG_REPRODUCIBLE (-1004) /* 可重现构建失败 */
-#define AIRY_DIST_EPKG_ARCH       (-1005)  /* 架构不匹配 */
-#define AIRY_DIST_EUPDATE_LIVEPATCH (-1010) /* livepatch 应用失败 */
-#define AIRY_DIST_EUPDATE_OSTREE  (-1011)  /* rpm-ostree 更新失败 */
-#define AIRY_DIST_EUPDATE_ROLLBACK (-1012) /* 回滚失败 */
-#define AIRY_DIST_EUPDATE_HEALTH  (-1013)  /* 健康检查失败 */
-#define AIRY_DIST_EUPDATE_MIGRATE (-1014)  /* 数据迁移失败 */
-#define AIRY_DIST_EUPDATE_DEP     (-1015)  /* 依赖冲突 */
-#define AIRY_DIST_ENODISTRO       (-1020)  /* 不支持的发行版 */
-#define AIRY_DIST_ENOKERN         (-1021)  /* 内核版本过低 */
-#define AIRY_DIST_ENOGLIBC        (-1022)  /* glibc 版本过低 */
-#define AIRY_DIST_ENOMOD          (-1023)  /* 内核模块加载失败 */
-#define AIRY_DIST_ENOFALLBACK     (-1024)  /* 无可用降级路径 */
-
-#endif /* _AIRY_ERROR_H */
+/* 保留段（241-300）：未来子系统（含 i18n 专用码）在此申请分配，
+ * 需同步更新 30-interfaces/08-sc-error-contract.md。
+ * 注意：i18n 错误码（locale/encoding 相关）尚未在 [SC] 注册 ——
+ * 标注为"待 [SC] 注册"，禁止在文档中虚构 -900/-901 等负值 i18n 段。
+ * 原文档虚构的 -1~-15 负值基础段、-100~-899 各子系统负值段
+ * （AIRY_SYS_*/AIRY_KERN_*/AIRY_SVC_*/AIRY_LLM_*/AIRY_EXEC_*/
+ * AIRY_MEM_*/AIRY_SEC_*/AIRY_PROTO_*，含 AIRY_KERN_ENODIE=-210）
+ * 与 -1000~-1099 发行版段在 [SC] error.h 中均不存在，已废弃。
+ */
 ```
 
+> **修正说明**：旧文档将 `AIRY_KERN_ENODIE` 等符号定为 -200 段负值，与性能文档中虚构的 `AIRY_E_SCHED_TIMEOUT=-210` 数值冲突；[SC] error.h 的 A-ULS Sched/Lifecycle 段（121-140）与超节点相关错误码尚未注册，上述虚构符号一律废弃，以 error.h 实际定义为准。
+
 ### 2.3 SDK 十六进制体系分段
+
+> **规划态声明**：以下 SDK 十六进制分段（`0x0000`-`0x7FFF`）为 **SDK 层设计规划**，未在 [SC] `error.h` 中注册；待注册时需分配独立命名空间并在 `30-interfaces/08-sc-error-contract.md` 登记，不得与 C 错误码段（1-300）混用。
 
 SDK 十六进制体系用于 SDK 和外部接口（Python/Go/Rust/Java SDK）：
 
@@ -185,6 +136,8 @@ SDK 十六进制体系用于 SDK 和外部接口（Python/Go/Rust/Java SDK）：
 ```
 
 ### 2.4 双体系映射
+
+> **规划态声明**：以下映射函数为**设计示意**，所引符号（`AIRY_EGENERIC` / `AIRY_KERN_EBPF` / `AIRY_SVC_EGATEWAY` 等）在 [SC] `error.h` 中**不存在**，待 SDK 十六进制体系在 [SC] 注册后按实际符号实现：
 
 双错误码体系之间的映射函数定义于 [SC] 共享契约层：
 
@@ -227,8 +180,8 @@ static inline airy_err_t airy_err_sdk_to_c(u16 sdk_err)
 
 | 场景 | 体系 | 示例 |
 |------|------|------|
-| C 内核代码 | C 负整数 | `return -ENOENT;` |
-| Daemon C 代码 | C 负整数 | `return AIRY_IPC_ETIMEDOUT;` |
+| C 内核代码 | C 错误码（正数幅值） | `return -AIRY_ENOENT;`（-8） |
+| Daemon C 代码 | C 错误码（正数幅值） | `return -AIRY_EIPC_TIMEOUT;`（-52） |
 | Python SDK | SDK 十六进制 | `raise AgentrtError(0x1002)` |
 | Go SDK | SDK 十六进制 | `return AgentrtErrKernIPC` |
 | Rust SDK | SDK 十六进制 | `AgentrtErr::KernIpc` |
@@ -344,6 +297,8 @@ class AgentrtError(IntEnum):
 ---
 
 ## 4. 错误码与本地化消息分离设计
+
+> **规划态声明**：§4.2/§4.3 示例中的 `AIRY_EGENERIC` / `AIRY_KERN_EBPF` / `AIRY_SVC_EGATEWAY` / `AIRY_LLM_EPROVIDER` / `AIRY_MEM_EROVOL` / `AIRY_SEC_ECAP` / `AIRY_IPC_ETIMEDOUT` / `AIRY_I18N_ELOCALE` 等符号在 [SC] `error.h` 中**不存在**（仅 §2 摘录的 POSIX 段 1-40 与子系统段 41-240 为实际定义），以下代码为**设计示意**；`AIRY_I18N_ELOCALE` 等 i18n 错误码**待 [SC] 注册**（保留段 241-300）。
 
 ### 4.1 分离架构
 

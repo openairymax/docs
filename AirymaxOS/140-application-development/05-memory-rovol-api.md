@@ -92,31 +92,33 @@ AIRY_API int airy_sys_rovol_ctl(__u32 op,
 
 | op 码 | 宏定义 | 功能 | `arg` 编码 | 引入版本 |
 |------|--------|------|-----------|---------|
-| 0 | `AIRY_ROVOL_SNAPSHOT` | 创建进程记忆快照 | `airy_rovol_snapshot_info_t *`（含 options） | v1.0.1 |
-| 1 | `AIRY_ROVOL_RESTORE` | 从快照恢复记忆 | `snapshot_id`（低 64 位） | v1.0.1 |
-| 2 | `AIRY_ROVOL_MIGRATE` | 跨节点记忆迁移 | `airy_migrate_args_t *`（target_node + policy） | v1.0.1 |
-| 3 | `AIRY_ROVOL_TIER_SET` | 设置 CXL 内存分层策略 | `airy_cxl_tier_args_t *`（layer + policy） | v1.0.1 |
-| 4 | `AIRY_ROVOL_TIER_GET` | 获取 CXL 内存分层策略 | `airy_cxl_tier_policy_t *policy_out` | v1.0.1 |
-| 5 | `AIRY_ROVOL_MGLRU_CONFIG` | 配置 MGLRU 多代 LRU | `airy_mglru_config_t *config` | v1.0.1 |
-| 6 | `AIRY_ROVOL_LIST` | 列出进程的所有快照 | `airy_rovol_list_args_t *`（infos_out + in_out_count） | v1.0.1 |
-| 7 | `AIRY_ROVOL_DELETE` | 删除指定快照 | `snapshot_id`（低 64 位，flags 编码至高 64 位之外） | v1.0.1 |
-| 8 | `AIRY_ROVOL_DEMOTE` | L1→L2→L3→L4 层级降级 | `airy_rovol_tier_op_t *op` | v1.0.1 |
-| 9 | `AIRY_ROVOL_PROMOTE` | L4→L3→L2→L1 层级晋升 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+| 0x01 | `AIRY_ROVOL_SNAPSHOT` | 创建进程记忆快照 | `airy_rovol_snapshot_info_t *`（含 options） | v1.0.1 |
+| 0x02 | `AIRY_ROVOL_RESTORE` | 从快照恢复记忆 | `snapshot_id`（低 64 位） | v1.0.1 |
+| 0x03 | `AIRY_ROVOL_MIGRATE` | 跨节点记忆迁移 | `airy_migrate_args_t *`（target_node + policy） | v1.0.1 |
+| 0x04 | `AIRY_ROVOL_TIER_SET` | 设置 CXL 内存分层策略 | `airy_cxl_tier_args_t *`（layer + policy） | v1.0.1 |
+| 0x05 | `AIRY_ROVOL_TIER_GET` | 获取 CXL 内存分层策略 | `airy_cxl_tier_policy_t *policy_out` | v1.0.1 |
+| 0x06 | `AIRY_ROVOL_MGLRU_CONFIG` | 配置 MGLRU 多代 LRU | `airy_mglru_config_t *config` | v1.0.1 |
+| 0x07 | `AIRY_ROVOL_LIST` | 列出进程的所有快照 | `airy_rovol_list_args_t *`（infos_out + in_out_count） | v1.0.1 |
+| 0x08 | `AIRY_ROVOL_DELETE` | 删除指定快照 | `snapshot_id`（低 64 位，flags 编码至高 64 位之外） | v1.0.1 |
+| 0x09 | `AIRY_ROVOL_DEMOTE` | L1→L2→L3→L4 层级降级 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+| 0x0A | `AIRY_ROVOL_PROMOTE` | L4→L3→L2→L1 层级晋升 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+
+> **op 码编号权威源**：op 码数值（0x01-0x0A）以 [07-syscall-registry.md §4.3/§6.2](07-syscall-registry.md) 为唯一权威。注意 [SC] `memory_types.h` 当前**尚未落地** `AIRY_ROVOL_OP_*` 枚举（10 op 待 [SC] 补齐，见 docs-closed 执行视图 P1-2 计划），落地时须保持"注册表 ↔ UAPI 头文件 ↔ 内核实现"三方一致。
 
 **0.1.1 → v1.0.1 迁移映射表**：
 
 | 0.1.1 独立 syscall | 编号 | v1.0.1 op-dispatch | 编号 + op |
 |-------------------|------|--------------------|----------|
-| `airy_sys_rovol_snapshot` | 552 | `airy_sys_rovol_ctl(AIRY_ROVOL_SNAPSHOT, ...)` | 549, op=0 |
-| `airy_sys_rovol_restore` | 553 | `airy_sys_rovol_ctl(AIRY_ROVOL_RESTORE, ...)` | 549, op=1 |
-| `airy_sys_rovol_migrate` | 554 | `airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE, ...)` | 549, op=2 |
-| `airy_sys_cxl_tier_set` | 555 | `airy_sys_rovol_ctl(AIRY_ROVOL_TIER_SET, ...)` | 549, op=3 |
-| `airy_sys_cxl_tier_get` | 556 | `airy_sys_rovol_ctl(AIRY_ROVOL_TIER_GET, ...)` | 549, op=4 |
-| `airy_sys_mglru_config` | 557 | `airy_sys_rovol_ctl(AIRY_ROVOL_MGLRU_CONFIG, ...)` | 549, op=5 |
-| `airy_sys_rovol_list` | 558 | `airy_sys_rovol_ctl(AIRY_ROVOL_LIST, ...)` | 549, op=6 |
-| `airy_sys_rovol_delete` | 559 | `airy_sys_rovol_ctl(AIRY_ROVOL_DELETE, ...)` | 549, op=7 |
-| `airy_sys_rovol_demote` | 560 | `airy_sys_rovol_ctl(AIRY_ROVOL_DEMOTE, ...)` | 549, op=8 |
-| `airy_sys_rovol_promote` | 561 | `airy_sys_rovol_ctl(AIRY_ROVOL_PROMOTE, ...)` | 549, op=9 |
+| `airy_sys_rovol_snapshot` | 552 | `airy_sys_rovol_ctl(AIRY_ROVOL_SNAPSHOT, ...)` | 549, op=0x01 |
+| `airy_sys_rovol_restore` | 553 | `airy_sys_rovol_ctl(AIRY_ROVOL_RESTORE, ...)` | 549, op=0x02 |
+| `airy_sys_rovol_migrate` | 554 | `airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE, ...)` | 549, op=0x03 |
+| `airy_sys_cxl_tier_set` | 555 | `airy_sys_rovol_ctl(AIRY_ROVOL_TIER_SET, ...)` | 549, op=0x04 |
+| `airy_sys_cxl_tier_get` | 556 | `airy_sys_rovol_ctl(AIRY_ROVOL_TIER_GET, ...)` | 549, op=0x05 |
+| `airy_sys_mglru_config` | 557 | `airy_sys_rovol_ctl(AIRY_ROVOL_MGLRU_CONFIG, ...)` | 549, op=0x06 |
+| `airy_sys_rovol_list` | 558 | `airy_sys_rovol_ctl(AIRY_ROVOL_LIST, ...)` | 549, op=0x07 |
+| `airy_sys_rovol_delete` | 559 | `airy_sys_rovol_ctl(AIRY_ROVOL_DELETE, ...)` | 549, op=0x08 |
+| `airy_sys_rovol_demote` | 560 | `airy_sys_rovol_ctl(AIRY_ROVOL_DEMOTE, ...)` | 549, op=0x09 |
+| `airy_sys_rovol_promote` | 561 | `airy_sys_rovol_ctl(AIRY_ROVOL_PROMOTE, ...)` | 549, op=0x0A |
 
 > **v1.0.1 变更说明**：原 0.1.1 的 10 个独立 MemoryRovol syscall（552-561）已合并为单一 `airy_sys_rovol_ctl` (549) + op-dispatch 模型，详见 [07-syscall-registry.md](07-syscall-registry.md) §4.3。原编号段 552-561 在 v1.0.1 中已废弃保留。
 
@@ -389,13 +391,14 @@ typedef struct __attribute__((aligned(8))) airy_rovol_tier_op {
 
 > **内核态禁用 float 约束**：Linux 6.6 内核编译使用 `-mno-80387` 禁用 x87 FPU（见 `arch/x86/Makefile:137`），内核态任何 float/double 算术运算必须包裹在 `kernel_fpu_begin()`/`kernel_fpu_end()` 之间（会禁用抢占，不可在原子/中断/调度器热路径使用）。
 >
-> **本契约方案**：所有浮点字段（`weight`、`decay_factor`、`birth`、`death`）统一使用 `airy_q16_t`（int32_t）Q16.16 定点数。用户态需 float 展示时用 `AIRY_Q16_TO_F()` 转换。
+> **本契约方案**：所有浮点字段（`weight`、`decay_factor`、`birth`、`death`）统一使用 `airy_q16_t`（int32_t）Q16.16 定点数。用户态需 float 展示时用 `AIRY_Q16_TO_FLOAT()` 转换。
 
 ```c
-/* Q16.16 转换辅助宏（仅用户态使用 TO_F） */
-#define AIRY_Q16_ONE      (1 << 16)                    /* 1.0 */
-#define AIRY_Q16_FLOAT(f) ((airy_q16_t)((f) * AIRY_Q16_ONE))
-#define AIRY_Q16_TO_F(x)  ((float)(x) / AIRY_Q16_ONE)
+/* Q16.16 转换辅助宏（与 [SC] cognition_types.h 同源，宏名对齐：
+ * AIRY_Q16_TO_FLOAT / AIRY_Q16_FROM_FLOAT，仅用户态使用） */
+#define AIRY_Q16_ONE         (1 << 16)                          /* 1.0 */
+#define AIRY_Q16_FROM_FLOAT(f) ((airy_q16_t)((f) * AIRY_Q16_ONE))
+#define AIRY_Q16_TO_FLOAT(x)   ((float)(x) / AIRY_Q16_ONE)
 
 /* 艾宾浩斯衰减系数常用值 */
 #define AIRY_DECAY_EBBINGHAUS  0x8000    /* 0.5 Q16.16（默认艾宾浩斯系数） */
@@ -466,9 +469,9 @@ stateDiagram-v2
  *
  * @par 实现细节:
  * 1. capability 守卫：检查 AIRY_CAP_ROVOL_SNAPSHOT 权限
- * 2. 状态检查：Agent 必须处于 RUNNING/PAUSED 状态
+ * 2. 状态检查：Agent 必须处于 RUNNING/STOPPED 状态（8 态 SSoT）
  * 3. fork+COW：调用内核 do_fork() 创建影子进程
- * 4. 层级遍历：按 layer_mask 遍历 L1-L4，PMEM 持久化 L1/L4
+ * 4. 层级遍历：按 layer_mask 遍历 L1-L4，L4（物理 tier = PMEM）持久化，L1 原始卷按 CHECKPOINT 标记按需持久（记忆层级与物理 tier 为两套模型，见 §7.1）
  * 5. SHA-256：计算快照内容哈希链
  * 6. 状态转换：CREATING → ACTIVE
  *
@@ -495,7 +498,7 @@ stateDiagram-v2
 | 0 | 成功 | 快照已创建，`info->snapshot_id` 有效 |
 | `-AIRY_EINVAL` | 参数无效 | `agent_id` 不存在、`arg` 为 0、`layer_mask` 为 0 |
 | `-AIRY_EPERM` | 权限不足 | 缺少 `AIRY_CAP_ROVOL_SNAPSHOT` capability |
-| `-AIRY_ECONFLICT` | 状态冲突 | Agent 不在 RUNNING/PAUSED 状态 |
+| `-AIRY_ELIFECYCLE_STATE` | 状态冲突 | Agent 不在 RUNNING/STOPPED 状态（error.h A-ULS 子空间 127） |
 | `-AIRY_ENOMEM` | 内存不足 | PMEM/CXL 池耗尽 |
 | `-AIRY_EBUSY` | 资源繁忙 | Agent 正在迁移，无法快照 |
 
@@ -594,7 +597,7 @@ typedef struct __attribute__((aligned(8))) airy_rovol_list_args {
  * @par 恢复流程:
  * 1. capability 守卫：检查 AIRY_CAP_ROVOL_RESTORE 权限
  * 2. 快照状态检查：必须为 ACTIVE 状态
- * 3. Agent 状态检查：必须为 REGISTERED/CONFIGURED 状态
+ * 3. Agent 状态检查：必须为 SPAWNING/READY 状态（8 态 SSoT）
  * 4. mmap 占位：为目标 Agent 地址空间建立 VMA 占位
  * 5. 注册 userfaultfd：为占位 VMA 注册缺页处理
  * 6. 状态转换：快照 ACTIVE → RESTORING，Agent → RUNNING
@@ -692,7 +695,7 @@ typedef struct __attribute__((aligned(8))) airy_migrate_args {
 /**
  * @par 8 步迁移协议（post-copy 热迁移）:
  * 1. capability 守卫：检查 AIRY_CAP_ROVOL_MIGRATE 权限
- * 2. Agent 进入 PAUSING 状态（借鉴 seL4 Zombie 中间态）
+ * 2. Agent 进入 STOPPING 过渡态（冻结，8 态 SSoT；借鉴 seL4 Zombie 中间态）
  * 3. 创建快照：549 op=SNAPSHOT（L1-L4 全部）
  * 4. 快照状态：ACTIVE → MIGRATING
  * 5. CXL 传输：通过 CXL 内存池传输快照到目标节点
@@ -764,13 +767,20 @@ flowchart TD
  * - Linux 6.6 `mm/migrate.c`——页迁移至不同 tier
  * - CXL 3.0 规格——跨节点内存池
  *
- * @par 层级与 tier 映射:
- * | MemoryRovol 层 | 默认 tier | 策略可调整 |
+ * @par 两套层级模型区分（重要）:
+ * - **记忆层级 L1-L4**（本契约 MemoryRovol 逻辑记忆层：L1 原始卷/L2 特征/L3 结构/L4 模式，
+ *   §9.1-§9.4 语义）与 **物理 tier**（[SC] `memory_types.h` 的 `enum airy_mem_level`：
+ *   `AIRY_MEM_HOT=0`（注释 "L1: HBM/DDR hot tier"）/ `AIRY_MEM_WARM=1`（L2: DDR）/
+ *   `AIRY_MEM_COLD=2`（L3: CXL/NVMe）/ `AIRY_MEM_PMEM=3`（L4: PMEM persistent））是**两套独立模型**，
+ *   编号与命名互不通用，勿混用。物理 tier 以 [SC] `memory_types.h` 为唯一权威。
+ *
+ * @par 记忆层级 → 物理 tier 规划映射:
+ * | MemoryRovol 记忆层 | 规划默认物理 tier（[SC]） | 策略可调整 |
  * |---|---|---|
- * | L1 原始卷 | FAST (DRAM) | 不可调整（PMEM 持久） |
- * | L2 特征层 | BALANCED (DRAM+CXL) | 可调整 |
- * | L3 结构层 | COLD (CXL+PMEM) | 可调整 |
- * | L4 模式层 | ARCHIVE (PMEM+SSD) | 不可调整（PMEM 持久） |
+ * | L1 原始卷 | HOT（HBM/DDR） | 不可调整（仅追加） |
+ * | L2 特征层 | WARM（DDR） | 可调整 |
+ * | L3 结构层 | COLD（CXL/NVMe） | 可调整 |
+ * | L4 模式层 | PMEM（持久层） | 不可调整（持久） |
  *
  * @par 策略生效:
  * 设置后立即生效，内核 MGLRU 回收器按新策略调整 aging/eviction。
@@ -968,26 +978,27 @@ stateDiagram-v2
 
 ### 10.1 MemoryRovol 专用错误码
 
-MemoryRovol API 复用 [contracts.md](../50-engineering-standards/20-contracts/contracts.md) 第 4.2 节的通用错误码，并新增 3 个 MemoryRovol 专用错误码：
+MemoryRovol API 复用 [SC] error.h（`include/uapi/linux/airymax/error.h`）的通用错误码与 MemoryRoVol 子空间（141-148）。错误码为**正数幅值**，调用返回 `-AIRY_E*` 负值：
 
-| 错误码 | 值 | 含义 | 典型触发场景 | 可重试 |
-|--------|-----|------|-------------|--------|
+| 错误码 | 值（幅值） | 含义 | 典型触发场景 | 可重试 |
+|--------|-----------|------|-------------|--------|
 | `AIRY_EOK` | 0 | 成功 | 调用成功 | - |
-| `AIRY_EINVAL` | -1 | 参数无效 | `agent_id` 不存在、`options` 为 0 | 否 |
-| `AIRY_ENOMEM` | -2 | 内存不足 | PMEM/CXL 池耗尽 | 是（等待后） |
-| `AIRY_ENOSYS` | -3 | 未实现 | 编号未实现或已废弃 | 否 |
-| `AIRY_EPERM` | -4 | 权限不足 | capability 令牌缺失 | 否 |
-| `AIRY_ENOENT` | -5 | 资源不存在 | `snapshot_id` 不存在 | 否 |
-| `AIRY_EAGAIN` | -6 | 暂时不可用 | CXL 带宽不足 | 是（立即） |
-| `AIRY_EMSGSIZE` | -7 | 消息过大 | 快照超过最大限制 | 否 |
-| `AIRY_EBUSY` | -9 | 资源繁忙 | Agent 正在迁移 | 是（延迟） |
-| `AIRY_ENOTSUP` | -10 | 不支持 | 无 CXL 设备、PMEM 未配置 | 否 |
-| `AIRY_ETIMEDOUT` | -11 | 超时 | 迁移超时、userfaultfd 超时 | 是（限制次数） |
-| `AIRY_ECONFLICT` | -12 | 状态冲突 | 快照非 ACTIVE 状态、Agent 非 RUNNING | 否 |
-| `AIRY_EFAULT` | -13 | 地址错误 | 用户态指针非法 | 否 |
-| **`AIRY_ECORRUPTED`** | **-15** | **快照损坏** | **SHA-256 校验失败** | **否** |
-| **`AIRY_ETIER`** | **-16** | **层级非法** | **demote/promote 层级越界** | **否** |
-| **`AIRY_EMIGRATE`** | **-17** | **迁移失败** | **目标节点不可达、CXL 池故障** | **是（限制次数）** |
+| `AIRY_EFAULT` | 3 | 地址错误 | 用户态指针非法 | 否 |
+| `AIRY_EINVAL` | 5 | 参数无效 | `agent_id` 不存在、`options` 为 0 | 否 |
+| `AIRY_ENOENT` | 8 | 资源不存在 | `snapshot_id` 不存在 | 否 |
+| `AIRY_ENOMEM` | 9 | 内存不足 | PMEM/CXL 池耗尽 | 是（等待后） |
+| `AIRY_ENOTSUP` | 11 | 不支持 | 无 CXL 设备、PMEM 未配置 | 否 |
+| `AIRY_EPERM` | 12 | 权限不足 | capability 令牌缺失 | 否 |
+| `AIRY_EBUSY` | 16 | 资源繁忙 | Agent 正在迁移 | 是（延迟） |
+| `AIRY_ECANCELED` | 19 | 操作取消/超时 | 迁移超时、userfaultfd 超时 | 是（限制次数） |
+| `AIRY_EAGAIN` | 35 | 暂时不可用 | CXL 带宽不足 | 是（立即） |
+| `AIRY_EMEM_TIER` | 141 | 层级非法 | demote/promote 层级越界（error.h MemoryRoVol 子空间） | 否 |
+| `AIRY_EMEM_PMEM` | 143 | PMEM 操作失败 | PMEM 持久化失败 | 是（限制次数） |
+| `AIRY_EMEM_CXL` | 144 | CXL 操作失败 | 目标节点不可达、CXL 池故障 | 是（限制次数） |
+| `AIRY_EMEM_OOM` | 148 | 内存耗尽（Agent 作用域） | PMEM/CXL 池耗尽（agent 作用域） | 是（等待后） |
+| `AIRY_ECORRUPTED` | 待 [SC] 注册 | 快照损坏 | SHA-256 校验失败（error.h 暂无对应码） | 否 |
+
+> **废弃码说明**：0.1.1 文档中的 `AIRY_ENOSYS`/`AIRY_EMSGSIZE`/`AIRY_ETIMEDOUT`/`AIRY_ECONFLICT`/`AIRY_ETIER`/`AIRY_EMIGRATE` 及负值编号（-1 ~ -17）均不符合 [SC] error.h 正数幅值体系，已按上表替换（`AIRY_ETIER`→`AIRY_EMEM_TIER`、`AIRY_EMIGRATE`→`AIRY_EMEM_CXL`、`AIRY_ETIMEDOUT`→`AIRY_ECANCELED`、`AIRY_EMSGSIZE`→`AIRY_EINVAL`）；`AIRY_ECORRUPTED` 语义无对应码，标注待 [SC] 注册（MemoryRoVol 子空间 141-160 尚有剩余）。
 
 ### 10.2 错误码字符串化
 
@@ -1008,7 +1019,7 @@ AIRY_API const char *airy_strerror(int err);
 
 1. **错误码原样传递**：内核子系统的错误码必须原样传递到用户态，不得吞没或转换
 2. **错误日志记录**：每个错误返回前必须调用 `log_write(LOG_ERROR, ...)` 记录上下文
-3. **审计日志**：`-AIRY_EPERM`（权限不足）和 `-AIRY_ECORRUPTED`（损坏）必须记录审计日志
+3. **审计日志**：`-AIRY_EPERM`（权限不足）和 `-AIRY_ECORRUPTED`（损坏，待 [SC] 注册）必须记录审计日志
 4. **状态回滚**：错误发生时，快照/Agent 状态必须回滚到操作前状态（借鉴 seL4 Point of No Return 模式——仅在不可回滚点之后失败才进入 CORRUPTED）
 
 ---
@@ -1107,17 +1118,17 @@ from .bindings import _libagentrt
 from .exceptions import AgentrtError
 from .types import SnapshotInfo, MglruConfig, CxlTierPolicy
 
-# op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
-AIRY_ROVOL_SNAPSHOT      = 0
-AIRY_ROVOL_RESTORE       = 1
-AIRY_ROVOL_MIGRATE       = 2
-AIRY_ROVOL_TIER_SET      = 3
-AIRY_ROVOL_TIER_GET      = 4
-AIRY_ROVOL_MGLRU_CONFIG  = 5
-AIRY_ROVOL_LIST          = 6
-AIRY_ROVOL_DELETE        = 7
-AIRY_ROVOL_DEMOTE        = 8
-AIRY_ROVOL_PROMOTE       = 9
+# op 码常量（与 07-syscall-registry.md §4.3 权威编号一致：0x01-0x0A）
+AIRY_ROVOL_SNAPSHOT      = 0x01
+AIRY_ROVOL_RESTORE       = 0x02
+AIRY_ROVOL_MIGRATE       = 0x03
+AIRY_ROVOL_TIER_SET      = 0x04
+AIRY_ROVOL_TIER_GET      = 0x05
+AIRY_ROVOL_MGLRU_CONFIG  = 0x06
+AIRY_ROVOL_LIST          = 0x07
+AIRY_ROVOL_DELETE        = 0x08
+AIRY_ROVOL_DEMOTE        = 0x09
+AIRY_ROVOL_PROMOTE       = 0x0A
 
 class MemoryRovolClient:
     """MemoryRovol 记忆卷载客户端。
@@ -1217,17 +1228,17 @@ use crate::error::{AgentrtError, Result};
 use crate::types::{SnapshotInfo, MglruConfig, CxlTierPolicy};
 use crate::bindings::*;
 
-// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
-pub const AIRY_ROVOL_SNAPSHOT:     u32 = 0;
-pub const AIRY_ROVOL_RESTORE:      u32 = 1;
-pub const AIRY_ROVOL_MIGRATE:      u32 = 2;
-pub const AIRY_ROVOL_TIER_SET:     u32 = 3;
-pub const AIRY_ROVOL_TIER_GET:     u32 = 4;
-pub const AIRY_ROVOL_MGLRU_CONFIG: u32 = 5;
-pub const AIRY_ROVOL_LIST:         u32 = 6;
-pub const AIRY_ROVOL_DELETE:       u32 = 7;
-pub const AIRY_ROVOL_DEMOTE:       u32 = 8;
-pub const AIRY_ROVOL_PROMOTE:      u32 = 9;
+// op 码常量（与 07-syscall-registry.md §4.3 权威编号一致：0x01-0x0A）
+pub const AIRY_ROVOL_SNAPSHOT:     u32 = 0x01;
+pub const AIRY_ROVOL_RESTORE:      u32 = 0x02;
+pub const AIRY_ROVOL_MIGRATE:      u32 = 0x03;
+pub const AIRY_ROVOL_TIER_SET:     u32 = 0x04;
+pub const AIRY_ROVOL_TIER_GET:     u32 = 0x05;
+pub const AIRY_ROVOL_MGLRU_CONFIG: u32 = 0x06;
+pub const AIRY_ROVOL_LIST:         u32 = 0x07;
+pub const AIRY_ROVOL_DELETE:       u32 = 0x08;
+pub const AIRY_ROVOL_DEMOTE:       u32 = 0x09;
+pub const AIRY_ROVOL_PROMOTE:      u32 = 0x0A;
 
 /// MemoryRovol 记忆卷载客户端
 pub struct MemoryRovolClient;
@@ -1299,18 +1310,18 @@ import (
     "unsafe"
 )
 
-// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
+// op 码常量（与 07-syscall-registry.md §4.3 权威编号一致：0x01-0x0A）
 const (
-    OpSnapshot     = 0
-    OpRestore      = 1
-    OpMigrate      = 2
-    OpTierSet      = 3
-    OpTierGet      = 4
-    OpMglruConfig  = 5
-    OpList         = 6
-    OpDelete       = 7
-    OpDemote       = 8
-    OpPromote      = 9
+    OpSnapshot     = 0x01
+    OpRestore      = 0x02
+    OpMigrate      = 0x03
+    OpTierSet      = 0x04
+    OpTierGet      = 0x05
+    OpMglruConfig  = 0x06
+    OpList         = 0x07
+    OpDelete       = 0x08
+    OpDemote       = 0x09
+    OpPromote      = 0x0A
 )
 
 // MemoryRovolClient 提供 MemoryRovol 记忆卷载操作
@@ -1363,17 +1374,17 @@ func (c *MemoryRovolClient) Migrate(agentID, targetNode uint32, policy MigratePo
 import { AgentrtError, SnapshotInfo, MglruConfig, CxlTierPolicy } from './types';
 import { bindings } from './bindings';
 
-// op 码常量（与 include/uapi/linux/airymax/rovol.h 同源）
-export const OP_SNAPSHOT     = 0;
-export const OP_RESTORE      = 1;
-export const OP_MIGRATE      = 2;
-export const OP_TIER_SET     = 3;
-export const OP_TIER_GET     = 4;
-export const OP_MGLRU_CONFIG = 5;
-export const OP_LIST         = 6;
-export const OP_DELETE       = 7;
-export const OP_DEMOTE       = 8;
-export const OP_PROMOTE      = 9;
+// op 码常量（与 07-syscall-registry.md §4.3 权威编号一致：0x01-0x0A）
+export const OP_SNAPSHOT     = 0x01;
+export const OP_RESTORE      = 0x02;
+export const OP_MIGRATE      = 0x03;
+export const OP_TIER_SET     = 0x04;
+export const OP_TIER_GET     = 0x05;
+export const OP_MGLRU_CONFIG = 0x06;
+export const OP_LIST         = 0x07;
+export const OP_DELETE       = 0x08;
+export const OP_DEMOTE       = 0x09;
+export const OP_PROMOTE      = 0x0A;
 
 /**
  * MemoryRovol 记忆卷载客户端
@@ -1556,7 +1567,7 @@ int hot_migration_example(uint32_t agent_id)
     /* 热迁移：post-copy，先切后传 */
     ret = airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE, agent_id,
                                  (uint64_t)(uintptr_t)&args);
-    if (ret == -AIRY_EMIGRATE) {
+    if (ret == -AIRY_EMEM_CXL) {
         /* 迁移失败，可重试 */
         printf("migration failed, retrying with cold policy...\n");
         args.policy = AIRY_MIGRATE_COLD;
@@ -1734,6 +1745,8 @@ stress-ng --cpu 4 --io 2 --vm 2 --vm-bytes 1G --timeout 60s &
 
 所有 `airy_sys_rovol_ctl` (549) op-dispatch 操作必须通过 capability 守卫，由 `op` 参数查表分派对应 capability 检查：
 
+> **⚠️ 待 [SC] 扩展**：`security_types.h` 当前**未定义** `AIRY_CAP_ROVOL_*` 权限位（仅有 `AIRY_CAP_PERM_*` 16 位 perms 与 POSIX 44 ID）。本表为**规划守卫表**，待 [SC] 扩展（docs-closed 执行视图 P1-2 计划：Badge perms 位扩展 rovol 操作位），落地前以 `security_types.h` 实际定义为准。
+
 | op 码 | 所需 capability | 说明 |
 |-------|---------------|------|
 | `AIRY_ROVOL_SNAPSHOT` | `AIRY_CAP_ROVOL_SNAPSHOT` | 对目标 Agent 创建快照 |
@@ -1749,7 +1762,7 @@ stress-ng --cpu 4 --io 2 --vm 2 --vm-bytes 1G --timeout 60s &
 
 ### 16.2 记忆加密
 
-L1 原始卷与 L4 模式层在 PMEM 持久化时启用 TEE 加密：
+L4 模式层在 PMEM tier 持久化时启用 TEE 加密；L1 原始卷按 `AIRY_ROVOL_FLAG_CHECKPOINT` 标记持久时同样启用（记忆层级与物理 tier 为两套模型，见 §7.1）：
 
 - **L1 加密**：AES-256-GCM，密钥由 Vault backend 管理
 - **L4 加密**：AES-256-GCM + SHA-256 完整性校验
@@ -1760,8 +1773,8 @@ L1 原始卷与 L4 模式层在 PMEM 持久化时启用 TEE 加密：
 以下操作必须记录审计日志：
 
 - `snapshot` 失败（`-AIRY_EPERM`）——可能的未授权访问
-- `restore` 失败（`-AIRY_ECORRUPTED`）——可能的数据篡改
-- `migrate` 失败（`-AIRY_EMIGRATE`）——可能的网络/CXL 故障
+- `restore` 失败（`-AIRY_ECORRUPTED`，待 [SC] 注册）——可能的数据篡改
+- `migrate` 失败（`-AIRY_EMEM_CXL`）——可能的网络/CXL 故障
 - `delete` 成功——记忆销毁审计
 
 ---
@@ -1797,7 +1810,7 @@ L1 原始卷与 L4 模式层在 PMEM 持久化时启用 TEE 加密：
 | **S-1 反馈闭环** | 检索反馈反向调整权重与衰减速率 |
 | **S-2 同源契约** | [SC] 共享契约层 `include/uapi/linux/airymax/memory_types.h` |
 | **P-1 性能可观测** | Prometheus metrics + OpenTelemetry span |
-| **R-1 持久性** | L1/L4 PMEM 持久化 |
+| **R-1 持久性** | L4 模式层（物理 tier = PMEM）持久化；L1 原始卷按 `AIRY_ROVOL_FLAG_CHECKPOINT` 标记按需持久（记忆层级 L1-L4 与物理 tier [SC] memory_types.h 为两套模型，见 §7.1） |
 | **R-2 完整性** | SHA-256 哈希链保护 L1 |
 | **IRON-9 v3 同源且部分代码共享** | [SC] + [SS] + [IND] 三层共享 |
 

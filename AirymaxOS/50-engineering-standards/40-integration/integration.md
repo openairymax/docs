@@ -244,10 +244,13 @@ typedef struct __attribute__((aligned(64))) {
 } airy_cap_token_t;
 
 typedef enum {
-    AIRY_CAP_OP_MINT       = 0x01,
-    AIRY_CAP_OP_MINTCOPY   = 0x02,
-    AIRY_CAP_OP_DERIVE     = 0x03,
-    AIRY_CAP_OP_REVOKE     = 0x04,
+    AIRY_CAP_OP_COPY   = 0,   /* 复制能力（不降级） */
+    AIRY_CAP_OP_MINT   = 1,   /* 铸新能力（可降级） */
+    AIRY_CAP_OP_MOVE   = 2,   /* 转移能力 */
+    AIRY_CAP_OP_MUTATE = 3,   /* 变更能力权限 */
+    AIRY_CAP_OP_REVOKE = 4,   /* 全局撤销能力 */
+    AIRY_CAP_OP_DELETE = 5,   /* 删除能力槽 */
+    AIRY_CAP_OP_ROTATE = 6,   /* 轮换能力 badge */
 } airy_cap_op_t;
 
 typedef enum {
@@ -448,7 +451,7 @@ agentrt AgentsIPC 在 agentrt-linux 上运行时：
 
 | 维度 | agentrt（Cupolas） | agentrt-linux（capability + LSM） | 同源语义 |
 |------|--------------------|-----------------------------------|----------|
-| **安全模型** | capability-based | capability-based + SELinux | capability 模型一致 |
+| **安全模型** | capability-based | capability-based（纯 C LSM，不用 SELinux） | capability 模型一致 |
 | **令牌格式** | 不可伪造令牌 | 不可伪造令牌（内核签名） | 令牌格式一致（[SC] 层共享） |
 | **权限操作** | 委托/复制/限制/撤销 | 委托/复制/限制/撤销 | 操作语义一致 |
 | **最小权限** | 默认无权限 | 默认无权限 | 最小权限原则一致 |
@@ -1559,7 +1562,7 @@ export AIRY_DEBUG=1
 |------|------|---------|
 | v0.1.1 | 2026-04-01 | 初始版本，定义集成标准和最佳实践 |
 | v1.0.1 | 2026-04-03 | 文档迁移至 agentrt/docs/specifications/integration_standards/ |
-| v1.0.2 | 2026-04-09 | 修复编码问题，迁移至 docs/50-specifications/ |
+| v1.0.1 | 2026-04-09 | 修复编码问题，迁移至 docs/50-specifications/（版本号统一，历史记录原 v1.0.2） |
 
 ---
 

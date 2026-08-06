@@ -947,13 +947,13 @@ def schedule(plan_json: str) -> str:
 
 from agentrt.errors import AgentRTError, ValidationError, ResourceError
 
-# 错误码 → 异常类映射表
+# 错误码 → 异常类映射表（AIRY_E* 正数幅值，error.h SSoT；调用方返回 -AIRY_E*）
 _ERROR_CODE_MAP: dict[int, type[AgentRTError]] = {
     0: None,                          # AIRY_EOK
-    -2: ValidationError,              # AIRY_EINVAL
-    -4: ResourceError,                # AIRY_ENOMEM
-    -8: ResourceError,                # AIRY_ETIMEDOUT
-    -17: ResourceError,               # AIRY_EBUSY
+    5: ValidationError,               # AIRY_EINVAL
+    9: ResourceError,                 # AIRY_ENOMEM
+    16: ResourceError,                # AIRY_EBUSY
+    19: ResourceError,                # AIRY_ECANCELED（超时/取消；error.h 无 AIRY_ETIMEDOUT）
 }
 
 
@@ -2396,13 +2396,13 @@ AIRY_E* 错误码到 HTTP 状态码的映射：
 | AGENTRT 错误码 | HTTP 状态码 | 说明 |
 |---------------|------------|------|
 | `AIRY_EOK` (0) | 200 | 成功 |
-| `AIRY_EINVAL` (-1) | 400 | 参数无效 |
-| `AIRY_ENOMEM` (-2) | 503 | 资源不足 |
-| `AIRY_ETIMEDOUT` (-11) | 408 / 504 | 请求超时 |
-| `AIRY_EBUSY` (-9) | 429 | 服务繁忙 |
-| `AIRY_ENOENT` | 404 | 资源不存在 |
-| `AIRY_EPERM` | 403 | 权限不足 |
-| 其他负值 | 500 | 内部错误 |
+| `AIRY_EINVAL` (5) | 400 | 参数无效 |
+| `AIRY_ENOMEM` (9) | 503 | 资源不足 |
+| `AIRY_ECANCELED` (19) | 408 / 504 | 请求超时（error.h 无 AIRY_ETIMEDOUT，以 ECANCELED 表示） |
+| `AIRY_EBUSY` (16) | 429 | 服务繁忙 |
+| `AIRY_ENOENT` (8) | 404 | 资源不存在 |
+| `AIRY_EPERM` (12) | 403 | 权限不足 |
+| 其他错误码（返回 `-AIRY_E*` 负值） | 500 | 内部错误 |
 
 #### 13-B.4 JSON-RPC 2.0 服务层规范
 

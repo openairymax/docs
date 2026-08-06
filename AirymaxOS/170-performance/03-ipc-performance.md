@@ -12,20 +12,20 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **A-IPC 性能 SLO** 的唯一权威源。FAST_SEND / SLOW_SEND 延迟预算、fastpath C-S9 Badge 校验性能拆解、io_uring SQE/CQE 批量提交吞吐量、kfifo 批量读取吞吐量、错误码对接（v1.0.1: -41~-70 IPC + -78~-82 Capability + 0x1001-0x1006 Fault）均以本文件为唯一权威定义。
+> **单一权威源声明**：本文件是 **A-IPC 性能 SLO** 的唯一权威源。FAST_SEND / SLOW_SEND 延迟预算、fastpath C-S9 Badge 校验性能拆解、io_uring SQE/CQE 批量提交吞吐量、kfifo 批量读取吞吐量、错误码对接（v1.0.1: 41-70 IPC + 71-100 Capability 正数幅值 + 0x1001-0x1006 Fault）均以本文件为唯一权威定义。
 >
-> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，A-IPC 引入 **fastpath C-S9 Badge 校验**（~10ns 内联），整体 FAST_SEND 降至 ~158ns（含 C-S9 + Ring Buffer 写入）。SLOW_SEND（C-S9 失败路径）为 ~600ns-5.5μs（含 LSM 钩子 + 冷酷执法）。Badge 撤销通过 `atomic_inc` 一行代码完成（~1ns，O(1)）。错误码体系对齐 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（-41~-70 IPC + -78~-82 Capability + 0x1001-0x1006 Fault），原 -800~-899 段已废弃。
+> **v1.0.1 Capability Folding 集成声明**（A-IPC 第一块基石）：自 v1.0.1 起，A-IPC 引入 **fastpath C-S9 Badge 校验**（实测 2-10ns 内联，KUnit `airy_fastpath_bench`，UML x86_64 测量环境），整体 fastpath_send 实测 ~46ns（37-61ns，含 C-S9 + Ring Buffer 写入）。SLOW_SEND（C-S9 失败路径）为 ~600ns-5.5μs（**估算值，未实测**，含 LSM 钩子 + 冷酷执法）。Badge 撤销通过 `atomic_inc` 一行代码完成（~1ns，O(1)）。错误码体系对齐 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（41-70 IPC + 71-100 Capability 正数幅值 + 0x1001-0x1006 Fault），原 -800~-899 段已废弃。
 
 ---
 
 ## 1. 设计目标与范围
 
-### 1.1 设计目标（v1.0.1: FAST_SEND ~158ns / SLOW_SEND ~600ns-5.5μs）
+### 1.1 设计目标（v1.0.1: FAST_SEND 实测 ~46ns / SLOW_SEND 估算 ~600ns-5.5μs）
 
 agentrt-linux（AirymaxOS）IPC 性能工程为 A-IPC（Airymax Unify IPC Fabric，v1.0.1 Capability Folding 单平面架构）提供低延迟、高吞吐、零拷贝的传输能力。本设计聚焦四大目标：
 
-1. **v1.0.1 FAST_SEND 延迟 SLO**（fastpath C-S9 通过）：≤ 200ns，实测 ~158ns（含 C-S9 Badge 校验 ~10ns + Ring Buffer 写入 ~100ns + 其他校验 ~48ns）
-2. **v1.0.1 SLOW_SEND 延迟 SLO**（fastpath C-S9 失败，LSM 钩子接管）：≤ 10μs，实测 ~600ns-5.5μs（含 LSM 钩子 + 冷酷执法 + eventfd 通知）
+1. **v1.0.1 FAST_SEND 延迟 SLO**（fastpath C-S9 通过）：≤ 200ns，实测 ~46ns（37-61ns，KUnit `airy_fastpath_bench`，UML x86_64 测量环境，含 C-S9 Badge 校验 2-10ns + Ring Buffer 写入）
+2. **v1.0.1 SLOW_SEND 延迟 SLO**（fastpath C-S9 失败，LSM 钩子接管）：≤ 10μs，估算 ~600ns-5.5μs（未实测，含 LSM 钩子 + 冷酷执法 + eventfd 通知）
 3. **128B 消息头零拷贝传输延迟 SLO**（端到端 P50/P99）：P50 ≤ 5μs、P99 ≤ 20μs、P99.9 ≤ 50μs
 4. **io_uring SQE/CQE 批量提交吞吐量**：≥ 2M ops/s（单核），≥ 12M ops/s（8 核并发）
 5. **kfifo 批量读取内核消息通道吞吐量**：≥ 1.5M msg/s（单 kthread）
@@ -53,30 +53,32 @@ agentrt-linux（AirymaxOS）IPC 性能工程为 A-IPC（Airymax Unify IPC Fabric
 | 内核事件 | 128B | ≤ 2μs | ≤ 10μs | ≥ 1.5M msg/s | kfifo |
 | 流式 Token | 4KB×N | ≤ 10μs/块 | ≤ 50μs/块 | ≥ 1M ops/s | io_uring |
 
-### 1.5 v1.0.1 FAST_SEND 性能拆解
+### 1.5 v1.0.1 FAST_SEND 实测性能（KUnit `airy_fastpath_bench`）
 
-FAST_SEND（fastpath C-S9 通过路径）的详细性能拆解：
+FAST_SEND（fastpath C-S9 通过路径）的实测数据来自内核 KUnit 微基准 [airy_fastpath_bench.c](../../agentrt-linux/kernel/kernel/corekern/ipc/airy_fastpath_bench.c)，**测量环境：UML x86_64**（ktime_get_ns 分批计时，warm-up + batched loop，net mean = raw - baseline），数据非估算：
 
-| 阶段 | 操作 | 延迟 | 占比 | 说明 |
-|------|------|------|------|------|
-| C-S0 | Ring 冻结检查（`unlikely(ring->frozen)`） | ~1ns | ~1% | 分支预测优化 |
-| C-S1~C-S8 | magic/版本/源/目的/payload_len 等前置校验 | ~30ns | ~19% | 详见 [07-ipc-fastpath.md §5](../30-interfaces/07-ipc-fastpath.md) |
-| **C-S9** | **Badge 64-bit Native Word 校验**（v1.0.1 新增） | **~10ns** | **~6%** | `airy_cap_badge_ok()` 3×READ_ONCE + 位运算 |
-| C-S10~C-S12 | 其他校验（含 CRC32 ~5ns） | ~17ns | ~11% | C-S12 CRC32 完整性校验 |
-| Ring Buffer 写入 | reserve + memcpy + commit | ~100ns | ~63% | 128B 头 + payload 引用 |
-| **FAST_SEND 总计** | | **~158ns** | **100%** | 含 C-S9 Badge 校验 |
+| 指标 | 实测延迟 | 说明 |
+|------|----------|------|
+| **badge_ok 命中**（C-S9） | **2-10ns** | `airy_cap_badge_ok()` 内联，3×READ_ONCE + 位运算，1e6 次迭代 |
+| **badge_ok 未命中**（C-S9 伪造） | 同量级（ns） | RandomTag 不匹配早退 |
+| **fastpath_send 全路径** | **~46ns（37-61ns）** | `airy_ipc_fastpath_send()`，含 C-S0 冻结门 + C-S9 + ring_post |
+| **ring_post** | **~56ns** | `airy_ipc_ring_post()`，SPSC 内存序成本（reserve + commit） |
+| **ring_consume** | **~20ns** | `airy_ipc_ring_consume()`，SPSC 消费路径 |
+| **slowpath 5 阶段模拟** | 实测存在 | phase1/4/5 全路径，见 bench 套件 slowpath_5phase 用例 |
 
-### 1.6 v1.0.1 SLOW_SEND 性能拆解
+> 原设计估算值（C-S9 ~10ns、Ring 写入 ~100ns、FAST_SEND ~158ns）已被实测数据取代。SLO 上限（≤ 200ns）不变；真实硬件（非 UML）上的绝对值可能更低，需以 [06-benchmark-suite.md](06-benchmark-suite.md) 定义的统一口径重新测量后回填。
 
-SLOW_SEND（fastpath C-S9 失败路径）的详细性能拆解：
+### 1.6 v1.0.1 SLOW_SEND 性能拆解（估算值，未实测）
+
+SLOW_SEND（fastpath C-S9 失败路径）的详细性能拆解——**以下为设计估算，尚无实测数据**，待 slowpath 全链路（io_uring_cmd + LSM 钩子）落地后由 KUnit/用户态基准补充：
 
 | 阶段 | 操作 | 延迟 | 说明 |
 |------|------|------|------|
-| C-S0~C-S9.{EPOCH,RANDTAG,PERMS} | fastpath 校验至 C-S9 失败 | ~10ns | 返回 Badge 错误码（-78/-79/-80/-81/-82） |
+| C-S0~C-S9.{EPOCH,RANDTAG,PERMS} | fastpath 校验至 C-S9 失败 | ~2-10ns | 返回 Badge 错误码（78/79/80/81/82 正数幅值，返回 -AIRY_E*） |
 | LSM 钩子 | `security_uring_cmd` 被 slowpath 调用 | ~100ns-1μs | Micro-Supervisor 接管，详见 [09-kernel-agent-supervisor.md §2.3](../20-modules/09-kernel-agent-supervisor.md) |
 | 冷酷执法 | `airy_fault_enforce()` 冻结 Ring + 时间戳 | ~200ns | smp_store_release + ktime_get_real_ns |
 | eventfd 通知 | `airy_eventfd_signal_fault()` | ~50ns | 非阻塞 signal |
-| **SLOW_SEND 总计** | | **~600ns-5.5μs** | 含 LSM 钩子 + 冷酷执法 + eventfd |
+| **SLOW_SEND 总计** | | **~600ns-5.5μs** | 估算（含 LSM 钩子 + 冷酷执法 + eventfd） |
 
 ---
 
@@ -602,42 +604,45 @@ static inline void emit_ipc_metric(const struct airy_ipc_metric *m)
 
 ---
 
-## 6. 错误码体系对接（v1.0.1: -41~-70 IPC + -78~-82 Capability + 0x1001-0x1006 Fault）
+## 6. 错误码体系对接（v1.0.1: 41-70 IPC + 71-100 Capability + 0x1001-0x1006 Fault）
 
-> **v1.0.1 变更**：原 -800~-899 段错误码已废弃。错误码体系全面对齐 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（[SC] 共享契约层 SSoT），分为三类：
-> - **Error（负数，可恢复）**：IPC 段 -41~-70、Capability 段 -78~-82、[SC] 段 -101~-200、[DSL] 段 -201~-300
+> **v1.0.1 变更**：原 -800~-899 段错误码已废弃。错误码体系全面对齐 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（[SC] 共享契约层 SSoT，`include/uapi/linux/airymax/error.h`）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**，分为三类：
+> - **Error（正数幅值，可恢复）**：IPC 段 41-70、Capability 段 71-100、Config 段 101-120、Sched/Lifecycle 段 121-140、Mem 段 141-160、Cognition 段 161-180、Log 段 181-200、Object 段 201-220、Syscall 段 221-240
 > - **Fault（正数 0x1000+，不可恢复）**：0x1001~0x1006（Capability Folding 异常）
-> - **POSIX 兼容段**：-1~-40（EINVAL/ENOMEM/EAGAIN 等）
+> - **POSIX 兼容段**：1-40（AIRY_EACCES=1 / AIRY_EINVAL=5 / AIRY_ENOMEM=9 / AIRY_EPERM=12 / AIRY_EBUSY=16 / AIRY_EAGAIN=35 等）
 
-### 6.1 IPC 错误码段（-41 ~ -70，[SC] 共享契约层）
+### 6.1 IPC 错误码段（41 ~ 70，[SC] 共享契约层 error.h）
 
 | 错误码 | 数值 | 含义 | 触发位置 |
 |--------|------|------|---------|
-| AIRY_E_IPC_MAGIC | -41 | 消息头魔数错误 | fastpath C-S1 |
-| AIRY_E_IPC_VERSION | -42 | 协议版本不兼容 | fastpath C-S2 |
-| AIRY_E_IPC_HDR_SIZE | -43 | 消息头长度非法 | fastpath C-S3 |
-| AIRY_E_IPC_PAYLOAD | -44 | 载荷长度超限 | fastpath C-S4 |
-| AIRY_E_IPC_SRC | -45 | 源 task 非法 | fastpath C-S5 |
-| AIRY_E_IPC_DST | -46 | 目的 task 非法 | fastpath C-S6 |
-| AIRY_E_IPC_OPCODE | -47 | opcode 非法 | fastpath C-S7 |
-| AIRY_E_IPC_CRC | -48 | CRC32 校验失败 | fastpath C-S12 |
-| AIRY_E_IPC_OVF | -49 | 消息队列溢出 | Ring Buffer 写入 |
-| AIRY_E_IPC_REGION | -50 | 内存区域未注册 | 零拷贝注册路径 |
-| AIRY_E_IPC_TIMEOUT | -51 | IPC 超时 | slowpath 等待 |
-| AIRY_E_IPC_KFIFO_FULL | -52 | kfifo 队列满 | kfifo 通道 |
-| AIRY_E_IPC_RING_FULL | -53 | io_uring SQ 已满 | io_uring 提交 |
-| AIRY_E_IPC_BATCH_SIZE | -54 | 批量大小非法 | 批量提交路径 |
-| AIRY_EIPC_FROZEN | -53 | Ring 已冻结（FREEZE opcode） | fastpath C-S0 |
+| AIRY_EIPC_MAGIC | 41 | 消息头魔数错误 | fastpath C-S1 |
+| AIRY_EIPC_OPCODE | 42 | 未知 IPC opcode | fastpath C-S2 |
+| AIRY_EIPC_PAYLOAD | 43 | payload_len 越界 | fastpath C-S3 |
+| AIRY_EIPC_HDRSIZE | 44 | 头大小 != 128B | fastpath C-S4 |
+| AIRY_EIPC_RESERVED | 45 | reserved[72] 非全零 | fastpath C-S4 |
+| AIRY_EIPC_FLAGS | 46 | flags 非法（保留位非零） | fastpath C-S10 |
+| AIRY_EIPC_NOTSUPP | 47 | opcode/flag 不支持 | fastpath C-S10 |
+| AIRY_EIPC_KFIFO | 48 | kfifo 入队失败 | fastpath C-S6 |
+| AIRY_EIPC_RECLAIM | 49 | reclaim 标志置位 | fastpath C-S7 |
+| AIRY_EIPC_CONTEXT | 50 | 上下文检查失败（!in_task） | fastpath C-S8 |
+| AIRY_EIPC_CRC32 | 51 | CRC32 校验失败 | fastpath C-S12 |
+| AIRY_EIPC_TIMEOUT | 52 | SLOW_SEND 超时 | slowpath 等待 |
+| AIRY_EIPC_FROZEN | 53 | Ring 已冻结（FREEZE opcode） | fastpath C-S0 |
+| [54, 70] | | 保留（未分配） | |
 
-### 6.2 Capability 错误码段（-78 ~ -82，Badge 校验，v1.0.1 新增）
+> **修正说明**：旧文档中的 AIRY_E_IPC_VERSION / AIRY_E_IPC_HDR_SIZE / AIRY_E_IPC_SRC / AIRY_E_IPC_DST / AIRY_E_IPC_CRC / AIRY_E_IPC_OVF / AIRY_E_IPC_REGION / AIRY_E_IPC_KFIFO_FULL / AIRY_E_IPC_RING_FULL / AIRY_E_IPC_BATCH_SIZE 等符号在 [SC] error.h 中**不存在**，且旧表将 RING_FULL 与 FROZEN 同时映射为 -53（冲突），现已按 error.h 实际定义（41-53 + 54-70 保留）重写。
+
+### 6.2 Capability 错误码段（71 ~ 100，Badge 校验，v1.0.1 新增）
 
 | 错误码 | 数值 | 含义 | 触发位置 | Fault 映射 |
 |--------|------|------|---------|-----------|
-| AIRY_ECAP_BADGE | -78 | Badge 格式无效 | fastpath C-S9 预校验 | 0x1005 ABNORMAL_CAP |
-| AIRY_ECAP_EPOCH | -79 | Epoch 不匹配（已撤销/过期） | fastpath C-S9.EPOCH | 0x1005 ABNORMAL_CAP |
-| AIRY_ECAP_FORGED | -80 | Badge 伪造（RandomTag 不匹配） | fastpath C-S9.RANDTAG | **0x1001 CAP_FORGED** |
-| AIRY_ECAP_PERM | -81 | Perms 权限位不满足 | fastpath C-S9.PERMS | 0x1005 ABNORMAL_CAP |
-| AIRY_EIPC_FROZEN | -53 | Ring 已冻结 | fastpath C-S0 | —（Error，不触发 Fault） |
+| AIRY_ECAP_MISSING | 71 | Capability 未找到 | slowpath | — |
+| AIRY_ECAP_BADGE | 78 | Badge 格式无效 | fastpath C-S9 预校验 | 0x1005 ABNORMAL_CAP |
+| AIRY_ECAP_EPOCH | 79 | Epoch 不匹配（已撤销/过期） | fastpath C-S9.EPOCH | 0x1005 ABNORMAL_CAP |
+| AIRY_ECAP_FORGED | 80 | Badge 伪造（RandomTag 不匹配） | fastpath C-S9.RANDTAG | **0x1001 CAP_FORGED** |
+| AIRY_ECAP_PERM | 81 | Perms 权限位不满足 | fastpath C-S9.PERMS | 0x1005 ABNORMAL_CAP |
+| AIRY_ECAP_FROZEN | 82 | Capability badge 冻结 | Badge 撤销（A-ULS 控制） | —（Error，不触发 Fault） |
+| [85, 100] | | 保留（未分配） | | |
 
 ### 6.3 Fault 码段（0x1001 ~ 0x1006，不可恢复，v1.0.1 重定义）
 
@@ -655,25 +660,26 @@ static inline void emit_ipc_metric(const struct airy_ipc_metric *m)
 ```c
 /* v1.0.1: 集中错误处理对齐 fastpath C-S9 Badge 校验
  * 详见 30-interfaces/07-ipc-fastpath.md §5.2 + 08-sc-error-contract.md §3
+ * 错误码为 error.h 正数幅值（AIRY_EIPC_*），返回 -AIRY_EIPC_* 产生负值
  */
 int airy_ipc_validate_hdr(const struct airy_ipc_msg_hdr *h)
 {
 	/* C-S1: magic 校验 */
 	if (unlikely(h->magic != AIRY_IPC_MAGIC))
-		return -AIRY_E_IPC_MAGIC;     /* -41 */
+		return -AIRY_EIPC_MAGIC;      /* -41 */
 
-	/* C-S2: 版本校验 */
-	if (unlikely(h->version != AIRY_IPC_VERSION))
-		return -AIRY_E_IPC_VERSION;   /* -42 */
+	/* C-S2: opcode 校验 */
+	if (unlikely(!airy_ipc_opcode_valid(h->opcode)))
+		return -AIRY_EIPC_OPCODE;     /* -42 */
 
-	/* C-S3: 头长度校验 */
-	if (unlikely(h->hdr_size != AIRY_IPC_HDR_SIZE))
-		return -AIRY_E_IPC_HDR_SIZE;  /* -43 */
-
-	/* C-S4: 载荷长度校验 */
-	if (h->payload_len < AIRY_IPC_HDR_SIZE ||
+	/* C-S3: 载荷长度校验 */
+	if (h->payload_len < 0 ||
 	    h->payload_len > AIRY_IPC_MAX_PAYLOAD)
-		return -AIRY_E_IPC_PAYLOAD;   /* -44 */
+		return -AIRY_EIPC_PAYLOAD;    /* -43 */
+
+	/* C-S4: 头大小校验 */
+	if (unlikely(sizeof(*h) != AIRY_IPC_HDR_SIZE))
+		return -AIRY_EIPC_HDRSIZE;    /* -44 */
 
 	return 0;
 }
@@ -691,7 +697,7 @@ static inline int airy_ipc_badge_err_dispatch(int fastpath_ret,
 	case -AIRY_ECAP_PERM:          /* -81: 权限位不满足 */
 	case -AIRY_ECAP_BADGE:         /* -78: Badge 格式无效 */
 		return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd); /* 0x1005 */
-	case -AIRY_ECAP_FROZEN:        /* -82: Ring 冻结 */
+	case -AIRY_ECAP_FROZEN:        /* -82: Badge 冻结 */
 		return fastpath_ret;         /* Error，不触发 Fault */
 	default:
 		return airy_fault_enforce(AIRY_FAULT_ABNORMAL_CAP, cmd); /* 0x1005 */
@@ -726,7 +732,7 @@ int airy_ipc_register_region(int ring_fd,
 
 	/* 2. 区域对齐校验（必须 2MB 对齐） */
 	if (desc->user_addr & 0x1FFFFF || desc->size & 0x1FFFFF) {
-		ret = -AIRY_E_IPC_REGION;   /* -50 */
+		ret = -AIRY_EINVAL;   /* 5: 区域未注册（[SC] IPC 段 54-70 保留，暂未分配专用码） */
 		goto out_err;
 	}
 
@@ -791,14 +797,14 @@ out_err:
 |------|--------------------------------|--------------------------|----------------------|
 | IPC 传输 | 内核 io_uring `IORING_OP_URING_CMD` | 用户态消息队列 | 128B 消息头结构（Layout C v4） |
 | 消息类型枚举 | AIRY_IPC_MSG_* | AIRY_IPC_MSG_* | `include/uapi/linux/airymax/ipc.h` |
-| Badge 64-bit Native Word | fastpath C-S9 内联校验（~10ns） | 用户态 Badge 校验 | Badge 编码 = `Epoch<<48 \| RandomTag<<16 \| Perms` |
+| Badge 64-bit Native Word | fastpath C-S9 内联校验（实测 2-10ns，UML x86_64） | 用户态 Badge 校验 | Badge 编码 = `Epoch<<48 \| RandomTag<<16 \| Perms` |
 | per-agent Epoch（主）/ 全局 Epoch（辅） | per-agent `agent_caps[agent_id].epoch`（K9-1 主要撤销机制）+ 补充性 `atomic_t airy_cap_global_epoch`（UNFREEZE 用） | 用户态 atomic | Epoch 撤销语义（O(1) per-agent epoch bump / UNFREEZE atomic_inc） |
 | agent_caps[] 静态数组 | 128KB 内核静态数组（sec_d 唯一写者） | 用户态等价结构 | `airy_cap_badge_compile()` / `airy_cap_badge_ok()` |
 | opcode 枚举 | SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE | 同左 | 7 种 opcode（[SC] 共享契约层） |
-| 错误码 | AIRY_E_IPC_*（-41~-70）+ AIRY_ECAP_*（-78~-82） | 同左 | `include/uapi/linux/airymax/error.h` |
+| 错误码 | AIRY_EIPC_*（41-70）+ AIRY_ECAP_*（71-100，正数幅值） | 同左 | `include/uapi/linux/airymax/error.h` |
 | Fault 码 | AIRY_FAULT_*（0x1001~0x1006） | 用户态映射到 Error | Fault 码仅内核态使用 |
-| TraceID | 16B UUID | 16B UUID | TraceID 体系 |
-| 4 值裁决枚举 | AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN | 同左 | `include/uapi/linux/airymax/verdict.h` |
+| TraceID | `__u64`（8B，offset 8） | `__u64`（8B） | trace_id 字段（非 UUID） |
+| 4 值裁决枚举 | AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN | 同左 | `include/uapi/linux/airymax/security_types.h`（airy_verdict） |
 
 > **IRON-9 v3 四层模型**：[SC] 共享契约层 / [SS] 语义同源层 / [IND] 完全独立层 / [DSL] 降级生存层。详见 [10-unify-design.md §7](../10-architecture/10-unify-design.md) IRON-9 v3 章节。
 
@@ -810,7 +816,7 @@ out_err:
 
 - [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md)（A-IPC 协议 SSoT，Layout C v4 完整定义）
 - [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md)（A-IPC fastpath SSoT，C-S0~C-S12 校验链 + C-S9 Badge 校验）
-- [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（错误码契约 SSoT，-41~-70 + -78~-82 + 0x1001~0x1006）
+- [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)（错误码契约 SSoT，41-70 IPC + 71-100 Capability + 0x1001~0x1006 Fault）
 - [20-modules/09-kernel-agent-supervisor.md](../20-modules/09-kernel-agent-supervisor.md)（Micro-Supervisor SSoT，冷酷执法 + agent_caps[] 静态数组）
 - [110-security/01-lsm-framework.md](../110-security/01-lsm-framework.md)（LSM 框架 SSoT，§8.4 职责分割表）
 - [110-security/07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md)（纯 C LSM 模块 SSoT，§3 fastpath/slowpath 职责分割 + §3.5 sec_d Badge 编译）

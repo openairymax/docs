@@ -327,10 +327,12 @@ double airy_calc_token_cost(uint64_t tokens,
 
 | 硬件 | 每小时成本 | Token 吞吐 | Token/Dollar |
 |------|-----------|-----------|-------------|
-| NVIDIA H100 | $2.50 | 5000 tokens/s | 7200 tokens/cent |
-| NVIDIA A100 | $1.20 | 2000 tokens/s | 6000 tokens/cent |
-| NVIDIA L40S | $0.80 | 1500 tokens/s | 6750 tokens/cent |
-| Intel Gaudi2 | $1.00 | 1800 tokens/s | 6480 tokens/cent |
+| NVIDIA H100 | $2.50 | 5000 tokens/s | 72000 tokens/cent |
+| NVIDIA A100 | $1.20 | 2000 tokens/s | 60000 tokens/cent |
+| NVIDIA L40S | $0.80 | 1500 tokens/s | 67500 tokens/cent |
+| Intel Gaudi2 | $1.00 | 1800 tokens/s | 64800 tokens/cent |
+
+> **计算口径**：Token/Dollar =（Token 吞吐 × 3600 秒/小时）÷（每小时成本 × 100 美分/美元）。例：H100 = 5000×3600 ÷ 250 = **72000 tokens/cent**（旧文档误写为 7200，差 10 倍，已修正）。
 
 ---
 
@@ -399,7 +401,7 @@ int airy_budget_check_efficiency(uint32_t agent_id)
 ### 7.2 阶段感知调度
 
 ```c
-/* kernel/sched/scx_agent.c [IND] */
+/* kernel/sched/sched_agent.c [IND] —— 禁 sched_ext 命名（sched_tac 用户态调度器） */
 
 /**
  * airy_sched_llm_phase - 根据推理阶段调整调度策略

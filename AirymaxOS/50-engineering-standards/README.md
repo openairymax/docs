@@ -23,7 +23,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## 2. 技术选型声明
 
-本目录的工程标准以 agentrt-linux v1.0 五大技术选型为基线：
+本目录的工程标准以 agentrt-linux v1.0.1 五大技术选型为基线：
 
 | # | 技术维度 | 选定方案 | 明确不采用的方案 | 工程标准影响 |
 |---|---------|---------|----------------|---------|
@@ -76,7 +76,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ```
 50-engineering-standards/
-├── README.md                            # 本文件 — 主索引与总纲（v1.0）
+├── README.md                            # 本文件 — 主索引与总纲（v1.0.1）
 ├── 00-engineering-standards-handbook.md # 工程标准规范手册（SSoT 索引 + IRON 铁律）
 ├── 01-coding-standards.md               # 代码规范合集（6 Parts）
 ├── 04-engineering-philosophy.md         # 工程思想
@@ -104,7 +104,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |-----------|------------|---------|
 | **A-UEF**（统一错误码与故障定义体系） | `01-coding-standards.md`（热路径 C 编码规范）+ `30-runtime-interfaces/`（运行时接口） | CoreLoopThree kthread 热路径必须遵循 C 内核风格；sched_tac 调度策略可插拔 |
 | **A-ULP**（统一日志与打印系统） | `20-contracts/contracts.md`（日志契约）+ `30-runtime-interfaces/`（日志运行时接口） | Ring Buffer 日志契约化；Logger Daemon 接口契约化；Panic 生存路径可审计 |
-| **A-UCS**（统一配置管理体系） | `09-ssot-registry.md`（SSoT v2，配置规则编号登记）+ `30-runtime-interfaces/`（配置接口） | sysctl/Kconfig/airy_defconfig 配置规则统一登记于 SSoT v2 |
+| **A-UCS**（统一认知体系） | `90-terminology.md`（术语 SSoT）+ `30-runtime-interfaces/`（认知接口） | CoreLoopThree/Thinkdual 认知循环契约；[SC] `cognition_types.h` 为唯一权威类型源 |
 | **A-ULS**（统一生命周期管理） | `07-maintainers-and-governance.md`（维护者层级）+ `30-runtime-interfaces/`（监管接口） | 监管器生命周期管理契约化；故障重启策略可审计 |
 | **A-IPC**（统一进程间通信体系） | `11-sc-header-type-bridging.md`（[SC] 类型桥接，IPC 头文件类型映射）+ `20-contracts/contracts.md`（IPC 契约） | [SC] `ipc.h` 头文件的 C↔Rust 类型桥接规则；128B 消息头契约化；IORING_OP_URING_CMD 命令码契约化 |
 
@@ -259,9 +259,9 @@ agentrt-linux 在 agentrt 17 类规则编号体系基础上，新增 OS 专属�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.3 | 2026-07-13 | 50-engineering-standards 精简合并 53→23 文档（已废弃，按 IRON-7 重置为 0.1.1 奠基→v1.0.1 演进路径） |
-| v1.4 | 2026-07-13 | D 类 OLK-6.6 工程标准 8 项差距移交 1.0.1 M1+；修正子目录文档计数（已废弃，按 IRON-7 重置） |
-| v1.0 | 2026-07-17 | 升级为 v1.0：新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v2 升级为 v3 四层模型（新增 [DSL] 降级生存层）；新增 `11-sc-header-type-bridging.md`（[SC] 类型桥接文档）；SSoT 升级为 v2（`09-ssot-registry.md`）；`120-cross-project-code-sharing.md` 升级为 IRON-9 v3 四层模型；新增 Airymax Unify Design 五模块工程标准映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC） |
+| v1.0.1 | 2026-07-13 | 50-engineering-standards 精简合并 53→23 文档（历史记录原 v1.3，已废弃，按 IRON-7 重置为 0.1.1 奠基→v1.0.1 演进路径） |
+| v1.0.1 | 2026-07-13 | D 类 OLK-6.6 工程标准 8 项差距移交 1.0.1 M1+；修正子目录文档计数（历史记录原 v1.4，已废弃，按 IRON-7 重置） |
+| v1.0.1 | 2026-07-17 | 升级为 v1.0.1（历史记录原 v1.0）：新增sched_tac 技术选型声明（不使用 sched_ext）、IORING_OP_URING_CMD（不使用 page flipping）、纯 C LSM（不使用 BPF LSM）、alloc_pages + mmap（不使用 DMA 一致性内存）；IRON-9 v2 升级为 v3 四层模型（新增 [DSL] 降级生存层）；新增 `11-sc-header-type-bridging.md`（[SC] 类型桥接文档）；SSoT 升级为 v2（`09-ssot-registry.md`）；`120-cross-project-code-sharing.md` 升级为 IRON-9 v3 四层模型；新增 Airymax Unify Design 五模块工程标准映射（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC） |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
 
 ---

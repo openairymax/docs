@@ -39,15 +39,15 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **OS-OBS-091: 记忆监控是 agentrt-linux 可观测性 L10 层的强制基线，所有 Agent 必须接受 L1-L4 记忆层级监控，不得存在"匿名记忆访问"路径。**
 
-**OS-KER-181: kernel 的 defconfig 必须开启 CONFIG_AIRY_MEMORY_MONITOR；agentrt.ko 必须在 module_init 阶段注册记忆监控数据结构。**
+**OS-KER-181: 记忆监控规划配置项 `CONFIG_AIRY_MEMORY_MONITOR`（**当前 kernel 源码中不存在，属规划**）；落地时由内建 Airy LSM（非 agentrt.ko）在 `airy_init()` 阶段注册记忆监控数据结构。**
 
 ### 1.2 框架组成
 
 | 组件 | 实现位置 | 职责 |
 |------|----------|------|
-| 记忆监控核心 | `kernel/agentrt/airy_mem_monitor.c` | per-Agent 记忆统计 |
+| 记忆监控核心 | `kernel/corekern/airy/airy_mem_monitor.c`（规划） | per-Agent 记忆统计 |
 | mem_d daemon | `daemons/mem_d/mem_daemon.c` | 记忆卷载管理与上报 |
-| procfs 接口 | `kernel/agentrt/airy_mem_procfs.c` | `/proc/airy/agents/[id]/memory_stats` |
+| procfs 接口 | `kernel/corekern/airy/airy_mem_procfs.c`（规划） | `/proc/airy/agents/[id]/memory_stats` |
 | user_events | `daemons/cogn_d/user_events.c` | `memory_access` 事件上报 |
 | A-ULS 监管 | `daemons/macro_d/mem_superv.c` | 记忆配额监管 |
 | 持久化 | `daemons/logger_d/mem_persister.c` | 历史趋势落盘 |
@@ -73,23 +73,25 @@ MemoryRovol 是 agentrt-linux 的记忆卷载理论，定义四层记忆层级�
 
 | 层级 | 名称 | 存储介质 | 容量 | 延迟 | 用途 |
 |------|------|---------|------|------|------|
-| L1 | 工作记忆 | CPU L1/L2 cache | KB 级 | 1-5ns | 当前认知循环的活跃数据 |
-| L2 | 短期记忆 | LLC + 主存 | MB 级 | 10-100ns | 近期会话上下文 |
-| L3 | 长期记忆 | 主存 + NVMe | GB 级 | 1-100μs | 持久化知识库 |
-| L4 | 经验记忆 | NVMe + 压缩 | GB-TB 级 | 100μs-10ms | 压缩的经验模式 |
+| L1 | 工作记忆 | 进程内存 | 256MB（默认，可调） | <1μs | 当前认知循环的活跃数据 |
+| L2 | 短期记忆 | 进程内存 + 共享内存 | 1GB（默认，上限 2GB） | <10μs | 近期会话上下文 |
+| L3 | 长期记忆 | 主存 + NVMe | 1-10GB | <1ms | 持久化知识库 |
+| L4 | 经验记忆 | NVMe + 压缩 | 100MB-1GB | <10ms | 压缩的经验模式 |
+
+> **模型统一说明**：L1/L2 容量与延迟以 [100-operations/09-memory-operations.md §1](../100-operations/09-memory-operations.md) 的 MemoryRovol 运维模型为权威（L1=256MB 进程内存、L2=1GB）；本文档早期"CPU L1/L2 cache / KB 级 / 1-5ns"的表述混淆了硬件 cache 与 Agent 工作记忆，已废弃。
 
 ### 2.2 记忆层级数据流
 
 ```mermaid
 graph LR
     A[Agent 认知请求] --> B{L1 工作记忆命中?}
-    B -->|命中| C[返回数据 1-5ns]
+    B -->|命中| C[返回数据 <1μs]
     B -->|缺失| D{L2 短期记忆命中?}
-    D -->|命中| E[回填 L1 + 返回 10-100ns]
+    D -->|命中| E[回填 L1 + 返回 <10μs]
     D -->|缺失| F{L3 长期记忆命中?}
-    F -->|命中| G[回填 L2+L1 + 返回 1-100μs]
+    F -->|命中| G[回填 L2+L1 + 返回 <1ms]
     F -->|缺失| H{L4 经验记忆命中?}
-    H -->|命中| I[解压 + 回填 + 返回 100μs-10ms]
+    H -->|命中| I[解压 + 回填 + 返回 <10ms]
     H -->|缺失| J[LLM 推理生成 + 写入 L4]
     style B fill:#fde68a,stroke:#b45309
     style D fill:#fde68a,stroke:#b45309
@@ -103,8 +105,8 @@ agentrt-linux 的记忆层级基于 `alloc_pages + mmap` 实现，不使用 DMA 
 
 | 层级 | 物理内存来源 | 映射方式 | 生命周期 |
 |------|------------|---------|---------|
-| L1 | CPU cache（自动） | 无需显式映射 | 由 CPU 硬件管理 |
-| L2 | `alloc_pages(order=0)` 单页 | `vm_map_pages` 内核虚拟映射 | Agent 会话期间 |
+| L1 | `alloc_pages` 进程内存 | mmap 到 Agent 地址空间 | Agent 会话期间 |
+| L2 | `alloc_pages(order=0)` 单页 + 共享内存 | `vm_map_pages` 内核虚拟映射 | Agent 会话期间 |
 | L3 | `alloc_pages(order=4-9)` 大页 | `remap_pfn_range` 用户态映射 | Agent 持久化期间 |
 | L4 | NVMe 磁盘 + 按需加载 | `remap_pfn_range` 按需映射 | 系统全生命周期 |
 
@@ -116,14 +118,14 @@ agentrt-linux 的记忆层级基于 `alloc_pages + mmap` 实现，不使用 DMA 
 
 ### 3.1 L1 监控指标
 
-L1 工作记忆是 Agent 当前认知循环的活跃数据，存储于 CPU L1/L2 cache。监控指标：
+L1 工作记忆是 Agent 当前认知循环的活跃数据，存储于 Agent 进程内存（默认 256MB，见 §2.1）。监控指标：
 
 | 指标 | 含义 | 健康基线 |
 |------|------|---------|
 | `hit_rate` | L1 命中率 | ≥ 90% |
-| `access_latency_ns` | 平均访问延迟 | ≤ 5ns |
-| `p99_latency_ns` | P99 访问延迟 | ≤ 10ns |
-| `working_set_size` | 工作集大小 | ≤ 32KB（L1 cache 大小） |
+| `access_latency_ns` | 平均访问延迟 | < 1μs |
+| `p99_latency_ns` | P99 访问延迟 | ≤ 10μs |
+| `working_set_size` | 工作集大小 | ≤ 256MB（L1 默认容量） |
 | `eviction_count` | 驱逐计数 | 低 |
 
 ### 3.2 L1 监控数据结构
@@ -168,7 +170,7 @@ perf stat -e L1-dcache-loads,L1-dcache-load-misses \
 agentrt-linux 在内核态通过 PMU 中断采样 L1 访问模式：
 
 ```c
-/* kernel/agentrt/airy_mem_monitor.c */
+/* kernel/corekern/airy/airy_mem_monitor.c（规划） */
 void airy_mem_l1_on_access(u32 agent_id, u8 hit, u32 latency_ns)
 {
     struct airy_agent_memory *mem = airy_mem_get(agent_id);
@@ -206,15 +208,15 @@ void airy_mem_l1_on_access(u32 agent_id, u8 hit, u32 latency_ns)
 
 ### 4.1 L2 监控指标
 
-L2 短期记忆存储近期会话上下文，位于 LLC + 主存。监控指标：
+L2 短期记忆存储近期会话上下文，位于 Agent 进程内存 + 共享内存（默认 1GB，上限 2GB，见 §2.1）。监控指标：
 
 | 指标 | 含义 | 健康基线 |
 |------|------|---------|
-| `capacity_kb` | 当前容量 | ≤ 4MB |
-| `max_capacity_kb` | 最大容量配额 | 由 A-ULS 配置 |
+| `capacity_kb` | 当前容量 | ≤ 1GB（默认配额） |
+| `max_capacity_kb` | 最大容量配额 | 由 A-ULS 配置（上限 2GB） |
 | `eviction_rate` | 淘汰率 | ≤ 10% |
 | `hit_rate` | L2 命中率 | ≥ 70% |
-| `access_latency_ns` | 平均访问延迟 | ≤ 100ns |
+| `access_latency_ns` | 平均访问延迟 | < 10μs |
 | `fill_latency_ns` | L3→L2 回填延迟 | ≤ 10μs |
 
 ### 4.2 L2 监控数据结构
@@ -492,7 +494,7 @@ alert_state: NORMAL
 ### 7.3 procfs 实现规范
 
 ```c
-/* kernel/agentrt/airy_mem_procfs.c */
+/* kernel/corekern/airy/airy_mem_procfs.c（规划） */
 static int memory_stats_show(struct seq_file *m, void *v)
 {
     struct airy_agent_memory *mem = m->private;
@@ -628,7 +630,7 @@ A-ULS 模块 macro_d daemon 负责记忆配额监管。监管策略分三层：
 ### 9.3 配额检查流程
 
 ```c
-/* kernel/agentrt/airy_mem_monitor.c */
+/* kernel/corekern/airy/airy_mem_monitor.c（规划） */
 static void airy_mem_check_quota(struct airy_agent_memory *mem)
 {
     u64 total_used = mem->l2.capacity_kb / 1024 +
