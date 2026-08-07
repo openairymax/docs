@@ -338,7 +338,7 @@ flowchart LR
 
 ### 8.1 跨项目贡献者协调
 
-agentrt（用户态运行时）与 agentrt-linux（内核发行版）是同源项目，共享 10 个 [SC] 头文件。涉及 [SC] 变更的贡献需在两个项目同时进行。
+agentrt（用户态运行时）与 agentrt-linux（内核发行版）是同源项目，共享 12 个 [SC] 头文件。涉及 [SC] 变更的贡献需在两个项目同时进行。
 
 - **跨项目贡献者**：贡献者可同时向 agentrt 与 agentrt-linux 贡献。
 - **跨项目 PR**：[SC] 变更必须在 agentrt 与 agentrt-linux 同时发起 PR，PR 描述中互相引用。
@@ -349,7 +349,7 @@ agentrt（用户态运行时）与 agentrt-linux（内核发行版）是同源�
 
 - **评审频率**：每季度由 SSoT 委员会组织 agentrt ↔ agentrt-linux 同源 API 评审。
 - **评审内容**：
-  - 10 个 [SC] 头文件的双端一致性（逐字节校验）。
+  - 12 个 [SC] 头文件的双端一致性（逐字节校验）。
   - 同源 API 的语义一致性（[SS] 语义同源层）。
   - 同源 API 的兼容性（ABI 兼容性）。
 - **评审产出**：评审报告，列出漂移、不一致、兼容性问题。

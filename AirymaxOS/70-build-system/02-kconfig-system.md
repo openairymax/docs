@@ -427,11 +427,11 @@ make allnoconfig      # 全关闭配置（CI 用）
 
 ```bash
 # 使用架构 airy_defconfig 作为全配置基线（实际存在于 arch/*/configs/）
-make allmodconfig KCONFIG_ALLCONFIG=arch/x86_64/configs/airy_defconfig
-make allnoconfig KCONFIG_ALLCONFIG=arch/x86_64/configs/airy_defconfig
+make allmodconfig KCONFIG_ALLCONFIG=arch/x86/configs/airy_defconfig
+make allnoconfig KCONFIG_ALLCONFIG=arch/x86/configs/airy_defconfig
 ```
 
-`airy_defconfig`（`arch/<arch>/configs/airy_defconfig`，共 5 个：x86_64/arm64/riscv/loongarch/sw_64）列出 agentrt-linux 必须启用的选项（如 `CONFIG_SECURITY_AIRY=y`、`CONFIG_AIRY_IPC=y`、`CONFIG_AIRY_CAP_TABLE_SIZE=1024`、`CONFIG_IO_URING=y`）。这样 `allnoconfig` 也会保留这些必选项，避免"最小内核"把 agentrt-linux 核心特性关掉。
+`airy_defconfig`（`arch/<arch>/configs/airy_defconfig`，共 5 个：x86/arm64/riscv/loongarch/sw_64）列出 agentrt-linux 必须启用的选项（如 `CONFIG_SECURITY_AIRY=y`、`CONFIG_AIRY_IPC=y`、`CONFIG_AIRY_CAP_TABLE_SIZE=1024`、`CONFIG_IO_URING=y`）。这样 `allnoconfig` 也会保留这些必选项，避免"最小内核"把 agentrt-linux 核心特性关掉。
 
 > **说明**：早期设计中的独立 `airymaxos-base.config` 全配置基线文件并不存在（`kernel/` 下未提供）；其"必须启用的选项基线"角色由各架构 `airy_defconfig` 直接承担，CI 通过 `scripts/kconfig/merge_config.sh` 叠加使用（见 §7.1）。
 
@@ -975,7 +975,7 @@ int conf_read(struct kconfig_symbol *symbols, const char *config);
 #  * 对齐 Linux 6.6 scripts/kconfig/conf.c 的 allconfig 处理
 #  */
 # 语义常量（agentrt-linux 专属建模）
-#define KCONFIG_ALLCONFIG_DEFAULT  "arch/x86_64/configs/airy_defconfig"
+#define KCONFIG_ALLCONFIG_DEFAULT  "arch/x86/configs/airy_defconfig"
 # KCONFIG_ALLCONFIG=1 时使用 randconfig 生成的种子；=文件路径则读取该文件
 ```
 

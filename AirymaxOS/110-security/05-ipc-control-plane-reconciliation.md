@@ -82,7 +82,7 @@ Reconciliation 采用 **最终一致性（eventual consistency）**，而非强�
     ▼
 1. 扫描数据面状态（io_uring_cmd RECONCILE_SCAN）
     │  ├── 扫描所有存活 Ring（内核 Ring 表遍历）
-    │  ├── 扫描 Capability 状态（v1.0.1 `agent_caps` 指针表遍历，`alloc_pages_node` 运行时分配）
+    │  ├── 扫描 Capability 状态（v1.0.1 `agent_caps` 静态数组遍历，`__airymax_cap_table[1024]`）
     │  ├── 扫描离线队列（暂存消息）
     │  └── 读取 reconciliation log
     │
@@ -392,7 +392,7 @@ static void reconcile_timeout_handler(int sig, siginfo_t *info, void *ctx)
     airy_ipc_broadcast_dsl_notification();
 
     /* 3. 数据面继续自治运行（基于现有缓存） */
-    /*    新 Capability 请求直接拒绝，返回 AIRY_EDSL_CAP_MINIMAL（-206，见 08-sc-error-contract.md §2.6） */
+    /*    新 Capability 请求直接拒绝，返回 -AIRY_EINVAL（-5，[DSL] 5 核心码；原规划码 AIRY_EDSL_CAP_MINIMAL（-206）未注册于 [SC] error.h，见 08-sc-error-contract.md §2.6） */
 
     /* 4. 每 60 秒重试 Reconciliation */
     schedule_retry(60);
@@ -406,7 +406,7 @@ Reconciliation 超时进入 [DSL] 降级后，IPC 行为调整：
 | 行为 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
 | 消息传递 | 基于完整 Capability | 仅基于缓存（容忍 stale） |
-| 新 Ring 创建 | 控制面授权 | 拒绝（返回 `AIRY_EDSL_CAP_MINIMAL`，-206） |
+| 新 Ring 创建 | 控制面授权 | 拒绝（返回 `-AIRY_EINVAL`（-5，[DSL] 5 核心码；原规划码 `AIRY_EDSL_CAP_MINIMAL`（-206）未注册于 [SC] error.h）） |
 | 新 Capability | 控制面授权 | 拒绝 |
 | 消息格式 | 完整 IPC 消息头 | 最简 128B 消息头 |
 

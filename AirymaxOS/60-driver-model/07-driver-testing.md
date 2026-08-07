@@ -35,6 +35,8 @@ agentrt-linux v1.0.1 驱动测试框架采用三层测试策略：**KUnit 单元
 
 > **OS-DRV-121**： Agent 设备 I/O fastpath 延迟**必须** ≤50ns（IORING_OP_URING_CMD 路径）。回归测试中延迟超过此阈值的提交**不得**合入。这是 A-IPC fastpath 性能契约。
 
+> **设备错误统一映射 [SC] error.h POSIX 段（error.h 无设备专用子空间）**：本文件测试矩阵中的预期错误码均映射至 [SC] `error.h` 实有码——拒绝/权限→`-AIRY_EPERM`、配额/内存不足→`-AIRY_ENOMEM`、已存在→`-AIRY_EEXIST`、参数非法→`-AIRY_EINVAL`、忙/冲突→`-AIRY_EBUSY`、超时→`-AIRY_EAGAIN`、不存在→`-AIRY_ENOENT`（详见 [03-devm-resource.md](03-devm-resource.md) §7.1）。
+
 ---
 
 ## 2. 测试策略总览
@@ -93,9 +95,9 @@ Agent 设备驱动测试矩阵覆盖四大维度：
 | 用例 ID | 描述 | 输入 | 预期输出 | 测试层 |
 |---------|------|------|---------|--------|
 | REG-001 | 正常注册 Agent 驱动 | 合法 `airy_agent_driver` | 返回 0，`/dev/airy_*` 创建 | KUnit |
-| REG-002 | 缺少 CAP_AGENT_DRIVER_REGISTER | cap_mask 不含所需 Capability | 返回 `-AIRY_E_DEV_NOCAP` | KUnit |
-| REG-003 | A-ULS 审核拒绝 | macro_d 返回拒绝 | 返回 `-AIRY_E_DEV_REJECTED` | kselftest |
-| REG-004 | 重复注册同名驱动 | 已注册的驱动名 | 返回 `-AIRY_E_DEV_EXIST` | KUnit |
+| REG-002 | 缺少 CAP_AGENT_DRIVER_REGISTER | cap_mask 不含所需 Capability | 返回 `-AIRY_EPERM` | KUnit |
+| REG-003 | A-ULS 审核拒绝 | macro_d 返回拒绝 | 返回 `-AIRY_EPERM` | kselftest |
+| REG-004 | 重复注册同名驱动 | 已注册的驱动名 | 返回 `-AIRY_EEXIST` | KUnit |
 | REG-005 | 注销后访问设备 | 注销后 open `/dev/airy_*` | 返回 `-ENXIO` | kselftest |
 | REG-006 | probe 返回 -EPROBE_DEFER | 依赖未就绪 | 延迟重试，最终成功 | kselftest |
 | REG-007 | probe 返回其他错误 | 资源不足 | 立即解绑，devm 释放 | kselftest |
@@ -106,14 +108,14 @@ Agent 设备驱动测试矩阵覆盖四大维度：
 | 用例 ID | 描述 | 输入 | 预期输出 | 测试层 |
 |---------|------|------|---------|--------|
 | RES-001 | 正常分配 Token 资源 | `airy_dev_alloc(TOKEN)` | 返回有效句柄 | KUnit |
-| RES-002 | 配额耗尽 | 超出 instance 配额 | 返回 `-AIRY_E_DEV_QUOTA` | KUnit |
-| RES-003 | 全局配额耗尽 | 超出 global 配额 | 返回 `-AIRY_E_DEV_QUOTA_GLOBAL` | KUnit |
+| RES-002 | 配额耗尽 | 超出 instance 配额 | 返回 `-AIRY_ENOMEM` | KUnit |
+| RES-003 | 全局配额耗尽 | 超出 global 配额 | 返回 `-AIRY_ENOMEM` | KUnit |
 | RES-004 | 逆序释放验证 | 按顺序申请 A→B→C | 释放顺序 C→B→A | KUnit |
 | RES-005 | 释放回调执行 | `airy_dev_free(handle)` | 释放回调被调用 | KUnit |
 | RES-006 | devm 自动释放 | 设备注销不主动 free | devres_release_all 释放所有 | KUnit |
 | RES-007 | 释放回调失败 | 释放回调返回错误 | 不影响其他资源释放 | KUnit |
-| RES-008 | 重复释放同一句柄 | 已释放的 handle | 返回 `-AIRY_E_DEV_NOENT` | KUnit |
-| RES-009 | 跨 Agent 释放 | 其他 Agent 的 handle | 返回 `-AIRY_E_DEV_NOCAP` | KUnit |
+| RES-008 | 重复释放同一句柄 | 已释放的 handle | 返回 `-AIRY_ENOENT` | KUnit |
+| RES-009 | 跨 Agent 释放 | 其他 Agent 的 handle | 返回 `-AIRY_EPERM` | KUnit |
 | RES-010 | SUSPENDED 状态释放 DMA | Agent 状态 SUSPENDED | DMA 释放，TOKEN 保留 | kselftest |
 
 ### 3.4 I/O 路径测试用例
@@ -124,7 +126,7 @@ Agent 设备驱动测试矩阵覆盖四大维度：
 | IO-002 | read 慢路径 | `read(fd, buf, count)` | 返回读取字节数 | kselftest |
 | IO-003 | write 慢路径 | `write(fd, buf, count)` | 返回写入字节数 | kselftest |
 | IO-004 | ioctl GET_DEV_INFO | `AIRY_IOC_GET_DEV_INFO` | 返回正确设备信息 | kselftest |
-| IO-005 | ioctl 非法命令 | `_IO('A', 0xFF)` | 返回 `-AIRY_E_DEV_INVAL` | kselftest |
+| IO-005 | ioctl 非法命令 | `_IO('A', 0xFF)` | 返回 `-AIRY_EINVAL` | kselftest |
 | IO-006 | io_uring fastpath 同步 | `IORING_OP_URING_CMD` 同步 | 返回结果，延迟 ≤50ns | kselftest |
 | IO-007 | io_uring fastpath 异步 | `IORING_OP_URING_CMD` 异步 | CQE 完成通知 | kselftest |
 | IO-008 | io_uring 命令取消 | `IORING_OP_URING_CMD` + cancel | CQE 取消通知 | kselftest |
@@ -137,8 +139,8 @@ Agent 设备驱动测试矩阵覆盖四大维度：
 |---------|------|------|---------|--------|
 | ERR-001 | probe 失败回滚 | probe 中途失败 | devm 资源全部释放 | kselftest |
 | ERR-002 | DMA fault 处理 | 设备 DMA 越界 | IOMMU fault，设备隔离 | 契约 |
-| ERR-003 | 超时处理 | I/O 超时 | 返回 `-AIRY_E_DEV_TIMEOUT` | kselftest |
-| ERR-004 | Capability 撤销 | 运行中撤销 CAP_DEV_ALLOC | 后续操作返回 `-AIRY_E_DEV_NOCAP` | 契约 |
+| ERR-003 | 超时处理 | I/O 超时 | 返回 `-AIRY_EAGAIN` | kselftest |
+| ERR-004 | Capability 撤销 | 运行中撤销 CAP_DEV_ALLOC | 后续操作返回 `-AIRY_EPERM` | 契约 |
 | ERR-005 | Agent FAULTED 状态 | Agent 进入 FAULTED | 资源隔离，audit_d 快照 | 契约 |
 
 ---
@@ -216,7 +218,7 @@ static void airy_test_agent_driver_register_no_cap(struct kunit *test)
     /* cap_mask 不含 CAP_AGENT_DRIVER_REGISTER */
     rc = airy_agent_driver_register(ctx->drv, 0);
 
-    KUNIT_EXPECT_EQ(test, rc, -AIRY_E_DEV_NOCAP);
+    KUNIT_EXPECT_EQ(test, rc, -AIRY_EPERM);
 }
 
 /* REG-004: 重复注册同名驱动 */
@@ -233,7 +235,7 @@ static void airy_test_agent_driver_register_duplicate(struct kunit *test)
     dup = kunit_kzalloc(test, sizeof(*dup), GFP_KERNEL);
     *dup = *ctx->drv;
     rc = airy_agent_driver_register(dup, CAP_AGENT_DRIVER_REGISTER);
-    KUNIT_EXPECT_EQ(test, rc, -AIRY_E_DEV_EXIST);
+    KUNIT_EXPECT_EQ(test, rc, -AIRY_EEXIST);
 
     airy_agent_driver_unregister(ctx->drv);
 }
@@ -457,7 +459,7 @@ int main(void)
 |---------|------|---------|---------|
 | VFIO-001 | 独立 IOMMU 组直通 | 单设备组 | 直通成功 |
 | VFIO-002 | 多设备组直通（同 Agent） | 同组多设备 | 直通成功 |
-| VFIO-003 | 多设备组直通（跨 Agent） | 同组含其他 Agent 设备 | 拒绝，`-AIRY_E_VFIO_GROUP_CONFLICT` |
+| VFIO-003 | 多设备组直通（跨 Agent） | 同组含其他 Agent 设备 | 拒绝，`-AIRY_EBUSY` |
 | VFIO-004 | 无 IOMMU 系统 | IOMMU 不可用 | 拒绝，降级到模拟设备 |
 
 ### 6.2 DMA 映射验证测试

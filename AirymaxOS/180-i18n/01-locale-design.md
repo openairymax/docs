@@ -126,7 +126,7 @@ static const struct airy_locale_desc airy_locales[] = {
 agentrt-linux 完整支持 glibc 的 LC_* 分类，每个 daemon 可独立配置：
 
 ```bash
-# /etc/airymaxos/locale.conf —— 系统级 locale 配置
+# /etc/agentrt/locale.conf —— 系统级 locale 配置
 LANG=zh_CN.UTF-8
 LC_CTYPE=zh_CN.UTF-8
 LC_NUMERIC=en_US.UTF-8
@@ -497,28 +497,28 @@ msgstr "Cupolas 安全穹顶拒绝访问"
 MemoryRovol L1-L4 按 locale 独立组织，避免跨语言知识污染：
 
 ```yaml
-# /etc/airymaxos/memoryrovol/regions.yaml —— MemoryRovol 区域配置
+# /etc/agentrt/memoryrovol/regions.yaml —— MemoryRovol 区域配置
 memoryRovol:
   default_region: zh-CN
   regions:
     - name: zh-CN
       locale: zh_CN.UTF-8
       locale_id: 1
-      knowledge_base: /var/lib/airymaxos/memoryrovol/zh-CN
+      knowledge_base: /var/lib/agentrt/memoryrovol/zh-CN
       capacity_gb: 64
       forgetting_strategy: EBBINGHAUS
       tau_days: 7
     - name: en-US
       locale: en_US.UTF-8
       locale_id: 0
-      knowledge_base: /var/lib/airymaxos/memoryrovol/en-US
+      knowledge_base: /var/lib/agentrt/memoryrovol/en-US
       capacity_gb: 64
       forgetting_strategy: EBBINGHAUS
       tau_days: 7
     - name: ja-JP
       locale: ja_JP.UTF-8
       locale_id: 2
-      knowledge_base: /var/lib/airymaxos/memoryrovol/ja-JP
+      knowledge_base: /var/lib/agentrt/memoryrovol/ja-JP
       capacity_gb: 32
       forgetting_strategy: EBBINGHAUS
       tau_days: 7

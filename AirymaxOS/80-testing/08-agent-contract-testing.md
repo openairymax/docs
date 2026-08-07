@@ -93,11 +93,11 @@ flowchart TB
 |------|------|---------|---------|
 | KUnit | `airy_agent_contract_*_test.c`（**规划，未实现**） | 状态机 / Token / 记忆 / 认知循环 | 开发期（毫秒级） |
 | kselftest | `airy_agent_contract/` 子目录 | 状态机 / 记忆 / daemon 交互 | 系统级（秒级） |
-| ftrace tracepoint | `airy_agent_contract_violation` tracepoint | 全部契约 | 运行时（实时） |
+| ftrace tracepoint | `airy_agent_contract_violation` tracepoint（**规划，未实现**：内核当前无此 tracepoint） | 全部契约 | 运行时（实时） |
 
 **OS-TEST-090**：所有 Agent 行为契约必须有对应的 KUnit 测试套件；契约无 KUnit 覆盖时，PR 评审必须显式标注"契约豁免理由"，并由 Agent 行为契约维护者审批。
 
-**OS-KER-150**：`airy_agent_contract_violation` tracepoint 在生产构建（`airy_defconfig`）中必须启用；任一契约违反通过该 tracepoint 实时上报至 A-ULP 日志系统（`LOG_LEVEL_FATAL`）。
+**OS-KER-150**：`airy_agent_contract_violation` tracepoint 在生产构建（`airy_defconfig`）中必须启用；任一契约违反通过该 tracepoint 实时上报至 A-ULP 日志系统（`AIRY_LOG_FATAL`）。（**规划，未实现**：该 tracepoint 当前不存在，待内核实现后启用）
 
 ---
 
@@ -355,10 +355,10 @@ struct airy_token_budget {
 
 /* 契约 9：溢出处理 */
 /* 当 consumed + delta > total 时：
- *   - 调用方返回 -AIRY_ERR_TOKEN_OVERFLOW
+ *   - 调用方返回 -AIRY_ESCHED_BUDGET（Token 预算超额，映射 [SC] error.h A-ULS 段实有码）
  *   - Agent 进入 STOPPING 状态（强制停止）
- *   - 触发 airy_agent_contract_violation tracepoint
- *   - A-ULP 上报 LOG_LEVEL_FATAL
+ *   - 触发 airy_agent_contract_violation tracepoint（规划，未实现）
+ *   - A-ULP 上报 AIRY_LOG_FATAL
  */
 ```
 
@@ -395,12 +395,12 @@ KUNIT_DEFINE_TEST(airy_contract_token_overflow_triggers_stop)
     
     /* 尝试消耗 300，超出剩余 200 */
     int ret = airy_token_consume(agent, 300);
-    KUNIT_EXPECT_EQ(test, -AIRY_ERR_TOKEN_OVERFLOW, ret);
+    KUNIT_EXPECT_EQ(test, -AIRY_ESCHED_BUDGET, ret);
     
     /* Agent 必须进入 STOPPING 状态（契约 9） */
     KUNIT_EXPECT_EQ(test, AIRY_AGENT_STOPPING, agent->state);
     
-    /* tracepoint 必须触发（通过 airy_dyn_token_overflow_total 验证） */
+    /* tracepoint 必须触发（通过 airy_dyn_token_overflow_total 验证）——规划，未实现 */
     KUNIT_EXPECT_GE(test, airy_dyn_token_overflow_total(), 1);
     
     airy_agent_free(agent);
@@ -414,7 +414,7 @@ KUNIT_DEFINE_TEST(airy_contract_token_zero_budget)
     
     /* 零预算下任何消耗均溢出 */
     int ret = airy_token_consume(agent, 1);
-    KUNIT_EXPECT_EQ(test, -AIRY_ERR_TOKEN_OVERFLOW, ret);
+    KUNIT_EXPECT_EQ(test, -AIRY_ESCHED_BUDGET, ret);
     KUNIT_EXPECT_EQ(test, AIRY_AGENT_STOPPING, agent->state);
     
     airy_agent_free(agent);
@@ -456,7 +456,7 @@ struct airy_memory_quota {
 
 /* 契约 11：配额不可超越
  *   - 写入字节数 ≤ quota_l{1,2,3,4}
- *   - 超越时返回 -AIRY_ERR_MEM_QUOTA_EXCEEDED
+ *   - 超越时返回 -AIRY_ENOSPC（记忆配额超额，映射 [SC] error.h POSIX 段实有码）
  *   - Agent 进入 STOPPING 状态
  */
 ```
@@ -516,7 +516,7 @@ KUNIT_DEFINE_TEST(airy_contract_mem_quota_exceeded)
     KUNIT_EXPECT_EQ(test, 0,  airy_mem_write(agent, AIRY_MEM_L1_WORKING, 0, data, 100));
     
     /* 再写 1 字节，超越配额 */
-    KUNIT_EXPECT_EQ(test, -AIRY_ERR_MEM_QUOTA_EXCEEDED,
+    KUNIT_EXPECT_EQ(test, -AIRY_ENOSPC,
         airy_mem_write(agent, AIRY_MEM_L1_WORKING, 100, data, 1));
     
     /* Agent 必须进入 STOPPING 状态（契约 11） */
@@ -823,10 +823,10 @@ jobs:
 
 ### 8.2 契约违反的 tracepoint 实时检测
 
-生产环境通过 `airy_agent_contract_violation` tracepoint 实时检测契约违反：
+生产环境通过 `airy_agent_contract_violation` tracepoint 实时检测契约违反（**规划，未实现**：该 tracepoint 当前不存在，`/sys/kernel/debug/tracing/events/airy_agent/` 目录亦不存在，待内核实现后启用）：
 
 ```bash
-# 实时监控契约违反
+# 实时监控契约违反（规划，未实现）
 echo 1 > /sys/kernel/debug/tracing/events/airy_agent/airy_agent_contract_violation/enable
 cat /sys/kernel/debug/tracing/trace_pipe
 ```
@@ -839,7 +839,7 @@ agent_contract_violation: agent=1234 contract=12 (cogn_phase_skip) attempted=EXE
 agent_contract_violation: agent=1234 contract=14 (cogn_d_loop_timeout) state=STOPPING timeout=200ms
 ```
 
-**OS-TEST-097**：CI nightly 必须运行 Agent 压力测试（1000 个 Agent 并发 spawn/stop），通过 ftrace 监控 `airy_agent_contract_violation` tracepoint；任一契约违反即标记 nightly 失败。
+**OS-TEST-097**：CI nightly 必须运行 Agent 压力测试（1000 个 Agent 并发 spawn/stop），通过 ftrace 监控 `airy_agent_contract_violation` tracepoint；任一契约违反即标记 nightly 失败。（**规划，未实现**：该 tracepoint 当前不存在，待内核实现后启用）
 
 ---
 
@@ -887,7 +887,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 ### 10.2 与 07-ftrace-selftest 的关系
 
-07 卷的 `airy_trace_selftest_agent` 验证 `airy_agent_state_change` tracepoint 功能；本卷的契约违反检测通过 `airy_agent_contract_violation` tracepoint 实时上报。二者共享 ftrace 基础设施。
+07 卷的 `airy_trace_selftest_agent` 验证 `airy_agent_state_change` tracepoint 功能；本卷的契约违反检测通过 `airy_agent_contract_violation` tracepoint 实时上报。二者共享 ftrace 基础设施。（**规划，未实现**：两个 tracepoint 当前均不存在，待内核实现后启用）
 
 ### 10.3 与 09-fuzz-testing 的关系
 
@@ -909,7 +909,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 1. 17 条 Agent 行为契约定义（状态机契约 1-7、Token 预算契约 8-9、记忆配额契约 10-11、CoreLoopThree 契约 12-13、daemon 契约 14-17）。
 2. KUnit + kselftest 双层契约测试框架。
-3. `airy_agent_contract_violation` tracepoint 实时检测。
+3. `airy_agent_contract_violation` tracepoint 实时检测（**规划，未实现**）。
 4. `ci-agent-contract` workflow 完整定义。
 5. `airy_agent_contracts.json` 契约注册表。
 
@@ -950,7 +950,7 @@ agentrt-linux 维护一个全局契约注册表 `scripts/airy_agent_contracts.js
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.0.1 | 2026-07-18 | 初始版本：定义 17 条 Agent 行为契约（状态机 1-7 / Token 8-9 / 记忆 10-11 / CoreLoopThree 12-13 / daemon 14-17）；定义 KUnit + kselftest 双层契约测试框架；新增 `airy_agent_contract_violation` tracepoint 实时检测；定义 `ci-agent-contract` workflow 与契约注册表 |
+| v1.0.1 | 2026-07-18 | 初始版本：定义 17 条 Agent 行为契约（状态机 1-7 / Token 8-9 / 记忆 10-11 / CoreLoopThree 12-13 / daemon 14-17）；定义 KUnit + kselftest 双层契约测试框架；新增 `airy_agent_contract_violation` tracepoint 实时检测（**规划，未实现**）；定义 `ci-agent-contract` workflow 与契约注册表 |
 
 ---
 

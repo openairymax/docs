@@ -613,7 +613,9 @@ int airy_printk_utf8_safe(const char *level, const char *msg, size_t msg_len)
 
 ## 7. 错误码体系对接
 
-编码错误码纳入 agentrt-linux 统一错误码体系：
+> **规划态声明**：`AIRY_E_ENCODING_*`（下表 -904~-910）**未在 [SC] error.h 注册**（[SC] 中不存在 `AIRY_E_ENCODING_*` 段，也未占用 -900 段），以下数值均为**规划值**；落地时须向 error.h 保留段 241-300 申请注册，并同步更新 `30-interfaces/08-sc-error-contract.md`。
+
+编码错误码规划纳入 agentrt-linux 统一错误码体系：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|
@@ -657,7 +659,7 @@ int airy_validate_input(const char *input, size_t len)
 | **E-1 安全内生** | 禁止 strcpy/wchar_t，从源头消除安全风险 |
 | **E-4 跨平台一致性** | UTF-8 跨架构一致，无字节序问题 |
 | **E-5 命名语义化** | airy_utf8_* 函数名即语义 |
-| **E-6 错误可追溯** | 详细错误码（-904 ~ -910）覆盖所有编码错误 |
+| **E-6 错误可追溯** | 详细错误码（-904 ~ -910 为规划值，未在 [SC] 注册）覆盖所有编码错误 |
 | **A-3 人文关怀** | CJK 用户与英文用户公平的 Token 计数 |
 
 ---
@@ -667,7 +669,7 @@ int airy_validate_input(const char *input, size_t len)
 | 组件 | agentrt-linux（[SC]） | agentrt（[SC]） | 共享 |
 |------|------------------------|------------------|------|
 | UTF-8 头文件 | `airy_utf8.h` | `airy_utf8.h` | 完全共享 |
-| 错误码 | AIRY_E_ENCODING_* | AIRY_E_ENCODING_* | `error.h` |
+| 错误码（规划态） | AIRY_E_ENCODING_*（未在 [SC] 注册，待 error.h 保留段 241-300 申请） | 同左 | 规划中（error.h 保留段 241-300） |
 | Token 计数规则 | 按码点 | 按码点 | 共享契约 |
 | 编码规范文档 | 本文件 | 同源镜像 | [SC] |
 

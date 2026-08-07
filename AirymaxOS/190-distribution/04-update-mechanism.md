@@ -70,7 +70,7 @@ CONFIG_FTRACE=y
 #include <linux/kernel.h>
 #include <linux/livepatch.h>
 #include <linux/sched.h>
-#include <airymax/airy_q16.h>
+#include <airymax/airy_q16.h>   /* [IND] 规划态示例：airy_q16.h 为规划中的内部头文件（当前 Q16.16 定义在 [SC] cognition_types.h 的 airy_q16_t），非 [SC] 12 头文件之一 */
 
 static struct klp_func lp_vtime_fix_funcs[] = {
 	{
@@ -213,7 +213,7 @@ rpm-ostree 将整个系统（内核 + 用户态 + 配置）作为不可变的"�
 │  /etc  （可写，三路合并：default + 用户修改 + 新版本）  │
 ├─────────────────────────────────────────────────────────┤
 │  /var  （可写，用户数据，跨版本保留）                  │
-│    └── /var/lib/airymaxos/  （MemoryRovol 数据）       │
+│    └── /var/lib/agentrt/  （MemoryRovol 数据）       │
 ├─────────────────────────────────────────────────────────┤
 │  /sysroot/ostree/deploy/airymaxos/                     │
 │    ├── deploy.<hash>.0/    ← 当前活跃部署              │
@@ -297,7 +297,7 @@ echo "[完成] rpm-ostree 系统已初始化"
 # 原子更新 agentrt-linux 系统
 
 set -euo pipefail
-LOG=/var/log/airymaxos-upgrade.log
+LOG=/var/log/agentrt-upgrade.log
 
 echo "[1/5] 检查可用更新" | tee -a "$LOG"
 rpm-ostree upgrade --check | tee -a "$LOG"
@@ -389,13 +389,13 @@ echo "[6/6] 重启后健康检查（在启动脚本中执行）"
 
 ```bash
 #!/bin/bash
-# /usr/lib/systemd/system/airymaxos-health-check.service
+# /usr/lib/systemd/system/agentrt-health-check.service
 # 启动后健康检查（systemd 服务）
 
 [Unit]
 Description=agentrt-linux Health Check after Boot
 After=multi-user.target
-ConditionPathExists=/var/lib/airymaxos/.pending-upgrade
+ConditionPathExists=/var/lib/agentrt/.pending-upgrade
 
 [Service]
 Type=oneshot
@@ -423,7 +423,7 @@ KERNEL_VER=$(uname -r)
 echo "  [1/5] 内核版本: $KERNEL_VER"
 
 # 检查 2：sched_tac 用户态调度器
-if systemctl is-active --quiet airymaxos-sched-agent; then
+if systemctl is-active --quiet agentrt-sched-agent; then
     echo "  [2/5] stc_agent: OK"
     CHECK_PASSES=$((CHECK_PASSES + 1))
 else
@@ -448,7 +448,7 @@ else
 fi
 
 # 检查 4：MemoryRovol PMEM 挂载
-if mount | grep -q "/var/lib/airymaxos/memoryrovol/pmem"; then
+if mount | grep -q "/var/lib/agentrt/memoryrovol/pmem"; then
     echo "  [4/5] MemoryRovol PMEM: OK"
     CHECK_PASSES=$((CHECK_PASSES + 1))
 else
@@ -471,13 +471,13 @@ echo "[健康检查] 通过: $CHECK_PASSES / 5，失败: $CHECK_FAILS"
 if [ $CHECK_FAILS -ge $MAX_FAILURES ]; then
     echo "[健康检查] 失败次数 $CHECK_FAILS >= $MAX_FAILURES，触发自动回滚"
     rpm-ostree rollback
-    rm -f /var/lib/airymaxos/.pending-upgrade
+    rm -f /var/lib/agentrt/.pending-upgrade
     echo "[健康检查] 已回滚，系统将在下次重启时回到前一版本"
     exit 1
 fi
 
 # 检查通过，清除待升级标记
-rm -f /var/lib/airymaxos/.pending-upgrade
+rm -f /var/lib/agentrt/.pending-upgrade
 echo "[健康检查] 全部通过，本次升级固化"
 exit 0
 ```
@@ -491,7 +491,7 @@ exit 0
 MemoryRovol L1-L4 数据卷在更新过程中保留版本标记，确保跨版本兼容：
 
 ```yaml
-# /var/lib/airymaxos/memoryrovol/metadata.yaml
+# /var/lib/agentrt/memoryrovol/metadata.yaml
 # MemoryRovol 元数据（跨更新保留）
 
 version: 1.0.1
@@ -535,7 +535,7 @@ set -euo pipefail
 TARGET_VERSION=${1:-1.0.2}
 
 echo "[1/4] 检查 MemoryRovol 元数据"
-META=/var/lib/airymaxos/memoryrovol/metadata.yaml
+META=/var/lib/agentrt/memoryrovol/metadata.yaml
 CURRENT_VER=$(yq '.version' "$META")
 
 echo "  当前版本: $CURRENT_VER"
@@ -554,8 +554,8 @@ if [ "$COMPATIBLE" = "null" ]; then
 fi
 
 echo "[3/4] 备份数据"
-BACKUP_DIR=/var/lib/airymaxos/memoryrovol-backup-$(date +%Y%m%d-%H%M%S)
-cp -r /var/lib/airymaxos/memoryrovol "$BACKUP_DIR"
+BACKUP_DIR=/var/lib/agentrt/memoryrovol-backup-$(date +%Y%m%d-%H%M%S)
+cp -r /var/lib/agentrt/memoryrovol "$BACKUP_DIR"
 
 echo "[4/4] 执行迁移"
 airymax-memory migrate --from "$CURRENT_VER" --to "$TARGET_VERSION"
@@ -615,16 +615,16 @@ echo "[完成] 12 daemon 滚动重启完成"
 
 ## 7. 错误码体系对接
 
-更新机制错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
+更新机制错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，[SC] 共享契约层）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**；[SC] error.h 中**不存在** `AIRY_DIST_*` 专用段（原虚构的 -1000~-1099 段已废弃，见 [160-compatibility/05-cross-distro.md §15.1](../160-compatibility/05-cross-distro.md)），更新机制场景复用既有段码，未来发行版专属错误码向 error.h 保留段 241-300 申请：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|
-| AIRY_DIST_EUPDATE_LIVEPATCH | -1010 | livepatch 应用失败 |
-| AIRY_DIST_EUPDATE_OSTREE | -1011 | rpm-ostree 更新失败 |
-| AIRY_DIST_EUPDATE_ROLLBACK | -1012 | 回滚失败 |
-| AIRY_DIST_EUPDATE_HEALTH | -1013 | 健康检查失败 |
-| AIRY_DIST_EUPDATE_MIGRATE | -1014 | 数据迁移失败 |
-| AIRY_DIST_EUPDATE_DEP | -1015 | 依赖冲突 |
+| AIRY_ENOTSUP | 11 | livepatch 应用失败（内核不支持） |
+| AIRY_EIO | 6 | rpm-ostree 更新失败 / 数据迁移失败（I/O 失败） |
+| AIRY_EBUSY | 16 | 回滚失败（目标状态忙） |
+| AIRY_EAGAIN | 35 | 健康检查失败（可重试） |
+| AIRY_EEXIST | 2 | 依赖冲突（更新包已存在且不兼容） |
+| （保留段） | 241-300 | 后续发行版专属错误码向 [SC] error.h 申请注册 |
 
 集中错误处理示例：
 
@@ -640,13 +640,13 @@ int airy_update_atomic(const char *target_version)
 
 	ret = airy_update_ostree_upgrade(target_version);
 	if (ret < 0) {
-		ret = -AIRY_DIST_EUPDATE_OSTREE;
+		ret = -AIRY_EIO;
 		goto out_err;
 	}
 
 	ret = airy_update_reboot_and_check();
 	if (ret < 0) {
-		ret = -AIRY_DIST_EUPDATE_HEALTH;
+		ret = -AIRY_EAGAIN;
 		goto out_rollback;
 	}
 	return 0;

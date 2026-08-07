@@ -455,7 +455,7 @@ L4 由于深度压缩且数据量大，采用加密擦除：
 每个 Agent 可配置擦除策略：
 
 ```yaml
-# /etc/airy/agents/<id>/erase_policy.yaml
+# /etc/agentrt/agents/<id>/erase_policy.yaml
 on_terminate:
   l1: quick              # 快速擦除
   l2: overwrite          # 覆写擦除

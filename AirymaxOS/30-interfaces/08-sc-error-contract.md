@@ -330,7 +330,7 @@ Fault 码占据正数空间 `[0x1000, 0x1FFF]`，从 `0x1000` 起步以避免与
 
 ### 3.1 Fault 码定义（对齐 SSoT error.h L163-169，6 个 Fault 码）
 
-> **⚠️ P0-I3 修复说明**（v1.0.1-fix）：原文档列出 11 个 Fault 码（`0x1001-0x100B`，含虚构的 `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED=0x1007`、`AIRY_FAULT_TOKEN_BUDGET_EXCEEDED=0x1008`、`AIRY_FAULT_DMA=0x1009`、`AIRY_FAULT_URING_MALFORMED=0x100A`、`AIRY_FAULT_AUDIT_TAMPER=0x100B`），与 SSoT `error.h` L163-169 实际定义的 6 个 Fault 码严重不符。修复后严格对齐 SSoT：仅保留 `0x1001-0x1006` 共 6 个 Fault 码。原虚构的 5 个 Fault 码（`0x1007-0x100B`）标注为"v1.1+ 计划扩展，当前 SSoT 未定义"。
+> **⚠️ P0-I3 修复说明**（v1.0.1-fix）：原文档列出 11 个 Fault 码（`0x1001-0x100B`，含虚构的 `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED=0x1007`、`AIRY_FAULT_TOKEN_BUDGET_EXCEEDED=0x1008`、`AIRY_FAULT_DMA=0x1009`、`AIRY_FAULT_URING_MALFORMED=0x100A`、`AIRY_FAULT_AUDIT_TAMPER=0x100B`），与 SSoT `error.h` L163-169 实际定义的 6 个 Fault 码严重不符。修复后严格对齐 SSoT：仅保留 `0x1001-0x1006` 共 6 个 Fault 码。原虚构的 5 个 Fault 码（`0x1007-0x100B`）标注为"v1.0.1+ 计划扩展，当前 SSoT 未定义"。
 
 SSoT `error.h` 实际定义 6 个 Fault 码（`0x1001-0x1006`），覆盖 Badge 伪造/泄漏、Ring 损坏、Agent 心跳超时、Capability 异常、VM 页错误：
 
@@ -346,15 +346,15 @@ SSoT `error.h` 实际定义 6 个 Fault 码（`0x1001-0x1006`），覆盖 Badge 
 
 **Fault 码值域**：`[0x1000, 0x1FFF]`，从 `0x1000` 起步以避免与 errno 正值冲突。`0x1000` 本身保留作为"未指定 Fault"哨兵值，实际定义从 `0x1001` 起。`0x1007-0x1FFF` 当前未定义，预留给 v1.1+ 子系统扩展（如 io_uring hardened 路径、审计哈希链、资源配额等场景），新增必须更新 SSoT `error.h` 与本契约文档。
 
-**v1.1+ 计划扩展（当前 SSoT 未定义，标注为计划项）**：
+**v1.0.1+ 计划扩展（当前 SSoT 未定义，标注为计划项）**：
 
 | Fault 码（计划） | 计划值 | 计划用途 | 当前状态 |
 |------------------|--------|---------|---------|
-| `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED` | 0x1007 | 记忆配额溢出（mem_d 检测） | v1.1+ 计划，SSoT 未定义 |
-| `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED` | 0x1008 | Token 预算溢出（cogn_d 检测） | v1.1+ 计划，SSoT 未定义 |
-| `AIRY_FAULT_DMA` | 0x1009 | Agent 设备 DMA 故障 | v1.1+ 计划，SSoT 未定义 |
-| `AIRY_FAULT_URING_MALFORMED` | 0x100A | malformed SQE/CQE 输入 | v1.1+ 计划，SSoT 未定义 |
-| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B | 审计哈希链断裂 | v1.1+ 计划，SSoT 未定义 |
+| `AIRY_FAULT_MEMORY_QUOTA_EXCEEDED` | 0x1007 | 记忆配额溢出（mem_d 检测） | v1.0.1+ 计划，SSoT 未定义 |
+| `AIRY_FAULT_TOKEN_BUDGET_EXCEEDED` | 0x1008 | Token 预算溢出（cogn_d 检测） | v1.0.1+ 计划，SSoT 未定义 |
+| `AIRY_FAULT_DMA` | 0x1009 | Agent 设备 DMA 故障 | v1.0.1+ 计划，SSoT 未定义 |
+| `AIRY_FAULT_URING_MALFORMED` | 0x100A | malformed SQE/CQE 输入 | v1.0.1+ 计划，SSoT 未定义 |
+| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B | 审计哈希链断裂 | v1.0.1+ 计划，SSoT 未定义 |
 
 ### 3.2 Fault 码触发与处置（对齐 SSoT 6 个 Fault 码）
 
@@ -367,7 +367,7 @@ SSoT `error.h` 实际定义 6 个 Fault 码（`0x1001-0x1006`），覆盖 Badge 
 | `AIRY_FAULT_ABNORMAL_CAP` | 0x1005 | Capability 树完整性校验失败 | 立即终止 Agent（SIGKILL） | 进入 DEAD 态 |
 | `AIRY_FAULT_VM_FAULT` | 0x1006 | 共享页映射损坏（MemoryRovol 检测） | 立即标记 Ring 不可用 | 回退到 printk_safe |
 
-> **⚠️ P0-I3 修复说明（续）**：原文档 §3.2 触发与处置表列出 11 行，含 5 行虚构 Fault 码（`AIRY_FAULT_MEMORY_QUOTA_EXCEEDED`/`TOKEN_BUDGET_EXCEEDED`/`DMA`/`URING_MALFORMED`/`AUDIT_TAMPER`）。修复后表格仅保留 SSoT 实际定义的 6 个 Fault 码。虚构 Fault 码的触发场景已移至 §3.1 "v1.1+ 计划扩展" 表中并标注"SSoT 未定义"。
+> **⚠️ P0-I3 修复说明（续）**：原文档 §3.2 触发与处置表列出 11 行，含 5 行虚构 Fault 码（`AIRY_FAULT_MEMORY_QUOTA_EXCEEDED`/`TOKEN_BUDGET_EXCEEDED`/`DMA`/`URING_MALFORMED`/`AUDIT_TAMPER`）。修复后表格仅保留 SSoT 实际定义的 6 个 Fault 码。虚构 Fault 码的触发场景已移至 §3.1 "v1.0.1+ 计划扩展" 表中并标注"SSoT 未定义"。
 
 ### 3.3 Error 与 Fault 的关系
 

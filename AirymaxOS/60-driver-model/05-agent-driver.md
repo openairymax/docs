@@ -113,7 +113,7 @@ sequenceDiagram
         A-->>K: probe 成功
     else 审核拒绝
         U-->>K: 拒绝注册
-        K-->>A: -AIRY_E_DEV_NOCAP
+        K-->>A: -AIRY_EPERM
     end
 ```
 
@@ -137,11 +137,11 @@ sequenceDiagram
  * agent_device 匹配成功后触发 probe 回调。
  *
  * 上下文：可能睡眠（A-ULS 审核可能等待）
- * 返回：0 成功，负数错误码失败：
- *   -AIRY_E_DEV_NOCAP     Capability 校验失败
- *   -AIRY_E_DEV_REJECTED  A-ULS 审核拒绝
- *   -AIRY_E_DEV_EXIST     驱动名冲突
- *   -AIRY_E_DEV_NOMEM     内存分配失败
+ * 返回：0 成功，负数错误码失败（设备错误统一映射 [SC] error.h
+ *   POSIX 段，error.h 无设备专用子空间）：
+ *   -AIRY_EPERM     Capability 校验失败 / A-ULS 审核拒绝
+ *   -AIRY_EEXIST    驱动名冲突
+ *   -AIRY_ENOMEM    内存分配失败
  */
 int airy_agent_driver_register(struct airy_agent_driver *drv, u32 cap_mask);
 
@@ -168,10 +168,10 @@ int airy_agent_driver_register(struct airy_agent_driver *drv, u32 cap_mask)
 
     /* 1. 参数校验 */
     if (!drv || !drv->name || !drv->probe || !drv->remove)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     if (drv->dev_type > AIRY_DEV_TOOL)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 2. Capability 校验（纯 C LSM 钩子） */
     rc = airy_lsm_check_agent_driver_register(drv, cap_mask);
@@ -205,7 +205,7 @@ int airy_agent_driver_register(struct airy_agent_driver *drv, u32 cap_mask)
     if (rc) {
         airy_ulps_log(AIRY_ULPS_ERROR,
                       "driver_register failed: %s rc=%d", drv->name, rc);
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
     }
 
     /* 6. 上报 A-ULS 注册成功事件 */
@@ -450,7 +450,7 @@ static int airy_cogn_probe(struct agent_device *adev)
     /* 1. 分配驱动私有数据（devm 托管） */
     priv = devm_kzalloc(&adev->dev, sizeof(*priv), GFP_KERNEL);
     if (!priv)
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
 
     priv->adev = adev;
     dev_set_drvdata(&adev->dev, priv);
@@ -588,7 +588,7 @@ static int cogn_d_handle_dev_ready(u32 agent_id, u32 dev_type)
     /* 1. 为 Agent 创建认知会话 */
     sess = cogn_session_create(agent_id);
     if (!sess)
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
 
     /* 2. 加载推理引擎（通过 io_uring cmd 向内核驱动请求 DMA 缓冲） */
     sess->engine = cogn_engine_load(agent_id, AIRY_COGN_MODEL_DEFAULT);
@@ -608,7 +608,7 @@ static int cogn_d_handle_infer_req(u32 agent_id,
     struct cogn_result *result;
 
     if (!sess)
-        return -AIRY_E_DEV_NOENT;
+        return -AIRY_ENOENT;
 
     /* 执行推理 */
     result = cogn_engine_infer(sess->engine, req);
@@ -701,7 +701,7 @@ static int airy_cogn_uring_cmd(struct agent_device *adev,
     /* 1. 解析命令头（OLK 6.6 io_uring_cmd_to_pdu 宏访问 pdu[32]） */
     hdr = io_uring_cmd_to_pdu(ioucmd, const struct airy_uring_cmd_hdr);
     if (hdr->magic != AIRY_URING_CMD_MAGIC)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 2. prep 阶段（同步，校验 + 准备） */
     rc = cogn_uring_ops.prep(adev, ioucmd, issue_flags);
@@ -769,7 +769,7 @@ static int airy_cogn_infer_dispatch(struct agent_device *adev,
     /* 1. 优先尝试 io_uring fastpath */
     if (adev->state == AGENT_DEV_ALLOCATED && adev->io_uring_ops) {
         rc = airy_cogn_uring_infer(adev, req);
-        if (rc != -AIRY_E_DEV_FALLBACK)
+        if (rc != -AIRY_ENOTSUP)
             return rc;
         /* fastpath 不可用，降级到慢路径 */
         airy_ulps_log(AIRY_ULPS_WARN,
@@ -788,7 +788,7 @@ static int airy_cogn_infer_dispatch(struct agent_device *adev,
         return airy_generic_cogn_infer(req);
     }
 
-    return -AIRY_E_DEV_UNAVAILABLE;
+    return -AIRY_ENOTSUP;
 }
 ```
 

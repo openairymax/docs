@@ -11,7 +11,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ## SSoT 声明
 
-> **单一权威源声明**：本文件是 **A-ULS 模块调度扩展 [SC] 契约** 的唯一权威源。Agent 8 态生命周期枚举、3 态降级映射、sched_tac 调度接口（`sched_setattr` / `sched_setscheduler`）、seL4 MCS 语义映射（`scBudget` ↔ `sched_runtime`、`scPeriod` ↔ `sched_deadline`）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Agent 状态机与调度参数契约。
+> **单一权威源声明**：本文件是 **A-ULS 模块调度扩展 [SC] 契约** 的唯一权威源。Agent 8 态生命周期枚举、3 态降级映射、sched_tac 调度接口（`sched_setattr` / `sched_setscheduler`）、seL4 MCS 语义映射（`scBudget` ↔ `sched_runtime`、`scPeriod` ↔ `sched_period`、`scRefill` ↔ `sched_deadline`）均以本文件为唯一权威定义。其余文档只能引用本文件，禁止重新定义 Agent 状态机与调度参数契约。
 >
 > 技术选型声明：本文件遵循 **sched_tac**（SCHED_DEADLINE / SCHED_FIFO / EEVDF + seL4 MCS 语义映射，**不使用 sched_ext**）。IPC 采用 **IORING_OP_URING_CMD + registered buffer + mmap**（不使用 page flipping）。安全采用 **纯 C LSM 模块**（不使用 BPF LSM）。日志内存采用 **alloc_pages + mmap**（不使用 DMA 一致性内存）。[SC] 共享契约头文件的物理宿主为 `kernel/include/uapi/linux/airymax/`。
 

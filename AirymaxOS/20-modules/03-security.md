@@ -272,7 +272,7 @@ typedef __u64 cap_t;
  * - Perms[0:15]    16 bit：权限位段（send/recv/derive/kill/file_open/rotate/supervise）
  */
 
-/* [SC] lsm_types.h: 每槽 sizeof=80 字节（24 base + 16 MDB + 40 reserved，AIRY_ALIGNED(64)） */
+/* [SC] lsm_types.h: 每槽字段布局 80B（24 base + 16 MDB + 40 reserved），sizeof=128B（AIRY_ALIGNED(64)） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit badge: Epoch<<48 | RandomTag<<16 | Perms */
     __u32   agent_id;         /* Owning agent ID */
@@ -304,7 +304,7 @@ extern atomic_t airy_cap_global_epoch;
 
 | 维度 | v1.0 实现（已废弃） | v1.0.1 实现（当前权威） |
 |------|-------------------|---------------------|
-| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节，sec_d 唯一写者）+ Badge 64-bit Native Word |
+| 物理存储 | `airy_cnode`（radix-tree 动态分配）+ v1.0 capability 元数据结构体 | `agent_caps[1024]` 静态数组（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，字段布局 80B，sizeof=128B（64B 对齐），sec_d 唯一写者）+ Badge 64-bit Native Word |
 | 逻辑视图 | `airy_cspace`（CNode 树） | `airy_cspace` 保留（`slots` 指针指向 `agent_caps[agent_id]`） |
 | 派生关系 | `airy_cap_mdb`（全局 MDB，parent→children 链）+ v1.0 元数据 parent_cap_id 字段 | 不需要——Badge 64-bit Native Word 自包含 Epoch + RandomTag + Perms |
 | 撤销机制 | MDB 递归遍历子树（O(n)） | `airy_cap_epoch_bump(agent_id)` 一行代码 O(1) per-agent 定向撤销 |
@@ -641,8 +641,8 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | --- | --- | --- | --- |
 | `AIRY_FAULT_CAP_FORGED` | 0x1001 | Badge 伪造 | 终止 Agent + 安全团队介入 |
 | `AIRY_FAULT_CAP_LEAK` | 0x1002 | A-IPC Badge 泄漏 | 冻结 Ring + 重启 Agent |
-| `AIRY_FAULT_URING_MALFORMED` | 0x100A | malformed SQE/CQE 输入（opcode/flags/payload_len 越界） | `airy_security_fault()` 通知 Micro-Supervisor + 冻结 Ring |
-| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B | 审计哈希链断裂（`airy_audit_chain_verify` 检测到 `prev_hash` 不匹配） | 紧急 CRITICAL 告警 + 停止审计写入 + 安全团队介入 |
+| `AIRY_FAULT_URING_MALFORMED` | 0x100A（预留） | malformed SQE/CQE 输入（opcode/flags/payload_len 越界） | `airy_security_fault()` 通知 Micro-Supervisor + 冻结 Ring |
+| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B（预留） | 审计哈希链断裂（`airy_audit_chain_verify` 检测到 `prev_hash` 不匹配） | 紧急 CRITICAL 告警 + 停止审计写入 + 安全团队介入 |
 
 > **Error vs Fault**：Error（负数 errno）由调用方处理；Fault（正数 0x1000+）触发 `airy_security_fault()` 上报 Micro-Supervisor，由 `macro_d` 裁决。两者码空间严格不重叠。详见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md)。
 
@@ -702,7 +702,7 @@ agentrt-linux IPC 启用 **SQE128 模式**（`IORING_SETUP_SQE128`，Linux 5.18+
 | `AIRY_LSM_KERNEL_HOOK_TOTAL` 常量    | Linux 6.6 LSM 框架可用钩子总数（=250，仅文档用途，非数组尺寸）                          |
 | `airy_task_sec` 结构                | task blob 布局（agent_id/cap_space_root/agent_state/fault_count/sched_budget_ns/last_heartbeat/frozen_reason/ipc_ring） |
 | `airy_inode_sec` 结构               | inode blob 布局（cap_required/owner_agent）                                            |
-| `airy_cap_slot` 结构                | capability slot（`AIRY_ALIGNED(64)`，sizeof=80 字节（24 base + 16 MDB + 40 reserved）；badge/agent_id/flags/randtag/perms/epoch + MDB 派生树 parent_agent/first_child/next_sibling/generation/revocable） |
+| `airy_cap_slot` 结构                | capability slot（`AIRY_ALIGNED(64)`，字段布局 80B（24 base + 16 MDB + 40 reserved），sizeof=128B；badge/agent_id/flags/randtag/perms/epoch + MDB 派生树 parent_agent/first_child/next_sibling/generation/revocable） |
 | `airy_capability_check_fn` 回调签名  | capability 检查函数指针类型（badge, required_perm, agent_id → __s32）                    |
 | v1.0 capability 元数据语义模型（v1.0 元数据已废弃） | capability 派生模型语义契约（cap\_id/cap\_type/rights/parent\_cap\_id/mint\_depth/mint\_quota + 7 操作 Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）；v1.0.1 物理存储改用 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（详见 §4.1） |
 | `airy_vault_backend_t` 结构          | Vault backend 抽象（init/seal/unseal/attest）                                            |

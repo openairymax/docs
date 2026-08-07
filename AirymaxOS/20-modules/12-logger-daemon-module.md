@@ -450,9 +450,9 @@ Capability Folding 校验失败时，`logger_d` 将错误码记录至 Ring Buffe
 
 | 错误码 | 值 | 触发场景 | logger_d 处理 |
 |--------|-----|---------|--------------|
-| `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | 记录 `LOG_WARN` 级别，标记 Ring 冻结事件 |
-| `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求 | 记录 `LOG_WARN` 级别，标记 sec_d 限流事件 |
-| `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | 记录 `LOG_FATAL` 级别，触发 `AIRY_FAULT_CAP_FORGED` |
+| `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | 记录 `AIRY_LOG_WARN` 级别，标记 Ring 冻结事件 |
+| `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求 | 记录 `AIRY_LOG_WARN` 级别，标记 sec_d 限流事件 |
+| `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | 记录 `AIRY_LOG_FATAL` 级别，触发 `AIRY_FAULT_CAP_FORGED` |
 
 ### 7.5 O(1) 撤销机制
 
@@ -469,7 +469,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 | 层 | 头文件/资源 | logger_d 使用方式 |
 |----|----------|-----------------|
 | [SC] | `log_types.h` | 128B 记录格式、`LOG_*` 枚举、`AIRY_LOG_FAC_*` facility |
-| [SC] | `error.h` | `AIRY_EIPC_FROZEN`、`AIRY_ESEC_D_THROTTLED`、`AIRY_FAULT_AUDIT_TAMPER` |
+| [SC] | `error.h` | `AIRY_EIPC_FROZEN`、`AIRY_ESEC_D_THROTTLED`（`AIRY_FAULT_AUDIT_TAMPER` 为预留 Fault 码，待 [SC] error.h 注册） |
 | [SS] | 配置语义 | `logger_d.yaml` 与 sysctl 语义同源 |
 | [IND] | systemd unit、zstd 压缩、轮转策略 | `logger_d` 实现细节 |
 | [DSL] | `#ifdef AIRY_SC_FALLBACK` 降级块 | log_types.h 损坏时的最小可运行子集 |
@@ -480,7 +480,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 
 | 维度 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
-| 日志级别 | 5 级（LOG_DEBUG~LOG_FATAL） | 仅 LOG_FATAL + LOG_ERROR 两级 |
+| 日志级别 | 5 级（AIRY_LOG_DEBUG~AIRY_LOG_FATAL） | 仅 AIRY_LOG_FATAL + AIRY_LOG_ERROR 两级 |
 | 日志通路 | Ring Buffer + `logger_d` 消费 + 落盘 | printk 原生路径（绕过 Ring Buffer） |
 | facility 过滤 | `AIRY_LOG_FAC_*` 完整枚举 | 仅 `AIRY_LOG_FAC_KERN` |
 | 审计哈希链 | SHA-256 + Ed25519 + TPM 2.0 | 关闭（降级模式下不可靠） |
@@ -494,16 +494,16 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，`logger_d` 涉及 [
 #ifdef AIRY_SC_FALLBACK
 #warning "AIRY_SC_FALLBACK: log_types.h degraded, only LOG_FATAL+LOG_ERROR available"
 
-/* [DSL] 最小可运行子集：仅保留 LOG_FATAL + LOG_ERROR */
-#define LOG_FATAL   4
-#define LOG_ERROR   3
-/* LOG_DEBUG / LOG_INFO / LOG_WARN 预处理为空操作，直接走 printk 原生路径 */
-#define LOG_DEBUG   LOG_ERROR
-#define LOG_INFO    LOG_ERROR
-#define LOG_WARN    LOG_ERROR
+/* [DSL] 最小可运行子集：仅保留 AIRY_LOG_FATAL + AIRY_LOG_ERROR（AIRY_DSL_LOG_* 别名） */
+#define AIRY_DSL_LOG_DEBUG   AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_INFO    AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_WARN    AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_ERROR   AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_FATAL   AIRY_LOG_FATAL
+#define AIRY_DSL_LOG_LEVELS  2  /* Only FATAL + ERROR retained */
 
-/* [DSL] 仅保留 AIRY_LOG_FAC_KERN */
-#define AIRY_LOG_FAC_KERN  0
+/* [DSL] 仅保留 AIRY_LOG_FAC_KERN（值 0x0001，[DSL] 块不改变该值） */
+#define AIRY_LOG_FAC_KERN  0x0001
 
 /* [DSL] 128B 记录降级为 printk 原生日志（绕过 Ring Buffer） */
 #define airy_log_record  printk_degraded_entry

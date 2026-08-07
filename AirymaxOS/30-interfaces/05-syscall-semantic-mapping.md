@@ -103,8 +103,8 @@ graph TB
 
 | 层次 | agentrt 侧 | agentrt-linux 侧 | 共享程度 |
 |------|-----------|-----------------|---------|
-| **[SC] 共享契约层** | 10 个头文件（`include/uapi/linux/airymax/`） | 同一 10 个头文件（`kernel/include/uapi/linux/airymax/`） | 完全共享代码 |
-| **[SS] 语义同源层** | JSON-RPC 高层 API（27 函数，8 域） | 编号 syscall（548-571，6 类 120 调用） | 概念操作一致，签名独立演进 |
+| **[SC] 共享契约层** | 12 个头文件（`include/uapi/linux/airymax/`） | 同一 12 个头文件（`kernel/include/uapi/linux/airymax/`） | 完全共享代码 |
+| **[SS] 语义同源层** | JSON-RPC 高层 API（27 函数，8 域） | 编号 syscall（548-551 共 4 核心 + 552-571 预留 = 24 槽位） | 概念操作一致，签名独立演进 |
 | **[IND] 完全独立层** | 跨平台 syscall 封装（libc syscall()） | 内核 syscall 表注册（`syscall_64.tbl`） | 完全独立 |
 
 ### 2.2 调用路径
@@ -336,7 +336,7 @@ static int detect_kernel_accel(void)
 |------|---------|------------------|
 | **[SC] 共享契约层** | 完全共享代码 | `sched.h`（任务描述符）+ `ipc.h`（128B 消息头）+ `security_types.h`（capability）+ `memory_types.h`（MemoryRovol）+ `cognition_types.h`（CLT 三阶段）+ `syscalls.h`（24 槽位 syscall 编号） |
 | **[SS] 语义同源层** | 概念操作一致，签名独立演进 | 6 组直接语义映射 + 5 组条件语义映射（见 §3） |
-| **[IND] 完全独立层** | 完全独立 | agentrt 独有 19 个高层 API（见 §4）+ agentrt-linux 独有 11 个内核 syscall（见 §5） |
+| **[IND] 完全独立层** | 完全独立 | agentrt 独有 16 个高层 API（见 §4）+ agentrt-linux 独有 11 个内核 syscall（见 §5） |
 
 ### 8.2 [SC] 共享契约层——在语义映射中的角色
 
@@ -387,7 +387,7 @@ graph TB
 
     subgraph "agentrt-linux 内核态 [IND] 编号 syscall"
         OS_TBL[syscall_64.tbl<br/>548-571 段]
-        OS_DEF[SYSCALL_DEFINE*<br/>6 类 120 调用]
+        OS_DEF[SYSCALL_DEFINE*<br/>4 核心 + 24 槽位]
     end
 
     subgraph "[SC] 共享契约层"
@@ -446,7 +446,7 @@ graph TB
 ### 9.3 废弃流程
 
 - 废弃映射关系保留 2 个 MAJOR 版本，标注 `@deprecated` 并提供迁移指引。
-- agentrt 废弃高层 API 时，对应 agentrt-linux syscall 编号保留但返回 `AIRY_ENOSYS`。
+- agentrt 废弃高层 API 时，对应 agentrt-linux syscall 编号保留但返回 `-ENOSYS`。
 - agentrt-linux 废弃 syscall 时，对应 agentrt 高层 API 降级为用户态纯软件实现。
 
 ---

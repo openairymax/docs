@@ -256,7 +256,7 @@ flowchart LR
 
 版本号的注入是 Kbuild 中 `filechk` 宏的典型应用场景。agentrt-linux 规划把上游的供应商版本文件改写为 `Makefile.airymaxos`，定义自身的 LTS/主/次/发布四元版本，并通过 `filechk_version.h` 注入到 `include/generated/uapi/linux/version.h`。
 
-> **未实现标注**：`Makefile.airymaxos` 目前**不存在**——`kernel/` 根目录仅含上游 `Makefile`（版本由上游 `VERSION=6` / `PATCHLEVEL=6` / `SUBLEVEL=148` 决定）。本节为规划描述：1.0.1+ 将引入独立的 Airymax 版本四元组注入，当前版本号直接沿用上游 6.6.148。
+> **未实现标注**：`Makefile.airymaxos` 目前**不存在**——`kernel/` 根目录仅含上游 `Makefile`（版本由上游 `VERSION=6` / `PATCHLEVEL=6` / `SUBLEVEL=149` 决定）。本节为规划描述：1.0.1+ 将引入独立的 Airymax 版本四元组注入，当前版本号直接沿用上游 6.6.149。
 
 ### 5.1 filechk 宏机制
 

@@ -108,7 +108,7 @@ AirymaxOS 全面复用 openEuler 24.03 LTS 构建体系（LAYER 方案，详见 
 **关键约束**：
 
 1. **不 fork 原则**：仅通过配置覆盖实现定制，不 fork openEuler 构建工具链（imageTailor/Yocto/isocut/Anaconda/OBS/dnf）
-2. **版本对齐**：openEuler OLK-6.6 当前同步到 6.6.148，与 AirymaxOS vanilla 6.6.148 在 `6.6.0-148` 段完全对齐，构建工具链无需版本迁移
+2. **版本对齐**：agentrt-linux 内核基线 6.6.149（OLK-6.6 为 openEuler 在 6.6.0 分叉并自带补丁维护，非 vanilla 同版本号对应）
 3. **IRON-7 不变**：openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值
 
 > 详细构建与烧录策略见闭源文档 [12-build-and-flash-strategy.md](../../../docs-closed/agentrt-linux/01-openeuler-tech-reference/12-build-and-flash-strategy.md)。

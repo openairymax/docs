@@ -147,11 +147,11 @@ struct airy_misc_dev {
  *
  * 设备名称规则：/dev/airy_<agent_id>_<dev_type>，例如 /dev/airy_42_cogn
  *
- * 返回：0 成功，负数错误码失败：
- *   -AIRY_E_DEV_NOCAP     Capability 校验失败
- *   -AIRY_E_DEV_QUOTA     设备配额耗尽
- *   -AIRY_E_DEV_EXIST     设备名冲突
- *   -AIRY_E_DEV_NOMEM     内存分配失败
+ * 返回：0 成功，负数错误码失败（设备错误统一映射 [SC] error.h
+ *   POSIX 段，error.h 无设备专用子空间）：
+ *   -AIRY_EPERM     Capability 校验失败
+ *   -AIRY_ENOMEM    设备配额耗尽 / 内存分配失败
+ *   -AIRY_EEXIST    设备名冲突
  */
 int airy_misc_register(struct airy_misc_dev *adev, u32 cap_mask);
 
@@ -186,7 +186,7 @@ int airy_misc_register(struct airy_misc_dev *adev, u32 cap_mask)
                    "airy_%u_%s", adev->agent_id,
                    airy_dev_type_str(adev->dev_type));
     if (rc >= AIRY_DEV_NAME_MAX)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 3. 设置动态次设备号 */
     adev->misc.minor = MISC_DYNAMIC_MINOR;
@@ -196,7 +196,7 @@ int airy_misc_register(struct airy_misc_dev *adev, u32 cap_mask)
     if (rc) {
         airy_ulps_log(AIRY_ULPS_ERROR, "misc_register failed: %s rc=%d",
                       adev->misc.name, rc);
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
     }
 
     /* 5. 上报 vfs_d daemon（设备节点创建事件） */
@@ -304,7 +304,7 @@ static int airy_cogn_open(struct inode *inode, struct file *filp)
     /* 3. 分配打开上下文（记录 Agent 上下文、I/O 计数等） */
     ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
     if (!ctx)
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
 
     ctx->adev = adev;
     ctx->open_time = ktime_get_ns();
@@ -345,7 +345,7 @@ static ssize_t airy_cogn_read(struct file *filp, char __user *buf,
 
     /* 1. 参数校验 */
     if (count > AIRY_COGN_READ_MAX)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 2. 从认知传感器读取数据（可能阻塞） */
     data = airy_cogn_read_data(ctx, count);
@@ -354,7 +354,7 @@ static ssize_t airy_cogn_read(struct file *filp, char __user *buf,
 
     /* 3. 拷贝到用户态（慢路径，建议使用 io_uring fastpath） */
     if (copy_to_user(buf, data, count)) {
-        rc = -AIRY_E_DEV_FAULT;
+        rc = -AIRY_EFAULT;
         goto out;
     }
 
@@ -428,11 +428,11 @@ static long airy_cogn_ioctl(struct file *filp, unsigned int cmd,
 {
     struct agent_dev_ctx *ctx = filp->private_data;
     void __user *uarg = (void __user *)arg;
-    int rc = -AIRY_E_DEV_INVAL;
+    int rc = -AIRY_EINVAL;
 
     /* 1. 命令编号校验 */
     if (_IOC_NR(cmd) > AIRY_IOC_MAX_NR)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 2. 按命令类型分发 */
     switch (cmd) {
@@ -441,21 +441,21 @@ static long airy_cogn_ioctl(struct file *filp, unsigned int cmd,
         info.agent_id = ctx->adev->agent_id;
         info.dev_type = ctx->adev->dev_type;
         info.cap_mask = ctx->adev->cap_mask;
-        rc = copy_to_user(uarg, &info, sizeof(info)) ? -AIRY_E_DEV_FAULT : 0;
+        rc = copy_to_user(uarg, &info, sizeof(info)) ? -AIRY_EFAULT : 0;
         break;
     }
     case AIRY_IOC_COGN_SENSE: {
         struct airy_cogn_req req;
         if (copy_from_user(&req, uarg, sizeof(req)))
-            return -AIRY_E_DEV_FAULT;
+            return -AIRY_EFAULT;
         rc = airy_cogn_handle_sense(ctx, &req);
         if (copy_to_user(uarg, &req, sizeof(req)))
-            return -AIRY_E_DEV_FAULT;
+            return -AIRY_EFAULT;
         break;
     }
     /* ... 其他命令 ... */
     default:
-        rc = -AIRY_E_DEV_INVAL;
+        rc = -AIRY_EINVAL;
     }
 
     atomic_inc(&ctx->io_count);
@@ -515,7 +515,7 @@ static int airy_cogn_uring_cmd(struct io_uring_cmd *ioucmd,
     /* 1. 解析命令头（io_uring pdu 内联数据区，OLK 6.6 io_uring_cmd_to_pdu 宏） */
     hdr = io_uring_cmd_to_pdu(ioucmd, const struct airy_uring_cmd_hdr);
     if (hdr->magic != AIRY_URING_CMD_MAGIC)
-        return -AIRY_E_DEV_INVAL;
+        return -AIRY_EINVAL;
 
     /* 2. 按命令类型分发（与 ioctl 命令复用） */
     switch (hdr->cmd) {
@@ -526,7 +526,7 @@ static int airy_cogn_uring_cmd(struct io_uring_cmd *ioucmd,
         rc = airy_cogn_uring_infer(adev, ioucmd, issue_flags);
         break;
     default:
-        rc = -AIRY_E_DEV_INVAL;
+        rc = -AIRY_EINVAL;
     }
 
     return rc;
@@ -639,7 +639,7 @@ int devm_airy_misc_register(struct device *dev,
 
     ptr = devres_alloc(devm_airy_misc_release, sizeof(*ptr), GFP_KERNEL);
     if (!ptr)
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
 
     rc = airy_misc_register(adev, cap_mask);
     if (rc) {
@@ -666,7 +666,7 @@ static int airy_cogn_probe(struct device *dev)
 
     priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
     if (!priv)
-        return -AIRY_E_DEV_NOMEM;
+        return -AIRY_ENOMEM;
 
     /* 1. 申请 Token 预算（devm_airy_token_budget） */
     rc = airy_dev_alloc(dev, AIRY_RES_TOKEN, sizeof(u32), 0,

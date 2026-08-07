@@ -82,21 +82,23 @@ graph TB
 
 ## 2. IRON-9 v3 下的契约分层
 
-### 2.1 [SC] 共享契约层：10 个共享头文件
+### 2.1 [SC] 共享契约层：12 个共享头文件
 
-[SC] 层是 agentrt 与 agentrt-linux 代码字面一致的头文件库，位于 `include/uapi/linux/airymax/` 目录。这 10 个头文件是 agentrt-linux OS 层契约的"共享基础"：
+[SC] 层是 agentrt 与 agentrt-linux 代码字面一致的头文件库，位于 `include/uapi/linux/airymax/` 目录。这 12 个头文件（10 核心 + 2 补充：`syscall.h`、`bpf_struct_ops.h`）是 agentrt-linux OS 层契约的"共享基础"：
 
 | 头文件 | 全路径 | 定义内容 | 对应契约 |
 |--------|--------|---------|---------|
-| `error.h` | `include/uapi/linux/airymax/error.h` | A-UEF Error 码（负数空间 `[-300, -1]`）+ Fault 码（正数空间 `[0x1000, 0x1FFF]`）双轨制 + POSIX/IPC/Capability/[SC]/[DSL] 分层错误码 | A-UEF 错误码契约 |
-| `log_types.h` | `include/uapi/linux/airymax/log_types.h` | A-ULP LOG_* 枚举（LOG_DEBUG~LOG_FATAL）+ 128B 固定日志记录格式（magic=0x414C4F47 'ALOG'）+ facility 编号 | A-ULP 日志契约 |
+| `error.h` | `include/uapi/linux/airymax/error.h` | A-UEF Error 码（常量正数幅值 1-300，调用方返回 `-AIRY_E*` 产生负错误值）+ Fault 码 0x1001-0x1006 + POSIX/IPC/Capability/Config/[DSL] 分层错误码 | A-UEF 错误码契约 |
+| `log_types.h` | `include/uapi/linux/airymax/log_types.h` | A-ULP AIRY_LOG_* 枚举（AIRY_LOG_DEBUG~AIRY_LOG_FATAL）+ 128B 固定日志记录格式（magic=0x414C4F47 'ALOG'）+ facility 编号 | A-ULP 日志契约 |
 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | syscall API 契约 |
 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP）契约 |
 | `lsm_types.h` | `include/uapi/linux/airymax/lsm_types.h` | LSM 钩子 250 ID 枚举 + Cupolas blob 布局（cred/inode/file/task）+ 纯 C LSM 模块接口契约 | 安全（LSM）契约 |
 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | syscall API 契约 |
 | `sched.h` | `include/uapi/linux/airymax/sched.h` | sched_tac 调度类约束（使用 SCHED_DEADLINE/SCHED_FIFO/EEVDF 原生调度类，禁止 SCHED_AGENT 内核调度类宏）+ 任务描述符（magic 0x41475453 'AGTS'）+ vtime 衰减公式 + 优先级 0-139 + AIRY_SLICE_DFL（20ms） | syscall API 契约 |
 | `ipc.h` | `include/uapi/linux/airymax/ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（struct airy_ipc_msg_hdr）+ SQE/CQE 操作码与标志位 | IPC 协议契约 |
-| `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | v1.1: 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位 | syscall API 契约 |
+| `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | v1.0.1: 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位 | syscall API 契约 |
+| `syscall.h` | `include/uapi/linux/airymax/syscall.h` | syscall_gen.py 生成的系统调用编号定义（`__NR_airy_sys_*` 注册号 548-551，源自 syscall.xml，R-01 SSoT） | syscall API 契约（补充共享文件） |
+| `bpf_struct_ops.h` | `include/uapi/linux/airymax/bpf_struct_ops.h` | struct_ops 状态机枚举（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value 布局（sched_tac 用户态调度器经 BTF 只读消费） | 调度契约（补充共享文件） |
 | `uapi_compat.h` | `include/uapi/linux/airymax/uapi_compat.h` | 用户态-内核态 ABI 兼容性定义 + 类型映射（`__u32`/`__u16` 等）+ 字节序与对齐规范 | ABI 兼容契约 |
 
 **共享规则**：
@@ -263,7 +265,7 @@ agentrt-linux OS 层契约在 MAJOR 版本内提供以下 ABI 兼容性保证：
 
 ### 6.2 IRON-9 v3 同源且部分代码共享
 
-本契约规范体系是 IRON-9 v3"同源且部分代码共享"原则在 OS 层契约的落地：[SC] 层 10 个头文件完全共享，[SS] 层语义一致但实现独立，[IND] 层完全独立。详见第 2 章 IRON-9 v3 契约分层。
+本契约规范体系是 IRON-9 v3"同源且部分代码共享"原则在 OS 层契约的落地：[SC] 层 12 个头文件完全共享，[SS] 层语义一致但实现独立，[IND] 层完全独立。详见第 2 章 IRON-9 v3 契约分层。
 
 ---
 
@@ -322,7 +324,7 @@ agentrt-linux OS 层契约的治理遵循"分层负责、架构仲裁"模型：
 
 - [x] 本目录 4 份契约文档完成初稿
 - [x] IRON-9 v3 四层契约分层定义完成
-- [x] [SC] 层 10 个共享头文件清单确认
+- [x] [SC] 层 12 个共享头文件清单确认
 - [x] 系统调用编号 548-571 预留段分配（v1.0.1 4 核心 + 20 预留）
 - [x] 128B 消息头 v0x0100 布局锁定
 - [x] 日志格式 JSON Schema v1.0 锁定

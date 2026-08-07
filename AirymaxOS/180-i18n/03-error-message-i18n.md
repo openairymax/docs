@@ -286,8 +286,8 @@ from enum import IntEnum
 
 class AgentrtError(IntEnum):
     AIRY_EOK = 0  # 成功
-    AIRY_EINVAL = -1  # 参数非法
-    AIRY_ENOMEM = -2  # 内存不足
+    AIRY_EINVAL = 5  # 参数非法（示意值：正数幅值，调用方返回 -AIRY_EINVAL）
+    AIRY_ENOMEM = 9  # 内存不足（示意值）
     AIRY_KERN_EBPF = -200  # BPF 程序加载失败
     AIRY_KERN_ESCHED = -201  # 调度器错误
     AIRY_IPC_ETIMEDOUT = -802  # IPC 通信超时

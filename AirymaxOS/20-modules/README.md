@@ -300,7 +300,7 @@ A-ULP 模块的审计哈希链完整性保护（详见 [12-logger-daemon-module.
 | 模块 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
 | 错误码 | 10 子空间（300 码） | 38 个 POSIX 码 → 5 核心码 + 1 个配置码 |
-| 日志 | Ring Buffer + `logger_d` | printk 原生（仅 `LOG_FATAL` + `LOG_ERROR`） |
+| 日志 | Ring Buffer + `logger_d` | printk 原生（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR`） |
 | printk 桥接 | 启用（printk 镜像至 Ring Buffer） | 禁用（回归 printk_safe） |
 | IPC | 完整 128B 消息头 + 7 操作（0x0001-0x0011） | 最简 128B 消息头 + 2 操作（SEND/RECV） |
 | 调度 | sched_tac 多策略（SCHED_DEADLINE/SCHED_FIFO/EEVDF） | EEVDF 默认 |

@@ -128,8 +128,8 @@ v1.0.1 Capability Folding 引入以下扩展错误码与故障码，均定义于
 |------------|---|------|---------|--------|
 | `AIRY_ESEC_D_THROTTLED` | -83 | sec_d 令牌桶限流触发 | sec_d Badge 编译请求超过令牌桶容量（50ms SLO 违约保护） | 否（[SC] 常量） |
 | `AIRY_ECAP_FROZEN` | -82 | Capability 冻结 | `agent_caps[1024]` 静态数组被冻结（O(1) 撤销后 Epoch 跃迁） | 否（[SC] 常量） |
-| `AIRY_FAULT_URING_MALFORMED` | 0x100A | io_uring SQE 格式错误 | SQE128 cmd 字段长度 ≠ 80 字节或 magic 0x41524531 校验失败 | 否（[SC] 常量） |
-| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B | 审计日志篡改检测 | audit_d 检测到审计日志哈希不匹配（防篡改触发） | 否（[SC] 常量） |
+| `AIRY_FAULT_URING_MALFORMED` | 0x100A（预留） | io_uring SQE 格式错误 | SQE128 cmd 字段长度 ≠ 80 字节或 magic 0x41524531 校验失败 | 否（预留，待 [SC] error.h 注册） |
+| `AIRY_FAULT_AUDIT_TAMPER` | 0x100B（预留） | 审计日志篡改检测 | audit_d 检测到审计日志哈希不匹配（防篡改触发） | 否（预留，待 [SC] error.h 注册） |
 | `AIRY_ECFGVERSION` | -101 | 配置版本号不匹配 | `AIRY_CONFIG_VERSION` 校验失败（拒绝加载/热重载） | 否（[SC] 常量） |
 
 > **命名约定**：所有错误码使用 `AIRY_E*` 前缀（负值），所有故障码使用 `AIRY_FAULT_*` 前缀（正值 0x1000+）。这些错误码是 [SC] 共享契约的一部分，两端逐字节相同，发布即冻结。
@@ -156,7 +156,7 @@ v1.0.1 Capability Folding 引入以下扩展错误码与故障码，均定义于
 | 内核 sysctl | 用户态 YAML/TOML | 语义 | 默认值 |
 |------------|-----------|------|--------|
 | `kernel.airy.sched_rt_runtime_us` | `sched.rt_runtime_us` | RT Agent 运行时间 | 950000 |
-| `kernel.airy.log_min_level` | `log.min_level` | 最低日志级别 | LOG_INFO(6) |
+| `kernel.airy.log_min_level` | `log.min_level` | 最低日志级别 | AIRY_LOG_INFO(1) |
 | `kernel.airy.ipc_ring_size` | `ipc.ring_size` | IPC Ring 容量 | 1024 |
 | `kernel.airy.superv_heartbeat_interval` | `superv.heartbeat_interval` | 心跳间隔 | 1(秒) |
 | `kernel.airy.cap_max_agents` | `cap.max_agents` | v1.0.1: `agent_caps[]` 静态数组容量（H4 硬约束，只读 sysctl mode=0444，不支持热重载） | 1024 |

@@ -564,32 +564,32 @@ enum airy_action {
 | LLM | suspend | `AIRY_EOK` | `AGENT_STATE_SUSPENDED` | 暂停推理上下文，`vtime` 冻结 |
 | LLM | resume | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 恢复推理上下文，`vtime` 续算 |
 | LLM | terminate | `AIRY_EOK` | `AGENT_STATE_TERMINATED` | 释放 token 句柄，注销 registry |
-| LLM | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler(TOKEN_EVENT_EXHAUST)`，触发回退 |
-| LLM | comm_failure | `-AIRY_ECOMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到 fallback agent |
+| LLM | token_exhaust | `-AIRY_ESCHED_BUDGET` | `AGENT_STATE_ERROR` | 调用 `token_handler(TOKEN_EVENT_EXHAUST)`，触发回退 |
+| LLM | comm_failure | `-AIRY_EAGAIN` | `AGENT_STATE_ERROR` | 5 秒超时回退到 fallback agent |
 | TOOL | probe | `AIRY_EOK` | `AGENT_STATE_IDLE` | 注册到 registry，`tool_table` 非空 |
 | TOOL | bind | `AIRY_EOK` | `AGENT_STATE_BOUND` | 绑定 capability，`CAP_SYS_PTRACE` 校验 |
 | TOOL | dispatch | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 调用 `tool_exec()`，`exit_code == 0` |
 | TOOL | suspend | `AIRY_EOK` | `AGENT_STATE_SUSPENDED` | 暂停子进程，`SIGSTOP` 发送 |
 | TOOL | resume | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 恢复子进程，`SIGCONT` 发送 |
 | TOOL | terminate | `AIRY_EOK` | `AGENT_STATE_TERMINATED` | 回收子进程，`waitpid` 返回 |
-| TOOL | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，工具调用降级 |
-| TOOL | comm_failure | `-AIRY_ECOMM` | `AGENT_STATE_ERROR` | 5 秒超时回退，工具调用重试 ≤ 3 次 |
+| TOOL | token_exhaust | `-AIRY_ESCHED_BUDGET` | `AGENT_STATE_ERROR` | 调用 `token_handler`，工具调用降级 |
+| TOOL | comm_failure | `-AIRY_EAGAIN` | `AGENT_STATE_ERROR` | 5 秒超时回退，工具调用重试 ≤ 3 次 |
 | PLAN | probe | `AIRY_EOK` | `AGENT_STATE_IDLE` | 注册到 registry，`plan_graph` 非空 |
 | PLAN | bind | `AIRY_EOK` | `AGENT_STATE_BOUND` | 绑定规划上下文，`plan_depth <= MAX_DEPTH` |
 | PLAN | dispatch | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 调用 `plan_solve()`，`plan_steps > 0` |
 | PLAN | suspend | `AIRY_EOK` | `AGENT_STATE_SUSPENDED` | 暂停规划栈，`plan_stack` 冻结 |
 | PLAN | resume | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 恢复规划栈，续算依赖 |
 | PLAN | terminate | `AIRY_EOK` | `AGENT_STATE_TERMINATED` | 释放规划上下文，清空 `plan_graph` |
-| PLAN | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，规划降级为粗粒度 |
-| PLAN | comm_failure | `-AIRY_ECOMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到上一规划节点 |
+| PLAN | token_exhaust | `-AIRY_ESCHED_BUDGET` | `AGENT_STATE_ERROR` | 调用 `token_handler`，规划降级为粗粒度 |
+| PLAN | comm_failure | `-AIRY_EAGAIN` | `AGENT_STATE_ERROR` | 5 秒超时回退到上一规划节点 |
 | OBSERVE | probe | `AIRY_EOK` | `AGENT_STATE_IDLE` | 注册到 registry，`observe_channel` 就绪 |
 | OBSERVE | bind | `AIRY_EOK` | `AGENT_STATE_BOUND` | 绑定观测源，`event_mask != 0` |
 | OBSERVE | dispatch | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 调用 `observe_collect()`，`event_count > 0` |
 | OBSERVE | suspend | `AIRY_EOK` | `AGENT_STATE_SUSPENDED` | 暂停事件采集，`ring_buffer` 冻结 |
 | OBSERVE | resume | `AIRY_EOK` | `AGENT_STATE_RUNNING` | 恢复事件采集，续采 |
 | OBSERVE | terminate | `AIRY_EOK` | `AGENT_STATE_TERMINATED` | 释放观测通道，flush `ring_buffer` |
-| OBSERVE | token_exhaust | `-ETOKEN_EXHAUSTED` | `AGENT_STATE_ERROR` | 调用 `token_handler`，观测降采样 |
-| OBSERVE | comm_failure | `-AIRY_ECOMM` | `AGENT_STATE_ERROR` | 5 秒超时回退到本地缓存模式 |
+| OBSERVE | token_exhaust | `-AIRY_ESCHED_BUDGET` | `AGENT_STATE_ERROR` | 调用 `token_handler`，观测降采样 |
+| OBSERVE | comm_failure | `-AIRY_EAGAIN` | `AGENT_STATE_ERROR` | 5 秒超时回退到本地缓存模式 |
 
 #### 11.3.3 关键测试用例代码片段
 
@@ -603,7 +603,7 @@ static void llm_token_exhaust_test(struct kunit *test)
     KUNIT_ASSERT_NOT_ERR_OR_NULL(test, agent);
     KUNIT_EXPECT_EQ(test, AIRY_EOK, airy_agent_bind(agent, 100));
     KUNIT_EXPECT_EQ(test, AIRY_EOK, airy_agent_dispatch(agent, "long prompt", 200));
-    KUNIT_EXPECT_EQ(test, -ETOKEN_EXHAUSTED,
+    KUNIT_EXPECT_EQ(test, -AIRY_ESCHED_BUDGET,
                     airy_agent_action(agent, AIRY_ACTION_TOKEN_EXHAUST));
     KUNIT_EXPECT_EQ(test, AGENT_STATE_ERROR, airy_agent_state(agent));
     KUNIT_EXPECT_EQ(test, 1, mock_token_handler_call_count(TOKEN_EVENT_EXHAUST));
@@ -624,7 +624,7 @@ static void observe_comm_failure_test(struct kunit *test)
     ktime_t start = ktime_get();
     int ret = airy_agent_action(agent, AIRY_ACTION_COMM_FAILURE);
     s64 elapsed_ms = ktime_to_ms(ktime_sub(ktime_get(), start));
-    KUNIT_EXPECT_EQ(test, -AIRY_ECOMM, ret);
+    KUNIT_EXPECT_EQ(test, -AIRY_EAGAIN, ret);
     KUNIT_EXPECT_EQ(test, AGENT_STATE_ERROR, airy_agent_state(agent));
     KUNIT_EXPECT_GE(test, elapsed_ms, 4900);  /* 5s 超时（±100ms 抖动） */
     KUNIT_EXPECT_LE(test, elapsed_ms, 5100);

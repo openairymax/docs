@@ -130,18 +130,18 @@ printk 桥接产出记录的 facility 字段必须使用 `AIRY_LOG_FAC_*` 前缀
 
 printk 桥接路径固定写入 `AIRY_LOG_FAC_KERN`，其他 facility 由各 daemon 直接通过 `airy_log_write()` API 写入 Ring Buffer（不经过 printk 桥接）。
 
-**printk 8 级 → LOG_* 5 级映射**（权威源 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) §4）：
+**printk 8 级 → AIRY_LOG_* 5 级映射**（权威源 [09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) §4）：
 
-| printk 级别 | `LOG_*` 级别 | 说明 |
+| printk 级别 | `AIRY_LOG_*` 级别 | 说明 |
 |------------|-------------|------|
-| KERN_EMERG (0) | `LOG_FATAL` | Panic 前最后输出 |
-| KERN_ALERT (1) | `LOG_FATAL` | 合并至 FATAL |
-| KERN_CRIT (2) | `LOG_FATAL` | 合并至 FATAL |
-| KERN_ERR (3) | `LOG_ERROR` | |
-| KERN_WARNING (4) | `LOG_WARN` | |
-| KERN_NOTICE (5) | `LOG_INFO` | |
-| KERN_INFO (6) | `LOG_INFO` | |
-| KERN_DEBUG (7) | `LOG_DEBUG` | |
+| KERN_EMERG (0) | `AIRY_LOG_FATAL` | Panic 前最后输出 |
+| KERN_ALERT (1) | `AIRY_LOG_FATAL` | 合并至 FATAL |
+| KERN_CRIT (2) | `AIRY_LOG_FATAL` | 合并至 FATAL |
+| KERN_ERR (3) | `AIRY_LOG_ERROR` | |
+| KERN_WARNING (4) | `AIRY_LOG_WARN` | |
+| KERN_NOTICE (5) | `AIRY_LOG_INFO` | |
+| KERN_INFO (6) | `AIRY_LOG_INFO` | |
+| KERN_DEBUG (7) | `AIRY_LOG_DEBUG` | |
 
 ### 2.5 Ring Buffer reserve/commit 写入
 
@@ -280,7 +280,7 @@ Panic notifier 注册优先级低于 console 刷新，确保 console 通路优�
 |--------|-----|---------|------------|
 | `AIRY_EIPC_FROZEN` | -53 | `ring->frozen == true`（C-S0 检查） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
 | `AIRY_ESEC_D_THROTTLED` | -83 | `sec_d` 限流器拒绝 Badge 编译请求（50ms SLO 违约保护） | `sec_d` 写入审计日志，`logger_d` 消费时识别 |
-| `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | `sec_d` 写入 `LOG_FATAL` 审计日志 + 触发 `AIRY_FAULT_CAP_FORGED` |
+| `AIRY_ECAP_FORGED` | -80 | Badge RandomTag 不匹配（伪造尝试） | `sec_d` 写入 `AIRY_LOG_FATAL` 审计日志 + 触发 `AIRY_FAULT_CAP_FORGED` |
 | `AIRY_ECAP_EPOCH` | -79 | Badge Epoch 与 per-agent slot Epoch 不匹配（已撤销或过期） | `sec_d` 写入审计日志 |
 
 > **设计原则**：printk 桥接**不直接产生** Badge 校验失败日志（这些日志由 `sec_d` 通过 `airy_log_write()` 直接写入 Ring Buffer，绕过 printk 桥接）。printk 桥接仅承担"将 Linux 6.6 原生 printk 镜像到 Ring Buffer"的职责，与 Badge 校验链路解耦——这是 seL4 "机制与策略分离"原则的体现（ADR-014）：桥接是机制，Badge 校验是策略。
@@ -348,7 +348,7 @@ printk 桥接在原生 printk 路径上额外增加：128B 记录格式化（含
 
 - **per-cpu 格式化缓冲**：128B 记录在 per-cpu 栈缓冲格式化，避免每次 reserve 零拷贝失败回退
 - **批量 commit**：高频 printk 场景下，`logger_d` 侧批量消费摊销 mmap 读取开销
-- **level 过滤前置**：`LOG_DEBUG` 级别在 `airy_printk_reserve` 前按 `logger_d.yaml` 的 `level.min` 过滤，避免无效写入
+- **level 过滤前置**：`AIRY_LOG_DEBUG` 级别在 `airy_printk_reserve` 前按 `logger_d.yaml` 的 `level.min` 过滤，避免无效写入
 - **caller_id 缓存**：per-cpu 缓存 `smp_processor_id()` 结果，减少字段填充开销
 
 ---
@@ -369,14 +369,14 @@ A-ULP（统一日志与打印系统）是 Airymax Unify Design 五模块之一�
 
 printk 桥接是 A-ULP 的**兼容层**，而非 A-ULP 的核心组件。核心组件（Ring Buffer + `logger_d`）定义了 Airymax 原生日志链路；printk 桥接负责将既有的 Linux 内核日志（驱动、子系统、第三方模块的 printk）纳入这条链路，避免双轨。这一兼容层定位决定了：
 
-- **不新增日志语义**：桥接不引入新的日志级别或 facility，仅做 printk → `LOG_*` 的格式转换（`AIRY_LOG_FAC_KERN`）
+- **不新增日志语义**：桥接不引入新的日志级别或 facility，仅做 printk → `AIRY_LOG_*` 的格式转换（`AIRY_LOG_FAC_KERN`）
 - **可禁用**：通过 Kconfig `CONFIG_AIRY_PRINTK_BRIDGE` 可关闭桥接，系统退化为"Airymax 模块走 Ring Buffer，其余走 log_buf"的双轨模式（功能完整，仅割裂）
 - **不替代 printk**：桥接是镜像，原生 printk/log_buf/dmesg 工具链全部保留
 - **不参与 Badge 校验**：桥接路径不持有 Badge，Badge 校验由 `sec_d` 与 `logger_d` 协作完成（§4.2）
 
 ### 6.3 与 [DSL] 降级层的关系
 
-在 [DSL] 降级生存层（见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §5）生效时，Ring Buffer 退化为 printk 原生（仅 `LOG_FATAL` + `LOG_ERROR`），printk 桥接自动禁用——此时 printk 与 `LOG_*` 均回归原生 printk 路径，两者合一，无需桥接。这保证了 [DSL] 降级模式下日志链路最简、最可靠。
+在 [DSL] 降级生存层（见 [06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) §5）生效时，Ring Buffer 退化为 printk 原生（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR`），printk 桥接自动禁用——此时 printk 与 `AIRY_LOG_*` 均回归原生 printk 路径，两者合一，无需桥接。这保证了 [DSL] 降级模式下日志链路最简、最可靠。
 
 ---
 
@@ -401,7 +401,7 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，printk 桥接涉及
 |------|---------|--------------|
 | 桥接状态 | 启用（printk 镜像至 Ring Buffer） | **禁用**（桥接自动让位 printk_safe） |
 | 日志通路 | printk → log_buf + printk_hook → Ring Buffer → `logger_d` | printk → log_buf + printk_safe → console |
-| 日志级别映射 | printk 8 级 → `LOG_*` 5 级 | printk 8 级原样保留（仅 `LOG_FATAL` + `LOG_ERROR` 落地） |
+| 日志级别映射 | printk 8 级 → `AIRY_LOG_*` 5 级 | printk 8 级原样保留（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR` 落地） |
 | facility 字段 | `AIRY_LOG_FAC_KERN` | 退化（不填充 facility） |
 | 128B 记录格式 | 完整 8 字段（含 `caller_id` / `payload_len` / `reserved`） | 退化为 printk 原生文本（无 128B 包装） |
 | Badge 校验 | fastpath C-S9 协作 | 跳过（降级模式不可靠） |
@@ -418,12 +418,13 @@ IRON-9 v3 四层模型（[SC] + [SS] + [IND] + [DSL]）中，printk 桥接涉及
 #define airy_printk_commit(rec)   do {} while (0)
 #define airy_printk_register_hook(h)  (-ENOSYS)
 
-/* [DSL] 仅保留 LOG_FATAL + LOG_ERROR 两级 */
-#define LOG_FATAL   4
-#define LOG_ERROR   3
-#define LOG_DEBUG   LOG_ERROR
-#define LOG_INFO    LOG_ERROR
-#define LOG_WARN    LOG_ERROR
+/* [DSL] 仅保留 AIRY_LOG_FATAL + AIRY_LOG_ERROR 两级（AIRY_DSL_LOG_* 别名） */
+#define AIRY_DSL_LOG_DEBUG   AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_INFO    AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_WARN    AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_ERROR   AIRY_LOG_ERROR
+#define AIRY_DSL_LOG_FATAL   AIRY_LOG_FATAL
+#define AIRY_DSL_LOG_LEVELS  2
 
 /* [DSL] 仅保留 AIRY_LOG_FAC_KERN */
 #define AIRY_LOG_FAC_KERN  0x0001

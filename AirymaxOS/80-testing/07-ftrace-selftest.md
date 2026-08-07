@@ -299,7 +299,7 @@ late_initcall(airy_trace_selftest_cprime);
 
 ### 6.2 IPC fastpath 追踪
 
-`airy_trace_selftest_ipc` 验证 IPC fastpath 的 ftrace 钩子（`airy_ipc_fastpath_entry` / `airy_ipc_fastpath_exit` tracepoint）正确触发：
+`airy_trace_selftest_ipc` 验证 IPC fastpath 的 ftrace 钩子（`airy_ipc_fastpath_entry` / `airy_ipc_fastpath_exit` tracepoint）正确触发（**规划，未实现**：内核当前无 `airy_ipc_fastpath_*` tracepoint，无 `kernel/airymaxos/trace/` 目录）：
 
 ```c
 static int __init airy_trace_selftest_ipc(void)
@@ -307,6 +307,7 @@ static int __init airy_trace_selftest_ipc(void)
     /* 1. 启用 airy_ipc_fastpath tracepoint */
     /* 伪代码标注：trace_array_set_event() 非 6.6 API；真实 API 为
      * trace_array_set_clr_event(tr, system, event, enable)（EXPORT_SYMBOL_GPL） */
+    /* 规划，未实现：airy_ipc_fastpath_* tracepoint 当前不存在 */
     trace_array_set_event("airy_ipc_fastpath_entry", true);
     trace_array_set_event("airy_ipc_fastpath_exit",  true);
 
@@ -325,11 +326,11 @@ static int __init airy_trace_selftest_ipc(void)
 late_initcall(airy_trace_selftest_ipc);
 ```
 
-**OS-TEST-085**：IPC fastpath ftrace 自检必须验证 `airy_ipc_fastpath_entry` 与 `airy_ipc_fastpath_exit` tracepoint 配对触发；配对失败即视为 ftrace 钩子缺失。
+**OS-TEST-085**：IPC fastpath ftrace 自检必须验证 `airy_ipc_fastpath_entry` 与 `airy_ipc_fastpath_exit` tracepoint 配对触发；配对失败即视为 ftrace 钩子缺失。（**规划，未实现**：上述 tracepoint 当前不存在，待内核实现后启用）
 
 ### 6.3 Agent 状态转换追踪
 
-`airy_trace_selftest_agent` 验证 Agent 8 态生命周期状态转换的 ftrace 钩子（`airy_agent_state_change` tracepoint）正确触发：
+`airy_trace_selftest_agent` 验证 Agent 8 态生命周期状态转换的 ftrace 钩子（`airy_agent_state_change` tracepoint）正确触发（**规划，未实现**：内核当前无 `airy_agent_state_change` tracepoint）：
 
 ```c
 static int __init airy_trace_selftest_agent(void)
@@ -337,6 +338,7 @@ static int __init airy_trace_selftest_agent(void)
     /* 1. 启用 airy_agent_state_change tracepoint */
     /* 伪代码标注：trace_array_set_event() 非 6.6 API；真实 API 为
      * trace_array_set_clr_event(tr, system, event, enable)（EXPORT_SYMBOL_GPL） */
+    /* 规划，未实现：airy_agent_state_change tracepoint 当前不存在 */
     trace_array_set_event("airy_agent_state_change", true);
 
     /* 2. 触发 Agent spawn → ready → running → stop → dead 路径 */
@@ -359,7 +361,7 @@ static int __init airy_trace_selftest_agent(void)
 late_initcall(airy_trace_selftest_agent);
 ```
 
-**OS-TEST-086**：Agent 状态转换 ftrace 自检必须验证 5 次状态转换（SPAWNING → READY → RUNNING → STOPPING → STOPPED → DEAD）均触发 `airy_agent_state_change` tracepoint；任一状态转换未触发即视为自检失败。
+**OS-TEST-086**：Agent 状态转换 ftrace 自检必须验证 5 次状态转换（SPAWNING → READY → RUNNING → STOPPING → STOPPED → DEAD）均触发 `airy_agent_state_change` tracepoint；任一状态转换未触发即视为自检失败。（**规划，未实现**：`airy_agent_state_change` tracepoint 当前不存在，待内核实现后启用）
 
 ---
 
@@ -379,15 +381,15 @@ ftrace 是 agentrt-linux 可观测性体系（90-observability）的基础设施
 
 ### 7.2 ftrace → A-ULP 集成
 
-agentrt-linux 的 `airy_trace_to_ulps` 模块将 ftrace tracepoint 事件转换为 A-ULP 128B 日志记录，供 logger_d 统一收集：
+agentrt-linux 的 `airy_trace_to_ulps` 模块将 ftrace tracepoint 事件转换为 A-ULP 128B 日志记录，供 logger_d 统一收集（**规划，未实现**：`kernel/airymaxos/trace/` 目录与 `airy_trace_to_ulps` 模块当前不存在）：
 
 ```c
-/* kernel/airymaxos/trace/airy_trace_to_ulps.c */
+/* kernel/airymaxos/trace/airy_trace_to_ulps.c（规划，未实现） */
 static void airy_trace_event_to_ulps(void *ignore,
                                      int agent_id, int from_state, int to_state)
 {
     struct airy_log_record rec = {0};
-    rec.level = LOG_LEVEL_DEBUG;
+    rec.level = AIRY_LOG_DEBUG;
     rec.module = AIRY_MODULE_SCHED;
     rec.event_id = AIRY_EVENT_AGENT_STATE_CHANGE;
     rec.ts_ns = ktime_get_ns();
@@ -405,7 +407,7 @@ static int __init airy_trace_to_ulps_init(void)
 late_initcall(airy_trace_to_ulps_init);
 ```
 
-**OS-TEST-087**：CI nightly 必须验证 `airy_trace_to_ulps` 集成正确——tracepoint 触发后 A-ULP 日志记录数应等量增加；任一 tracepoint 触发未对应 A-ULP 记录即视为集成失败。
+**OS-TEST-087**：CI nightly 必须验证 `airy_trace_to_ulps` 集成正确——tracepoint 触发后 A-ULP 日志记录数应等量增加；任一 tracepoint 触发未对应 A-ULP 记录即视为集成失败。（**规划，未实现**：`airy_trace_to_ulps` 模块当前不存在，待内核实现后启用）
 
 ---
 

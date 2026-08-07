@@ -158,7 +158,7 @@ agentrt-linux 默认采用 Btrfs 子卷方案，支持快照回滚：
 | `lv_root` | `/` | XFS | 100GB |
 | `lv_home` | `/home` | XFS | 50GB |
 | `lv_var` | `/var` | XFS | 200GB |
-| `lv_var_lib_airymaxos` | `/var/lib/airymaxos` | Btrfs | 剩余空间 |
+| `lv_var_lib_agentrt` | `/var/lib/agentrt` | Btrfs | 剩余空间 |
 | `lv_swap` | swap | swap | 16GB |
 | `lv_log` | `/var/log` | XFS | 20GB |
 | `lv_tmp` | `/tmp` | XFS | 20GB |
@@ -169,7 +169,7 @@ agentrt-linux 默认采用 Btrfs 子卷方案，支持快照回滚：
 
 | 分区 | 挂载点 | 文件系统 | 大小 | 说明 |
 |------|--------|----------|------|------|
-| `/dev/pmem0` | `/var/lib/airymaxos/memory_rovol/L1_raw` | XFS (DAX) | 800GB | MemoryRovol L1 |
+| `/dev/pmem0` | `/var/lib/agentrt/memory_rovol/L1_raw` | XFS (DAX) | 800GB | MemoryRovol L1 |
 
 PMEM 与 CXL 自动检测脚本：
 
@@ -180,7 +180,7 @@ PMEM 与 CXL 自动检测脚本：
 
 set -euo pipefail
 
-PMEM_MOUNT=/var/lib/airymaxos/memoryrovol/pmem
+PMEM_MOUNT=/var/lib/agentrt/memoryrovol/pmem
 
 # 检测 PMEM 区域
 for region in $(ndctl list -R 2>/dev/null | jq -r '.[].dev'); do
@@ -206,7 +206,7 @@ done
 ### 3.5 大页（hugepage）分区配置
 
 ```bash
-# /etc/airymaxos/sysctl.d/99-hugepage.conf
+# /etc/agentrt/sysctl.d/99-hugepage.conf
 # 为 IPC 零拷贝区域预留 2MB 大页
 
 vm.nr_hugepages = 1024
@@ -215,7 +215,7 @@ vm.nr_hugepages = 1024
 echo always > /sys/kernel/mm/transparent_hugepage/enabled
 
 # 大页挂载点
-hugetlbfs /var/lib/airymaxos/hugepages hugetlbfs mode=1770,gid=1000 0 0
+hugetlbfs /var/lib/agentrt/hugepages hugetlbfs mode=1770,gid=1000 0 0
 ```
 
 ---
@@ -388,8 +388,8 @@ airymaxos-kernel-modules
 airymaxos-system-init
 %end
 
-%post --log=/var/log/airymaxos-install.log
-systemctl enable airymaxos-kernel-load-bpf.service
+%post --log=/var/log/agentrt-install.log
+systemctl enable agentrt-kernel-load-bpf.service
 btrfs subvolume snapshot / /.snapshots/post-install/$(date +%Y%m%d)
 %end
 
@@ -425,7 +425,7 @@ volgroup airymaxos-vg --pesize=4096 pv.01
 logvol / --vgname=airymaxos-vg --name=root --fstype=xfs --size=102400
 logvol /home --vgname=airymaxos-vg --name=home --fstype=xfs --size=51200
 logvol /var --vgname=airymaxos-vg --name=var --fstype=xfs --size=204800
-logvol /var/lib/airymaxos --vgname=airymaxos-vg --name=airymaxos --fstype=xfs --size=102400
+logvol /var/lib/agentrt --vgname=airymaxos-vg --name=agentrt --fstype=xfs --size=102400
 logvol swap --vgname=airymaxos-vg --name=swap --fstype=swap --size=16384
 
 bootloader --location=mbr --append="crashkernel=auto rd.agentrt.sched_cprime=1 rd.agentrt.memoryrovol=1"
@@ -457,15 +457,15 @@ ibus-libpinyin
 -kernel-debug
 %end
 
-%post --log=/var/log/airymaxos-install.log
+%post --log=/var/log/agentrt-install.log
 
 # 启用 sched_tac 用户态调度器
-systemctl enable airymaxos-sched-agent.service
+systemctl enable agentrt-sched-agent.service
 
 # 启用 12 个 daemon
 for svc in gateway_d cogn_d dev_d gateway_d sched_d audit_d \
            net_d logger_d sec_d mem_d vfs_d config_d; do
-    systemctl enable "$svc.service"
+    systemctl enable "agentrt-${svc%_d}.service"
 done
 
 # 配置默认 locale 与时区
@@ -473,10 +473,10 @@ localectl set-locale LANG=zh_CN.UTF-8
 timedatectl set-timezone Asia/Shanghai
 
 # 启用 MemoryRovol PMEM 挂载点
-mkdir -p /var/lib/airymaxos/memoryrovol/pmem
+mkdir -p /var/lib/agentrt/memoryrovol/pmem
 if [ -e /dev/pmem0 ]; then
     mkfs.xfs -m dax=inode -f /dev/pmem0
-    echo "/dev/pmem0 /var/lib/airymaxos/memoryrovol/pmem xfs dax 0 0" >> /etc/fstab
+    echo "/dev/pmem0 /var/lib/agentrt/memoryrovol/pmem xfs dax 0 0" >> /etc/fstab
 fi
 
 # 启用 MGLRU 多代 LRU
@@ -485,8 +485,8 @@ echo "1000" > /sys/kernel/mm/lru_gen/min_ttl_ms
 
 # 配置大页
 echo "vm.nr_hugepages = 1024" > /etc/sysctl.d/99-airymaxos-hugepage.conf
-echo "hugetlbfs /var/lib/airymaxos/hugepages hugetlbfs mode=1770,gid=1000 0 0" >> /etc/fstab
-mkdir -p /var/lib/airymaxos/hugepages
+echo "hugetlbfs /var/lib/agentrt/hugepages hugetlbfs mode=1770,gid=1000 0 0" >> /etc/fstab
+mkdir -p /var/lib/agentrt/hugepages
 
 %end
 
@@ -505,11 +505,11 @@ PMEM_DEV=$(ndctl list -R | jq -r '.[0].dev' | sed 's/namespace/pmem/')
 
 if [ -n "$PMEM_DEV" ]; then
     mkfs.xfs -m dax=inode /dev/${PMEM_DEV}p1
-    mkdir -p /var/lib/airymaxos/memory_rovol/L1_raw
-    echo "/dev/${PMEM_DEV}p1 /var/lib/airymaxos/memory_rovol/L1_raw xfs dax 0 0" \
+    mkdir -p /var/lib/agentrt/memory_rovol/L1_raw
+    echo "/dev/${PMEM_DEV}p1 /var/lib/agentrt/memory_rovol/L1_raw xfs dax 0 0" \
         >> /etc/fstab
-    mount /var/lib/airymaxos/memory_rovol/L1_raw
-    xfs_io -c "statx -v" /var/lib/airymaxos/memory_rovol/L1_raw \
+    mount /var/lib/agentrt/memory_rovol/L1_raw
+    xfs_io -c "statx -v" /var/lib/agentrt/memory_rovol/L1_raw \
         | grep STATX_ATTR_DAX
 fi
 %end
@@ -554,7 +554,7 @@ fi
 
 ### 6.2 安装日志
 
-安装日志位于 `/var/log/airymaxos-install.log`：
+安装日志位于 `/var/log/agentrt-install.log`：
 
 ```
 2026-07-09 10:00:00 [INFO] agentrt-linux 安装器启动
@@ -731,10 +731,10 @@ packages:
   - airymaxos-cognition-core
 
 runcmd:
-  - systemctl enable airymaxos-kernel-load-bpf.service
-  - systemctl enable gateway_d.service
-  - systemctl enable cogn_d.service
-  - systemctl enable dev_d.service
+  - systemctl enable agentrt-kernel-load-bpf.service
+  - systemctl enable agentrt-gateway.service
+  - systemctl enable agentrt-cogn.service
+  - systemctl enable agentrt-dev.service
   - |
     echo "y" > /sys/kernel/mm/lru_gen/enabled
     echo "1000" > /sys/kernel/mm/lru_gen/min_ttl_ms
@@ -757,7 +757,7 @@ users:
       - ssh-rsa AAAA... user@example.com
 
 write_files:
-  - path: /etc/airymaxos/services/cogn_d.conf
+  - path: /etc/agentrt/services/cogn_d.conf
     content: |
       [llm]
       provider = openai

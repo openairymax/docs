@@ -74,14 +74,11 @@ AgentsIPC 协议的核心是 128 字节定长消息头，定义于 IRON-9 v3 [SC
 
 ### 2.2 消息类型
 
+> **SSoT 声明**：无 `AIRY_IPC_TYPE_*` 宏——payload 协议类型（REQUEST/RESPONSE/EVENT/STREAM/CONTROL 5 种）由 payload 体首字段携带，不下沉为 [SC] 宏（对齐 SSoT `ipc.h`）。
+
 ```c
-enum airy_ipc_msg_type {
-	AIRY_IPC_TYPE_REQUEST  = 1,  /* 请求 */
-	AIRY_IPC_TYPE_RESPONSE = 2,  /* 响应 */
-	AIRY_IPC_TYPE_EVENT    = 3,  /* 事件（单向） */
-	AIRY_IPC_TYPE_STREAM   = 4,  /* 流式（LLM 流式输出） */
-	AIRY_IPC_TYPE_CONTROL  = 5,  /* 控制消息（心跳/关闭） */
-};
+/* 无 AIRY_IPC_TYPE_* 宏（[SC] ipc.h 不定义消息类型枚举）；
+ * payload 协议类型（REQUEST/RESPONSE/EVENT/STREAM/CONTROL）由 payload 体首字段携带 */
 ```
 
 ### 2.3 五种 payload 类型
@@ -435,7 +432,7 @@ int airy_client_call(airy_client_t *client,
 	hdr.opcode       = AIRY_IPC_OP_SEND;      /* SEND 操作码 */
 	hdr.flags        = 0;                     /* 默认阻塞模式 */
 	hdr.trace_id     = client->next_trace_id++;
-	hdr.timestamp_ns = ktime_get_real_ns();   /* CLOCK_REALTIME 纳秒 */
+	hdr.timestamp_ns = ktime_get_ns();        /* CLOCK_MONOTONIC 纳秒 */
 	hdr.src_task     = client->self_agent_id; /* 源任务 ID（u64） */
 	hdr.dst_task     = dst_agent_id;          /* 目标任务 ID（u64） */
 	hdr.payload_len  = payload_len;

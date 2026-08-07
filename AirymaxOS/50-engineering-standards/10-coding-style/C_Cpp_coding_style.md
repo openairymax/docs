@@ -640,39 +640,39 @@ int airy_untyped_retype(cte_t *ut_slot, u32 new_type, u32 size_bits,
         /* 校验 1：操作合法性——cap 必须是 Untyped 类型 */
         ut_cap = ut_slot->cap;
         if (cap_get_type(ut_cap) != AIRY_CAP_UNTYPED) {
-                log_write(LOG_ERROR, "airy_untyped_retype: not an untyped cap");
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: not an untyped cap");
                 return -EINVAL;
         }
 
         /* 校验 2：对象类型必须在合法范围内 */
         if (new_type >= AIRY_OBJ_TYPE_COUNT || new_type == AIRY_OBJ_NULL) {
-                log_write(LOG_ERROR, "airy_untyped_retype: invalid type %u", new_type);
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: invalid type %u", new_type);
                 return -EINVAL;
         }
 
         /* 校验 3：对象大小边界检查（溢出 + 上限） */
         if (size_bits >= BITS_PER_LONG ||
             size_bits > cap_untyped_get_max_bits(ut_cap)) {
-                log_write(LOG_ERROR, "airy_untyped_retype: size_bits %u out of range",
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: size_bits %u out of range",
                           size_bits);
                 return -ERANGE;
         }
 
         /* 校验 4：CNode 最小大小（必须 >= 1 slot） */
         if (new_type == AIRY_OBJ_CNODE && size_bits < AIRY_MIN_CNODE_BITS) {
-                log_write(LOG_ERROR, "airy_untyped_retype: CNode too small");
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: CNode too small");
                 return -EINVAL;
         }
 
         /* 校验 5：Untyped 对象最小大小（必须 >= 4 bits = 16 字节） */
         if (new_type == AIRY_OBJ_UNTYPED && size_bits < AIRY_MIN_UNTYPED_BITS) {
-                log_write(LOG_ERROR, "airy_untyped_retype: Untyped too small");
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: Untyped too small");
                 return -EINVAL;
         }
 
         /* 校验 6：目标 CNode 深度合法性 */
         if (dest_depth > AIRY_MAX_CNODE_DEPTH) {
-                log_write(LOG_ERROR, "airy_untyped_retype: depth %u too large", dest_depth);
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: depth %u too large", dest_depth);
                 return -EINVAL;
         }
 
@@ -680,20 +680,20 @@ int airy_untyped_retype(cte_t *ut_slot, u32 new_type, u32 size_bits,
         if (dest_depth > 0) {
                 ret = cnode_lookup_slot(dest_root, dest_index, dest_depth, &dest_root);
                 if (ret) {
-                        log_write(LOG_ERROR, "airy_untyped_retype: destination lookup failed");
+                        log_write(AIRY_LOG_ERROR, "airy_untyped_retype: destination lookup failed");
                         return ret; /* 校验失败直接返回，无副作用 */
                 }
         }
 
         /* 校验 8：目标确实是 CNode */
         if (cap_get_type(dest_root->cap) != AIRY_CAP_CNODE) {
-                log_write(LOG_ERROR, "airy_untyped_retype: destination is not a CNode");
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: destination is not a CNode");
                 return -ENOTDIR;
         }
 
         /* 校验 9：窗口大小在合法范围且不越界 */
         if (num_objects == 0 || num_objects > AIRY_MAX_RETYPE_FANOUT) {
-                log_write(LOG_ERROR, "airy_untyped_retype: num_objects %u out of range [1, %u]",
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: num_objects %u out of range [1, %u]",
                           num_objects, AIRY_MAX_RETYPE_FANOUT);
                 return -ERANGE;
         }
@@ -702,7 +702,7 @@ int airy_untyped_retype(cte_t *ut_slot, u32 new_type, u32 size_bits,
         {
                 u32 node_size = cap_cnode_get_radix(dest_root->cap);
                 if (dest_index + num_objects > node_size) {
-                        log_write(LOG_ERROR, "airy_untyped_retype: destination window overflow");
+                        log_write(AIRY_LOG_ERROR, "airy_untyped_retype: destination window overflow");
                         return -ENOSPC;
                 }
         }
@@ -710,7 +710,7 @@ int airy_untyped_retype(cte_t *ut_slot, u32 new_type, u32 size_bits,
         /* 校验 11：Untyped 是否有足够空间 */
         if (cap_untyped_get_free(ut_cap) + (num_objects * BIT(size_bits)) >
             cap_untyped_get_total(ut_cap)) {
-                log_write(LOG_ERROR, "airy_untyped_retype: insufficient memory");
+                log_write(AIRY_LOG_ERROR, "airy_untyped_retype: insufficient memory");
                 return -ENOMEM;
         }
 
@@ -1246,7 +1246,7 @@ static int airy_untyped_reset_children(cte_t *ut_slot,
                                 ret = -EINTR;
                                 /* 记录断点以便调用者恢复 */
                                 ut_slot->reset_offset = offset;
-                                log_write(LOG_INFO,
+                                log_write(AIRY_LOG_INFO,
                                           "airy_untyped_reset: preempted at "
                                           "offset %zd (%u iterations)",
                                           offset, iteration);
@@ -1483,7 +1483,7 @@ kfree(old);
 
 #### 10.1 [SC] 层定义
 
-[SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/uapi/linux/airymax/` 下的 10 个头文件：
+[SC] 共享契约层是 IRON-9 v3 四层模型中**代码完全共享**的层级。agentrt-linux（AirymaxOS）与 agentrt 共享 `include/uapi/linux/airymax/` 下的 12 个头文件（10 核心 + 2 补充 `syscall.h`/`bpf_struct_ops.h`）：
 - `syscalls.h`：v1.0.1 4 核心 syscall 编号（AIRY_SYS_CALL/ROVOL_CTL/SCHED_CTL/CLT_NOTIFY）+ 20 预留槽位
 - `memory_types.h`：MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口
 - `security_types.h`：Cupolas capability 令牌结构、capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）、LSM 钩子 250 ID 枚举、capability 派生模型、Vault backend 抽象、策略裁决 4 值枚举
@@ -1494,6 +1494,8 @@ kfree(old);
 - `log_types.h`：A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射）
 - `uapi_compat.h`：三路类型桥接（内核态 \_\_u32 ↔ 用户态 Linux uint32_t ↔ 第三方 uint32_t with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译
 - `lsm_types.h`：纯 C LSM 模块类型定义（struct airy_lsm_blob + airy_capability_check() 回调原型 + Capability 缓存结构）
+- `syscall.h`：syscall_gen.py 生成的系统调用编号定义（`__NR_airy_sys_*` 注册号 548-551，源自 syscall.xml，R-01 SSoT）——补充共享文件
+- `bpf_struct_ops.h`：struct_ops 状态机枚举（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value 布局（sched_tac 用户态调度器经 BTF 只读消费）——补充共享文件
 
 #### 10.2 [SC] 层代码编写规则（OS-KER-021）
 

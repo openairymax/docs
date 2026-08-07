@@ -124,7 +124,7 @@ baseurl=https://repo.airymaxos.dev/$releasever/base/$basearch/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-airymaxos
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-agentrt
 skip_if_unavailable=0
 countme=1
 ```
@@ -249,7 +249,7 @@ sequenceDiagram
 
 ### 7.1 firstboot 阶段
 
-系统首次启动时，`airymaxos-firstboot.service` 执行以下初始化：生成唯一 `machine-id`（若 Kickstart 未固化）→ 应用 `/etc/sysctl.d/` 全部 sysctl 参数（详见 02-configuration）→ 加载 LSM 策略与 capability 令牌 → 触发 `agentrt.target` 拉起 12 daemons → 注册到 DevStation 注册中心（若配置）。
+系统首次启动时，`agentrt-firstboot.service` 执行以下初始化：生成唯一 `machine-id`（若 Kickstart 未固化）→ 应用 `/etc/sysctl.d/` 全部 sysctl 参数（详见 02-configuration）→ 加载 LSM 策略与 capability 令牌 → 触发 `agentrt.target` 拉起 12 daemons → 注册到 DevStation 注册中心（若配置）。
 
 **OS-OPS-013**：firstboot 必须在 systemd `default.target` 之前完成 sysctl 应用与 LSM 加载；任何 daemon 在 firstboot 完成前启动视为初始化失败（S-1 反馈闭环，初始化是不可绕过的关卡）。
 
@@ -1204,7 +1204,7 @@ int pxe_setup(const struct pxe_config *pxe, bool repo_sync);
 
 ```c
 /**
- * RPM_* - RPM 构建与签名错误码
+ * RPM_* - RPM 构建与签名错误码（构建流水线内部错误码，非 [SC] error.h 符号）
  *
  * 对齐 rpmbuild + 主流 Linux 发行版打包错误语义
  */
@@ -1215,7 +1215,7 @@ int pxe_setup(const struct pxe_config *pxe, bool repo_sync);
 #define RPM_E_BUILDROOT         (-104)   /* 构建根环境错误（mock 隔离失败） */
 #define RPM_E_FILE_MODE         (-105)   /* 文件权限不符（非 0755/0644/0600，OS-OPS-032） */
 #define RPM_E_CHANGELOG         (-106)   /* %changelog 缺少 Fixes:/Closes: 引用（OS-OPS-029） */
-#define RPM_E_CONFIG_NOREPLACE  (-107)   /* /etc/agentrt/ 未使用 %config(noreplace)（OS-OPS-031） */
+#define RPM_E_CONFIG_NOREPLACE  (-AIRY_ECFGSCHEMA)  /* /etc/agentrt/ 未使用 %config(noreplace)（OS-OPS-031）；映射到 [SC] Config 段码 AIRY_ECFGSCHEMA=102（正数幅值，返回负值） */
 ```
 
 #### A.3.4 Kickstart 错误码
@@ -1251,7 +1251,7 @@ int pxe_setup(const struct pxe_config *pxe, bool repo_sync);
 #define SYSTEMD_UNIT_DIR          "/usr/lib/systemd/system"
 #define SYSTEMD_OVERRIDE_DIR      "/etc/systemd/system"
 #define AIRY_TARGET            "agentrt.target"
-#define AIRY_GPG_KEY_PATH      "/etc/pki/rpm-gpg/RPM-GPG-KEY-airymaxos"
+#define AIRY_GPG_KEY_PATH      "/etc/pki/rpm-gpg/RPM-GPG-KEY-agentrt"
 
 /**
  * 仓库类型常量

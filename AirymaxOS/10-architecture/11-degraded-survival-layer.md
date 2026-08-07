@@ -161,7 +161,7 @@ Airymax Unify Design 的 [SC] 共享契约层（物理宿主 `kernel/include/uap
 | 头文件 | 降级块职责 | 保留符号 |
 |--------|----------|---------|
 | `error.h` | 38 个 POSIX 码以 `AIRY_DSL_*` 别名映射到 5 核心码（EINVAL/ENOMEM/EBUSY/ECANCELED/EAGAIN）+ `AIRY_ECFGVERSION` | 5 核心码 + 配置码 |
-| `log_types.h` | 仅 `LOG_FATAL` + `LOG_ERROR` 两级 | 2 个日志级别 |
+| `log_types.h` | 仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR` 两级 | 2 个日志级别 |
 | `ipc.h` | 最简 128B 消息头（magic + opcode + payload_len + **capability_badge=0**） | 4 个字段（H6 落地） |
 | `sched.h` | 仅 `AIRY_TASK_MAGIC` + `AIRY_CAP_MAX_AGENTS` | 2 个符号 |
 | `memory_types.h` | 仅 L1 记忆结构 | 1 个结构 |
@@ -281,7 +281,7 @@ _Static_assert(sizeof(struct airy_ipc_msg_hdr_min) == 128,
 
 #### 4.1.4 日志子集
 
-降级模式下 A-ULP 不初始化 Ring Buffer，日志级别仅保留 `LOG_FATAL` + `LOG_ERROR` 两级，直接走 `printk` 原生路径。
+降级模式下 A-ULP 不初始化 Ring Buffer，日志级别仅保留 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR` 两级，直接走 `printk` 原生路径。
 
 ### 4.2 降级模式的能力边界
 
@@ -376,7 +376,7 @@ cap_pass:
 [DSL] 模式退出（[SC] 头文件修复 + 重启）后，Badge 恢复流程：
 
 1. 系统重启，[SC] 头文件完整
-2. sec_d 启动，初始化 `agent_caps[1024]` 静态数组
+2. sec_d 启动，初始化 `agent_caps[1024]` 静态数组（`__airymax_cap_table[1024]`，AIRY_ALIGNED(64)，sec_d 唯一写者）
 3. sec_d 重置 `airy_cap_global_epoch = 0`
 4. Agent 通过 CAP_REQUEST opcode 向 sec_d 申请新 Badge
 5. sec_d 调用 `airy_sys_call + COMPILE_BADGE` 编译 Badge
@@ -388,7 +388,7 @@ cap_pass:
 
 | 层面 | 机制 | 触发条件 | 行为 | 代码位置 |
 |------|------|---------|------|---------|
-| 编译时 [DSL] 契约 | `#ifdef AIRY_SC_FALLBACK` 降级块 | 构建系统注入 `AIRY_SC_FALLBACK` 宏 | [SC] 头文件中 `capability_badge=0`，跳过 C-S9 Badge 校验 | 8 个 [SC] 头文件底部降级块（§2） |
+| 编译时 [DSL] 契约 | `#ifdef AIRY_SC_FALLBACK` 降级块 | 构建系统注入 `AIRY_SC_FALLBACK` 宏 | [SC] 头文件中 `capability_badge=0`，跳过 C-S9 Badge 校验 | 12 个 [SC] 头文件底部降级块（§2） |
 | 运行时 fail-closed | `phase3_dsl_degradation()` | Agent 处于 STOPPED 状态时进入 slowpath phase 3 | 返回 `-AIRY_EIPC_FROZEN`（-53），拒绝操作 | [airy_cap_check.c:111-116](../../agentrt-linux/kernel/security/airy/airy_cap_check.c#L111-L116) |
 
 **设计原则**：编译时 [DSL] 契约（`AIRY_SC_FALLBACK`）是 [SC] 头文件损坏时的最后防线，允许 IPC 以降级模式继续运行；但**运行时** Agent STOPPED 状态下的 slowpath **不继承 [DSL] 的 fail-open 语义**——而是采用 **fail-closed** 策略，返回 `-AIRY_EIPC_FROZEN`，将操作视为 ring 冻结并拒绝。

@@ -527,7 +527,7 @@ cognition 子仓的 CoreLoopThree kthread + io\_uring IPC 实现严格遵循 OLK
 - **SQE128 模式**（`IORING_SETUP_SQE128`）：`cmd` 字段从标准 16 字节扩展至 80 字节（16→80），承载 `airy_ipc_cmd` 结构体（≤ 80 字节，`BUILD_BUG_ON(sizeof(struct airy_ipc_cmd) > 80)` 编译期校验）
 - **`airy_lsm` 模块**：物理宿主 `security/airy/`（非 `security/airymax/`），`CONFIG_SECURITY_AIRY` default 'n'
 - **UAPI 标准路径**：`include/uapi/linux/airymax/`（12 个 \[SC] 共享契约头文件物理宿主，`cognition_types.h` 为其中之一）
-- **CoreLoopThree kthread 实现**：基于 Linux 6.6 `kernel/kthread.c`（1562 行）的 `kthread_run()` / `kthread_should_stop()` / `kthread_bind()` API，禁止使用已废弃的 `kthread_create()` 直接调用模式
+- **CoreLoopThree kthread 实现**：基于 Linux 6.6 `include/linux/kthread.h` 声明的 `kthread_run()` / `kthread_should_stop()` / `kthread_bind()` API（实现于 `kernel/kthread.c`，行数未验证），禁止使用已废弃的 `kthread_create()` 直接调用模式
 - **结构体对齐**：`struct airy_cog_config` 等 \[SC] 共享结构使用 `__aligned(64)` 对齐（参考 OLK 6.6 `struct ethhdr` / `struct iphdr` 手动安排字段自然对齐的做法），D-9 修复后移除 packed 属性（破坏自然对齐，影响 fastpath 性能）
 
 ***

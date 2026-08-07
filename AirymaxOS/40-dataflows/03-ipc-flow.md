@@ -177,13 +177,13 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
  * 50-engineering-standards/120-cross-project-code-sharing.md §Layout C v4） */
 ```
 
-**字段语义同源说明**（v1.1: 新增 `capability_badge` 字段）：
+**字段语义同源说明**（v1.0.1: 新增 `capability_badge` 字段）：
 
 | 字段 | offset | 同源来源 | 同源标注 |
 |------|--------|---------|----------|
 | `magic` (0x41524531 'ARE1') | 0 | agentrt AgentsIPC | [SC] 完全共享 |
 | `trace_id` | 8 | io_uring `user_data`（提交时填充，完成时原样返回） | [SC] 共享契约 |
-| `timestamp_ns` | 16 | CLOCK_REALTIME | [SS] 语义同源 |
+| `timestamp_ns` | 16 | CLOCK_MONOTONIC | [SS] 语义同源 |
 | `src_task` / `dst_task` | 24 / 32 | agentrt-linux 扩展（io_uring 无此字段） | [IND] 独立扩展 |
 | **`capability_badge`** | **40** | **v1.0.1 新增: Capability Folding 物理载体（64-bit Native Word: Epoch + RandomTag + Perms）** | **[SC] 数据结构共享 + [SS] 校验机制同源** |
 | `crc32` | 52 | v1.0.1 新增: 覆盖 header[0:52) + payload 完整性校验 | [SC] 完全共享 |
@@ -192,13 +192,13 @@ agentrt-linux IPC 基于 Linux 6.6 内核基线 `include/uapi/linux/io_uring.h` 
 
 ### 3.2 5 阶段生命周期表
 
-**v1.1: 阶段 3 接收新增 fastpath C-S9 Badge 内联校验**：
+**v1.0.1: 阶段 3 接收新增 fastpath C-S9 Badge 内联校验**：
 
 | 阶段 | 阶段名 | 触发者 | 操作 | 状态变更 | 持续时间 | 同源 |
 |---|---|---|---|---|---|---|
 | 1 | 创建 | 发送进程 | 分配 128B 缓冲区 + 填充字段（含 `capability_badge`）| UNINIT → READY | < 1μs | AgentsIPC create |
 | 2 | 发送 | 发送进程 | 写入 SQE（SQPOLL 零 syscall） | READY → IN_FLIGHT | < 2μs | AgentsIPC send |
-| 3 | 接收 | 内核 + io_uring | **v1.1: fastpath C-S0~C-S12 校验（含 C-S9 Badge ~10ns）** + 零拷贝传递（registered buffer）+ CQE 完成 | IN_FLIGHT → DELIVERED | < 5μs（含 C-S9 ~10ns） | AgentsIPC deliver |
+| 3 | 接收 | 内核 + io_uring | **v1.0.1: fastpath C-S0~C-S12 校验（含 C-S9 Badge ~10ns）** + 零拷贝传递（registered buffer）+ CQE 完成 | IN_FLIGHT → DELIVERED | < 5μs（含 C-S9 ~10ns） | AgentsIPC deliver |
 | 4 | 处理 | 接收进程 | 解析消息头 + 处理 payload（若 CAP_CARRY，提取派生 Badge）| DELIVERED → PROCESSING | 业务相关 | AgentsIPC process |
 | 5 | 回收 | 接收进程 | 释放 128B 缓冲区（provided buffer 回收） | PROCESSING → FREED | < 1μs | AgentsIPC recycle |
 

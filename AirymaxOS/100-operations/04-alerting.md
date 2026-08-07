@@ -144,7 +144,7 @@ sec_d 通过纯 C LSM hook 采集安全事件，是唯一可绕过用户态直�
 - **LSM hook 命中**：进程越权、文件非法访问等，按 1 秒窗口计数，>10 触发 CRITICAL。
 - **密钥访问异常**：未授权进程访问 `/etc/agentrt/keys/` 立即触发 CRITICAL。
 - **能力变更**：进程 capability 集合异常扩展触发 WARNING。
-- **审计日志篡改**：检测到 `/var/log/airy/` 下文件被非 audit_d 进程修改，触发 CRITICAL。
+- **审计日志篡改**：检测到 `/var/log/agentrt/` 下文件被非 audit_d 进程修改，触发 CRITICAL。
 
 ---
 
@@ -333,7 +333,7 @@ recipients = +8613800000001,+8613800000002
 
 ### 5.3 渠道故障处理
 
-- **journal 写入失败**：audit_d 重试 3 次，仍失败则降级写入 `/var/log/airy/alert_fallback.log`，并触发 WARNING 告警（自身告警，不通过 journal 通道）。
+- **journal 写入失败**：audit_d 重试 3 次，仍失败则降级写入 `/var/log/agentrt/alert_fallback.log`，并触发 WARNING 告警（自身告警，不通过 journal 通道）。
 - **RPC push 失败**：audit_d 缓冲到本地队列（最多 1000 条），订阅者重连后批量补发。
 - **Email/SMS/Webhook 失败**：重试 3 次（指数退避），仍失败则记录到 journal，不影响主告警流程。
 
@@ -566,7 +566,7 @@ audit_d 每日生成告警统计报告，写入 `/var/lib/airy/alerts/daily/<YYY
 
 audit_d 处理告警的过程本身被审计：
 
-- 所有 ack 操作记录到 `/var/log/airy/alert_ack.log`，含操作者、时间、comment。
+- 所有 ack 操作记录到 `/var/log/agentrt/alert_ack.log`，含操作者、时间、comment。
 - 抑制规则变更记录到 journal，由 config_d 上报。
 - 告警丢弃事件（Ring Buffer 溢出）触发独立的"告警系统健康"CRITICAL 告警。
 
@@ -619,7 +619,7 @@ CRITICAL 告警自动触发 P0 事件响应流程，WARNING 告警触发 P1 事�
 
 ## 13. 自动化 Remediation Playbook（R2 补强新增）
 
-> **章节定位**：本节为 R2 metrics/observability 自动化 remediation 补强，定义"指标超阈值 → 自动触发 remediation 动作"的文档化 playbook。本节不修改 §1-§12 任何既有告警/抑制/聚合机制，仅在告警传输链路（§4）之上补强"自动响应动作"。所有 remediation 动作均通过 systemd timer + `airy-remediation.service` 执行，由 Prometheus alertmanager 触发。
+> **章节定位**：本节为 R2 metrics/observability 自动化 remediation 补强，定义"指标超阈值 → 自动触发 remediation 动作"的文档化 playbook。本节不修改 §1-§12 任何既有告警/抑制/聚合机制，仅在告警传输链路（§4）之上补强"自动响应动作"。所有 remediation 动作均通过 systemd timer + `agentrt-remediation.service` 执行，由 Prometheus alertmanager 触发。
 >
 > **与既有机制的关系**：
 > - 与 §6 告警抑制的关系：remediation 触发后，相关告警进入 5 分钟静默期（§13.4），避免雪崩。
@@ -653,7 +653,7 @@ CRITICAL 告警自动触发 P0 事件响应流程，WARNING 告警触发 P1 事�
 Remediation 动作通过以下组件协同执行：
 
 ```
-[Prometheus]                [Alertmanager]               [airy-remediation.service]
+[Prometheus]                [Alertmanager]               [agentrt-remediation.service]
    │                            │                              │
    │ 1. scrape /metrics          │                              │
    ▼                            │                              │
@@ -669,7 +669,7 @@ Remediation 动作通过以下组件协同执行：
    │                            │                              │
    │ 4. webhook 触发            │                              │
    ▼                            │                              │
-[airy-remediation.service]─────┘                              │
+[agentrt-remediation.service]─────┘                              │
    │                                                           │
    │ 5. systemd timer 调度（默认 10s 间隔）                    │
    ▼                                                           │
@@ -687,9 +687,9 @@ Remediation 动作通过以下组件协同执行：
 | 组件 | 职责 | 配置位置 |
 |------|------|---------|
 | **Prometheus** | 采集 `/metrics`，执行 alerting rules（阈值判定） | `/etc/agentrt/observability/prometheus.yml` |
-| **Alertmanager** | 路由告警，触发 webhook 至 `airy-remediation.service` | `/etc/agentrt/alert/alertmanager.yml` |
-| **systemd timer `airy-remediation.timer`** | 周期调度（默认 10s），检查待执行 remediation 队列 | `/etc/systemd/system/airy-remediation.timer` |
-| **`airy-remediation.service`** | 执行 remediation 动作，调用 `airyctl` CLI | `/etc/systemd/system/airy-remediation.service` |
+| **Alertmanager** | 路由告警，触发 webhook 至 `agentrt-remediation.service` | `/etc/agentrt/alert/alertmanager.yml` |
+| **systemd timer `agentrt-remediation.timer`** | 周期调度（默认 10s），检查待执行 remediation 队列 | `/etc/systemd/system/agentrt-remediation.timer` |
+| **`agentrt-remediation.service`** | 执行 remediation 动作，调用 `airyctl` CLI | `/etc/systemd/system/agentrt-remediation.service` |
 | **macro_d** | 接收 remediation 完成回调，更新 Agent 状态 | 内置 |
 
 **alertmanager webhook 配置示例**：
@@ -706,7 +706,7 @@ route:
 receivers:
   - name: 'remediation-webhook'
     webhook_configs:
-      - url: 'http://127.0.0.1:7464/remediation'   # airy-remediation.service 监听端口
+      - url: 'http://127.0.0.1:7464/remediation'   # agentrt-remediation.service 监听端口
         send_resolved: true
         max_alerts: 100
 ```
@@ -714,7 +714,7 @@ receivers:
 **systemd 单元配置示例**：
 
 ```ini
-# /etc/systemd/system/airy-remediation.timer
+# /etc/systemd/system/agentrt-remediation.timer
 [Unit]
 Description=AirymaxOS Remediation Timer (R2)
 
@@ -726,22 +726,22 @@ AccuracySec=1s
 [Install]
 WantedBy=multi-user.target
 
-# /etc/systemd/system/airy-remediation.service
+# /etc/systemd/system/agentrt-remediation.service
 [Unit]
 Description=AirymaxOS Remediation Service (R2)
-After=network.target macro-superv.service
-Requires=macro-superv.service
+After=network.target agentrt-macro-superv.service
+Requires=agentrt-macro-superv.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/lib/airy/airy-remediation --run-once
+ExecStart=/usr/lib/airy/agentrt-remediation --run-once
 User=root
-Group=airy-remediation
+Group=agentrt-remediation
 ```
 
 ### 13.3 回滚机制
 
-每个 remediation 动作必须有对应回滚命令，防止误判或自动化故障导致 Agent/daemon 异常终止。回滚操作记录到 `/var/log/airy/remediation_rollback.log`，含操作者（`airy-remediation` 或人工）、时间、原 remediation ID。
+每个 remediation 动作必须有对应回滚命令，防止误判或自动化故障导致 Agent/daemon 异常终止。回滚操作记录到 `/var/log/agentrt/remediation_rollback.log`，含操作者（`agentrt-remediation` 或人工）、时间、原 remediation ID。
 
 | Remediation 动作 | 回滚命令 | 回滚前置条件 |
 |------------------|---------|-------------|
@@ -795,7 +795,7 @@ airyctl remediation silence break --metric airy_ipc_badge_fail_total --agent-id 
 
 **静默期实现**：
 - 静默状态存储于 `/run/airy/remediation_silence.json`（tmpfs，重启清空）。
-- `airy-remediation.service` 每次执行前检查静默表，命中静默期则跳过该指标该 Agent 的 remediation（仅记录告警到 journal）。
+- `agentrt-remediation.service` 每次执行前检查静默表，命中静默期则跳过该指标该 Agent 的 remediation（仅记录告警到 journal）。
 - 静默期结束（5 分钟后）自动恢复，下次指标超阈值时重新触发 remediation。
 
 **与 §6 告警抑制的关系**：

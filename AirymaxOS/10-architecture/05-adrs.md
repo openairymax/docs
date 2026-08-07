@@ -49,7 +49,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | ADR-015 | （已撤销——定位调整方向错误）                                                  | Deprecated |
 | ADR-016 | 版本基线锁定战略决策（1.x.x 锁定 Linux 6.6，2.x.x 升级 Linux 7.1）        | Accepted |
 | ADR-017 | Capability 派生操作与 IPC Ring Buffer 6 项致命缺陷修复（K9-1 回归 + ARM64 内存序） | Accepted |
-| ADR-018 | openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.148 + openEuler 硬件适配层正交叠加） | Accepted |
+| ADR-018 | openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.149 + openEuler 硬件适配层正交叠加） | Accepted |
 
 ***
 
@@ -298,7 +298,7 @@ agentrt-linux 在 security 子仓实现 **capability-based security 模型**（s
 | 模型来源          | seL4 capability（ADR-014）                      |
 | capability 定义 | 不可伪造的令牌，代表对资源的访问权限                            |
 | capability 操作 | 委托、复制、限制、撤销                                   |
-| 内核支持          | 纯 C LSM + agent_caps[1024] 静态数组实现 capability 检查（H5） |
+| 内核支持          | 纯 C LSM + agent_caps[1024] 静态数组（`__airymax_cap_table`，sec_d 唯一写者）实现 capability 检查（H5） |
 | 用户态服务         | security 提供 capability 管理守护进程                 |
 | 兼容性           | 与 SELinux 共存，capability 优先于 SELinux 检查        |
 | 同源            | 与 agentrt Cupolas 安全模型同源                      |
@@ -775,7 +775,7 @@ agentrt-linux 与 agentrt 是 **同源且部分代码共享** 的关系（IRON-9
 | 性质   | 跨平台用户态运行时（Linux/macOS/Windows）                             | Linux 发行版（仅 Linux 6.6）                            |
 | 代码   | 共享契约层（`include/uapi/linux/airymax/`）+ 实现独立                            | 共享契约层（`include/uapi/linux/airymax/`）+ 实现独立                   |
 | 设计理念 | 共享 Airymax 设计理念                                            | 共享 Airymax 设计理念                                   |
-| 同源体现 | MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 语义 | SCHED\_AGENT/128B IPC/capability/L1-L4/kthread 语义 |
+| 同源体现 | MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree 语义 | sched\_tac/128B IPC/capability/L1-L4/kthread 语义 |
 | 关系   | 可独立运行于任何平台                                                 | agentrt-linux 是 agentrt 的最佳载体                     |
 | 适配层  | 无需适配层                                                      | 无需适配层（天然契合）                                       |
 
@@ -959,7 +959,7 @@ seL4 的 10 项核心工程思想（ES-SEL4-01\~10）通过 Linux 改造手段�
 | 架构层 | ES-SEL4-04 机制与策略分离                 | sched\_tac 调度框架（机制）+ 用户态策略           | SCHED\_DEADLINE / SCHED\_FIFO / EEVDF 调度类承载机制，用户态 sched\_tac 策略 |
 | 架构层 | ES-SEL4-10 Endpoint 三态状态机          | io\_uring SQ/CQ ring 等效异步消息语义          | IPC magic 0x41524531（'ARE1'）共享       |
 | 机制层 | ES-SEL4-03 Untyped-Retype          | userfaultfd + MemoryRovol L1-L4 分层     | userfaultfd 拦截缺页 + 用户态 memory server |
-| 机制层 | ES-SEL4-05\~09 CTE/CNode/MDB/Badge | 纯 C LSM + agent_caps[1024] 静态数组 | 纯 C 实现 7 种 CNode 操作原语（H5）          |
+| 机制层 | ES-SEL4-05\~09 CTE/CNode/MDB/Badge | 纯 C LSM + agent_caps[1024] 静态数组（`__airymax_cap_table`，sec_d 唯一写者） | 纯 C 实现 7 种 CNode 操作原语（H5）          |
 | 约束层 | ES-SEL4-02 极少系统调用                  | v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位（IPC 数据面零 syscall，io\_uring 承载）+ TSC 评审                    | syscall.xml 式接口契约（R-01 增强建议）         |
 
 **吸收边界**（明确不吸收）：完整形式化验证（复杂度不允许）、Haskell 形式规范（用 kernel-doc 等效）、seL4 编码风格（与 Linux 6.6 基线冲突，整体拒绝）、libsel4 独立仓库（用 \[SC] 共享契约层等效）、seL4 bootinfo（保留 Linux initramfs/systemd 启动模型）。
@@ -1272,7 +1272,7 @@ K9-1 将 Capability 撤销机制从全局 epoch（`airy_cap_global_epoch`）改�
 
 ***
 
-## ADR-018: openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.148 + openEuler 硬件适配层正交叠加）
+## ADR-018: openEuler 硬件驱动复用 LAYER 决策（vanilla 6.6.149 + openEuler 硬件适配层正交叠加）
 
 - **状态**: Accepted
 - **日期**: 2026-07-31
@@ -1284,10 +1284,10 @@ agentrt-linux 需要广泛兼容国产主流硬件（鲲鹏/飞腾/海光/申威
 
 ### 决策
 
-采用 **LAYER 方案**：以 vanilla linux-stable 6.6.148 为唯一核心基线（IRON-7），在其上叠加复用 openEuler 硬件适配层形成的国产硬件驱动层。驱动层与微内核化改造补丁正交，仅触及 `drivers/`、`arch/` 硬件适配，不触及调度/安全/IPC/内存核心子系统。
+采用 **LAYER 方案**：以 vanilla linux-stable 6.6.149 为唯一核心基线（IRON-7），在其上叠加复用 openEuler 硬件适配层形成的国产硬件驱动层。驱动层与微内核化改造补丁正交，仅触及 `drivers/`、`arch/` 硬件适配，不触及调度/安全/IPC/内存核心子系统。
 
 ```
-ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
+ALK-6.6 = vanilla 6.6.149 (IRON-7 基线)
          + openEuler 硬件适配层（LAYER，架构可选）
          + agentrt-linux 微内核化改造补丁（≤ 2 万行）
 ```
@@ -1296,7 +1296,7 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 
 | 维度 | 处置 |
 |------|------|
-| `arch/sw_64/`（申威架构，367 文件） | 完整导入（vanilla 6.6.148 不含此架构） |
+| `arch/sw_64/`（申威架构，367 文件） | 完整导入（vanilla 6.6.149 不含此架构） |
 | `arch/{x86,arm64}/configs/openeuler_defconfig` | 作为硬件配置底座 |
 | `configs/euler_hw_{x86,arm64,sw64}.config` | 从 openeuler_defconfig 提取的硬件相关 CONFIG 碎片 |
 | `configs/defconfig-agent` | IRON-7 覆盖：将触及核心子系统的 CONFIG 覆盖回 vanilla 默认值 |
@@ -1307,8 +1307,8 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 ### 理由
 
 1. **正交性已验证**：openEuler 对核心子系统（调度/安全）的修改被完全排除，提取的仅是纯硬件驱动与架构代码。驱动代码通过标准 Linux 驱动模型（device/driver/bus）接入，与核心子系统通过既定接口交互，不改变核心子系统行为。
-2. **版本天然对齐**：openEuler OLK-6.6 当前同步到 6.6.148，与 AirymaxOS vanilla 6.6.148 在 `6.6.0-148` 段完全对齐，硬件适配补丁天然适用，无需版本迁移。
-3. **IRON-7 不变**：复用 openEuler 硬件适配层不改变 vanilla 6.6.148 为唯一核心基线的事实——openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值。
+2. **版本天然对齐**：openEuler OLK-6.6 当前同步到 6.6.149，与 AirymaxOS vanilla 6.6.149 在 `6.6.0-148` 段完全对齐，硬件适配补丁天然适用，无需版本迁移。
+3. **IRON-7 不变**：复用 openEuler 硬件适配层不改变 vanilla 6.6.149 为唯一核心基线的事实——openeuler_defconfig 中触及核心子系统的 CONFIG 由 `configs/defconfig-agent` 覆盖回 vanilla 默认值。
 4. **企业级验证**：openEuler 24.03 LTS 已完成企业级硬件兼容性验证，复用其适配层可节省数万人年的硬件适配成本。
 5. **GPL-2.0 兼容**：openEuler 与 Linux 内核同为 GPL-2.0，许可证完全兼容，合规要求明确（版权保留/变更标注/源码公开/DCO 认证）。
 6. **构建链复用**：可同步复用 openEuler 构建体系（airy-kernel.spec / meta-airymax / custom/cfg_airymax / ks-airymax.cfg），不 fork 任何工具代码，仅通过配置覆盖实现定制。
@@ -1317,7 +1317,7 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 
 | 影响范围 | 描述 |
 |---------|------|
-| kernel | 内核基线保持 vanilla 6.6.148（IRON-7），叠加 openEuler 硬件适配层 |
+| kernel | 内核基线保持 vanilla 6.6.149（IRON-7），叠加 openEuler 硬件适配层 |
 | services | 驱动通过标准 Linux 驱动模型接入，不影响服务层 |
 | security | 不移植 openEuler security/ 修改，保持 vanilla + airy_lsm（H5 约束） |
 | 构建系统 | 复用 openEuler 构建工具链（imageTailor/Yocto/Anaconda/OBS），详见 70-build-system/README.md §3.2 |
@@ -1337,7 +1337,7 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 **正面后果**：
 
 - 获得 openEuler 企业级硬件兼容性（鲲鹏/飞腾/海光/申威/昇腾）
-- 内核核心子系统保持 vanilla 6.6.148 基线纯净（IRON-7 保障）
+- 内核核心子系统保持 vanilla 6.6.149 基线纯净（IRON-7 保障）
 - 复用 openEuler 构建体系，降低工程成本
 - GPL-2.0 完全兼容，无法律障碍
 
@@ -1357,7 +1357,7 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 
 | 层次               | 共享程度                               | ADR 分布                                                                                                                                                                                |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                             | ADR-004 capability（`security_types.h` 44 cap + 250 LSM）+ ADR-005 IPC（`ipc.h` magic 0x41524531 'ARE1' + 128B）+ ADR-006 认知（`cognition_types.h` 三阶段）+ ADR-007 记忆（`memory_types.h` L1-L4） |
+| **\[SC] 共享契约层**  | 完全共享代码                             | ADR-004 capability（`security_types.h` 44 cap + 7 钩子实现 + 250 框架总槽位）+ ADR-005 IPC（`ipc.h` magic 0x41524531 'ARE1' + 128B）+ ADR-006 认知（`cognition_types.h` 三阶段）+ ADR-007 记忆（`memory_types.h` L1-L4） |
 | **\[SS] 语义同源层**  | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | ADR-003 8 子仓 ↔ agentrt 7 模块同源映射 + ADR-010 同源且部分代码共享                                                                                                                                   |
 | **\[IND] 完全独立层** | 完全独立                               | 构建系统（CMake vs Kbuild）+ 平台适配（libc / POSIX vs Linux 6.6）+ 形式化验证                                                                                                                         |
 | **\[DSL] 降级生存层** | \[SC] 头文件损坏时的最小可运行子集               | 每个 \[SC] 头文件底部含 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk 原生日志 + 最简 128B IPC + EEVDF 默认调度 + 仅 POSIX capability + 统一 Panic），自包含，不依赖 \[SC] 其他符号 |
@@ -1371,11 +1371,13 @@ ALK-6.6 = vanilla 6.6.148 (IRON-7 基线)
 | `ipc.h`             | ADR-005 | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）                    | kernel / services  |
 | `sched.h`           | ADR-010 | magic 0x41475453 'AGTS' + sched\_tac 调度参数（不使用 SCHED\_EXT / SCHED\_AGENT 宏）+ AIRY\_CAP\_MAX\_AGENTS=1024 | kernel / cognition |
 | `memory_types.h`    | ADR-007 | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
-| `security_types.h`  | ADR-004 | 44 cap + 250 LSM + Cupolas blob + capability 派生                                  | kernel / security  |
+| `security_types.h`  | ADR-004 | 44 cap（41 POSIX + 3 扩展）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，lsm_types.h）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 | kernel / security  |
 | `cognition_types.h` | ADR-006 | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual                                     | kernel / cognition |
-| `syscalls.h`        | ADR-010 | Syscall 编号体系（v1.0.1: 4 核心 + 20 预留 = 24 槽位）                                            | kernel / cognition |
+| `syscalls.h`        | ADR-010 | Syscall 编号体系（v1.0.1: 4 核心 548-551 + 20 预留 552-571 = 24 槽位）                                            | kernel / cognition |
+| `syscall.h`         | ADR-010 | `syscall_gen.py` 生成产物（`__NR_airy_sys_*` 548-551）                                   | kernel / services  |
 | `uapi_compat.h`     | ADR-010 | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                                       | IRON-9 跨端          |
-| `lsm_types.h`       | ADR-004 | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构                          | kernel / security  |
+| `lsm_types.h`       | ADR-004 | 纯 C LSM 类型定义（`AIRY_LSM_HOOK_IMPLEMENTED=7` / `AIRY_LSM_KERNEL_HOOK_TOTAL=250`）+ 安全 blob（`airy_task_sec`/`airy_inode_sec`）+ `airy_cap_slot`（80B，AIRY_ALIGNED(64)）+ `DEFINE_LSM(airy)` 骨架 | kernel / security  |
+| `bpf_struct_ops.h`  | ADR-010 | struct_ops 4 态状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ `bpf_struct_ops_common_val` 布局 | kernel / cognition |
 
 ### \[SS] 语义同源层——ADR agentrt ↔ agentrt-linux 映射
 
@@ -1510,7 +1512,7 @@ graph LR
 | 0.3.0 | 2026-07-19 | ADR-013 重写为调度框架决策（sched\_tac，非 sched\_ext），修正"Linux 6.6 已验证 sched\_ext"事实错误；版本基线锁定战略调整至 ADR-016；新增 ADR-015（已撤销——定位调整方向错误）；ADR-002 标题与内容 sched\_ext → sched\_tac；IRON-9 v3 四层模型汇总（三层 → 四层，6 头文件 → 10 头文件，补全 \[DSL] 降级生存层） |
 | 1.0.1 | 2027-XX-XX | 首个开发版本（与代码实现同步验证）                                                          |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
-| v1.0.1 | 2026-07-31 | 新增 ADR-018（openEuler 硬件驱动复用 LAYER 决策，vanilla 6.6.148 + openEuler 硬件适配层正交叠加） |
+| v1.0.1 | 2026-07-31 | 新增 ADR-018（openEuler 硬件驱动复用 LAYER 决策，vanilla 6.6.149 + openEuler 硬件适配层正交叠加） |
 
 ***
 

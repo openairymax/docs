@@ -196,7 +196,7 @@ Score(agent) = w1 * (1/cost) + w2 * success_rate + w3 * trust_score
 | 落地子仓/模块 | 策略维度 | 可选实现 |
 |---------------|----------|----------|
 | kernel sched_tac | 调度策略 | stc_* 策略（用户态调度器）+ EEVDF 默认调度 |
-| kernel 纯 C LSM（airy_lsm） | 安全策略 | H5 纯 C LSM + agent_caps[1024] 静态数组 |
+| kernel 纯 C LSM（airy_lsm） | 安全策略 | H5 纯 C LSM + agent_caps[1024] 静态数组（`__airymax_cap_table`，sec_d 唯一写者） |
 | cognition 规划策略 | 任务规划 | 分层规划、反应式规划、反思式规划、ML 规划 |
 | cognition 协同策略 | 模型协同 | 双模型协同、多数投票、加权融合、外部仲裁 |
 | memory 遗忘策略 | 记忆衰减 | 艾宾浩斯曲线、线性衰减、基于访问次数 |
@@ -606,11 +606,13 @@ Airymax 将乔布斯与艾夫的设计哲学确立为 A-1 简约至上原则的�
 | `ipc.h` | S 系统观 | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）契约 | kernel / services |
 | `sched.h` | S 系统观 | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED_AGENT 宏）+ AIRY_CAP_MAX_AGENTS=1024 | kernel / cognition |
 | `memory_types.h` | E 工程观 | MemoryRovol L1-L4 + GFP 掩码语义 + PMEM 接口 | kernel / memory |
-| `security_types.h` | E 工程观 | 41 capability + 250 LSM 钩子 + Cupolas blob 布局 | kernel / security |
+| `security_types.h` | E 工程观 | 44 capability（41 POSIX 0-40 + 3 扩展 41-43）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，lsm_types.h）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 | kernel / security |
 | `cognition_types.h` | C 认知观 | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式 | kernel / cognition |
-| `syscalls.h` | K 接口契约 | 4 核心 + 20 预留 = 24 槽位（1 Capability Invocation + 3 控制原语，v1.0.1 Capability Folding 后） | kernel / cognition |
+| `syscalls.h` | K 接口契约 | 4 核心（548-551）+ 20 预留（552-571）= 24 槽位（1 Capability Invocation + 3 控制原语，v1.0.1 Capability Folding 后） | kernel / cognition |
+| `syscall.h` | K 接口契约 | `syscall_gen.py` 生成产物（`__NR_airy_sys_*` 548-551） | kernel / services |
 | `uapi_compat.h` | E 工程观 | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）支持 E-4 跨平台一致性 | IRON-9 跨端 |
-| `lsm_types.h` | E 工程观 | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构（E-1 安全内生） | kernel / security |
+| `lsm_types.h` | E 工程观 | 纯 C LSM 类型定义（`AIRY_LSM_HOOK_IMPLEMENTED=7` / `AIRY_LSM_KERNEL_HOOK_TOTAL=250`）+ 安全 blob（`airy_task_sec`/`airy_inode_sec`）+ `airy_cap_slot`（80B，AIRY_ALIGNED(64)）+ `DEFINE_LSM(airy)` 骨架（E-1 安全内生） | kernel / security |
+| `bpf_struct_ops.h` | E 工程观 | struct_ops 4 态状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ `bpf_struct_ops_common_val` 布局 | kernel / cognition |
 
 ### 10.3 [SS] 语义同源层——五维原则 agentrt ↔ agentrt-linux 映射
 

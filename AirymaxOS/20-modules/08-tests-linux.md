@@ -523,15 +523,15 @@ agentrt-linux 的 12 daemon 完整名单（ADR-014 确立 seL4 唯一来源，�
 
 | daemon | 单元测试重点 | 验证 \[SC] 引用 | 优先级 |
 |--------|------------|--------------|--------|
-| `sec_d` | Badge 编译串行化 + 令牌桶限流 + fastpath C-S9 校验 + `agent_caps[1024]` 写者独占 + `AIRY_ESEC_D_THROTTLED=-83` 错误码路径 + `airy_sys_call`（syscall 0）入口 | security\_types.h + error.h + syscalls.h \[SC] | P0 |
+| `sec_d` | Badge 编译串行化 + 令牌桶限流 + fastpath C-S9 校验 + `agent_caps[1024]` 写者独占 + `AIRY_ESEC_D_THROTTLED=-83` 错误码路径 + `airy_sys_call`（syscall 548）入口 | security\_types.h + error.h + syscalls.h \[SC] | P0 |
 | `cogn_d` | CoreLoopThree 三阶段状态转换 + Thinkdual 模式 + LLM 推理阶段枚举 | cognition\_types.h \[SC] | P1 |
-| `mem_d` | MemoryRovol L1-L4 快照 + GFP 掩码 + PMEM 持久化接口 + `airy_sys_rovol_ctl`（syscall 1） | memory\_types.h + syscalls.h \[SC] | P0 |
+| `mem_d` | MemoryRovol L1-L4 快照 + GFP 掩码 + PMEM 持久化接口 + `airy_sys_rovol_ctl`（syscall 549） | memory\_types.h + syscalls.h \[SC] | P0 |
 | `gateway_d` | io_uring IPC SQE128 + 128B msg\_hdr + magic 0x41524531 + `io_uring_cmd_to_pdu` 访问 | ipc.h \[SC] | P0 |
 | `logger_d` | 128B 日志记录 + `AIRY_LOG_MAGIC` + 5 级日志枚举 + printk 映射 | log\_types.h \[SC] | P1 |
 | `macro_d` | Macro-Supervisor 监管策略 + SIGKILL 故障处理 + `airy_fault_enforce()` 联动 | error.h + lsm\_types.h \[SC] | P0 |
 | `audit_d` | 审计日志完整性 + `AIRY_FAULT_AUDIT_TAMPER = 0x100B` 检测 + 防篡改 | error.h \[SC] | P0 |
-| `sched_d` | sched\_tac 调度策略 + SCHED\_DEADLINE/FIFO/EEVDF + `airy_sys_sched_ctl`（syscall 2） | sched.h + syscalls.h \[SC] | P0 |
-| `dev_d` | 设备 hotplug + 驱动加载 + `airy_sys_clt_notify`（syscall 3）kthread 注册 | syscalls.h \[SC] | P1 |
+| `sched_d` | sched\_tac 调度策略 + SCHED\_DEADLINE/FIFO/EEVDF + `airy_sys_sched_ctl`（syscall 550） | sched.h + syscalls.h \[SC] | P0 |
+| `dev_d` | 设备 hotplug + 驱动加载 + `airy_sys_clt_notify`（syscall 551）kthread 注册 | syscalls.h \[SC] | P1 |
 | `net_d` | 网络栈用户态化 + Landlock 沙箱 + 网络命名空间隔离 | security\_types.h \[SC] | P1 |
 | `vfs_d` | VFS 用户态化 + Landlock 路径限制 + 挂载命名空间 | security\_types.h \[SC] | P1 |
 | `config_d` | YAML/TOML 配置解析 + RCU 热重载 + sysctl ↔ YAML/TOML 双向同步 + `AIRY_CONFIG_VERSION` 校验 | error.h + uapi\_compat.h \[SC] | P0 |
@@ -572,7 +572,7 @@ sec_d 是 v1.0.1 Capability Folding 的唯一 Badge 编译者，必须保证串�
 | 故障监管 | macro_d → 任意 daemon 崩溃 | SIGKILL + `airy_fault_enforce()` + 自动重启 |
 | 审计完整性 | audit_d → 全部 12 daemon | 审计日志无丢失 + `AIRY_FAULT_AUDIT_TAMPER = 0x100B` 检测 |
 | 调度联动 | sched_d → cogn_d / mem_d / dev_d | sched\_tac 调度策略 + SCHED\_DEADLINE 优先级 |
-| 记忆卷载 | mem_d → cogn_d / vfs_d | MemoryRovol L1-L4 快照 + `airy_sys_rovol_ctl`（syscall 1） |
+| 记忆卷载 | mem_d → cogn_d / vfs_d | MemoryRovol L1-L4 快照 + `airy_sys_rovol_ctl`（syscall 549） |
 
 #### 4.8.4 12 daemon 混沌测试 \[IND]
 

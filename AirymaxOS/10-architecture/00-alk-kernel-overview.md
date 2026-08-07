@@ -113,7 +113,7 @@ ALK-6.6 = Linux 6.6 LTS (vanilla)                       [IRON-7 基线]
          + io_uring 数据面（IORING_OP_URING_CMD）
          + 纯 C LSM（airy_lsm，H5 硬约束）
          + Micro-Supervisor（kernel/superv/，4 个 .c）
-         + Capability 静态数组（agent_caps[1024]，128KB）
+         + Capability 表（agent_caps[1024] 静态数组，字段 80B、sizeof 128B（AIRY_ALIGNED(64) 对齐），1024×128B=128KB，编译期 __airymax_cap_table，sec_d 唯一写者）
 ```
 
 > **层序说明**：国产硬件驱动层（复用openEuler的硬件适配能力）与微内核化改造补丁相互正交——驱动层仅触及 `drivers/`、`arch/` 硬件适配，不触及调度/安全/IPC/内存核心子系统；微内核化改造不依赖驱动层，两者可独立构建。核心子系统基线纯净性由 IRON-7 保障（详见 §3.5）。
@@ -153,7 +153,7 @@ kernel/                          # Linux 6.6 内核源码树
 │       ├── Kconfig              # 配置选项
 │       ├── airy_cap.h           # Capability 头文件
 │       ├── airy_lsm.c           # LSM 主入口（DEFINE_LSM(airy)）
-│       ├── airy_cap_array.c     # agent_caps[1024] 静态数组
+│       ├── airy_cap_array.c     # Capability 槽位查找与注册（agent_caps[] 静态数组，定义宿主 kernel/ipc/airy_ipc_capability.c）
 │       ├── airy_cap_check.c     # fastpath C-S9 Badge 校验
 │       ├── airy_cap_derive.c    # Capability 派生（Copy/Mint/MintCopy）
 │       ├── airy_cap_rotate.c    # Capability 轮换
@@ -194,7 +194,7 @@ ALK-6.6 的 6 大技术支柱：
 
 | # | 技术支柱                | seL4 借鉴                         | Linux 6.6 落地                                                            | 硬约束   |
 | - | ------------------- | ------------------------------- | ----------------------------------------------------------------------- | ----- |
-| 1 | **Capability 安全模型** | CNode + MDB 派生树                 | 纯 C LSM + `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word            | H1-H6 |
+| 1 | **Capability 安全模型** | CNode + MDB 派生树                 | 纯 C LSM + `agent_caps[1024]` 静态数组（`__airymax_cap_table`，字段 80B、sizeof 128B（AIRY_ALIGNED(64)），128KB，sec_d 唯一写者）+ Badge 64-bit Native Word            | H1-H6 |
 | 2 | **IPC 消息传递**        | Endpoint 三态状态机                  | io\_uring `IORING_OP_URING_CMD` + 128B 定长消息头 + fastpath C-S9 Badge 内联校验 | H1-H6 |
 | 3 | **调度原语**            | priority + round-robin + domain | sched\_tac（SCHED\_DEADLINE / SCHED\_FIFO / EEVDF 调度类组合 + seL4 MCS 语义映射） | —     |
 | 4 | **地址空间管理**          | VSpace + Page Table             | Linux mm/（保留原生）                                                         | —     |
@@ -337,7 +337,7 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 | 维度    | ACL        | POSIX capability | seL4 capability | agentrt-linux       |
 | ----- | ---------- | ---------------- | --------------- | ------------------- |
 | 权限传递  | 通过组/用户     | 进程位图             | 不可伪造令牌          | seL4（Agent 间传递）     |
-| 权限撤销  | 困难（遍历 ACL） | 不支持运行时           | 递归级联撤销          | seL4（O(1) Epoch 撤销） |
+| 权限撤销  | 困难（遍历 ACL） | 不支持运行时           | 递归级联撤销          | seL4 风格 MDB 级联 O(N)（K9-1 后；全局 Epoch 为补充机制） |
 | 权限粒度  | 对象级        | 41 个粗粒度 cap      | 对象 + 权限掩码       | seL4 + POSIX 混合     |
 | 形式化验证 | 无          | 无                | 有（seL4 已验证）     | seL4（参考验证方法）        |
 
@@ -347,7 +347,7 @@ agentrt-linux 选择 **seL4 风格 + POSIX 混合** capability 模型：
 | -------------------- | ----------------------------------- | -------------------------------- |
 | `struct airy_cnode`  | Capability Node（单个 cap 槽位）          | `security/airy/airy_cap.h`       |
 | `struct airy_cspace` | Agent 的 Capability Space            | `security/airy/airy_cap.h`       |
-| `agent_caps[1024]`   | 内核静态数组（128KB，per-Agent 索引）          | `security/airy/airy_cap_array.c` |
+| `agent_caps[1024]`   | 编译期静态数组（`__airymax_cap_table`，字段 80B、sizeof 128B（AIRY_ALIGNED(64)），1024×128B=128KB，per-Agent 索引，sec_d 唯一写者） | `kernel/ipc/airy_ipc_capability.c` |
 | Badge 64-bit         | Epoch<<48 \| RandomTag<<16 \| Perms | `ipc.h` offset 40-47             |
 
 ### 5.3 7 种 CNode 操作原语

@@ -96,12 +96,12 @@ AIRY_API int airy_sys_rovol_ctl(__u32 op,
 | 0x02 | `AIRY_ROVOL_RESTORE` | 从快照恢复记忆 | `snapshot_id`（低 64 位） | v1.0.1 |
 | 0x03 | `AIRY_ROVOL_MIGRATE` | 跨节点记忆迁移 | `airy_migrate_args_t *`（target_node + policy） | v1.0.1 |
 | 0x04 | `AIRY_ROVOL_TIER_SET` | 设置 CXL 内存分层策略 | `airy_cxl_tier_args_t *`（layer + policy） | v1.0.1 |
-| 0x05 | `AIRY_ROVOL_TIER_GET` | 获取 CXL 内存分层策略 | `airy_cxl_tier_policy_t *policy_out` | v1.0.1 |
-| 0x06 | `AIRY_ROVOL_MGLRU_CONFIG` | 配置 MGLRU 多代 LRU | `airy_mglru_config_t *config` | v1.0.1 |
-| 0x07 | `AIRY_ROVOL_LIST` | 列出进程的所有快照 | `airy_rovol_list_args_t *`（infos_out + in_out_count） | v1.0.1 |
-| 0x08 | `AIRY_ROVOL_DELETE` | 删除指定快照 | `snapshot_id`（低 64 位，flags 编码至高 64 位之外） | v1.0.1 |
-| 0x09 | `AIRY_ROVOL_DEMOTE` | L1→L2→L3→L4 层级降级 | `airy_rovol_tier_op_t *op` | v1.0.1 |
-| 0x0A | `AIRY_ROVOL_PROMOTE` | L4→L3→L2→L1 层级晋升 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+| 0x05 | `AIRY_ROVOL_MGLRU_CONFIG` | 配置 MGLRU 多代 LRU | `airy_mglru_config_t *config` | v1.0.1 |
+| 0x06 | `AIRY_ROVOL_LIST` | 列出进程的所有快照 | `airy_rovol_list_args_t *`（infos_out + in_out_count） | v1.0.1 |
+| 0x07 | `AIRY_ROVOL_DELETE` | 删除指定快照 | `snapshot_id`（低 64 位，flags 编码至高 64 位之外） | v1.0.1 |
+| 0x08 | `AIRY_ROVOL_DEMOTE` | L1→L2→L3→L4 层级降级 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+| 0x09 | `AIRY_ROVOL_PROMOTE` | L4→L3→L2→L1 层级晋升 | `airy_rovol_tier_op_t *op` | v1.0.1 |
+| 0x0A | `AIRY_ROVOL_TIER_GET` | 获取 CXL 内存分层策略 | `airy_cxl_tier_policy_t *policy_out` | v1.0.1 |
 
 > **op 码编号权威源**：op 码数值（0x01-0x0A）以 [07-syscall-registry.md §4.3/§6.2](07-syscall-registry.md) 为唯一权威。注意 [SC] `memory_types.h` 当前**尚未落地** `AIRY_ROVOL_OP_*` 枚举（10 op 待 [SC] 补齐，见 docs-closed 执行视图 P1-2 计划），落地时须保持"注册表 ↔ UAPI 头文件 ↔ 内核实现"三方一致。
 
@@ -316,7 +316,7 @@ typedef struct __attribute__((aligned(8))) airy_rovol_snapshot_info {
     uint64_t l4_size;           /* L4 模式层大小 */
     uint64_t total_size;        /* 快照总大小 */
 
-    /* 时间戳（纳秒，CLOCK_REALTIME） */
+    /* 时间戳（纳秒，CLOCK_MONOTONIC） */
     uint64_t created_ns;        /* 快照创建时间 */
     uint64_t last_accessed_ns;  /* 最后访问时间 */
 
@@ -497,7 +497,7 @@ stateDiagram-v2
 |--------|------|---------|
 | 0 | 成功 | 快照已创建，`info->snapshot_id` 有效 |
 | `-AIRY_EINVAL` | 参数无效 | `agent_id` 不存在、`arg` 为 0、`layer_mask` 为 0 |
-| `-AIRY_EPERM` | 权限不足 | 缺少 `AIRY_CAP_ROVOL_SNAPSHOT` capability |
+| `-AIRY_EPERM` | 权限不足 | 缺少 `AIRY_CAP_ROVOL_SNAPSHOT` capability（规划符号，待 [SC] `security_types.h` 注册，当前 44 cap ID 不含此项） |
 | `-AIRY_ELIFECYCLE_STATE` | 状态冲突 | Agent 不在 RUNNING/STOPPED 状态（error.h A-ULS 子空间 127） |
 | `-AIRY_ENOMEM` | 内存不足 | PMEM/CXL 池耗尽 |
 | `-AIRY_EBUSY` | 资源繁忙 | Agent 正在迁移，无法快照 |
@@ -996,9 +996,9 @@ MemoryRovol API 复用 [SC] error.h（`include/uapi/linux/airymax/error.h`）的
 | `AIRY_EMEM_PMEM` | 143 | PMEM 操作失败 | PMEM 持久化失败 | 是（限制次数） |
 | `AIRY_EMEM_CXL` | 144 | CXL 操作失败 | 目标节点不可达、CXL 池故障 | 是（限制次数） |
 | `AIRY_EMEM_OOM` | 148 | 内存耗尽（Agent 作用域） | PMEM/CXL 池耗尽（agent 作用域） | 是（等待后） |
-| `AIRY_ECORRUPTED` | 待 [SC] 注册 | 快照损坏 | SHA-256 校验失败（error.h 暂无对应码） | 否 |
+| `AIRY_EIO` | 6 | 快照损坏 | SHA-256 校验失败（映射 error.h POSIX 段 I/O 错误语义） | 否 |
 
-> **废弃码说明**：0.1.1 文档中的 `AIRY_ENOSYS`/`AIRY_EMSGSIZE`/`AIRY_ETIMEDOUT`/`AIRY_ECONFLICT`/`AIRY_ETIER`/`AIRY_EMIGRATE` 及负值编号（-1 ~ -17）均不符合 [SC] error.h 正数幅值体系，已按上表替换（`AIRY_ETIER`→`AIRY_EMEM_TIER`、`AIRY_EMIGRATE`→`AIRY_EMEM_CXL`、`AIRY_ETIMEDOUT`→`AIRY_ECANCELED`、`AIRY_EMSGSIZE`→`AIRY_EINVAL`）；`AIRY_ECORRUPTED` 语义无对应码，标注待 [SC] 注册（MemoryRoVol 子空间 141-160 尚有剩余）。
+> **废弃码说明**：0.1.1 文档中的 `AIRY_ENOSYS`/`AIRY_EMSGSIZE`/`AIRY_ETIMEDOUT`/`AIRY_ECONFLICT`/`AIRY_ETIER`/`AIRY_EMIGRATE` 及负值编号（-1 ~ -17）均不符合 [SC] error.h 正数幅值体系，已按上表替换（`AIRY_ETIER`→`AIRY_EMEM_TIER`、`AIRY_EMIGRATE`→`AIRY_EMEM_CXL`、`AIRY_ETIMEDOUT`→`AIRY_ECANCELED`、`AIRY_EMSGSIZE`→`AIRY_EINVAL`）；`AIRY_ECORRUPTED`→`AIRY_EIO`（数据完整性失败语义，error.h POSIX 段 I/O 错误）。
 
 ### 10.2 错误码字符串化
 
@@ -1018,8 +1018,8 @@ AIRY_API const char *airy_strerror(int err);
 所有 MemoryRovol API 实现必须遵循：
 
 1. **错误码原样传递**：内核子系统的错误码必须原样传递到用户态，不得吞没或转换
-2. **错误日志记录**：每个错误返回前必须调用 `log_write(LOG_ERROR, ...)` 记录上下文
-3. **审计日志**：`-AIRY_EPERM`（权限不足）和 `-AIRY_ECORRUPTED`（损坏，待 [SC] 注册）必须记录审计日志
+2. **错误日志记录**：每个错误返回前必须调用 `log_write(AIRY_LOG_ERROR, ...)` 记录上下文
+3. **审计日志**：`-AIRY_EPERM`（权限不足）和 `-AIRY_EIO`（损坏，数据完整性失败）必须记录审计日志
 4. **状态回滚**：错误发生时，快照/Agent 状态必须回滚到操作前状态（借鉴 seL4 Point of No Return 模式——仅在不可回滚点之后失败才进入 CORRUPTED）
 
 ---
@@ -1773,7 +1773,7 @@ L4 模式层在 PMEM tier 持久化时启用 TEE 加密；L1 原始卷按 `AIRY_
 以下操作必须记录审计日志：
 
 - `snapshot` 失败（`-AIRY_EPERM`）——可能的未授权访问
-- `restore` 失败（`-AIRY_ECORRUPTED`，待 [SC] 注册）——可能的数据篡改
+- `restore` 失败（`-AIRY_EIO`）——可能的数据篡改
 - `migrate` 失败（`-AIRY_EMEM_CXL`）——可能的网络/CXL 故障
 - `delete` 成功——记忆销毁审计
 

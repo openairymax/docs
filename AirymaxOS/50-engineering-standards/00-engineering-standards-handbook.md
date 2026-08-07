@@ -178,7 +178,7 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 
 ### 4.2 [SC] 共享契约层头文件清单
 
-> 基础 4 个头文件先确立；`sched.h` 和 `ipc.h` 于后续调度子系统与 IPC 子系统修订时新增，现共 10 个 [SC] 头文件。
+> 基础 4 个头文件先确立；`sched.h` 和 `ipc.h` 于后续调度子系统与 IPC 子系统修订时新增，现共 12 个 [SC] 头文件（10 核心 + 2 补充：`syscall.h`、`bpf_struct_ops.h`）。
 
 | 头文件 | 共享内容 | IRON-9 v3 层次 |
 |--------|---------|---------------|
@@ -192,6 +192,7 @@ agentrt-linux 与 agentrt 之间的代码共享与语义同源遵循 IRON-9 v3 �
 | `include/uapi/linux/airymax/log_types.h` | A-ULP 日志级别 + 128B 日志记录结构 + 设施码 + Ring Buffer 布局 | [SC] |
 | `include/uapi/linux/airymax/uapi_compat.h` | 三路类型桥接（Linux `__u32` / 第三方 `uint32_t` / C11 标准）+ 编译器无关类型定义 | [SC] |
 | `include/uapi/linux/airymax/lsm_types.h` | 纯 C LSM 类型：capability slot 结构 + per-agent epoch + badge 字段布局 + airy_task_sec blob + 7 派生操作枚举 | [SC] |
+| `include/uapi/linux/airymax/bpf_struct_ops.h` | struct_ops 状态机枚举（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value 布局（sched_tac 用户态调度器经 BTF 只读消费） | [SC]（补充共享文件） |
 
 ### 4.3 代码共享边界
 

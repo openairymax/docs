@@ -285,7 +285,7 @@ static inline int airy_log_write(struct airy_log_ring *ring,
     /* 1. reserve 128B slot（~10ns） */
     rec = airy_log_reserve(ring);
     if (unlikely(!rec))
-        return -AIRY_EIPC_RING_FULL;
+        return -AIRY_ELOG_FULL;
 
     /* 2. 填充字段 + memcpy 128B raw binary（~20ns 裸 memcpy） */
     rec->magic       = AIRY_LOG_MAGIC;

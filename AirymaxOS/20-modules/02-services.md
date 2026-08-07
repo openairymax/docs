@@ -82,7 +82,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ### 2.2 同源传承要点
 
-- 保留 agentrt 的 12 daemons 语义（macro\_superv/logger\_daemon/config\_daemon/gateway\_d/sched\_d/vfs\_d/net\_d/mem\_d/cogn\_d/sec\_d/audit\_d/dev\_d 等）\[SS]。
+- 保留 agentrt 的 12 daemons 语义（agentrt-linux 统一 `_d` 命名：sec_d/cogn_d/mem_d/gateway_d/logger_d/macro_d/audit_d/sched_d/dev_d/net_d/vfs_d/config_d；agentrt 旧称 macro_superv/logger_daemon/config_daemon 对应 macro_d/logger_d/config_d，见 90-terminology.md 旧称映射）\[SS]。
 - 保留 agentrt 的"消息传递"通信范式（升级为 io\_uring 零拷贝实现）\[SS]。
 - 保留 agentrt 的 capability 令牌传递语义（升级为内核态强制）\[SS]。
 - IPC 消息头与操作码 \[SC] 共享，确保两端通信协议一致。

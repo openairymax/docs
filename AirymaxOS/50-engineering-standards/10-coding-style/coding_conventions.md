@@ -3553,7 +3553,7 @@ int audit_query(
 | 返回值 | 含义 | 示例错误码 |
 |--------|------|-----------|
 | `0` | 成功 | - |
-| 负值 | 错误码（定义于 `error.h`） | `AIRY_EINVAL`（参数无效）、`AIRY_ENOMEM`（内存不足）、`AIRY_EDECRYPT`（解密失败）、`AIRY_EKEYREVOKED`（密钥已吊销） |
+| 负值 | 错误码（定义于 `error.h`） | `AIRY_EINVAL`（参数无效）、`AIRY_ENOMEM`（内存不足）、`AIRY_EIO`（数据完整性失败，如解密错误）、`AIRY_ECAP_REVOKED`（能力已吊销） |
 
 **规则**：
 - 调用方必须检查返回值，不得忽略错误
@@ -3610,7 +3610,7 @@ int crypto_encrypt_symmetric(
 /**
  * @brief 对称解密
  *
- * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AIRY_EINVAL、AIRY_EDECRYPT）
+ * @return 0 表示成功；负值表示错误码（定义于 error.h，如 AIRY_EINVAL、AIRY_EIO）
  */
 int crypto_decrypt_symmetric(
     const uint8_t* ciphertext,

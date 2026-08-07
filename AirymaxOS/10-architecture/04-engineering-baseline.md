@@ -605,7 +605,7 @@ agentrt-linux 全面参考 openEuler 24.03 LTS / 26.03 的 Euler API 用户态�
 | `ipc.h`             | magic 0x41524531 'ARE1' + 128B 消息头                             | kernel-doc + errno           | kernel / services  |
 | `sched.h`           | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF + AIRY\_CAP\_MAX\_AGENTS=1024 | kernel-doc + snake\_case     | kernel / cognition |
 | `memory_types.h`    | MemoryRovol L1-L4 + GFP 掩码                                     | kernel-doc + 80 列            | kernel / memory    |
-| `security_types.h`  | 44 cap + 250 LSM + Cupolas blob                                | kernel-doc + minimal typedef | kernel / security  |
+| `security_types.h`  | 44 cap（41 POSIX + 3 扩展）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，lsm_types.h）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 + `typedef __u64 cap_t`                                | kernel-doc + minimal typedef | kernel / security  |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式                                           | kernel-doc + snake\_case     | kernel / cognition |
 | `syscalls.h`        | 4 核心 syscall 编号（548-551）+ 20 预留槽位（552-571，v1.0.1）          | kernel-doc + K\&R            | kernel / cognition |
 | `syscall.h`         | syscall 语义声明（与 syscalls.h 编号表配套的 ABI 契约）                   | kernel-doc + K\&R            | kernel / 全部      |

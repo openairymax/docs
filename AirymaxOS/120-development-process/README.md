@@ -54,7 +54,7 @@ agentrt-linux v1.0 开发流程在内核调度、IPC 传输、安全钩子、内
 | 2 | **IPC 零拷贝** | **IORING_OP_URING_CMD**：通过 io_uring 命令操作码实现内核↔用户态零拷贝传输 | **不使用 page flipping**（不交换物理页、不破坏内存布局稳定性） | CI 强制校验 `CONFIG_IO_URING=y`；引入 page flipping 代码路径的 PR 被 CI 阻断 |
 | 3 | **安全钩子** | **纯 C LSM**：以纯 C 实现的 `airy_lsm` 通过 `security_hook_list` 注册 | **不使用 BPF LSM**（不依赖 BPF LSM 框架、不通过 eBPF 程序挂载安全钩子） | CI 强制校验 `# CONFIG_BPF_LSM is not set` 与 `CONFIG_SECURITY_AIRY_LSM=y`；引入 BPF LSM 钩子的 PR 被 CI 阻断 |
 | 4 | **内存分配** | **alloc_pages + mmap**：通过 `alloc_pages` 分配物理页后 `vm_map_pages` / `remap_pfn_range` 映射 | **不使用 DMA 一致性内存**（不调用 `dma_alloc_coherent`、不依赖硬件一致性缓存） | CI 强制扫描共享内存路径未调用 `dma_alloc_coherent`；引入 DMA 一致性内存的 PR 被 CI 阻断 |
-| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | `sc-dual-ci.yml` 双端逐字节校验 10 个 [SC] 头文件；`ssot-validate.yml` 校验四层归属一致性；[SC] 变更必须双向评审 |
+| 5 | **同源代码共享** | **IRON-9 v3 四层模型**：[SC] 共享契约层 + [SS] 语义同源层 + [IND] 独立实现层 + [DSL] 降级生存层 | （v2 三层模型升级为 v3 四层模型，新增 [DSL] 降级生存层） | `sc-dual-ci.yml` 双端逐字节校验 12 个 [SC] 头文件；`ssot-validate.yml` 校验四层归属一致性；[SC] 变更必须双向评审 |
 
 ### 2.1 SSoT v2 单一权威源模型
 

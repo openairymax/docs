@@ -12,7 +12,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 `160-compatibility/` 是 AirymaxOS 文档体系中**系统长期演进的工程保障**。它继承 Linux 内核 30+ 年沉淀的兼容性哲学（用户空间 ABI 永不破坏 + 内核内部 API 不保证稳定 + KABI 内核符号兼容性），并在其上扩展智能体操作系统专属的 AgentsIPC 协议兼容性、SDK 跨版本兼容性、Agent 应用迁移兼容性等。
 
-兼容性是操作系统的生命线。AirymaxOS 作为智能体操作系统发行版，必须承诺：在 0.1.1 上编写的 Agent 应用，到 1.0.1、3.0 LTS、5.0 LTS 上仍能正常运行；在 1.0.1 上开发的 Agent 应用，能通过兼容层在 0.1.1 上降级运行。这种双向兼容承诺是 IRON-9 v3 四层模型（[SC]/[SS]/[IND]/[DSL]）的延伸——agentrt 应用级接口与 AirymaxOS OS 级接口同源且部分代码共享演进。
+兼容性是操作系统的生命线。AirymaxOS 作为智能体操作系统发行版，必须承诺：在 0.1.1 上编写的 Agent 应用，到 1.0.1、3.0 LTS、5.0 LTS 上仍能正常运行；在 1.0.1 上开发的 Agent 应用，能通过 [DSL] 降级路径在 0.1.1 上降级运行。这种双向兼容承诺是 IRON-9 v3 四层模型（[SC]/[SS]/[IND]/[DSL]）的延伸——agentrt 应用级接口与 AirymaxOS OS 级接口同源且部分代码共享演进。
 
 本模块承担五项核心职责：
 
@@ -115,7 +115,7 @@ Airymax Unify Design 五模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）在兼容性体
 
 ### 4.1 IRON-9 v3 [SC] 共享契约 ABI 稳定性
 
-兼容性体系的核心是 IRON-9 v3 **[SC] 共享契约层**的 ABI 稳定性承诺。10 个 [SC] 头文件（`error.h`/`log_types.h`/`ipc.h`/`sched.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`syscalls.h`/`uapi_compat.h`/`lsm_types.h`）的物理宿主为 `kernel/include/uapi/linux/airymax/`，两端逐字节相同，通过 `sc-dual-ci.yml` 双端校验：
+兼容性体系的核心是 IRON-9 v3 **[SC] 共享契约层**的 ABI 稳定性承诺。12 个 [SC] 头文件（10 核心 + 2 补充 `syscall.h`/`bpf_struct_ops.h`；`error.h`/`log_types.h`/`ipc.h`/`sched.h`/`memory_types.h`/`security_types.h`/`cognition_types.h`/`syscalls.h`/`uapi_compat.h`/`lsm_types.h` + `syscall.h`/`bpf_struct_ops.h`）的物理宿主为 `kernel/include/uapi/linux/airymax/`，两端逐字节相同，通过 `sc-dual-ci.yml` 双端校验：
 
 - **错误码值永不复用**：`AIRY_E*` 一旦分配，值域永不回收（[-300, -1] 五子空间）
 - **128B 消息头布局固定**：IPC/日志 128B 记录布局一经发布永不改变

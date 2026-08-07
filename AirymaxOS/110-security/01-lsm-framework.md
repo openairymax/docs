@@ -446,7 +446,7 @@ static int __init airy_lsm_init(void) {
 }
 DEFINE_LSM(airy) = {
     .name  = "airy",
-    .order = LSM_ORDER_MUTABLE,   /* v1.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 默认值置于 capability 之后 */
+    .order = LSM_ORDER_MUTABLE,   /* v1.0.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 默认值置于 capability 之后 */
     .init  = airy_lsm_init,
     .blobs = &airy_blob_sizes,
 };
@@ -458,7 +458,7 @@ Cupolas 注册的钩子集合必须在 MicroCoreRT 锁定的"内核安全契约"
 
 ### 8.3 与 A-IPC（Capability Folding）的桥接
 
-Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.0.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 40-47，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → Cupolas blob（cred/file/inode/task）→ A-IPC 内核端 → agentrt → Audit/Workbench。
+Cupolas 在内核态除了消费 LSM 钩子，还通过 **A-IPC（Airymax Unify IPC Fabric，v1.0.1 Capability Folding 单平面架构）** 总线把"Agent 行为审计"事件推送到用户态的 Workbench 虚拟工作台。A-IPC 的 128B 消息头（Layout C v4，magic `0x41524531` 'ARE1'）由 [SC] 共享契约层锁定字段布局，含 `capability_badge`（offset 40-47，8B），保证两端无适配层互操作。事件流：LSM 钩子 → Cupolas 回调 → 安全 blob（`airy_task_sec`/`airy_inode_sec`，共 2 类）→ A-IPC 内核端 → agentrt → Audit/Workbench。
 
 ### 8.4 Capability Folding 与 LSM 钩子的职责分割（v1.0.1 新增）
 
@@ -592,16 +592,22 @@ struct airy_inode_sec {
     __u32   owner_agent;      /* 拥有者 Agent ID */
 };
 
-/* capability slot（64 字节缓存行对齐） */
+/* capability slot（80 字节，AIRY_ALIGNED(64)，含 MDB 派生树） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit Capability Folding badge */
     __u32   agent_id;         /* 拥有者 Agent ID */
     __u32   flags;            /* slot 标志 */
     __u32   randtag;          /* 伪造防护随机标签 */
     __u16   perms;            /* 权限位 */
-    __u16   _pad;             /* 对齐 */
-    __u8    _reserved[56];    /* 缓存行填充 */
-} __attribute__((aligned(64)));
+    __u16   epoch;            /* per-agent Epoch（O(1) 定向撤销） */
+    /* ── MDB 派生树（级联 REVOKE，K9-1 修复） ── */
+    __u32   parent_agent;     /* 派生来源 Agent ID（0 = 根） */
+    __u32   first_child;      /* 首个子 Agent ID（0 = 叶子） */
+    __u32   next_sibling;     /* 下一个兄弟 Agent ID（0 = 最后子节点） */
+    __u16   generation;       /* 派生深度（root=0，每 MINT/COPY +1） */
+    __u16   revocable;        /* 1 = 父 REVOKE 级联到本槽位 */
+    __u8    _reserved[40];    /* 缓存行填充（原 56，-16 给 MDB） */
+} AIRY_ALIGNED(64);
 
 #define AIRY_CAP_MAX_AGENTS     1024
 
@@ -739,7 +745,7 @@ struct airy_ipc_msg_hdr hdr = {
 
 `verdict` 字段取值严格遵循 [SC] `security_types.h` 的 `airy_verdict` 4 值枚举（`AIRY_VERDICT_ALLOW/DENY/AUDIT/COMPLAIN`），与 agentrt 用户态 Cupolas 裁决语义完全相同（OS-IRON-003）。**不存在虚构的 `airy_lsm_hook_id` 枚举**——LSM 钩子标识通过钩子名哈希在 payload 中传递，而非 250 ID 枚举。
 
-#### 11.2.4 OS-SEC 规则集（agentrt-linux 专属扩展深化，v1.1 对齐 4 值枚举）
+#### 11.2.4 OS-SEC 规则集（agentrt-linux 专属扩展深化，v1.0.1 对齐 4 值枚举）
 
 | 规则编号 | 类型 | 描述 |
 |----------|------|------|
@@ -747,8 +753,8 @@ struct airy_ipc_msg_hdr hdr = {
 | OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
 | OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
 | OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=7` 实际注册范围对应，新增子系统必须扩展映射表并明确实现状态（✅/⏳） |
-| OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
-| OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
+| OS-SEC-016 | 安全规范 | v1.0.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
+| OS-SEC-017 | 安全规范 | v1.0.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
 > **编号说明**：v1.0.1 新增规则原使用 OS-SEC-012/013，因与 02-landlock-sandbox.md 的 OS-SEC-012（3 层域叠加）/OS-SEC-013（访问掩码合并）冲突，重编号为 OS-SEC-016/017（SSoT 注册表下一可用编号）。详见 [09-ssot-registry.md §9.1](../50-engineering-standards/09-ssot-registry.md)。
 
@@ -779,8 +785,8 @@ struct airy_ipc_msg_hdr hdr = {
 | OS-SEC-009 | 安全规范 | COMPLAIN 裁决（学习模式）必须通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT |
 | OS-SEC-010 | 安全规范 | 审计事件必须包含 `agent_id` 字段，缺失 `agent_id` 的事件必须丢弃并告警 |
 | OS-SEC-011 | 安全规范 | Cupolas 7 子系统钩子映射必须与 [SC] `lsm_types.h` 的 `AIRY_LSM_HOOK_IMPLEMENTED=7` 实际注册范围对应 |
-| OS-SEC-016 | 安全规范 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
-| OS-SEC-017 | 安全规范 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
+| OS-SEC-016 | 安全规范 | v1.0.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 |
+| OS-SEC-017 | 安全规范 | v1.0.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 |
 
 ---
 
@@ -788,12 +794,12 @@ struct airy_ipc_msg_hdr hdr = {
 
 - `110-security/README.md`（安全加固体系主索引）
 - `110-security/02-landlock-sandbox.md`（Landlock 用户态沙箱）
-- `110-security/03-capability-model.md`（v1.1: capability 模型，Badge 64-bit Native Word）
+- `110-security/03-capability-model.md`（v1.0.1: capability 模型，Badge 64-bit Native Word）
 - `110-security/07-airy-lsm-design.md`（纯 C LSM 模块设计，唯一权威源）
-- `20-modules/09-kernel-agent-supervisor.md`（v1.1: Micro-Supervisor，fastpath C-S9 + slowpath LSM 接管）
-- `30-interfaces/02-ipc-protocol.md`（v1.1: A-IPC 协议，Layout C v4 128B + capability_badge offset 40）
-- `30-interfaces/07-ipc-fastpath.md`（v1.1: fastpath C-S9 Badge 校验实现，~10ns）
-- `30-interfaces/08-sc-error-contract.md`（v1.1: Error/Fault 码，-78~-82 Badge 码 + 0x1001-0x1006 Fault 码）
+- `20-modules/09-kernel-agent-supervisor.md`（v1.0.1: Micro-Supervisor，fastpath C-S9 + slowpath LSM 接管）
+- `30-interfaces/02-ipc-protocol.md`（v1.0.1: A-IPC 协议，Layout C v4 128B + capability_badge offset 40）
+- `30-interfaces/07-ipc-fastpath.md`（v1.0.1: fastpath C-S9 Badge 校验实现，~10ns）
+- `30-interfaces/08-sc-error-contract.md`（v1.0.1: Error/Fault 码，-78~-82 Badge 码 + 0x1001-0x1006 Fault 码）
 - `50-engineering-standards/04-engineering-philosophy.md`（双层稳定性哲学）
 - `20-modules/03-security.md`（security 子仓设计）
 - Linux 6.6 `security/security.c`、`include/linux/lsm_hooks.h`、`include/linux/lsm_hook_defs.h`
@@ -982,14 +988,19 @@ struct airy_inode_sec {
 };
 
 /**
- * struct airy_cap_slot - capability slot（64 字节缓存行对齐）
- * @badge:     64-bit Capability Folding badge
- * @agent_id:  拥有者 Agent ID
- * @flags:     slot 标志
- * @randtag:   伪造防护随机标签
- * @perms:     权限位
- * @_pad:      对齐
- * @_reserved: 缓存行填充
+ * struct airy_cap_slot - capability slot（80 字节，AIRY_ALIGNED(64)，含 MDB 派生树）
+ * @badge:       64-bit Capability Folding badge
+ * @agent_id:    拥有者 Agent ID
+ * @flags:       slot 标志
+ * @randtag:     伪造防护随机标签
+ * @perms:       权限位
+ * @epoch:       per-agent Epoch（O(1) 定向撤销）
+ * @parent_agent: 派生来源 Agent ID（0 = 根）
+ * @first_child:  首个子 Agent ID（0 = 叶子）
+ * @next_sibling: 下一个兄弟 Agent ID（0 = 最后子节点）
+ * @generation:   派生深度（root=0，每 MINT/COPY +1）
+ * @revocable:    1 = 父 REVOKE 级联到本槽位
+ * @_reserved:    缓存行填充（40B，原 56，-16 给 MDB）
  *
  * 对齐 [SC] lsm_types.h
  */
@@ -999,9 +1010,14 @@ struct airy_cap_slot {
     __u32   flags;
     __u32   randtag;
     __u16   perms;
-    __u16   _pad;
-    __u8    _reserved[56];
-} __attribute__((aligned(64)));
+    __u16   epoch;
+    __u32   parent_agent;
+    __u32   first_child;
+    __u32   next_sibling;
+    __u16   generation;
+    __u16   revocable;
+    __u8    _reserved[40];
+} AIRY_ALIGNED(64);
 
 #define AIRY_CAP_MAX_AGENTS     1024
 
@@ -1224,7 +1240,7 @@ struct lsm_blob_sizes airy_blob_sizes __ro_after_init = {
 
 /** airy LSM 注册（对齐 07-airy-lsm-design.md §2.1） */
 DEFINE_LSM(airy) = {
-    .order = LSM_ORDER_MUTABLE,  /* v1.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 默认值置于 capability 之后 */
+    .order = LSM_ORDER_MUTABLE,  /* v1.0.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 默认值置于 capability 之后 */
     .flags = 0,                /* 不设 EXCLUSIVE，可与其他 LSM 共存 */
     .init  = airy_lsm_init,
 };
@@ -1258,4 +1274,4 @@ DEFINE_LSM(airy) = {
 
 ---
 
-> **文档结束** | LSM 框架核心机制 | v1.1 | 2026-07-18
+> **文档结束** | LSM 框架核心机制 | v1.0.1 | 2026-07-18

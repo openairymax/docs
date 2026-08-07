@@ -788,14 +788,14 @@ security/
 ├── airy_lsm/                         # ★ 纯 C LSM 模块（DEFINE_LSM(airy)）
 │   ├── Kbuild
 │   ├── airy_lsm.c                   # LSM 注册（DEFINE_LSM(airy) + LSM_ORDER_MUTABLE）
-│   ├── airy_lsm_hooks.c             # 250 钩子实现
+│   ├── airy_lsm_hooks.c             # 7 钩子实现
 │   ├── airy_lsm_blob.c              # blob 管理（airy_cred_security 等）
 │   ├── airy_lsm_policy.c            # 策略加载
 │   └── airy_lsm.h
 │
-├── capability/                       # Capability 系统（v1.0.1: agent_caps[1024] 静态数组）
+├── capability/                       # Capability 系统（v1.0.1: agent_caps[1024] 运行时分配）
 │   ├── Kbuild
-│   ├── airy_cap_array.c             # agent_caps[1024] 静态数组管理（v1.0.1 替代 radix_tree 派生树）
+│   ├── airy_cap_array.c             # Capability 槽位查找与注册（agent_caps[] 静态数组，定义宿主 kernel/ipc/airy_ipc_capability.c）
 │   ├── airy_cap_derive.c            # seL4 CNode 派生（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）
 │   ├── airy_cap_check.c             # slowpath 校验（fastpath C-S9 Badge 内联在 kernel/kernel/superv/airy_cap_check.c）
 │   ├── airy_cap_rotate.c            # 轮换（Epoch 更新）
@@ -1324,7 +1324,7 @@ sc-dual-ci:
 | 3 | `ipc.h` | A-IPC | `0x41524531` ('ARE1') | `kernel/include/uapi/linux/airymax/ipc.h` | IPC 消息头（128B `struct airy_ipc_msg_hdr`，11 字段，D-9 修复后 `__attribute__((aligned(64)))`（移除 packed），`_Static_assert(sizeof==128)` + `_Static_assert(offsetof(capability_badge)==40)`）+ SQE/CQE 操作码与标志位 + Ring 常量（DEF=256, MAX=32768） |
 | 4 | `sched.h` | A-ULS | `0x41475453` ('AGTS') | `kernel/include/uapi/linux/airymax/sched.h` | 任务描述符（12 字段，64B：magic/prio/_pad/runtime_ns/deadline_ns/period_ns/vtime/agent_id/sched_policy/weight/state/_reserved[12]）+ `airy_vtime_decay()` inline + AIRY_CAP_MAX_AGENTS=1024 + AIRY_SLICE_DFL=20 + 优先级 0-139 + 权重 1-10000 |
 | 5 | `memory_types.h` | MemoryRovol | — | `kernel/include/uapi/linux/airymax/memory_types.h` | L1-L4 enum（HOT/WARM/COLD/PMEM）+ GFP 掩码语义（AIRY_GFP_HOT/WARM/COLD/PMEM） |
-| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ LSM 钩子 250 ID + `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `__u64`（64-bit，v1.0.1 无 cap_idx_t） |
+| 6 | `security_types.h` | 安全 | — | `kernel/include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展，CAP_AGENT_SPAWN=41 起）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，定义于 `lsm_types.h`）+ `enum airy_verdict`（ALLOW/DENY/AUDIT/COMPLAIN）+ `enum airy_cap_op`（7 操作：Copy/Mint/Move/Mutate/Revoke/Delete/Rotate）+ `cap_t` = `__u64`（64-bit，v1.0.1 无 cap_idx_t） |
 | 7 | `cognition_types.h` | A-UCS | — | `kernel/include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t`（= `__s32`，Q16.16 定点数，因 -mno-80387 禁 FPU）+ `enum airy_cog_phase`（PERCEPT/THINK/ACT）+ `enum airy_think_mode`（FAST/SLOW） |
 | 8 | `syscalls.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscalls.h` | v1.0.1: 4 核心系统调用（AIRY_SYS_CALL=548 ... AIRY_SYS_CLT_NOTIFY=551）+ 20 预留（552-571）= 24 槽位 |
 | 9 | `syscall.h` | 系统调用 | — | `kernel/include/uapi/linux/airymax/syscall.h` | `airy_sys_*` syscall 语义/ABI 声明（与 syscalls.h 编号表配套） |
@@ -1405,7 +1405,7 @@ sc-dual-ci:
 **agentrt-linux [IND]（与 agentrt 完全不共享）**：
 - `kernel/`（除 include/uapi/linux/airymax/ 外）：内核驱动、Kbuild、内核 API、systemd、纯 C LSM（airy_lsm）、eBPF 可观测性探针（非核心，H5）、IORING_OP_URING_CMD、alloc_pages+mmap
 - `security/airy_lsm/`：DEFINE_LSM(airy) 纯 C LSM
-- `security/capability/`：v1.1 `agent_caps[1024]` 静态数组 + Badge 64-bit Native Word（替代 v1.0 radix_tree 派生模型）
+- `security/airy/`：v1.0.1 `agent_caps[1024]` 静态数组（`__airymax_cap_table`，定义宿主 kernel/ipc/airy_ipc_capability.c，sec_d 唯一写者）+ Badge 64-bit Native Word（替代 v1.0 radix_tree 派生模型）
 - `memory/memoryrovol/`：L1-L4 内核模块
 - `cognition/coreloopthree/`：kthread 实现
 - `cognition/kthread/`：kfifo + wait_event_interruptible
@@ -1662,7 +1662,7 @@ graph TD
 
 | 路径 | 定位 | 内容 | 共享范围 |
 |------|------|------|---------|
-| `include/uapi/linux/airymax/` | [SC] 共享契约层 | 10 个 UAPI 头文件 | agentrt + agentrt-linux 双端共享 |
+| `include/uapi/linux/airymax/` | [SC] 共享契约层 | 12 个 UAPI 头文件 | agentrt + agentrt-linux 双端共享 |
 | `include/airymax/` | 内核内部类型 | build_types.h / kconfig_types.h | 仅 agentrt-linux 内核使用 |
 
 `include/airymax/` 中的文件不属于 [SC] 共享契约层，不参与 IRON-9 v3 的 CI 逐字节校验。
@@ -1711,12 +1711,18 @@ graph TD
 /* kernel/security/airy/airy_lsm.c */
 DEFINE_LSM(airy) = {
     .name = "airy",
-    .order = LSM_ORDER_MUTABLE,   /* v1.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 列表置于 capability 之后 */
+    .order = LSM_ORDER_MUTABLE,   /* v1.0.1: 不使用 LSM_ORDER_FIRST（OLK 6.6 仅用于 capabilities），通过 CONFIG_LSM 列表置于 capability 之后 */
 };
 
 static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
     LSM_HOOK_INIT(uring_cmd, airy_uring_cmd_check),
-    /* ... 250 钩子 ... */
+    LSM_HOOK_INIT(task_alloc, airy_task_alloc),
+    LSM_HOOK_INIT(task_free, airy_task_free),
+    LSM_HOOK_INIT(task_kill, airy_task_kill),
+    LSM_HOOK_INIT(file_open, airy_file_open),
+    LSM_HOOK_INIT(inode_alloc_security, airy_inode_alloc),
+    LSM_HOOK_INIT(inode_free_security, airy_inode_free),
+    /* ... 共 7 钩子（AIRY_LSM_HOOK_IMPLEMENTED=7，250 为框架总槽位 AIRY_LSM_KERNEL_HOOK_TOTAL）... */
 };
 ```
 
@@ -1838,7 +1844,7 @@ agentrt/          agentrt-linux/
 | 约束 # | 约束内容 | 本文档落地章节 | 符合性 |
 |--------|---------|--------------|--------|
 | 1 | IRON-9 v3 四层模型 | §6 | ✅ |
-| 2 | 10 [SC] 核心头文件 | §5 | ✅ |
+| 2 | 12 [SC] 核心头文件 | §5 | ✅ |
 | 3 | ALK 6.6（Model A 完整 fork） | §9 | ✅ |
 | 4 | 8 子仓结构 | §2、§4 | ✅ |
 | 5 | [SC] 头文件单一物理宿主 kernel/include/uapi/linux/airymax/ | §5 | ✅ |

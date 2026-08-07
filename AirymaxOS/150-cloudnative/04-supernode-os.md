@@ -204,7 +204,7 @@ static void numa_migrate_preferred(struct task_struct *p)
 
 ```c
 /* sched_tac 用户态调度策略：airy_agent（SCHED_DEADLINE/SCHED_FIFO 策略名，非宏）
- * 实现：sched_d daemon 通过 airy_sys_sched_ctl（编号 2）注入 NUMA 亲和性参数
+ * 实现：sched_d daemon 通过 airy_sys_sched_ctl（编号 550）注入 NUMA 亲和性参数
  * 注意：不使用 sched_ext / BPF struct_ops，对齐 H5 纯 C LSM 与 sched_tac 选型 */
 struct airy_agent_sched_params {
     u32 agent_id;
@@ -650,10 +650,10 @@ if (ret == -AIRY_EBUSY) {
     usleep(10000);
     ret = airy_sys_rovol_ctl(AIRY_ROVOL_MIGRATE, agent_id, dst_die, AIRY_ROVOL_MIGRATE_HOT);
 } else if (ret == -AIRY_KERN_ENODIE) {
-    log_write(LOG_ERROR, "目标 die %u 不存在", dst_die);
+    log_write(AIRY_LOG_ERROR, "目标 die %u 不存在", dst_die);
     return ret;
 } else if (ret == -AIRY_EPERM) {
-    log_write(LOG_ERROR, "缺少 CAP_SUPERNODE_MIGRATE 权限");
+    log_write(AIRY_LOG_ERROR, "缺少 CAP_SUPERNODE_MIGRATE 权限");
     return ret;
 }
 ```

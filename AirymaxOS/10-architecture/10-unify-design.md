@@ -227,7 +227,7 @@ A-ULP 采用 128 字节固定长度日志记录，对齐 cache line，确保单�
 | 字段 | 偏移 | 长度 | 说明 |
 |------|------|------|------|
 | `magic` | 0 | 4B | `AIRY_LOG_MAGIC = 0x414C4F47`（'ALOG'） |
-| `level` | 4 | 2B | 日志级别（LOG_DEBUG ~ LOG_FATAL） |
+| `level` | 4 | 2B | 日志级别（AIRY_LOG_DEBUG ~ AIRY_LOG_FATAL） |
 | `facility` | 6 | 2B | 设施编号（内核模块/daemon 编号） |
 | `timestamp_ns` | 8 | 8B | 纳秒时间戳（CLOCK_MONOTONIC） |
 | `caller_id` | 16 | 4B | 调用者 ID（pid / kmod id） |
@@ -383,7 +383,7 @@ A-IPC 的物理载体是 [SC] `ipc.h` Layout C v4 128B 定长消息头（2 cache
 | 4 | opcode | 2B | 7 opcode（SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE） | C-S2 |
 | 6 | flags | 2B | ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL | C-S10 |
 | 8 | trace_id | 8B | OpenTelemetry trace ID | 透传 |
-| 16 | timestamp_ns | 8B | CLOCK_REALTIME 纳秒 | 透传 |
+| 16 | timestamp_ns | 8B | CLOCK_MONOTONIC 纳秒 | 透传 |
 | 24 | src_task | 8B | 源 task_id，与 Badge 编译时绑定 | C-S9 |
 | 32 | dst_task | 8B | 目标 task_id，决定 kfifo 路由 | C-S5/C-S6 |
 | 48 | payload_len | 4B | 负载长度 | C-S3/C-S4 |
@@ -485,7 +485,7 @@ if (unlikely(!airy_cap_has_perm(badge_perms, hdr->opcode)))
 Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构级隔离），通过三个独立的内存区域实现：
 
 ```
-1. agent_caps[1024]   能力数据（内核静态数组，128KB）
+1. agent_caps[1024]   能力数据（字段 80B、sizeof 128B（AIRY_ALIGNED(64) 对齐），1024×128B=128KB，编译期静态数组 __airymax_cap_table，sec_d 唯一写者）
    ├─ 唯一写者: sec_d（通过 airy_sys_call + COMPILE_BADGE）
    ├─ 读者: fastpath C-S9（READ_ONCE 无锁）
    └─ 失败域: 独立于 IPC 数据投递
@@ -516,7 +516,7 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 | 层次 | A-IPC 落地内容 |
 |------|---------------|
 | **[SC] 共享契约层** | `ipc.h`：`struct airy_ipc_msg_hdr` Layout C v4 128B 消息头 + 7 opcode + 6 flags + Badge 位布局宏 + Capability 权限位 + `_Static_assert(sizeof == 128)` |
-| **[SS] 语义同源层** | `airy_cap_badge_ok()` 内联函数 + `agent_caps[1024]` 静态数组 + `airy_cap_global_epoch` atomic_t + Random Tag 生成 + C-S9 校验逻辑 + sec_d Badge 编译流程 |
+| **[SS] 语义同源层** | `airy_cap_badge_ok()` 内联函数 + `agent_caps[1024]` 静态数组（`__airymax_cap_table`，sec_d 唯一写者）+ `airy_cap_global_epoch` atomic_t + Random Tag 生成 + C-S9 校验逻辑 + sec_d Badge 编译流程 |
 | **[IND] 完全独立层** | agentrt 用户态 `capability_badge=0`（H3）↔ agentrt-linux 内核 `capability_badge` 由 sec_d 编译（H4） |
 | **[DSL] 降级生存层** | [DSL] 模式下 `capability_badge=0`，fastpath C-S9 跳过 Badge 校验（H6）；IPC 数据面 fastpath 仍可用，控制面 `airy_sys_call` 降级为传统 cap_t 引用模式 |
 
@@ -526,7 +526,7 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 |------|---------------|-----------------------------------|
 | syscall 数量 | 12（8 seL4 IPC 原语 + 4 控制原语） | 4（1 Capability Invocation + 3 控制原语） |
 | 能力校验路径 | 双路径（控制面 decode_and_invoke + 数据面 cap_check_fast） | 单路径（数据面 fastpath C-S9 内联） |
-| 能力数据结构 | radix tree + per-CPU cache + IPI coherency（~300 行） | `agent_caps[1024]` 静态数组 + 1 个 atomic_t（~50 行） |
+| 能力数据结构 | radix tree + per-CPU cache + IPI coherency（~300 行） | `agent_caps[1024]`（启动期 alloc_pages_node + \_\_GFP\_ZERO 运行时分配）+ 1 个 atomic_t（~50 行） |
 | 撤销机制 | 5ms drain + bitmap + IPI | 1 行 `airy_cap_epoch_bump(agent_id)`（K9-1 per-agent 主要机制）；UNFREEZE 全局撤销用 `airy_cap_epoch_bump_all()` |
 | 自举机制 | NULL Badge 硬编码特例 | `AIRY_IPC_OP_CAP_REQUEST` opcode（无硬编码） |
 | 完整性校验 | 无 | CRC32 覆盖 `header[0:52) + payload` |
@@ -550,12 +550,12 @@ Capability Folding 的隔离基础是**数据结构级隔离**（非 seL4 架构
 ```c
 /* kernel/include/uapi/linux/airymax/error.h 底部 */
 #ifdef AIRY_SC_FALLBACK
-/* 降级块：仅保留 38 个 POSIX 码 */
-#define AIRY_EPERM      (-1)
-#define AIRY_ENOENT     (-2)
-/* ... 共 38 个 POSIX errno 负值 */
-#define AIRY_ECFGVERSION (-101)   /* [DSL] 唯一保留的非 POSIX 码 */
-#warning "AIRY_SC_FALLBACK active: only 38 POSIX codes available"
+/* 降级块：38 个 POSIX 码以 AIRY_DSL_* 别名映射到 5 核心码（正数幅值，返回 -AIRY_*） */
+#define AIRY_DSL_EPERM   AIRY_EPERM     /* 12 */
+#define AIRY_DSL_ENOENT  AIRY_ENOENT    /* 8  */
+/* ... 共 38 个 POSIX 映射 */
+#define AIRY_ECFGVERSION 101   /* [DSL] 唯一保留的非 POSIX 码（正数幅值） */
+#warning "AIRY_SC_FALLBACK active: only 5 core POSIX codes available"
 #endif /* AIRY_SC_FALLBACK */
 ```
 
@@ -628,7 +628,7 @@ v1.0.1 Capability Folding 决策为 [SC] `ipc.h` 新增 [DSL] 降级块。当 `A
 - [30-interfaces/01-syscalls.md](../30-interfaces/01-syscalls.md) —— 系统调用接口（v1.0.1 Capability Folding 集成版，syscall 12→4 SSoT）
 - [30-interfaces/02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) —— IPC 协议（Layout C v4 + Capability Folding Badge 模型 SSoT）
 - [30-interfaces/07-ipc-fastpath.md](../30-interfaces/07-ipc-fastpath.md) —— IPC Fastpath 状态机（C-S9 Badge 校验 + 7 态状态机 SSoT）
-- [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— A-UEF [SC] error.h 契约（6 码空间 SSoT）
+- [30-interfaces/08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) —— A-UEF [SC] error.h 契约（10 子空间 + Fault 码空间 SSoT）
 - [30-interfaces/09-sc-log-types-contract.md](../30-interfaces/09-sc-log-types-contract.md) —— A-ULP [SC] log_types.h 契约
 - [40-dataflows/05-ring-buffer-logging.md](../40-dataflows/05-ring-buffer-logging.md) —— A-ULP 零拷贝 Ring Buffer 数据流
 - [50-engineering-standards/120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) —— [SC] 共享契约层物理宿主（§2.7 ipc.h + §2.8 syscalls.h）

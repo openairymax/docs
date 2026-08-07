@@ -194,7 +194,7 @@ flowchart TD
 | 4 | 双端逐字节一致 | `sc-dual-ci.yml` | diff 零字节差异 |
 | 5 | 注释完整性 | 人工 | 每个结构体/字段/枚举有文档注释 |
 | 6 | 类型桥接规则 | `check-sc-bridge.sh` | 符合 [SC] 类型桥接规则 |
-| 7 | [SC] 数量守恒 | `ssot-validate.yml` | 保持 10 个 [SC] 头文件 |
+| 7 | [SC] 数量守恒 | `ssot-validate.yml` | 保持 12 个 [SC] 头文件 |
 
 ---
 

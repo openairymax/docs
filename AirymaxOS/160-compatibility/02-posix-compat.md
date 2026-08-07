@@ -366,7 +366,7 @@ client = CognitionClient()
 result = client.process("hello")
 
 # SDK 内部：
-#   - agentrt-linux: syscall(AIRY_SYS_COGNITION_PROCESS)
+#   - agentrt-linux: syscall(AIRY_SYS_CALL)  # 认知处理经 AIRY_SYS_CALL op 子命令承载
 #   - 主流 Linux: 用户态消息队列调用 cogn_d
 #   - 无 daemon: 本地推理（功能受限）
 ```

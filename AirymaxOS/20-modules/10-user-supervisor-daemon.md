@@ -386,7 +386,7 @@ sec_d 崩溃期间，系统按以下降级模式运行：
 | 功能 | 状态 | 说明 |
 |-----|------|------|
 | 已建立 IPC 通信 | ✅ 正常 | fastpath C-S9 基于 agent_caps[] 校验，不依赖 sec_d |
-| 新 Agent 启动 | ❌ 阻塞 | CAP_REQUEST 无 sec_d 响应，返回 `AIRY_EDSL_CAP_MINIMAL`(-206) |
+| 新 Agent 启动 | ❌ 阻塞 | CAP_REQUEST 无 sec_d 响应，返回 `AIRY_EINVAL`(-5)（[DSL] 5 核心码；原规划码 `AIRY_EDSL_CAP_MINIMAL`(-206) 未注册于 [SC] error.h） |
 | Badge 撤销 | ⚠️ 延迟 | `atomic_inc` 仍可执行（内核操作），但审计日志缺失 |
 | 新 Ring 创建 | ❌ 阻塞 | 需 sec_d 授权 |
 | [DSL] 降级模式 | ⏳ 10 秒后触发 | 内核检测 sec_d OFFLINE 后自动进入 [DSL] |
@@ -1271,7 +1271,7 @@ static int macro_d_adjudicate(struct airy_fault_event *ev)
     }
 
     /* 4. 记录裁决日志（A-ULP Ring Buffer） */
-    airy_log_write(LOG_WARNING, AIRY_FAC_SUPERV, &action, sizeof(action));
+    airy_log_write(AIRY_LOG_WARN, AIRY_FAC_SUPERV, &action, sizeof(action));
 
     return 0;
 }

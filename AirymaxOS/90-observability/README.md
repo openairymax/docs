@@ -15,7 +15,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 agentrt-linux 可观测性体系是系统运行状态可见性的核心保障。它继承 Linux 内核 30+ 年沉淀的多层可观测性哲学（ftrace + eBPF + perf + 4 层文件系统接口），并在其上扩展智能体操作系统专属的 A-ULP 日志观测、调度器状态观测、Token 能效可观测性、Agent 行为追踪、记忆卷载监控等。本目录覆盖四方面职责：
 
 1. **eBPF 探针**：通过 kfunc + BTF + dynamic pointer 提供可编程的内核扩展能力，追踪 Agent 决策路径（认知→规划→调度→执行）。**注意：eBPF 仅用于可观测性探针，不用于安全钩子**（安全钩子由纯 C LSM 承载）。
-2. **tracepoint**：通过 `DECLARE_TRACE` / `trace_*()` 宏暴露内核静态追踪点，覆盖sched_tac 调度类切换、IPC fastpath 入口、Ring Buffer 写入等关键路径。
+2. **tracepoint**：通过 `DECLARE_TRACE` / `trace_*()` 宏暴露内核静态追踪点，覆盖sched_tac 调度类切换、IPC fastpath 入口、Ring Buffer 写入等关键路径。（**规划**：内核当前无任何 airy tracepoint，`include/trace/events/airy.h` 不存在，本节为设计规划）
 3. **user_events**：用户态守护进程通过 user_events 将事件上报到 ftrace ring buffer，实现用户态与内核态统一跟踪。
 4. **A-ULP 日志观测**：观测 A-ULP（Unified Logging and Printk Subsystem）的 Ring Buffer 写入路径、Logger Daemon 消费速率、Panic 回退到 `printk_safe` 的状态。这是 A-ULP 模块在可观测性侧的镜像。
 
@@ -46,7 +46,7 @@ agentrt-linux 可观测性体系是系统运行状态可见性的核心保障。
 
 ## 2. 技术选型声明
 
-agentrt-linux v1.0 可观测性体系在内核调度、IPC 传输、安全钩子、内存分配与同源代码共享五个维度遵循 [AirymaxOS 总览](../README.md) §2 的不可妥协基线。可观测性体系是五大选型的**运行时见证者**——通过 tracepoint 与 eBPF 探针持续观测五大选型的运行时行为。五个维度的选型在本目录的具体落地如下：
+agentrt-linux v1.0.1 可观测性体系在内核调度、IPC 传输、安全钩子、内存分配与同源代码共享五个维度遵循 [AirymaxOS 总览](../README.md) §2 的不可妥协基线。可观测性体系是五大选型的**运行时见证者**——通过 tracepoint 与 eBPF 探针持续观测五大选型的运行时行为。五个维度的选型在本目录的具体落地如下：
 
 | # | 技术维度 | 选定方案 | 明确不采用的方案 | 在本目录的落地 |
 |---|---------|---------|----------------|--------------|
@@ -81,9 +81,9 @@ agentrt-linux v1.0 可观测性体系在内核调度、IPC 传输、安全钩子
 
 | # | 文档 | 版本 | 内容概要 |
 |---|------|------|---------|
-| — | [README.md](README.md) | v1.0 | 可观测性主索引（本文件） |
-| 1 | [01-ftrace-framework.md](01-ftrace-framework.md) | v1.0 | ftrace 框架、tracepoint 静态追踪点、A-ULP Ring Buffer 日志观测、sched_tac 调度器状态观测、Panic 回退（[DSL]）观测 |
-| 2 | [02-ebpf-probes.md](02-ebpf-probes.md) | v1.0 | eBPF 可编程探针（仅观测，非安全）、kfunc + BTF + dynamic pointer、user_events 用户态桥接、Agent 行为追踪、Token 能效监控 |
+| — | [README.md](README.md) | v1.0.1 | 可观测性主索引（本文件） |
+| 1 | [01-ftrace-framework.md](01-ftrace-framework.md) | v1.0.1 | ftrace 框架、tracepoint 静态追踪点、A-ULP Ring Buffer 日志观测、sched_tac 调度器状态观测、Panic 回退（[DSL]）观测 |
+| 2 | [02-ebpf-probes.md](02-ebpf-probes.md) | v1.0.1 | eBPF 可编程探针（仅观测，非安全）、kfunc + BTF + dynamic pointer、user_events 用户态桥接、Agent 行为追踪、Token 能效监控 |
 
 ### 3.1 后续规划文档（1.0.1 版本）
 

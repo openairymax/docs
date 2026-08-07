@@ -60,7 +60,7 @@ agentrt-linux v1.0 驱动模型在内核调度、IPC 传输、安全钩子、内
 
 agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66144--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
 
-- **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.148 不含此架构
+- **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.149 不含此架构
 - **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
 - **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
 - **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）

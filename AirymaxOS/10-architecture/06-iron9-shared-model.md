@@ -97,7 +97,7 @@ v3 将 [SC] 头文件数量从 v2 的 6 个扩展为 **12 个**（v1.0.1 补全 
 | 3 | `ipc.h` | `include/uapi/linux/airymax/ipc.h` | IPC magic + 128B 消息头 + SQE/CQE 操作码 | A-IPC | [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) |
 | 4 | `sched.h` | `include/uapi/linux/airymax/sched.h` | Agent 8 态生命周期 + sched_tac 调度参数 + `AIRY_CAP_MAX_AGENTS` | A-ULS | [10-sc-sched-extension.md](../30-interfaces/10-sc-sched-extension.md) |
 | 5 | `memory_types.h` | `include/uapi/linux/airymax/memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 接口 | 记忆 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
-| 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID + Cupolas blob 布局 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
+| 6 | `security_types.h` | `include/uapi/linux/airymax/security_types.h` | capability 44 ID（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，定义于 `lsm_types.h`）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 | 安全 | [03-capability-model.md](../110-security/03-capability-model.md) |
 | 7 | `cognition_types.h` | `include/uapi/linux/airymax/cognition_types.h` | `airy_q16_t` Q16.16 定点数 + CoreLoopThree 三阶段 + Thinkdual 模式 | 认知 | [120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) |
 | 8 | `syscalls.h` | `include/uapi/linux/airymax/syscalls.h` | Syscall 编号体系（v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位） | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
 | 9 | `syscall.h` | `include/uapi/linux/airymax/syscall.h` | `airy_sys_*` syscall 语义/ABI 声明 | 全部 | [01-syscalls.md](../30-interfaces/01-syscalls.md) |
@@ -185,7 +185,7 @@ A-UCS 模块的配置也属于 [SS] 层——内核侧 Kconfig/sysctl 与用户�
 | # | 独有内容 | 说明 |
 |---|---------|------|
 | 1 | 内核态 syscall 编号（548-571） | OS 级系统调用 |
-| 2 | 纯 C LSM 钩子集成（250 个） | 对齐 openEuler，不使用 BPF LSM |
+| 2 | 纯 C LSM 钩子集成（7 个实现 + 250 框架总槽位） | 对齐 openEuler，不使用 BPF LSM |
 | 3 | KABI 二进制兼容 | 内核 ABI 稳定性 |
 | 4 | Kbuild/Kconfig 构建系统 | 内核模块构建 |
 | 5 | `IORING_OP_URING_CMD` 语义映射 | IPC fastpath 载体（不使用 page flipping） |
@@ -211,7 +211,7 @@ A-UCS 模块的配置也属于 [SS] 层——内核侧 Kconfig/sysctl 与用户�
 | 维度 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
 | 错误码 | 10 子空间（300 码） | 38 个 POSIX 码 → 5 核心码 + 1 个配置码 |
-| 日志 | Ring Buffer + Logger Daemon | printk 原生（仅 LOG_FATAL + LOG_ERROR） |
+| 日志 | Ring Buffer + Logger Daemon | printk 原生（仅 AIRY_LOG_FATAL + AIRY_LOG_ERROR） |
 | IPC | 完整 128B 消息头 + 7 操作（0x0001-0x0011） | 最简 128B 消息头 + 2 操作（SEND/RECV） |
 | 调度 | sched_tac 三层 | EEVDF 默认 |
 | 安全 | 纯 C LSM 完整校验 | 仅 POSIX capability |
@@ -265,7 +265,7 @@ A-UCS 模块的配置也属于 [SS] 层——内核侧 Kconfig/sysctl 与用户�
 
 `sc-dual-ci.yml` 对 [SC] 头文件进行逐字节校验，`ssot-validate.yml` 对四层归属进行一致性校验：
 
-- [SC] 头文件数量必须为 10（防止误增/误删）
+- [SC] 头文件数量必须为 12（防止误增/误删）
 - 每个 [SC] 头文件必须有对应的 [DSL] 降级块
 - [SS] 语义映射必须有对应的语义映射文档
 - [IND] 实现不得泄露到 [SC]/[SS] 层

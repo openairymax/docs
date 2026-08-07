@@ -166,7 +166,7 @@ int airy_check_l1_slo(uint32_t agent_id)
     struct airy_agent *agent = get_agent(agent_id);
 
     if (latency > agent->slo.l1_cognition_max_ns) {
-        log_write(LOG_WARN,
+        log_write(AIRY_LOG_WARN,
             "L1 SLO violation: agent=%d latency=%luns max=%luns",
             agent_id, latency, agent->slo.l1_cognition_max_ns);
 
@@ -213,7 +213,7 @@ void airy_optimize_planning_latency(uint32_t agent_id)
         /* 策略 1: 简化思维链 */
         if (agent->cot_depth > 3) {
             agent->cot_depth = 3;
-            log_write(LOG_INFO, "reduced CoT depth for agent %d", agent_id);
+            log_write(AIRY_LOG_INFO, "reduced CoT depth for agent %d", agent_id);
         }
 
         /* 策略 2: 启用工具缓存 */
@@ -254,7 +254,7 @@ int airy_guarantee_l3_slo(uint32_t agent_id)
     /* 预留执行时间预算 */
     uint64_t budget = agent->slo.l3_action_max_ns;
     if (!airy_reserve_time_budget(agent_id, budget)) {
-        log_write(LOG_ERROR, "failed to reserve L3 budget for agent %d",
+        log_write(AIRY_LOG_ERROR, "failed to reserve L3 budget for agent %d",
             agent_id);
         return -ENOMEM;
     }
@@ -339,7 +339,7 @@ void airy_slo_guard(uint32_t agent_id)
     if (l1_ratio > 0.8) {
         /* 超过 80% 阈值，提升优先级 */
         airy_sched_boost(agent_id, SCHED_BOOST_HIGH);
-        log_write(LOG_INFO, "SLO guard: boosted agent %d (L1 ratio=%.2f)",
+        log_write(AIRY_LOG_INFO, "SLO guard: boosted agent %d (L1 ratio=%.2f)",
             agent_id, l1_ratio);
     } else if (l1_ratio > 0.6) {
         /* 超过 60% 阈值，中量提升 */
@@ -423,7 +423,7 @@ void airy_handle_slo_violation(uint32_t agent_id, int level)
 {
     struct airy_agent *agent = get_agent(agent_id);
 
-    log_write(LOG_ERROR,
+    log_write(AIRY_LOG_ERROR,
         "SLO violation: agent=%d level=L%d current=%luns max=%luns",
         agent_id, level,
         level == 1 ? agent->current_l1_latency :
@@ -481,7 +481,7 @@ int airy_consume_latency_budget(uint32_t agent_id,
     struct airy_agent *agent = get_agent(agent_id);
 
     if (agent->latency_budget.remaining_ns < latency_ns) {
-        log_write(LOG_WARN,
+        log_write(AIRY_LOG_WARN,
             "latency budget exhausted: agent=%d phase=%d "
             "remaining=%luns needed=%luns",
             agent_id, phase,
@@ -537,10 +537,12 @@ graph TD
 
 | 错误码 | 名称 | 含义 |
 |--------|------|------|
-| -EDELAY | AIRY_EDELAY | 延迟超过 SLO |
-| -EBUDGET | AIRY_EBUDGET | 延迟预算耗尽 |
-| -ESLOVIOLATION | AIRY_ESLOVIOLATION | SLO 违约 |
-| -ENOSLO | AIRY_ENOSLO | SLO 未定义 |
+| -AIRY_EAGAIN | AIRY_EAGAIN | 延迟超过 SLO（原规划码 `AIRY_EDELAY`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段超时语义） |
+| -AIRY_ESCHED_BUDGET | AIRY_ESCHED_BUDGET | 延迟预算耗尽（原规划码 `AIRY_EBUDGET`，[IND] 规划码，未注册；映射 [SC] error.h A-ULS 段预算语义） |
+| -AIRY_EPERM | AIRY_EPERM | SLO 违约（原规划码 `AIRY_ESLOVIOLATION`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段拒绝语义） |
+| -AIRY_ENOTSUP | AIRY_ENOTSUP | SLO 未定义（原规划码 `AIRY_ENOSLO`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段未支持语义） |
+
+> **说明**：error.h 无 SLO 专用错误码子空间，SLO 场景统一映射 [SC] error.h 实有码；`AIRY_EDELAY` / `AIRY_EBUDGET` / `AIRY_ESLOVIOLATION` / `AIRY_ENOSLO` 为 [IND] 规划码，未注册。
 
 ---
 

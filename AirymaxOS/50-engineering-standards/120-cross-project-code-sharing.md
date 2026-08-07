@@ -56,7 +56,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 维度    | 旧版 IRON-9 | IRON-9 v2        | IRON-9 v3                    |
 | ----- | --------- | ---------------- | ---------------------------- |
-| 契约层代码 | 不共享，仅语义同源 | **完全共享**（10 个头文件） | **完全共享**（10 个头文件，v3 沿用）       |
+| 契约层代码 | 不共享，仅语义同源 | **完全共享**（12 个头文件） | **完全共享**（12 个头文件，v3 沿用）       |
 | 互操作方式 | 同源语义无适配层  | **共享代码无适配层**（增强） | **共享代码无适配层**（v3 沿用）           |
 | CI 校验 | 无         | 契约层变更双向校验        | 契约层变更双向校验 + magic 双向校验（v3 增强） |
 | 降级路径  | 无         | 无                | **[DSL] 降级生存层**（v3 新增第四层）    |
@@ -81,6 +81,8 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 8  | `syscalls.h`        | Syscall 编号体系（v1.0.1 唯一基线: 4 核心 + 20 预留 = 24 槽位，v4.3 锁定）                                                                     | —                     | `include/uapi/linux/airymax/syscalls.h`        |
 | 9  | `uapi_compat.h`     | 三路类型桥接（内核态 `__u32` ↔ 用户态 Linux `uint32_t` ↔ 第三方 `uint32_t` with stdint.h），确保 [SC] 头文件跨平台逐字节相同编译         | —                     | `include/uapi/linux/airymax/uapi_compat.h`    |
 | 10 | `lsm_types.h`       | 纯 C LSM 模块类型定义（`struct airy_lsm_blob` + `airy_capability_check()` 回调原型 + Capability 缓存结构）            | —                     | `include/uapi/linux/airymax/lsm_types.h`       |
+| 11 | `syscall.h`        | syscall_gen.py 生成的系统调用编号定义（`__NR_airy_sys_*` 注册号 548-551，源自 syscall.xml，R-01 SSoT）                       | —                     | `include/uapi/linux/airymax/syscall.h`（补充共享文件） |
+| 12 | `bpf_struct_ops.h` | struct_ops 状态机枚举（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value 布局（sched_tac 用户态调度器经 BTF 只读消费）      | —                     | `include/uapi/linux/airymax/bpf_struct_ops.h`（补充共享文件） |
 
 **补充内容**（不属于上述 10 个 [SC] 核心头文件，但两端共享语义）：
 
@@ -606,7 +608,7 @@ extern "C" {
 | 维度 | 正常模式 | [DSL] 降级模式 |
 |------|---------|--------------|
 | 错误码 | 5 子空间（300 码） | 38 个 POSIX 码 + 1 个配置码（`AIRY_ECFGVERSION`） |
-| 日志 | Ring Buffer + Logger Daemon | printk 原生（仅 `LOG_FATAL` + `LOG_ERROR`） |
+| 日志 | Ring Buffer + Logger Daemon | printk 原生（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR`） |
 | IPC | 完整 128B 消息头 + 3 操作 | 最简 128B 消息头（3 字段）+ 2 操作 |
 | 调度 | sched_tac 三层（SCHED_DEADLINE/SCHED_FIFO/EEVDF） | EEVDF 默认调度 |
 | 安全 | 纯 C LSM 完整校验 | 仅 POSIX capability |
@@ -885,7 +887,7 @@ static int airy_kthread_recv(struct airy_kthread_chan *chan,
 
 | 层次     | 共享程度 | 内容              | 落地路径               | CI 校验  |
 | ------ | ---- | --------------- | ------------------ | ------ |
-| \[SC]  | 完全共享 | 10 个头文件 + magic  | `include/uapi/linux/airymax/` | 双向 CI  |
+| \[SC]  | 完全共享 | 12 个头文件 + magic  | `include/uapi/linux/airymax/` | 双向 CI  |
 | \[SS]  | 语义同源 | 调度/安全/IPC/记忆    | 各自实现               | 行为契约测试 |
 | \[IND] | 完全独立 | 内核驱动/Kbuild/SDK | 各自仓库               | 各自 CI  |
 | \[DSL] | 自包含降级块 | `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 码 + 最简 IPC + EEVDF 默认调度） | [SC] 头文件底部 | 降级块 hash 校验 |

@@ -26,7 +26,7 @@ Agent 应用是 AirymaxOS 上的运行时租户：通过多语言 SDK 调用系�
 
 ## 2. 技术选型声明
 
-agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与同源代码共享五个维度做出**不可妥协**的技术选型。本目录所有 SDK、API 与示例设计必须以本声明为基线——Agent 应用开发不得绕过sched_tac 调度、不得使用 page flipping 传输、不得依赖 BPF LSM 安全模型。
+agentrt-linux v1.0.1 在内核调度、IPC 传输、安全钩子、内存分配与同源代码共享五个维度做出**不可妥协**的技术选型。本目录所有 SDK、API 与示例设计必须以本声明为基线——Agent 应用开发不得绕过sched_tac 调度、不得使用 page flipping 传输、不得依赖 BPF LSM 安全模型。
 
 | # | 技术维度 | 选定方案 | 明确不采用 | 选定理由 |
 |---|---------|---------|-----------|---------|
@@ -46,14 +46,14 @@ agentrt-linux v1.0 在内核调度、IPC 传输、安全钩子、内存分配与
 
 ```
 140-application-development/
-├── README.md                       # 本文件 — Agent 应用开发主索引（v1.0）
-├── 01-agent-lifecycle.md          # Agent 8 状态生命周期 + 系统调用 API + Capability 撤销（v1.0）
-├── 02-sdk-integration.md          # 四语言 SDK 集成设计 + IRON-9 v3 层次（v1.0）
-├── 03-agent-orchestration.md      # 多 Agent 协作模型 + DAG 工作流 + TaskFlow 引擎（v1.0）
-├── 04-token-budget.md             # Token 预算契约 + 令牌桶 + 三级阈值（v1.0）
-├── 05-memory-rovol-api.md         # MemoryRovol API（549 op-dispatch 10 操作 + 快照迁移）（v1.0）
-├── 06-agent-deployment.md         # Agent 部署与运行契约（.agentpkg/OCI + 四重沙箱）（v1.0）
-└── 07-syscall-registry.md         # Agent 系统调用编号注册表 SSoT（v1.0）
+├── README.md                       # 本文件 — Agent 应用开发主索引（v1.0.1）
+├── 01-agent-lifecycle.md          # Agent 8 状态生命周期 + 系统调用 API + Capability 撤销（v1.0.1）
+├── 02-sdk-integration.md          # 四语言 SDK 集成设计 + IRON-9 v3 层次（v1.0.1）
+├── 03-agent-orchestration.md      # 多 Agent 协作模型 + DAG 工作流 + TaskFlow 引擎（v1.0.1）
+├── 04-token-budget.md             # Token 预算契约 + 令牌桶 + 三级阈值（v1.0.1）
+├── 05-memory-rovol-api.md         # MemoryRovol API（549 op-dispatch 10 操作 + 快照迁移）（v1.0.1）
+├── 06-agent-deployment.md         # Agent 部署与运行契约（.agentpkg/OCI + 四重沙箱）（v1.0.1）
+└── 07-syscall-registry.md         # Agent 系统调用编号注册表 SSoT（v1.0.1）
 ```
 
 ### 3.1 各文档定位
@@ -102,9 +102,9 @@ Airymax Unify Design 五模块（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC）在 Agent 应�
 | Unify 模块 | 全称 | 在本目录的体现 | 对应 API/SDK |
 |-----------|------|--------------|------------|
 | **A-IPC** | Unified Airymax IPC Fabric | **核心**：SDK IPC 接口封装、Agent 间 128B 消息头通信、IORING_OP_URING_CMD 零拷贝 fastpath | `airy_ipc_send()` / AgentsIPC SDK 客户端 |
-| **A-UEF** | Unified Error and Fault Framework | **核心**：错误码 API（`AIRY_E*` 负数空间 + `AIRY_FAULT_*` 正数空间）、认知 API（CoreLoopThree 三阶段） | `airy_strerror()` / CognitionClient / `AIRY_SYS_CLT_PHASE_NOTIFY` |
+| **A-UEF** | Unified Error and Fault Framework | **核心**：错误码 API（`AIRY_E*` 负数空间 + `AIRY_FAULT_*` 正数空间）、认知 API（CoreLoopThree 三阶段） | `airy_strerror()` / CognitionClient / `AIRY_SYS_CLT_NOTIFY`（551，阶段通知 op） |
 | **A-UCS** | Unified Configuration Subsystem | 配置 API：sysctl/JSON 双向同步、agent.yaml 清单、Token 预算配置热重载 | `airy_config_get()` / agent.yaml Schema |
-| **A-ULS** | Unified Lifecycle Supervision Framework | Agent 8 态生命周期 API、Capability 申请/撤销、四重沙箱（cgroup v2 + Landlock + seccomp + capability） | `AIRY_SYS_AGENT_SPAWN` / SafetyClient |
+| **A-ULS** | Unified Lifecycle Supervision Framework | Agent 8 态生命周期 API、Capability 申请/撤销、四重沙箱（cgroup v2 + Landlock + seccomp + capability） | `AIRY_SYS_CALL`（548，AIRY_OP_COMPILE_BADGE/REVOKE_BADGE op-dispatch）/ SafetyClient |
 | **A-ULP** | Unified Logging and Printk Subsystem | Agent 日志 API、MemoryRovol 记忆卷载持久化 API（`airy_sys_rovol_ctl` 549 op-dispatch） | `airy_log_emit()` / MemoryRovol API（549） |
 
 ### 4.1 A-IPC SDK IPC 接口
@@ -140,14 +140,14 @@ memoryRovol:
 
 ### 4.4 同源 agentrt SDK（IRON-9 v3）
 
-Agent 应用 SDK 遵循 **IRON-9 v3 四层模型**与 agentrt SDK 同源：[SC] 共享 10 个头文件（`error.h`/`log_types.h`/`ipc.h` 等），[SS] 语义同源（`airy_cognition_*` 签名一致），[IND] 各自独立实现（agentrt 用户态库 ↔ AirymaxOS 系统调用封装），[DSL] 降级生存块（#ifdef AIRY_SC_FALLBACK，[SC] 损坏时最小可运行子集）。
+Agent 应用 SDK 遵循 **IRON-9 v3 四层模型**与 agentrt SDK 同源：[SC] 共享 12 个头文件（`error.h`/`log_types.h`/`ipc.h` 等），[SS] 语义同源（`airy_cognition_*` 签名一致），[IND] 各自独立实现（agentrt 用户态库 ↔ AirymaxOS 系统调用封装），[DSL] 降级生存块（#ifdef AIRY_SC_FALLBACK，[SC] 损坏时最小可运行子集）。
 
 ---
 
 ## 5. 相关文档
 
 ### 5.1 上级与架构文档
-- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0）
+- [AirymaxOS 总览](../README.md) —— 文档体系顶层纲领（v1.0.1）
 - [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) —— Airymax Unify Design 总纲（五模块 SSoT）
 - [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) —— IRON-9 v3 四层模型
 

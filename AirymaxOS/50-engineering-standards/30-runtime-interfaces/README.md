@@ -208,9 +208,9 @@ ARE Standards 采用语义版本命名：
 [SC] 层包含：
 - 常量定义（magic 编号、消息类型、错误码）
 - 基础数据结构（消息头、能力描述符、任务描述符）
-- 10 个 [SC] 核心头文件（syscalls.h / memory_types.h / security_types.h / cognition_types.h / sched.h / ipc.h / error.h / log_types.h / uapi_compat.h / lsm_types.h）
+- 12 个 [SC] 头文件（10 核心 + 2 补充 `syscall.h`/`bpf_struct_ops.h`；核心：syscalls.h / memory_types.h / security_types.h / cognition_types.h / sched.h / ipc.h / error.h / log_types.h / uapi_compat.h / lsm_types.h）
 
-共享方式：10 个 [SC] 头文件唯一物理宿主于 `kernel/include/uapi/linux/airymax/`，其他子仓通过 `-I../kernel/include` 引用，禁止物理副本（OS-IRON-014）。任何修改必须首先在物理宿主提交，两端逐字节相同。
+共享方式：12 个 [SC] 头文件唯一物理宿主于 `kernel/include/uapi/linux/airymax/`，其他子仓通过 `-I../kernel/include` 引用，禁止物理副本（OS-IRON-014）。任何修改必须首先在物理宿主提交，两端逐字节相同。
 
 ### 4.2 [SS] 语义同源层接口对齐
 

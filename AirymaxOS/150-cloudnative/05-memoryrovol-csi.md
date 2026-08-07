@@ -511,11 +511,11 @@ flowchart TB
 | CSI 错误码 | 内核错误码 | 场景 |
 |-----------|-----------|------|
 | `FAILED_PRECONDITION` | - | 卷未发布就尝试挂载 |
-| `NOT_FOUND` | `AIRY_ENOENT`（-5） | 卷/snapshot ID 不存在 |
-| `OUT_OF_RANGE` | `AIRY_EMSGSIZE`（-7） | 容量超出限制 |
-| `RESOURCE_EXHAUSTED` | `AIRY_ENOMEM`（-2） | CXL 池/DRAM 不足 |
-| `UNAVAILABLE` | `AIRY_EBUSY`（-9） | 正在迁移，重试 |
-| `ABORTED` | `AIRY_ECONFLICT`（-12） | 卷状态冲突 |
+| `NOT_FOUND` | `AIRY_ENOENT`（-8） | 卷/snapshot ID 不存在 |
+| `OUT_OF_RANGE` | `AIRY_ERANGE`（-13） | 容量超出限制 |
+| `RESOURCE_EXHAUSTED` | `AIRY_ENOMEM`（-9） | CXL 池/DRAM 不足 |
+| `UNAVAILABLE` | `AIRY_EBUSY`（-16） | 正在迁移，重试 |
+| `ABORTED` | `AIRY_EPERM`（-12） | 卷状态冲突 |
 
 ### 11.2 重试策略
 

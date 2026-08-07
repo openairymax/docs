@@ -117,15 +117,17 @@ C 代码风格遵循 `C_Cpp_coding_style.md Part I`，agentrt-linux 补充约定
 
 ### 3.1 缩进与括号
 
-- **缩进**: 4 空格，禁止 Tab。
-- **括号风格**: 1TBS（K&R 风格），开括号与控制语句同行。
-- **行宽**: 100 字符，超长需换行并对齐。
+> **风格统一说明（v1.0.1）**：本规范面向 agentrt-linux 内核态（Kbuild + Kconfig 构建），统一采用 Linux 6.6 内核基线风格（Tab 8 + K&R + 80 列 + errno+goto）。agentrt 用户态（CMake）沿用 4 空格 + 1TBS + 100 列，见 §10.4 独立层矩阵。
+
+- **缩进**: Tab 8（Linux 6.6 内核基线），禁止空格缩进。
+- **括号风格**: K&R（Linux 6.6 内核基线 标准），开括号与控制语句同行。
+- **行宽**: 80 列（Linux 6.6 内核基线 强制），超长需换行并对齐。
 
 ```c
-/* 正确：4 空格 + 1TBS */
+/* 正确：Tab 8 + K&R */
 if (ret < 0) {
-    log_write(AIRY_LOG_ERROR, "ipc_send failed: errno=%d", ret);
-    return ret;
+	log_write(AIRY_LOG_ERROR, "ipc_send failed: errno=%d", ret);
+	return ret;
 }
 ```
 
@@ -203,7 +205,7 @@ pub async fn submit_task(&self, desc: TaskDesc) -> Result<i32, Error> {
 
 ### 5.2 时间戳
 
-- 使用 `CLOCK_MONOTONIC` 纳秒时间戳，与 IPC 消息头 `timestamp_ns`（[SC] `ipc.h:80`）和日志记录 `timestamp_ns`（[SC] `log_types.h:26`）对齐。
+- 使用 `CLOCK_MONOTONIC` 纳秒时间戳，与 IPC 消息头 `timestamp_ns`（[SC] `ipc.h:72`）和日志记录 `timestamp_ns`（[SC] `log_types.h:26`）对齐。
 - 禁用 `CLOCK_REALTIME`（避免 NTP 跳变导致日志乱序与 IPC 时序错位）。
 - 日志显示对齐北京时间（UTC+8）。
 - 格式: `YYYY-MM-DD HH:MM:SS.nnnnnnnnn`。
@@ -280,7 +282,7 @@ struct airy_ipc_msg_hdr {
     __u16 opcode;         /**< SQE/CQE 操作码 */
     __u16 flags;          /**< 标志位 */
     /* ... 其余字段见 SSoT Layout C */
-} __attribute__((aligned(64)));
+} AIRY_ALIGNED(64);
 ```
 
 ### 6.3 文件头注释模板
@@ -310,14 +312,13 @@ struct airy_ipc_msg_hdr {
 - 数值参数必须检查范围（如 `priority` 必须 0-139）。
 
 ```c
-/* 正确：校验 priority 范围 */
-AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
-                           uint32_t priority)
+/* 正确：校验 msg 与 cap */
+AIRY_API int airy_sys_call(cap_t cap, const struct airy_ipc_msg_hdr *msg)
 {
-    if (task_desc == NULL) {
+    if (msg == NULL) {
         return -AIRY_EINVAL;
     }
-    if (priority > 139) {
+    if (cap == 0) {
         return -AIRY_EINVAL;
     }
     /* ... */
@@ -449,23 +450,21 @@ let resp: Response = client.send(req).await?;
 
 ```c
 /* 错误：未校验参数 */
-AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
-                           uint32_t priority)
+AIRY_API int airy_sys_call(cap_t cap, const struct airy_ipc_msg_hdr *msg)
 {
-    return do_submit(task_desc, priority);
+    return do_submit(cap, msg);
 }
 
 /* 正确：校验 NULL 与范围 */
-AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
-                           uint32_t priority)
+AIRY_API int airy_sys_call(cap_t cap, const struct airy_ipc_msg_hdr *msg)
 {
-    if (task_desc == NULL) {
+    if (msg == NULL) {
         return -AIRY_EINVAL;
     }
-    if (priority > 139) {
+    if (cap == 0) {
         return -AIRY_EINVAL;
     }
-    return do_submit(task_desc, priority);
+    return do_submit(cap, msg);
 }
 ```
 
@@ -491,7 +490,7 @@ AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
 
 | 层次 | 共享程度 | 本接口涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件的命名风格、类型定义、Doxygen 注释、`AIRY_E*` 错误码前缀在两侧完全一致 |
+| **[SC] 共享契约层** | 完全共享代码 | 12 个头文件的命名风格、类型定义、Doxygen 注释、`AIRY_E*` 错误码前缀在两侧完全一致 |
 | **[SS] 语义同源层** | 规范同源，实现独立 | agentrt（CMake 管理）↔ agentrt-linux（Kbuild + Kconfig 管理）的命名规范、daemon 命名（`_d` 后缀）、函数命名（`module_action_object()`）同源 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 用户态编码风格（4 空格 + 1TBS + 100 列）↔ agentrt-linux 内核态编码风格（Linux 6.6 内核基线：Tab 8 + K&R + 80 列 + errno+goto） |
 
@@ -502,7 +501,7 @@ AIRY_API int airy_sys_call(uint32_t op, const struct airy_task_desc *task_desc,
 | `sched.h` | `struct airy_task_desc` 类型命名 + magic 宏 UPPER_SNAKE + kernel-doc | kernel / cognition |
 | `ipc.h` | `struct airy_ipc_msg_hdr` 类型命名 + `AIRY_IPC_*` 宏前缀 + Doxygen | kernel / services |
 | `syscalls.h` | `AIRY_SYS_*` 宏命名 + 24 槽位编号 + kernel-doc | kernel / cognition |
-| `security_types.h` | 44 cap ID 枚举 + 250 LSM 钩子枚举 + `snake_case_t` | kernel / security |
+| `security_types.h` | 44 cap ID 枚举 + `typedef __u64 cap_t` + `snake_case_t`（LSM 钩子 7 个实现、250 框架总槽位见 `lsm_types.h`） | kernel / security |
 | `memory_types.h` | L1-L4 结构命名 + GFP 掩码宏 + Doxygen | kernel / memory |
 | `cognition_types.h` | 三阶段枚举 + Thinkdual 模式 + kernel-doc | kernel / cognition |
 
@@ -553,7 +552,7 @@ graph TB
     style OS_CODE fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-IFACE-008**： 编码规范在 agentrt（用户态，4 空格 + 1TBS + 100 列）与 agentrt-linux 内核态（Linux 6.6 内核基线 Tab 8 + K&R + 80 列 + errno+goto）间保持命名同源而风格独立——10 个 [SC] 共享头文件统一采用 `airy_` 前缀 + `snake_case_t` + Doxygen + `AIRY_E*`，在两侧编译期通过 `-I` 引用同一份源码，禁止生成风格转换中间文件。
+> **OS-IFACE-008**： 编码规范在 agentrt（用户态，4 空格 + 1TBS + 100 列）与 agentrt-linux 内核态（Linux 6.6 内核基线 Tab 8 + K&R + 80 列 + errno+goto）间保持命名同源而风格独立——12 个 [SC] 共享头文件统一采用 `airy_` 前缀 + `snake_case_t` + Doxygen + `AIRY_E*`，在两侧编译期通过 `-I` 引用同一份源码，禁止生成风格转换中间文件。
 
 ---
 

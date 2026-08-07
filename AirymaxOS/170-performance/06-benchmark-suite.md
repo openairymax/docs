@@ -806,10 +806,12 @@ graph TD
 
 | 错误码 | 名称 | 含义 |
 |--------|------|------|
-| -EBENCHFAIL | AIRY_EBENCHFAIL | 基准测试失败 |
-| -EBENCHREGRESS | AIRY_EBENCHREGRESS | 检测到性能回归 |
-| -EBENCHENV | AIRY_EBENCHENV | 测试环境异常 |
-| -EBENCHCV | AIRY_EBENCHCV | 变异系数过高 |
+| -AIRY_EIO | AIRY_EIO | 基准测试失败（原规划码 `AIRY_EBENCHFAIL`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段 I/O 错误语义） |
+| -AIRY_ECOG_CONFIDENCE | AIRY_ECOG_CONFIDENCE | 检测到性能回归（原规划码 `AIRY_EBENCHREGRESS`，[IND] 规划码，未注册；映射 [SC] error.h Cognition 段实有码） |
+| -AIRY_EINVAL | AIRY_EINVAL | 测试环境异常（原规划码 `AIRY_EBENCHENV`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段参数非法语义） |
+| -AIRY_ERANGE | AIRY_ERANGE | 变异系数过高（原规划码 `AIRY_EBENCHCV`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段超范围语义） |
+
+> **说明**：error.h 无基准测试专用错误码子空间，benchmark 场景统一映射 [SC] error.h 实有码；`AIRY_EBENCHFAIL` / `AIRY_EBENCHREGRESS` / `AIRY_EBENCHENV` / `AIRY_EBENCHCV` 为 [IND] 规划码，未注册。
 
 ---
 

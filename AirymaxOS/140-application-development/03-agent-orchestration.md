@@ -101,7 +101,9 @@ stateDiagram-v2
 TaskFlow 引擎基于 Pregel BSP 模型，将任务表达为 DAG：
 
 ```c
-/* include/uapi/linux/airymax/taskflow.h（[SC] 共享契约层，v1.1 计划实现，当前未创建） */
+/* taskflow.h 为文档级规划文件，非 [SC] 12 个头文件清单内项目；
+ * [SC] 头文件清单：uapi_compat/syscalls/syscall/security_types/sched/
+ * memory_types/log_types/lsm_types/error/ipc/bpf_struct_ops/cognition_types */
 struct airy_task_node {
 	uint32_t node_id;            /* 节点 ID */
 	uint32_t agent_id;          /* 执行 Agent */
@@ -397,7 +399,7 @@ int airy_taskflow_checkpoint(struct airy_dag_workflow *wf)
 	struct airy_checkpoint_record rec = {
 		.workflow_id = wf->workflow_id,
 		.superstep = wf->superstep,
-		.timestamp = ktime_get_real_ns(),
+		.timestamp = ktime_get_ns(),
 	};
 	int i, ret;
 
@@ -534,7 +536,7 @@ int airy_delegation_dispatch(uint32_t master, uint32_t slave,
 	hdr.opcode       = AIRY_IPC_OP_SEND;      /* SEND 操作码 */
 	hdr.flags        = 0;                     /* 默认阻塞模式 */
 	hdr.trace_id      = task->trace_id;
-	hdr.timestamp_ns  = ktime_get_real_ns();  /* CLOCK_REALTIME 纳秒 */
+	hdr.timestamp_ns  = ktime_get_ns();  /* CLOCK_MONOTONIC 纳秒 */
 	hdr.src_task      = master;               /* 源任务 ID（u64） */
 	hdr.dst_task      = slave;                /* 目标任务 ID（u64） */
 	hdr.payload_len   = sizeof(*task);

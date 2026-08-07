@@ -191,7 +191,7 @@ airy_<mechanism>_<operation>
  *   0: 成功发送
  *   -AIRY_EINVAL: 参数无效（dest 不存在、msg 非 128B 对齐、msg_len 超出范围）
  *   -AIRY_EPERM: 权限不足（没有发送能力）
- *   -AIRY_ETIMEDOUT: 发送超时
+ *   -AIRY_ECANCELED: 发送超时
  *   -AIRY_ENOMEM: 内核内存不足
  *
  * 所有权语义: 消息内容在发送成功后所有权转移给接收方，发送方不应再访问。
@@ -209,7 +209,7 @@ int airy_ipc_send(are_cap_t dest, const void *msg, size_t msg_len, uint32_t time
  *  >0: 实际接收的字节数
  *  -AIRY_EINVAL: 参数无效
  *  -AIRY_EPERM: 权限不足
- *  -AIRY_ETIMEDOUT: 接收超时
+ *  -AIRY_ECANCELED: 接收超时
  *  -AIRY_ENOMEM: 缓冲区空间不足
  */
 int airy_ipc_recv(are_cap_t src, void *msg, size_t msg_len, uint32_t timeout_ms);
@@ -408,8 +408,8 @@ int airy_timer_create(uint32_t clock_id, void *callback, are_cap_t *cap_out);
  * 返回值:
  *   0: 成功获取
  *   -AIRY_EINVAL: 参数无效
- *   -AIRY_ETIMEDOUT: 超时
- *   -AIRY_EDEADLK: 死锁检测
+ *   -AIRY_ECANCELED: 超时
+ *   -AIRY_EBUSY: 死锁检测（error.h 无 EDEADLK 码）
  */
 int airy_sync_mutex_lock(are_cap_t mutex, uint32_t timeout_ms);
 
@@ -432,7 +432,7 @@ int airy_sync_mutex_unlock(are_cap_t mutex);
  * 返回值:
  *   0: 成功
  *   -AIRY_EINVAL: 参数无效
- *   -AIRY_ETIMEDOUT: 超时
+ *   -AIRY_ECANCELED: 超时
  */
 int airy_sync_sem_wait(are_cap_t sem, uint32_t timeout_ms);
 
@@ -1831,7 +1831,7 @@ typedef struct {
  *
  * 返回值:
  *   0: 成功写入
- *   -AIRY_EAUDIT_DISK_FULL: 审计磁盘已满（系统告警）
+ *   -AIRY_ELOG_PERSIST: 审计磁盘已满（日志持久化失败）
  *   -AIRY_EINVAL: 参数无效
  */
 int airy_audit_write(const are_audit_entry_t *entry);
@@ -2103,7 +2103,7 @@ airymaxos-sbom generate \
     --output sbom.spdx.json \
     --include-dependencies \
     --include-vulnerabilities \
-    --sign-key /etc/airymaxos/sbom-signing-key.pem
+    --sign-key /etc/agentrt/sbom-signing-key.pem
 ```
 
 #### 9.4 供应链安全检查清单

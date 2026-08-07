@@ -395,7 +395,7 @@ fi
 - **0 daemon 崩溃**：12 daemon 任一崩溃即失败（systemd 自动重启不计为崩溃，但记录）
 - **内存增长 < 5%**：24h 后总内存占用增长 < 5%
 - **0 KASAN/KCSAN/lockdep 报告**：动态分析全程无报告
-- **0 契约违反**：`airy_agent_contract_violation` tracepoint 全程无触发
+- **0 契约违反**：`airy_agent_contract_violation` tracepoint 全程无触发（**规划**：该 tracepoint 当前未实现）
 - **性能不退化**：24h 结束时的 fastpath 延迟 P99 与开始时差值 < 5%
 
 ### 9.5 工具

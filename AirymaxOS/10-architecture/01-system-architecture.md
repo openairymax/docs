@@ -98,8 +98,8 @@ agentrt-linux 采用三大设计支柱:
 │              agentrt-linux 微内核核心 (kernel)             │
 │  ┌──────────┬──────────┬──────────┬──────────┬────────────┐   │
 │  │ sched_tac│ io_uring │ 内存管理  │ IPC      │ Rust 模块   │   │
-│  │ SCHED_   │ 零拷贝   │ 基本能力  │ agent_ipc│ 安全驱动    │   │
-│  │ AGENT    │          │          │ syscall  │             │   │
+│  │ SCHED_DE │ 零拷贝   │ 基本能力  │ agent_ipc│ 安全驱动    │   │
+│  │ ADLINE   │          │          │ syscall  │             │   │
 │  └──────────┴──────────┴──────────┴──────────┴────────────┘   │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
@@ -250,18 +250,18 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 
 ## 6. IRON-9 v3 四层共享模型
 
-> **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v3 四层共享模型——[SC] 共享契约层完全共享代码（10 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
+> **OS-ARCH-001**： agentrt-linux 与 agentrt 的同源关系遵循 IRON-9 v3 四层共享模型——[SC] 共享契约层完全共享代码（12 个头文件）、[SS] 语义同源层高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进、[IND] 完全独立层各自独立演进。禁止在 agentrt-linux 内核态与 agentrt 用户态之间引入适配层或兼容别名层。
 
 ### 6.1 四层模型概览
 
 | 层次 | 共享程度 | 本文档涉及内容 |
 |------|---------|---------------|
-| **[SC] 共享契约层** | 完全共享代码 | 10 个头文件 `kernel/include/uapi/linux/airymax/{error,log_types,ipc,sched,memory_types,security_types,cognition_types,syscalls,uapi_compat,lsm_types}.h`，物理宿主在 kernel 子仓 `kernel/include/uapi/linux/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本。`bpf_struct_ops.h` 为补充共享文件，非 [SC] 核心头文件 |
+| **[SC] 共享契约层** | 完全共享代码 | 12 个头文件 `kernel/include/uapi/linux/airymax/{error,log_types,ipc,sched,memory_types,security_types,cognition_types,syscalls,syscall,uapi_compat,lsm_types,bpf_struct_ops}.h`，物理宿主在 kernel 子仓 `kernel/include/uapi/linux/airymax/`（OS-IRON-014 落地），其他子仓通过 `-I../kernel/include` 引用，禁止物理副本 |
 | **[SS] 语义同源层** | 高层 API 语义同源（概念操作一致），签名因抽象层级不同而独立演进 | agentrt 7 大模块（MicroCoreRT/AgentsIPC/Cupolas/MemoryRovol/CoreLoopThree/Frameworks/Daemons）↔ agentrt-linux 8 子仓（kernel/services/security/memory/cognition/cloudnative/system/tests-linux）的同源映射 |
 | **[IND] 完全独立层** | 完全独立 | agentrt 跨平台用户态实现（libc/POSIX，Linux/macOS/Windows）↔ agentrt-linux Linux 6.6 内核态实现（Kbuild/Kconfig/sched_tac/io_uring） |
 | **[DSL] 降级生存层** | [SC] 损坏时最小可运行子集 | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
 
-### 6.2 [SC] 共享契约层——10 个头文件在本架构层的角色
+### 6.2 [SC] 共享契约层——12 个头文件在本架构层的角色
 
 | 头文件 | 在系统架构中的角色 | 消费方 |
 |--------|-------------------|--------|
@@ -270,11 +270,13 @@ agentrt-linux 的 IPC 子系统 (kernel + services):
 | `ipc.h` | IPC magic（0x41524531 'ARE1'）+ 128B 消息头结构（`struct airy_ipc_msg_hdr`）+ SQE/CQE 操作码 | kernel / services |
 | `sched.h` | 任务描述符 magic（0x41475453 'AGTS'）+ 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF 调度类 + vtime 衰减公式 + 优先级范围 0-139 | kernel / cognition |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | kernel / memory |
-| `security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 | kernel / security |
+| `security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，定义于 `lsm_types.h`）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 + `typedef __u64 cap_t` | kernel / security |
 | `cognition_types.h` | CoreLoopThree 阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式 + Token 能效指标 | kernel / cognition |
-| `syscalls.h` | 4 核心 syscall 编号 + 20 预留槽位（v1.0.1 Capability Folding 后）| kernel / cognition |
+| `syscalls.h` | 4 核心 syscall 编号（548-551）+ 20 预留槽位（552-571，v1.0.1 Capability Folding 后）| kernel / cognition |
+| `syscall.h` | Agent 专用 syscall 编号生成产物（`syscall_gen.py` 生成，`__NR_airy_sys_*` 548-551） | kernel / services |
 | `uapi_compat.h` | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`） | IRON-9 跨端 |
-| `lsm_types.h` | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构 | kernel / security |
+| `lsm_types.h` | 纯 C LSM 类型定义（`AIRY_LSM_HOOK_IMPLEMENTED=7` / `AIRY_LSM_KERNEL_HOOK_TOTAL=250`）+ 安全 blob（`airy_task_sec`/`airy_inode_sec`）+ `airy_cap_slot`（80B，AIRY_ALIGNED(64)）+ `DEFINE_LSM(airy)` 骨架 | kernel / security |
+| `bpf_struct_ops.h` | struct_ops 4 态状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ `bpf_struct_ops_common_val` 布局 | kernel / cognition |
 
 ### 6.3 [SS] 语义同源层——agentrt 7 大模块 ↔ agentrt-linux 8 子仓映射
 
@@ -319,8 +321,8 @@ graph TB
         OS_COG[cognition<br/>kthread + Wasm 3.0]
     end
 
-    subgraph "[SC] 共享契约层（10 头文件）"
-        SC[error.h / log_types.h / ipc.h / sched.h<br/>memory_types.h / security_types.h / cognition_types.h<br/>syscalls.h / uapi_compat.h / lsm_types.h]
+    subgraph "[SC] 共享契约层（12 头文件）"
+        SC[error.h / log_types.h / ipc.h / sched.h<br/>memory_types.h / security_types.h / cognition_types.h<br/>syscalls.h / syscall.h / uapi_compat.h / lsm_types.h / bpf_struct_ops.h]
     end
 
     subgraph "[DSL] 降级生存层"
@@ -351,7 +353,7 @@ graph TB
     style OS_KERN fill:#fff3e0,stroke:#e65100
 ```
 
-> **OS-ARCH-002**： 跨态协作遵循"零适配层天然契合"原则——agentrt 与 agentrt-linux 通过 [SC] 共享契约层 10 个头文件直接对接，不生成 `airy_compat_aliases.h` 或任何兼容层。在 Linux 平台上，agentrt 可选启用 agentrt-linux 内核加速路径（通过 ops 注入机制，非强制）；在 macOS/Windows 上仅走用户态路径。
+> **OS-ARCH-002**： 跨态协作遵循"零适配层天然契合"原则——agentrt 与 agentrt-linux 通过 [SC] 共享契约层 12 个头文件直接对接，不生成 `airy_compat_aliases.h` 或任何兼容层。在 Linux 平台上，agentrt 可选启用 agentrt-linux 内核加速路径（通过 ops 注入机制，非强制）；在 macOS/Windows 上仅走用户态路径。
 
 ---
 

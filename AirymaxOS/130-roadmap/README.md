@@ -125,7 +125,7 @@ timeline
 
 ### 4.2 同源 agentrt 协同
 
-agentrt-linux 路线图与 agentrt 路线图遵循 **IRON-9 v3 四层模型**（[SC]/[SS]/[IND]/[DSL]）共享契约：两端通过 [SC] 共享 10 个头文件，[SS] 语义同源（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），[IND] 各自独立实现，[DSL] 降级生存块共享。
+agentrt-linux 路线图与 agentrt 路线图遵循 **IRON-9 v3 四层模型**（[SC]/[SS]/[IND]/[DSL]）共享契约：两端通过 [SC] 共享 12 个头文件，[SS] 语义同源（MicroCoreRT / AgentsIPC / Cupolas / MemoryRovol / CoreLoopThree），[IND] 各自独立实现，[DSL] 降级生存块共享。
 
 ---
 

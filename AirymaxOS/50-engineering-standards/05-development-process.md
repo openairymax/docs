@@ -1552,9 +1552,9 @@ done
 
 ### 2.4 [SC] 头文件清单一致性检查
 
-**规则 OS-CHK-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 10 个头文件清单一致。
+**规则 OS-CHK-DOC-04**：所有引用 [SC] 共享契约层的文档必须与 12 个头文件清单一致。
 
-**10 个 [SC] 头文件清单**（权威定义见 [120-cross-project-code-sharing.md §2.1](./120-cross-project-code-sharing.md)，SSoT 规则登记为 [OS-IRON-014](./09-ssot-registry.md)；`00-engineering-standards-handbook.md §4.2` 为公开镜像，内容与权威定义逐项一致）：
+**12 个 [SC] 头文件清单**（10 核心 + 2 补充：`syscall.h`、`bpf_struct_ops.h`；权威定义见 [120-cross-project-code-sharing.md §2.1](./120-cross-project-code-sharing.md)，SSoT 规则登记为 [OS-IRON-014](./09-ssot-registry.md)；`00-engineering-standards-handbook.md §4.2` 为公开镜像，内容与权威定义逐项一致）：
 
 | # | 头文件 | 子系统 | 内容摘要 |
 |---|--------|--------|----------|
@@ -1568,8 +1568,10 @@ done
 | 8 | `include/uapi/linux/airymax/log_types.h` | 日志 | A-ULP 统一日志类型（128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射） |
 | 9 | `include/uapi/linux/airymax/uapi_compat.h` | 兼容 | 三路类型桥接（\_\_u32 ↔ uint32_t ↔ 第三方 uint32_t），确保 [SC] 头文件跨平台逐字节相同 |
 | 10 | `include/uapi/linux/airymax/lsm_types.h` | 安全 | 纯 C LSM 模块类型定义（airy_lsm_blob + capability_check 回调 + Capability 缓存） |
+| 11 | `include/uapi/linux/airymax/syscall.h` | SYS | syscall_gen.py 生成的系统调用编号定义（`__NR_airy_sys_*` 注册号 548-551，源自 syscall.xml，R-01 SSoT） |
+| 12 | `include/uapi/linux/airymax/bpf_struct_ops.h` | 调度 | struct_ops 状态机枚举（INIT/REGISTERED/ACTIVE/DRAINING）+ common_value 布局（sched_tac 用户态调度器经 BTF 只读消费） |
 
-**检查方法**：grep `include/uapi/linux/airymax/` 引用，核对是否与上述 10 个头文件一致。
+**检查方法**：grep `include/uapi/linux/airymax/` 引用，核对是否与上述 12 个头文件一致。
 
 ### 2.5 链接完整性检查
 
@@ -1663,7 +1665,7 @@ if ! grep -q "AIRY_SYS_" "$SC_SYSCALL_HEADER"; then
     exit 1
 fi
 
-# 检查 2：v1.1: 4 核心 syscall + 20 预留槽位完整性（TODO: R-01 落地后改为 XML 解析）
+# 检查 2：v1.0.1: 4 核心 syscall + 20 预留槽位完整性（TODO: R-01 落地后改为 XML 解析）
 CORE_COUNT=$(grep -c "^#define AIRY_SYS_[A-Z_]*[[:space:]]" "$SC_SYSCALL_HEADER")
 if [ "$CORE_COUNT" -lt 12 ]; then
     echo "WARN: $SC_SYSCALL_HEADER has only $CORE_COUNT core syscalls (need >= 12)"
@@ -1779,8 +1781,8 @@ grep -rn "^void\|^int\|^static.*(" atoms/ daemons/ | \
 
 | 禁止 | 允许 |
 |------|------|
-| `fprintf(stderr, ...)` | `log_write(LOG_LEVEL_INFO, ...)` |
-| `printf(...)` | `log_write_va(LOG_LEVEL_DEBUG, ...)` |
+| `fprintf(stderr, ...)` | `log_write(AIRY_LOG_INFO, ...)` |
+| `printf(...)` | `log_write_va(AIRY_LOG_DEBUG, ...)` |
 | `puts(...)` | `airy_print_info(...)`（构建期） |
 
 **ANSI 颜色编码**：
@@ -1898,7 +1900,7 @@ echo "OK: seL4 scope check passed (only ES-SEL4-1~5 architecture layer allowed)"
 
 ### 4.1 [SC] 共享契约层一致性检查
 
-**规则 OS-CHK-IRON-01**：[SC] 共享契约层的 10 个头文件必须 agentrt 与 agentrt-linux 完全一致。
+**规则 OS-CHK-IRON-01**：[SC] 共享契约层的 12 个头文件必须 agentrt 与 agentrt-linux 完全一致。
 
 **检查方法**：
 ```bash
@@ -1922,7 +1924,7 @@ for h in $SC_HEADERS; do
 done
 ```
 
-**合格标准**：10 个头文件 MD5 哈希完全一致。
+**合格标准**：12 个头文件 MD5 哈希完全一致。
 
 ### 4.2 [SS] 语义同源层 API 一致性检查
 
@@ -2299,13 +2301,13 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |------|------|------|
 | 内核态 → 用户态 | UAPI 头文件使用 `GPL-2.0-only WITH Linux-syscall-note` | `Linux-syscall-note` 例外允许用户态引用系统调用接口 |
 | 用户态 → 内核态 | 用户态代码不链接内核态代码 | 通过 syscall / io_uring / AgentsIPC 消息通信，无代码级链接 |
-| [SC] 共享契约层 | 10 个 `include/uapi/linux/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
+| [SC] 共享契约层 | 12 个 `include/uapi/linux/airymax/*.h` 头文件 | 采用 `GPL-2.0-only WITH Linux-syscall-note`，因含 UAPI 定义；两端引用方式符合各自许可证 |
 
 ### 2.2 IRON-9 v3 四层共享模型的许可证约束
 
 | 层次 | 许可证策略 | 说明 |
 |------|-----------|------|
-| **[SC] 共享契约层** | `GPL-2.0-only WITH Linux-syscall-note` | 10 个头文件含 UAPI 定义，遵循内核 UAPI 许可证 |
+| **[SC] 共享契约层** | `GPL-2.0-only WITH Linux-syscall-note` | 12 个头文件含 UAPI 定义，遵循内核 UAPI 许可证 |
 | **[SS] 语义同源层** | 各自独立许可证 | agentrt 端用户态用 AGPL-3.0 OR Apache-2.0；agentrt-linux 端内核态用 GPL-2.0-only WITH Linux-syscall-note |
 | **[IND] 完全独立层** | 各自独立许可证 | 按文件类型适用本矩阵 §1.1 |
 
@@ -2640,7 +2642,7 @@ agentrt-linux CI 同时运行：
 | **K-2 接口契约化** | UAPI 头文件许可证采用 `Linux-syscall-note` 例外，明确接口契约的可引用边界 |
 | **E-7 文档即代码** | 许可证策略矩阵本身纳入版本控制，与代码同源审查 |
 | **A-4 完美主义** | 三套历史策略并存与两文档间许可证字符串不一致是"隐藏瑕疵"，本卷消解为统一的 5 类矩阵 |
-| **IRON-9 v3 同源且部分代码共享** | [SC] 共享契约层 10 个头文件的许可证遵循内核 UAPI 规范，与 agentrt 端引用方式兼容 |
+| **IRON-9 v3 同源且部分代码共享** | [SC] 共享契约层 12 个头文件的许可证遵循内核 UAPI 规范，与 agentrt 端引用方式兼容 |
 
 ---
 

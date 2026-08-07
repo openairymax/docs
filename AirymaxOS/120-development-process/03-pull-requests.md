@@ -228,7 +228,7 @@ Signed-off-by: <作者> <邮箱>                # DCO 必填
 `sc-dual-ci.yml` 在 [SC] PR 上执行以下校验：
 
 1. **拉取双端 PR 分支**：从 agentrt 与 agentrt-linux 分别拉取对应 PR 的分支。
-2. **提取 10 个 [SC] 头文件**：从 `kernel/include/uapi/linux/airymax/*.h` 提取 10 个 [SC] 文件。
+2. **提取 12 个 [SC] 头文件**：从 `kernel/include/uapi/linux/airymax/*.h` 提取 12 个 [SC] 文件。
 3. **逐字节比对**：使用 `diff -u` 比对双端文件，任何字节差异阻断合并。
 4. **编译器无关性校验**：运行 `check-uapi-compiler-agnostic.sh`，验证头文件不含编译器扩展（GCC `__attribute__` / Clang `__builtin__` / MSVC `__declspec` 等）。
 5. **UAPI 兼容性校验**：使用 `scripts/headers_compile_test.sh` 在 5 种编译器（GCC / Clang / MSVC / icx / armclang）下编译。

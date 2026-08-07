@@ -220,7 +220,7 @@ IPC 消息优先级与 sched_tac 调度策略优先级对齐（0-139），按任
 | 有序投递 | STREAM 类型保证顺序 | 内核 seq 递增加接收方重排序缓冲 |
 | 优先级调度 | 高优先级消息优先投递 | io_uring SQ 优先级队列加内核优先级调度 |
 | 反压控制 | 接收方缓冲区满时暂停发送 | 控制消息 FLOW_OFF / FLOW_ON |
-| 超时处理 | 超过延迟预算的消息返回 AIRY_ETIMEDOUT | 发送方设置 timeout_ms，内核超时返回 |
+| 超时处理 | 超过延迟预算的消息返回 AIRY_ECANCELED | 发送方设置 timeout_ms，内核超时返回 |
 
 ---
 
@@ -257,7 +257,7 @@ sequenceDiagram
 | 不可伪造 | 令牌由内核生成，进程无法伪造 | 伪造令牌被内核拒绝，返回 AIRY_EPERM |
 | 最小权限 | 派生令牌权限不高于原令牌权限 | 超权限操作被内核拒绝 |
 | 递归撤销 | 撤销原令牌时，所有派生令牌自动撤销 | 内核遍历派生链，级联撤销 |
-| 超时过期 | 令牌可设置有效期，超时自动过期 | 过期令牌返回 AIRY_ETIMEDOUT |
+| 超时过期 | 令牌可设置有效期，超时自动过期 | 过期令牌返回 AIRY_ECANCELED |
 | 单次使用 | 令牌可标记为一次性，使用后自动撤销 | 重复使用返回 AIRY_EBUSY |
 
 #### 5.3 限制
@@ -557,7 +557,7 @@ agentrt-linux 系统调用遵循 Linux x86_64 标准调用约定（System V AMD6
 | 1. NULL 检查 | 指针是否为 NULL | `-AIRY_EINVAL` | `copy_from_user()` 前 |
 | 2. 地址范围检查 | 指针是否在用户态地址空间 | `-AIRY_EFAULT` | `access_ok()` |
 | 3. 内存可读性 | 指针指向的内存是否可读 | `-AIRY_EFAULT` | `copy_from_user()` |
-| 4. 大小限制 | 结构体大小是否在合理范围 | `-AIRY_EMSGSIZE` | 自定义校验 |
+| 4. 大小限制 | 结构体大小是否在合理范围 | `-AIRY_EIPC_PAYLOAD` | 自定义校验（消息大小超界） |
 | 5. 对齐检查 | 指针是否满足对齐要求 | `-AIRY_EINVAL` | 自定义校验 |
 
 **指针验证示例**：
@@ -610,25 +610,25 @@ agentrt-linux 系统调用错误码对齐 `include/uapi/linux/airymax/error.h`�
 | `AIRY_EOK` | 0 | 成功 | 调用成功 | - |
 | `AIRY_EINVAL` | 5 | 无效参数 | 参数为 NULL、结构体大小不匹配、对齐错误 | 否 |
 | `AIRY_ENOMEM` | 9 | 内存不足 | 内核分配失败、CXL 池耗尽 | 是（等待后） |
-| `AIRY_ENOSYS` | （error.h 未登记，预留） | 未实现 | 编号未实现或已废弃 | 否 |
+| `AIRY_ENOTSUP` | 11 | 未实现/不支持 | 编号未实现或已废弃、硬件不支持 | 否 |
 | `AIRY_EPERM` | 12 | 权限不足 | capability 令牌缺失或无效 | 否 |
 | `AIRY_ENOENT` | 8 | 资源不存在 | 任务 ID、快照 ID、capability 句柄不存在 | 否 |
 | `AIRY_EAGAIN` | 35 | 暂时不可用 | io_uring 队列满、CXL 带宽不足 | 是（立即） |
-| `AIRY_EMSGSIZE` | （error.h 未登记，预留） | 消息过大 | payload 超过最大长度 | 否 |
-| `AIRY_EBADF` | （error.h 未登记，预留） | 描述符错误 | ring fd、capability 句柄无效 | 否 |
+| `AIRY_EIPC_PAYLOAD` | 43 | 消息过大 | payload 超过最大长度（IPC 子空间） | 否 |
+| `AIRY_EOBJ_HANDLE` | 201 | 描述符错误 | ring fd、capability 句柄无效（Object 子空间） | 否 |
 | `AIRY_EBUSY` | 16 | 资源繁忙 | 任务正在迁移无法快照、capability 正在传递 | 是（延迟） |
 | `AIRY_ENOTSUP` | 11 | 不支持 | 硬件不支持（如无 CXL 设备）、内核配置未启用 | 否 |
-| `AIRY_ETIMEDOUT` | （error.h 未登记；超时语义以 `AIRY_ECANCELED`=19 表示） | 超时 | 调度等待超时、IPC 接收超时 | 是（限制次数） |
-| `AIRY_ECONFLICT` | （error.h 未登记，预留） | 状态冲突 | 任务状态不允许当前操作 | 否 |
+| `AIRY_ECANCELED` | 19 | 超时 | 调度等待超时、IPC 接收超时 | 是（限制次数） |
+| `AIRY_ELIFECYCLE_TRANS` | 128 | 状态冲突 | 任务状态不允许当前操作（A-ULS 子空间） | 否 |
 | `AIRY_EFAULT` | 3 | 地址错误 | 用户态指针非法、内存不可访问 | 否 |
-| `AIRY_EOVERFLOW` | （error.h 未登记，预留） | 溢出 | 计数器溢出、编号段耗尽 | 否 |
+| `AIRY_EOBJ_REFCOUNT` | 202 | 溢出 | 计数器溢出、编号段耗尽（Object 子空间） | 否 |
 
 #### 4.3 错误码使用规范
 
 所有系统调用实现必须遵循以下错误处理规范：
 
 1. **错误码原样传递**：内核子系统的错误码必须原样传递到用户态，不得吞没或转换。
-2. **错误日志记录**：每个错误返回前必须调用 `log_write(LOG_ERROR, ...)` 记录上下文。
+2. **错误日志记录**：每个错误返回前必须调用 `log_write(AIRY_LOG_ERROR, ...)` 记录上下文。
 3. **错误码字符串化**：使用 `airy_strerror(ret)` 获取人类可读描述。
 4. **审计日志**：安全敏感操作（capability 拒绝、权限不足）必须记录审计日志。
 
@@ -755,11 +755,11 @@ CoreLoopThree 是 agentrt-linux 的认知运行时，实现"感知-思考-行动
 
 #### 9.1 [SC] 层共享
 
-agentrt-linux 与 agentrt 在以下 10 个头文件中实现代码字面共享：
+agentrt-linux 与 agentrt 在以下 12 个头文件中实现代码字面共享（10 核心 + 2 补充：`syscall.h`、`bpf_struct_ops.h`；下表列系统调用相关的子集）：
 
 | 头文件 | 共享内容 | 对应系统调用分类 |
 |--------|---------|----------------|
-| `syscalls.h` | v1.1: 4 核心 syscall 编号 + 20 预留槽位| 系统调用（SYS） |
+| `syscalls.h` | v1.0.1: 4 核心 syscall 编号 + 20 预留槽位| 系统调用（SYS） |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码语义 + PMEM 持久化接口 | 内存管理（ROVOL） |
 | `security_types.h` | capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + Cupolas blob 布局 + capability 派生模型 + Vault backend 抽象 + 策略裁决 4 值枚举 | 安全（CAP） |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式枚举 + LLM 推理阶段枚举 + Token 能效指标 + GPU/NPU 能力描述符 | 认知（CLT） |

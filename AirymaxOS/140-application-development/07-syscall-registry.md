@@ -73,7 +73,7 @@ v1.0.1 Capability Folding 架构下，控制面精简为 4 核心 syscall，其�
 
 编号一旦分配，遵循以下四条不变性规则，对齐 OS-IRON-001（用户空间 ABI 永不破坏）：
 
-1. **编号不可变更**：编号在 MAJOR 版本内不可变更。即使系统调用被废弃，编号保留，返回 `-AIRY_ENOSYS`。
+1. **编号不可变更**：编号在 MAJOR 版本内不可变更。即使系统调用被废弃，编号保留，返回 `-ENOSYS`。
 2. **编号不可复用**：废弃编号永不复用。新系统调用只能追加到预留段末尾。
 3. **语义不可破坏**：已分配编号的语义（参数个数、参数类型、返回值含义）在 MAJOR 版本内不可破坏性变更。可向后兼容地扩展（如结构体新增字段通过 `version` 字段协商）。op-dispatch 的操作码（opcode）同样遵循此规则——已分配的 opcode 不可变更、不可复用。
 4. **编号段扩展需 ADR**：若 24 槽位（548-571）耗尽，需在下一 MAJOR 版本中扩展编号段，并创建架构决策记录（ADR）记录扩展理由与影响。
@@ -271,14 +271,14 @@ int airy_agent_register(const struct airy_agent_config *config,
     /* 3. 调用系统调用（机制层） */
     ret = airy_sys_call(sec_d_cap, &msg);
     if (ret < 0) {
-        log_write(LOG_ERROR, "agent_register failed: errno=%d (%s)",
+        log_write(AIRY_LOG_ERROR, "agent_register failed: errno=%d (%s)",
                   ret, airy_strerror(ret));
         return ret;
     }
     *agent_id = msg.capability_badge & 0xFFFFFFFF;
 
     /* 4. 审计日志（SDK 层策略） */
-    log_write(LOG_INFO, "agent registered: id=%u name=%s", *agent_id, config->name);
+    log_write(AIRY_LOG_INFO, "agent registered: id=%u name=%s", *agent_id, config->name);
     return AIRY_EOK;
 }
 ```
@@ -307,11 +307,11 @@ int airy_agent_register(const struct airy_agent_config *config,
  *   - 起始编号 548（避开 Linux 6.6 标准 0-511 + x86_64 x32 区域 512-547）
  *   - 4 核心 syscall + 20 预留 = 24 槽位（v1.0.1 Capability Folding）
  *   - 编号在 MAJOR 版本内不可变更（OS-IRON-001）
- *   - 废弃编号保留，返回 -AIRY_ENOSYS
+ *   - 废弃编号保留，返回 -ENOSYS
  */
 
-#ifndef _UAPI_AIRY_SYSCALLS_H
-#define _UAPI_AIRY_SYSCALLS_H
+#ifndef _UAPI_AIRYMAX_SYSCALLS_H
+#define _UAPI_AIRYMAX_SYSCALLS_H
 
 #include <linux/types.h>
 
@@ -346,7 +346,12 @@ extern "C" {
  * ==================================================================== */
 
 /* airy_sys_call op 码（通过 msg->opcode 传递）—— 0.1.1 历史命名；
- * v1.0.1 实际分派以 [SC] ipc.h 的 AIRY_IPC_OP_* 为权威（见 §4.2） */
+ * v1.0.1 实际分派以 [SC] ipc.h 的 AIRY_IPC_OP_* 为权威（见 §4.2）
+ *
+ * ⚠️ 命名空间说明：sec_d 管理 op（AIRY_OP_*）为 [IND] 层子命令空间，
+ * 与 [SC] ipc.h 的 opcode 空间（AIRY_IPC_OP_*）相互独立、不共用编号；
+ * 数值重叠（如 AIRY_OP_COMPILE_BADGE=0x01 与 AIRY_IPC_OP_SEND=0x0001）
+ * 仅为巧合，两者由不同分派路径消费，禁止混用。 */
 #define AIRY_OP_COMPILE_BADGE    0x01
 #define AIRY_OP_REVOKE_BADGE     0x02
 #define AIRY_OP_LSM_CTL          0x03
@@ -391,7 +396,7 @@ extern "C" {
 }
 #endif
 
-#endif /* _UAPI_AIRY_SYSCALLS_H */
+#endif /* _UAPI_AIRYMAX_SYSCALLS_H */
 ```
 
 ### 6.3 内核入口表模板（syscall_64.tbl 格式）
@@ -458,9 +463,9 @@ graph TD
 废弃系统调用或 op 码遵循以下流程：
 
 1. **标记废弃**：在本注册表中标注 `@deprecated since <version>`，并提供迁移指引。
-2. **保留编号/op 码**：废弃编号永不复用，内核实现改为返回 `-AIRY_ENOSYS`；废弃 op 码永不复用，内核返回 `-AIRY_EINVAL`。
+2. **保留编号/op 码**：废弃编号永不复用，内核实现改为返回 `-ENOSYS`；废弃 op 码永不复用，内核返回 `-AIRY_EINVAL`。
 3. **宽限期**：废弃后保留至少 1 个 MAJOR 版本的宽限期，期间继续可用（但标记废弃警告）。
-4. **最终移除**：宽限期结束后，内核返回 `-AIRY_ENOSYS`（syscall）或 `-AIRY_EINVAL`（op 码），但编号/op 码永不复用。
+4. **最终移除**：宽限期结束后，内核返回 `-ENOSYS`（syscall）或 `-AIRY_EINVAL`（op 码），但编号/op 码永不复用。
 
 ---
 
@@ -544,15 +549,15 @@ struct airy_task_config {
 
 ## 10. IRON-9 v3 同源映射
 
-### 10.1 [SC] 层共享（10 个头文件）
+### 10.1 [SC] 层共享（12 个头文件）
 
-agentrt-linux 与 agentrt 在以下 10 个头文件中实现代码字面共享，影响系统调用语义：
+agentrt-linux 与 agentrt 在以下 12 个头文件中实现代码字面共享，影响系统调用语义：
 
 | 头文件 | 共享内容 | 影响的核心 syscall |
 |--------|---------|------------------|
 | `syscalls.h` | v1.0.1: 4 核心 syscall 编号 + 20 预留槽位 + op 码定义 | 系统调用（SYS） |
 | `memory_types.h` | MemoryRovol L1-L4 数据结构 + GFP 掩码 | `airy_sys_rovol_ctl` |
-| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展）枚举 + LSM 250 钩子 + 派生模型 + Badge 位布局 | `airy_sys_call` |
+| `security_types.h` | capability 44 ID（41 POSIX + 3 Airymax 扩展）枚举 + `typedef __u64 cap_t` + 派生模型 + Badge 位布局（LSM 钩子 7 个实现、250 框架总槽位见 `lsm_types.h`） | `airy_sys_call` |
 | `cognition_types.h` | CoreLoopThree 阶段枚举 + Thinkdual 模式 | `airy_sys_clt_notify` |
 | `sched.h` | 任务描述符（magic 0x41475453）+ vtime 衰减 | `airy_sys_sched_ctl` |
 | `ipc.h` | IPC magic（0x41524531）+ 128B 消息头 + capability_badge 字段 | `airy_sys_call`（管理 opcode 通过 msg.opcode 传递） |
@@ -646,7 +651,7 @@ int launch_agent(void)
     /* 1. 注册 Agent（airy_sys_call + COMPILE_BADGE，编号 548） */
     ret = airy_agent_register(&config, &agent_id);
     if (ret < 0) {
-        log_write(LOG_ERROR, "register failed: %d (%s)",
+        log_write(AIRY_LOG_ERROR, "register failed: %d (%s)",
                   ret, airy_strerror(ret));
         return ret;
     }
@@ -654,12 +659,12 @@ int launch_agent(void)
     /* 2. 启动 Agent（io_uring URING_CMD 激活 ring） */
     ret = airy_agent_start(agent_id);
     if (ret < 0) {
-        log_write(LOG_ERROR, "start failed: %d", ret);
+        log_write(AIRY_LOG_ERROR, "start failed: %d", ret);
         airy_agent_stop(agent_id, AGENT_EXIT_RUNTIME_ERROR);
         return ret;
     }
 
-    log_write(LOG_INFO, "agent launched: id=%u", agent_id);
+    log_write(AIRY_LOG_INFO, "agent launched: id=%u", agent_id);
     return AIRY_EOK;
 }
 ```
@@ -701,11 +706,11 @@ int checkpoint_agent_memory(uint32_t pid, uint64_t *snapshot_id)
     ret = airy_sys_rovol_ctl(AIRY_ROVOL_SNAPSHOT, pid,
                              (uint64_t)snapshot_id);
     if (ret < 0) {
-        log_write(LOG_ERROR, "snapshot failed: %d", ret);
+        log_write(AIRY_LOG_ERROR, "snapshot failed: %d", ret);
         return ret;
     }
 
-    log_write(LOG_INFO, "snapshot created: pid=%u id=%llu",
+    log_write(AIRY_LOG_INFO, "snapshot created: pid=%u id=%llu",
               pid, (unsigned long long)*snapshot_id);
     return AIRY_EOK;
 }
@@ -734,14 +739,14 @@ int secure_ipc_send(const char *cap_name, const char *resource,
     cap_msg.opcode = AIRY_OP_COMPILE_BADGE;
     ret = airy_sys_call(sec_d_cap, &cap_msg);
     if (ret < 0) {
-        log_write(LOG_ERROR, "capability denied: %d", ret);
+        log_write(AIRY_LOG_ERROR, "capability denied: %d", ret);
         return -AIRY_EPERM;
     }
 
     /* 2. 携带令牌执行受保护操作：io_uring 数据面 */
     ret = airy_uring_ipc_send(hdr, payload);
     if (ret < 0) {
-        log_write(LOG_ERROR, "ipc_send failed: %d", ret);
+        log_write(AIRY_LOG_ERROR, "ipc_send failed: %d", ret);
     }
 
     /* 3. 撤销令牌：airy_sys_call(REVOKE_BADGE)，编号 548 */

@@ -27,8 +27,8 @@ agentrt-linux 的 12 个用户态守护进程统一归属 `services/daemons/` �
 | # | Daemon 名称 | systemd 服务 | Unify 模块归属 | 核心职责 |
 |---|------------|-------------|---------------|---------|
 | 1 | `macro_d` | `agentrt-macro-superv.service` | A-ULS | Macro-Supervisor 温情裁决（接收 Micro-Supervisor 故障通知） |
-| 2 | `logger_d` | `agentrt-logger-daemon.service` | A-ULP | 日志格式化、过滤、落盘（消费 Ring Buffer） |
-| 3 | `config_d` | `agentrt-config-daemon.service` | A-UCS | 配置热重载分发（sysctl ↔ JSON 双向同步） |
+| 2 | `logger_d` | `agentrt-logger.service` | A-ULP | 日志格式化、过滤、落盘（消费 Ring Buffer） |
+| 3 | `config_d` | `agentrt-config.service` | A-UCS | 配置热重载分发（sysctl ↔ JSON 双向同步） |
 | 4 | `gateway_d` | `agentrt-gateway.service` | A-IPC | IPC 网关守护（io_uring 命令路由） |
 | 5 | `sched_d` | `agentrt-sched.service` | A-ULS | 调度策略守护（sched_tac 参数注入） |
 | 6 | `vfs_d` | `agentrt-vfs.service` | A-ULS | VFS 用户态化守护（内核保留路径解析） |

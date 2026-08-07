@@ -87,14 +87,14 @@ perf stat -e sched:sched_switch,sched:sched_wakeup,sched:sched_stat_runtime \
 
 ### 2.2 sched_tac 调度类专用事件
 
-sched_tac 三层调度类（SCHED_DEADLINE / SCHED_FIFO / EEVDF）的切换通过 tracepoint 暴露：
+sched_tac 三层调度类（SCHED_DEADLINE / SCHED_FIFO / EEVDF）的切换通过 tracepoint 暴露（**规划**：内核当前无 `airy:airy_sched_class_switch` tracepoint，以下为设计规划）：
 
 ```bash
-# SCHED_DEADLINE 相关
+# SCHED_DEADLINE 相关（airy:airy_sched_class_switch 为规划事件）
 perf stat -e sched:sched_switch,sched:sched_stat_runtime,airy:airy_sched_class_switch \
     -a -- per-agent-benchmark 60
 
-# 输出片段示例
+# 输出片段示例（规划）
 # Performance counter stats for 'system wide':
 #     1,234,567  sched:sched_switch
 #       987,654  sched:sched_stat_runtime

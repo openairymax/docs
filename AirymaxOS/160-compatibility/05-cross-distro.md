@@ -219,10 +219,10 @@ dkms autoinstall
 int airy_detect_user_sched(void)
 {
     if (access("/proc/agentrt/user_sched", F_OK) == 0) {
-        log_write(LOG_INFO, "sched_tac supported: using stc_agent");
+        log_write(AIRY_LOG_INFO, "sched_tac supported: using stc_agent");
         return 1;
     }
-    log_write(LOG_WARN, "sched_tac not supported: falling back to EEVDF");
+    log_write(AIRY_LOG_WARN, "sched_tac not supported: falling back to EEVDF");
     return 0;
 }
 
@@ -235,10 +235,10 @@ int airy_detect_io_uring(void)
     int fd = syscall(__NR_io_uring_setup, 1, &params);
     if (fd >= 0) {
         close(fd);
-        log_write(LOG_INFO, "io_uring supported: using zero-copy IPC");
+        log_write(AIRY_LOG_INFO, "io_uring supported: using zero-copy IPC");
         return 1;
     }
-    log_write(LOG_WARN, "io_uring not supported: falling back to unix socket");
+    log_write(AIRY_LOG_WARN, "io_uring not supported: falling back to unix socket");
     return 0;
 }
 ```
@@ -429,7 +429,7 @@ agentrt-linux 的工程思想与实现方式与 主流 Linux 发行版 保持一
 
 ### 11.2 代码共享边界澄清
 
-- **agentrt ↔ AirymaxOS**：共享 [SC] 共享契约层代码（10 个头文件）
+- **agentrt ↔ AirymaxOS**：共享 [SC] 共享契约层代码（12 个头文件）
 - **AirymaxOS ↔ 主流 Linux 发行版**：仅技术参考，不共享代码
 - **AirymaxOS ↔ 主流 Linux 发行版标准发行版**：工具链兼容，可运行 主流 Linux 发行版标准 RPM 包
 
@@ -498,7 +498,7 @@ steps:
 void airy_notify_fallback(const char *feature,
                               const char *reason)
 {
-    log_write(LOG_WARN,
+    log_write(AIRY_LOG_WARN,
         "feature fallback: %s reason=%s agent=%d",
         feature, reason, current_agent_id);
 

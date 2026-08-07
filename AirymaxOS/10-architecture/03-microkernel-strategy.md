@@ -76,7 +76,7 @@ seL4 的核心设计决策是 **capability 单一安全模型**（ES-SEL4-05 至
 | cap 身份  | 64 bit Badge 标识来源                                            | `src/object/cnode.c:798-819`                    |
 | cap 即内存 | CTE 直接内嵌在 TCB 中，cap 本身就是内存                                   | `include/object/structures.h`                   |
 
-**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ LSM 钩子 250 ID 枚举 + capability 派生模型（mint / mintcopy / derive / revoke）。
+**agentrt-linux 落地**：security 子仓实现 capability 系统（ADR-004），与 agentrt Cupolas 同源。通过 \[SC] 共享契约层 `include/uapi/linux/airymax/security_types.h` 定义 capability 44 ID 枚举（41 POSIX 0-40 + 3 Airymax 扩展 41-43）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，定义于 `lsm_types.h`）+ capability 派生模型（mint / mintcopy / derive / revoke）。
 
 ### 1.3 形式化可验证性预留
 
@@ -129,7 +129,7 @@ seL4 明确内核只保留 6 类职责（ES-SEL4-29）：
 
 | 职责            | seL4 实现                            | agentrt-linux 实现                   | 代码预估      |
 | ------------- | ---------------------------------- | ---------------------------------- | --------- |
-| Capability 管理 | CNode + MDB 派生树                    | 纯 C LSM + agent_caps[1024] 静态数组（H5） | \~3,000 行 |
+| Capability 管理 | CNode + MDB 派生树                    | 纯 C LSM + agent_caps[1024] 静态数组（`__airymax_cap_table`，sec_d 唯一写者）（H5） | \~3,000 行 |
 | IPC（消息传递）     | Endpoint + Notification + Fastpath | io\_uring 零拷贝 + MSG\_RING          | \~5,000 行 |
 | 调度原语          | priority + round-robin + domain    | sched\_tac（SCHED\_DEADLINE / SCHED\_FIFO / EEVDF 调度类组合） | \~4,000 行 |
 | 地址空间管理        | VSpace + Page Table                | Linux mm/（保留）                      | Linux 原生  |
@@ -177,7 +177,7 @@ seL4 采用 bootinfo 机制（ES-SEL4-31）：内核启动后将初始 capabilit
 | 边界契约         | seL4                  | agentrt-linux                     |
 | ------------ | --------------------- | --------------------------------- |
 | 初始资源传递       | bootinfo 结构           | systemd unit + capability 初始化守护进程 |
-| ABI 稳定性      | syscall.xml + codegen | \[SC] 共享契约层 10 头文件                |
+| ABI 稳定性      | syscall.xml + codegen | \[SC] 共享契约层 12 头文件                |
 | root task 职责 | 初始化用户态服务              | systemd + 12 daemons              |
 | 内核启动后行为      | 不再主动创建资源              | 内核仅提供机制，资源由用户态管理                  |
 
@@ -205,7 +205,7 @@ CSpace = CNode 树
   寻址 = guard 匹配 + radix 逐级查找
 ```
 
-**agentrt-linux 落地**：通过纯 C LSM 钩子 + `agent_caps[1024]` 静态数组实现 capability 检查（H5 硬约束，禁止依赖 BPF）。CTE 结构定义在 \[SC] `include/uapi/linux/airymax/security_types.h` 中，与 agentrt Cupolas 同源。
+**agentrt-linux 落地**：通过纯 C LSM 钩子 + `agent_caps[1024]` 静态数组（`__airymax_cap_table`，定义宿主 `kernel/ipc/airy_ipc_capability.c`，sec_d 唯一写者）实现 capability 检查（H5 硬约束，禁止依赖 BPF）。`airy_cap_slot` 结构定义在 \[SC] `include/uapi/linux/airymax/lsm_types.h` 中（80B，AIRY_ALIGNED(64)，含 MDB 五字段），与 agentrt Cupolas 同源。
 
 ### 3.2 Capability 派生树
 
@@ -592,7 +592,7 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 
 | 层次               | 共享程度                                   | seL4 思想分布                                                                                            |
 | ---------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **\[SC] 共享契约层**  | 完全共享代码                                 | capability 模型（`security_types.h` 44 cap + 250 LSM）+ IPC 契约（`ipc.h` magic 0x41524531 'ARE1' + 128B 头） |
+| **\[SC] 共享契约层**  | 完全共享代码                                 | capability 模型（`security_types.h` 44 cap + 7 钩子实现 + 250 框架总槽位）+ IPC 契约（`ipc.h` magic 0x41524531 'ARE1' + 128B 头） |
 | **\[SS] 语义同源层**  | 操作模式同源（注册/匹配/生命周期等概念一致），函数签名因抽象层级不同而独立 | IPC 消息传递 API（agentrt POSIX MQ ↔ agentrt-linux io\_uring）+ capability 4 项 API 同源                      |
 | **\[IND] 完全独立层** | 完全独立                                   | 形式化验证框架（tests-linux seL4 风格）+ 内核态调度（sched\_tac）+ 纯 C LSM（airy\_lsm，H5）                                              |
 | **\[DSL] 降级生存层** | [SC] 损坏时最小可运行子集                          | 每个 [SC] 头文件底部 `#ifdef AIRY_SC_FALLBACK` 降级块（38 POSIX 错误码 + printk + 最小 128B IPC + EEVDF 默认 + POSIX capability + 统一 Panic），详见 [11-degraded-survival-layer.md](11-degraded-survival-layer.md) |
@@ -606,11 +606,13 @@ seL4 采用 TSC（Technical Steering Committee）集中治理模式（ES-SEL4-36
 | `ipc.h`             | Endpoint / Message   | magic 0x41524531 'ARE1' + 128B 消息头（`struct airy_ipc_msg_hdr`）                    | kernel / services  |
 | `sched.h`           | TCB 调度               | magic 0x41475453 'AGTS' + 复用 Linux 6.6 原生 SCHED_DEADLINE/SCHED_FIFO/EEVDF（禁用 SCHED\_AGENT 宏）+ AIRY\_CAP\_MAX\_AGENTS=1024 | kernel / cognition |
 | `memory_types.h`    | Untyped / Frame      | MemoryRovol L1-L4 + GFP 掩码 + PMEM 接口                                             | kernel / memory    |
-| `security_types.h`  | CNode / Capability   | 41 cap + 250 LSM + Cupolas blob 布局 + capability 派生                               | kernel / security  |
+| `security_types.h`  | CNode / Capability   | 44 cap（41 POSIX 0-40 + 3 扩展 41-43）+ 7 钩子实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`）+ 250 框架总槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL`，lsm_types.h）+ Cupolas 4 值裁决 + `airy_cap_op` 7 派生操作 + `typedef __u64 cap_t` | kernel / security  |
 | `cognition_types.h` | —                    | 三阶段枚举（PERCEPT/THINK/ACT）+ Thinkdual 模式                                  | kernel / cognition |
-| `syscalls.h`        | seL4 7-11 syscall 模型 | v1.0.1: 4 核心 + 20 预留 = 24 槽位（1 Capability Invocation + 3 控制原语）                                | kernel / cognition |
+| `syscalls.h`        | seL4 7-11 syscall 模型 | v1.0.1: 4 核心（548-551）+ 20 预留（552-571）= 24 槽位（1 Capability Invocation + 3 控制原语）                                | kernel / cognition |
+| `syscall.h`         | syscall 编号生成       | `syscall_gen.py` 生成产物（`__NR_airy_sys_*` 548-551）                                   | kernel / services |
 | `uapi_compat.h`     | 用户态 ABI 桥接        | 三路类型桥接（`__KERNEL__` / `__linux__` / `#else`）                                       | IRON-9 跨端 |
-| `lsm_types.h`       | 安全钩子契约            | 纯 C LSM 类型定义 + `DEFINE_LSM(airy)` 骨架 + Capability 缓存结构                          | kernel / security  |
+| `lsm_types.h`       | 安全钩子契约            | 纯 C LSM 类型定义（`AIRY_LSM_HOOK_IMPLEMENTED=7` / `AIRY_LSM_KERNEL_HOOK_TOTAL=250`）+ 安全 blob（`airy_task_sec`/`airy_inode_sec`）+ `airy_cap_slot`（80B，AIRY_ALIGNED(64)）+ `DEFINE_LSM(airy)` 骨架 | kernel / security  |
+| `bpf_struct_ops.h`  | struct_ops 状态机      | 4 态状态机（INIT/REGISTERED/ACTIVE/DRAINING）+ `bpf_struct_ops_common_val` 布局        | kernel / cognition |
 
 ### \[SS] 语义同源层——seL4 概念 agentrt ↔ agentrt-linux 映射
 
@@ -710,7 +712,7 @@ graph TB
 ### 12.3 agentrt-linux 内部参考文献
 
 - IRON-9 v3 四层共享模型：`50-engineering-standards/README.md`
-- \[SC] 共享契约层 10 头文件：`include/uapi/linux/airymax/{error,log_types,ipc,sched,memory_types,security_types,cognition_types,syscalls,uapi_compat,lsm_types}.h`
+- \[SC] 共享契约层 12 头文件：`include/uapi/linux/airymax/{error,log_types,ipc,sched,memory_types,security_types,cognition_types,syscalls,syscall,uapi_compat,lsm_types,bpf_struct_ops}.h`
 - 合规检查清单：`50-engineering-standards/08-compliance-checklist.md`
 
 ***

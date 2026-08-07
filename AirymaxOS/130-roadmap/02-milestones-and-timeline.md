@@ -233,7 +233,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 
 | 维度 | 设计 |
 |------|------|
-| 捐赠方/接收方握手 | (1) donor（client）发起 IPC call，在 `airy_ipc_msg_hdr.flags` 置 `AIRY_IPC_FLAG_SC_DONATE`<br>(2) receiver（server）在 `airy_uring_cmd_check()` 中识别该 flag，调用 `airy_sc_donate_accept()`<br>(3) 双方通过原子交换 `airy_sc_donation_token`（u64，含 donor agent_id + epoch + budget_ns）完成握手 |
+| 捐赠方/接收方握手 | (1) donor（client）发起 IPC call，在 `airy_ipc_msg_hdr.flags` 置 `AIRY_IPC_FLAG_SC_DONATE`（规划态，待 [SC] 注册）<br>(2) receiver（server）在 `airy_uring_cmd_check()` 中识别该 flag，调用 `airy_sc_donate_accept()`<br>(3) 双方通过原子交换 `airy_sc_donation_token`（u64，含 donor agent_id + epoch + budget_ns）完成握手 |
 | 捐赠内容 | donor 当前 `sched_dl_entity.runtime` 的剩余部分（不预借未补充的预算），临时附加到 receiver 的 `runtime` 字段 |
 | 优先级传递 | donor 的 `sched_attr.sched_priority`（FIFO）或 `sched_deadline`（DEADLINE）通过 `airy_sc_inherit_prio()` 传递给 receiver，对齐 sched_tac 优先级继承（[03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md) §4.5） |
 | 与 Badge 的关系 | 捐赠 token 复用 Badge 的 64-bit 布局（`Epoch<<48 \| RandomTag<<16 \| Perms`），但 Perms 字段重定义为 `AIRY_SC_PERM_DONATE`（0x4000）；sec_d 仍是 token 的唯一写者（[07-airy-lsm-design.md](../110-security/07-airy-lsm-design.md) §3.5） |
@@ -244,7 +244,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 **交付物**：
 
 1. `kernel/kernel/superv/airy_sc_donate.c` + `airy_sc_donate.h`——捐赠协议实现
-2. IPC fastpath 接入——`AIRY_IPC_FLAG_SC_DONATE` 在 `airy_ipc_msg_hdr.flags` 中分配（与 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) §3 opcode 表同步）
+2. IPC fastpath 接入——`AIRY_IPC_FLAG_SC_DONATE`（规划态，待 [SC] 注册）在 `airy_ipc_msg_hdr.flags` 中分配（与 [02-ipc-protocol.md](../30-interfaces/02-ipc-protocol.md) §3 opcode 表同步）
 3. KUnit 用例：握手 / 撤销 / 强制撤销 / 并发捐赠
 4. ftrace 事件：`airy:sc_donate_accept`、`airy:sc_donate_revoke`、`airy:sc_donate_force_revoke`
 
@@ -376,7 +376,7 @@ P0 阶段覆盖 M0-M6，净工期 91 天（13 周），其中多个里程碑并�
 - capability 级联撤销：DELETE 一个有 N 个子派生 capability 的快照时，所有子 capability 在 ≤ 10µs 内全部撤销
 - IPC ring 取消协同：DELETE/MIGRATE 触发 `airy_ipc_cancel_badged_sends()` 后，所有在途匹配 badge 的 IPC 在 ≤ 100µs 内完成取消（CQE 返回 `-EINTR`）
 - DSL 降级下仅 SNAPSHOT/RESTORE/DELETE 可用，其余 op 返回 `-ENOSYS`（内核标准 errno）
-- 与 CBS 准入（§3.3.1）/ lockdown（§3.5.1）协同：full lockdown 后 TIER_SET/MGLRU_CONFIG 返回 `-AIRY_ELOCKDOWN`（规划错误码，待 [SC] 新增），但 SNAPSHOT/RESTORE/DELETE 不受影响
+- 与 CBS 准入（§3.3.1）/ lockdown（§3.5.1）协同：full lockdown 后 TIER_SET/MGLRU_CONFIG 返回 `-AIRY_ELOCKDOWN`（规划中的 lockdown 拒绝码，落地时在 error.h 注册），但 SNAPSHOT/RESTORE/DELETE 不受影响
 
 **与既有 airy 模块依赖**：
 

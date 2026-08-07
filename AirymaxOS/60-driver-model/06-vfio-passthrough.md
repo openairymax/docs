@@ -151,38 +151,38 @@ int airy_vfio_assign_device(struct agent_vfio_ctx *ctx, u32 agent_id,
     /* 3. open group fd */
     group_fd = open(group_path, O_RDWR);
     if (group_fd < 0)
-        return -AIRY_E_VFIO_NO_GROUP;
+        return -AIRY_ENOENT;
 
     /* 4. 校验 group 状态 */
     rc = ioctl(group_fd, VFIO_GROUP_GET_STATUS, &group_status);
     if (rc || !(group_status.flags & VFIO_GROUP_FLAGS_VIABLE)) {
-        rc = -AIRY_E_VFIO_GROUP_NOT_VIABLE;
+        rc = -AIRY_EPERM;
         goto out_close_group;
     }
 
     /* 5. 创建 container 并绑定 group */
     container_fd = open("/dev/vfio/vfio", O_RDWR);
     if (container_fd < 0) {
-        rc = -AIRY_E_VFIO_NO_CONTAINER;
+        rc = -AIRY_ENOENT;
         goto out_close_group;
     }
 
     rc = ioctl(group_fd, VFIO_GROUP_SET_CONTAINER, &container_fd);
     if (rc) {
-        rc = -AIRY_E_VFIO_SET_CONTAINER;
+        rc = -AIRY_EINVAL;
         goto out_close_container;
     }
 
     /* 6. 设置 IOMMU 类型（VFIO_TYPE1_IOMMU） */
     rc = ioctl(container_fd, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
     if (rc) {
-        rc = -AIRY_E_VFIO_SET_IOMMU;
+        rc = -AIRY_EINVAL;
         goto out_close_container;
     }
 
     rc = ioctl(container_fd, VFIO_IOMMU_GET_INFO, &iommu_info);
     if (rc) {
-        rc = -AIRY_E_VFIO_IOMMU_INFO;
+        rc = -AIRY_EINVAL;
         goto out_close_container;
     }
 
@@ -195,7 +195,7 @@ int airy_vfio_assign_device(struct agent_vfio_ctx *ctx, u32 agent_id,
     /* 8. 获取设备 fd */
     device_fd = ioctl(group_fd, VFIO_GROUP_GET_DEVICE_FD, pci_bdf);
     if (device_fd < 0) {
-        rc = -AIRY_E_VFIO_GET_DEVICE;
+        rc = -AIRY_ENOENT;
         goto out_unmap_dma;
     }
 
@@ -331,7 +331,7 @@ int airy_vfio_check_iommu_group(const char *pci_bdf, u32 agent_id)
     /* 3. 遍历组内所有设备，校验是否均为该 Agent 已分配设备 */
     dir = opendir(group_path);
     if (!dir)
-        return -AIRY_E_VFIO_NO_GROUP;
+        return -AIRY_ENOENT;
 
     while ((ent = readdir(dir)) != NULL) {
         char dev_path[512];
@@ -347,7 +347,7 @@ int airy_vfio_check_iommu_group(const char *pci_bdf, u32 agent_id)
         if (rc == 0 && owner_agent != agent_id) {
             /* 组内有其他 Agent 的设备——拒绝直通 */
             closedir(dir);
-            return -AIRY_E_VFIO_GROUP_CONFLICT;
+            return -AIRY_EBUSY;
         }
     }
 
@@ -428,7 +428,7 @@ int airy_vfio_map_dma(int container_fd, u32 agent_id, size_t size,
     /* 1. 分配管理结构 */
     region = calloc(1, sizeof(*region));
     if (!region)
-        return -AIRY_E_VFIO_NOMEM;
+        return -AIRY_ENOMEM;
 
     region->agent_id = agent_id;
     region->size = ALIGN(size, PAGE_SIZE);
@@ -436,14 +436,14 @@ int airy_vfio_map_dma(int container_fd, u32 agent_id, size_t size,
     /* 2. 通过 /dev/airymax_dma 分配物理页（内核 alloc_pages + mmap） */
     region->dma_fd = open("/dev/airymax_dma", O_RDWR);
     if (region->dma_fd < 0) {
-        rc = -AIRY_E_VFIO_DMA_DEV;
+        rc = -AIRY_ENOENT;
         goto out_free_region;
     }
 
     rc = ioctl(region->dma_fd, AIRY_DMA_IOC_ALLOC_PAGES,
                &region->size);
     if (rc) {
-        rc = -AIRY_E_VFIO_ALLOC_PAGES;
+        rc = -AIRY_ENOMEM;
         goto out_close_dma_fd;
     }
 
@@ -451,7 +451,7 @@ int airy_vfio_map_dma(int container_fd, u32 agent_id, size_t size,
     vaddr = mmap(NULL, region->size, PROT_READ | PROT_WRITE,
                  MAP_SHARED, region->dma_fd, 0);
     if (vaddr == MAP_FAILED) {
-        rc = -AIRY_E_VFIO_MMAP;
+        rc = -AIRY_ENOMEM;
         goto out_close_dma_fd;
     }
 
@@ -461,7 +461,7 @@ int airy_vfio_map_dma(int container_fd, u32 agent_id, size_t size,
     /* 4. 分配 IOVA（VFIO IOMMU 域内的 DMA 地址） */
     region->iova = airy_vfio_alloc_iova(agent_id, region->size);
     if (!region->iova) {
-        rc = -AIRY_E_VFIO_IOVA;
+        rc = -AIRY_ENOMEM;
         goto out_munmap;
     }
 
@@ -473,7 +473,7 @@ int airy_vfio_map_dma(int container_fd, u32 agent_id, size_t size,
 
     rc = ioctl(container_fd, VFIO_IOMMU_MAP_DMA, dma_map);
     if (rc) {
-        rc = -AIRY_E_VFIO_MAP_DMA;
+        rc = -AIRY_EINVAL;
         goto out_free_iova;
     }
 
@@ -590,7 +590,7 @@ static int airy_vfio_assign_check(u32 agent_id, const char *pci_bdf,
 
     /* 1. 必须持有 CAP_VFIO_ASSIGN */
     if (!(cred->cap_mask & CAP_VFIO_ASSIGN))
-        return -AIRY_E_VFIO_NOCAP;
+        return -AIRY_EPERM;
 
     /* 2. IOMMU 绕过需要更高权限（仅 macro_d） */
     if ((cap_mask & CAP_VFIO_IOMMU_BYPASS) &&
@@ -598,7 +598,7 @@ static int airy_vfio_assign_check(u32 agent_id, const char *pci_bdf,
         airy_ulps_log(AIRY_ULPS_CRIT,
                       "IOMMU bypass attempted by non-privileged: agent=%u",
                       agent_id);
-        return -AIRY_E_VFIO_NOCAP;
+        return -AIRY_EPERM;
     }
 
     /* 3. IOMMU 组校验（不允许绕过 IOMMU 的情况） */
@@ -687,7 +687,7 @@ int airy_vfio_assign_or_fallback(struct agent_vfio_ctx *ctx, u32 agent_id,
     airy_ulps_log(AIRY_ULPS_ERROR,
                   "All assign paths failed: agent=%u bdf=%s",
                   agent_id, pci_bdf);
-    return -AIRY_E_VFIO_UNAVAILABLE;
+    return -AIRY_ENOTSUP;
 }
 ```
 
@@ -714,6 +714,8 @@ graph TD
 ### 9.1 与 03-devm-resource.md 的关系
 
 VFIO 直通的 DMA 区域分配通过 `devm_airy_dma_pool`（[03-devm-resource.md](03-devm-resource.md) §3）托管——Agent 注销时自动释放 DMA 映射，避免资源泄漏。
+
+> **设备错误统一映射 [SC] error.h POSIX 段（error.h 无设备专用子空间）**：本文件所有 `-AIRY_E_VFIO_*` 错误码一律映射至 [SC] `error.h` 实有码——拒绝→`-AIRY_EPERM`、资源不足→`-AIRY_ENOMEM`、参数非法→`-AIRY_EINVAL`、设备忙/冲突→`-AIRY_EBUSY`、不存在→`-AIRY_ENOENT`、未支持/不可用→`-AIRY_ENOTSUP`（详见 [03-devm-resource.md](03-devm-resource.md) §7.1）。
 
 ### 9.2 与 04-misc-framework.md 的关系
 

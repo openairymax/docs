@@ -48,7 +48,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 策略枚举     | `stc_agent`                        | 枚举值 | 优先级 100-119，<100ms，CoreLoopThree 思考                       |
 | 策略枚举     | `stc_batch`                        | 枚举值 | 优先级 120-139，<1s，LLM 批量推理                                  |
 | 字符串常量    | `AIRY_STC_POLICY_NAME "stc_agent"` | 宏   | 用户态策略标识字符串                                                |
-| 系统调用前缀   | `AIRY_SYS_SCHED_*`                 | 编号段 | 572-591，sched\_tac 策略管理                                   |
+| 系统调用前缀   | `AIRY_SYS_SCHED_CTL`               | 编号段 | 552-571 预留段，sched 经 `AIRY_SYS_SCHED_CTL`(550) op 承载       |
 | **禁止使用** | ~~`AIRY_SCHED_AGENT`~~             | 废弃  | 2026-07-18 彻底废弃                                           |
 | **禁止使用** | ~~`AIRY_SCHED_AGENT_NAME`~~        | 废弃  | 已改为 `AIRY_STC_POLICY_NAME`                                |
 | **禁止使用** | ~~`sched_ext`~~                    | 废弃  | OLK 6.6 已 backport 但选择不使用（与纯 C LSM 原则冲突），已由 sched\_tac 替代 |
@@ -88,7 +88,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 | 层次    | 标注     | 全称                      | 共享程度                              |
 | ----- | ------ | ----------------------- | --------------------------------- |
-| 共享契约层 | \[SC]  | Shared Contract         | 完全共享代码（10 个头文件）                   |
+| 共享契约层 | \[SC]  | Shared Contract         | 完全共享代码（12 个头文件）                   |
 | 语义同源层 | \[SS]  | Semantic Sibling       | 高层 API 语义同源，签名独立演进                |
 | 完全独立层 | \[IND] | Independent             | 完全独立实现                            |
 | 降级生存层 | \[DSL] | Degraded Survival Layer | 自包含降级块（`#ifdef AIRY_SC_FALLBACK`） |
@@ -736,7 +736,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - 128 字节固定记录格式单一权威源
 - 共享内存方案采用 `alloc_pages(GFP_KERNEL)` + mmap（**不使用 DMA 一致性内存**，x86\_64 默认缓存一致）
 - eventfd 通知复用 A-IPC 的 io\_uring 通道
-- \[DSL] 降级模式下退化为 printk 原生（仅 `LOG_FATAL` + `LOG_ERROR`）
+- \[DSL] 降级模式下退化为 printk 原生（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR`）
 
 **标准名称**: A-ULP（Unified Logging and Printk Subsystem，统一日志与打印系统）
 
@@ -948,7 +948,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 | 维度    | 正常模式                                             | \[DSL] 降级模式                               |
 | ----- | ------------------------------------------------ | ----------------------------------------- |
 | 错误码   | 5 子空间（300 码）                                     | 38 个 POSIX 码 + 1 个配置码（`AIRY_ECFGVERSION`） |
-| 日志    | Ring Buffer + Logger Daemon                      | printk 原生（仅 `LOG_FATAL` + `LOG_ERROR`）    |
+| 日志    | Ring Buffer + Logger Daemon                      | printk 原生（仅 `AIRY_LOG_FATAL` + `AIRY_LOG_ERROR`）    |
 | IPC   | 完整 128B 消息头 + 3 操作                               | 最简 128B 消息头（3 字段）+ 2 操作                   |
 | 调度    | sched\_tac 三层（SCHED\_DEADLINE/SCHED\_FIFO/EEVDF） | EEVDF 默认调度                                |
 | 安全    | 纯 C LSM 完整校验                                     | 仅 POSIX capability                        |
@@ -1329,7 +1329,7 @@ Micro-Supervisor 不做任何"人性化"决策，仅执行冷酷的机制级执�
 
 | 层次    | 标注     | 全称                      | 共享程度               |
 | ----- | ------ | ----------------------- | ------------------ |
-| 共享契约层 | \[SC]  | Shared Contract         | 完全共享代码（10 个头文件）    |
+| 共享契约层 | \[SC]  | Shared Contract         | 完全共享代码（12 个头文件）    |
 | 语义同源层 | \[SS]  | Semantic Sibling        | 高层 API 语义同源，签名独立演进 |
 | 完全独立层 | \[IND] | Independent             | 完全独立               |
 | 降级生存层 | \[DSL] | Degraded Survival Layer | 自包含降级块（\[SC] 头文件内） |

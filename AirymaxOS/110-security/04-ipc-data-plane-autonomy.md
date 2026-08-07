@@ -126,11 +126,11 @@ static void airy_ipc_ring_release(struct airy_ipc_ring *ring)
 
 ## §3 原则二：离线缓存校验 — Capability 缓存离线校验，不依赖在线服务
 
-> **v1.1 重构说明**（Capability Folding 集成版）：原则二的**目标不变**（控制面离线时数据面仍可校验），但**实现机制升级**——
+> **v1.0.1 重构说明**（Capability Folding 集成版）：原则二的**目标不变**（控制面离线时数据面仍可校验），但**实现机制升级**——
 > - v1.0：`radix tree` 缓存查找 + TTL 过期 + 两层校验（fastpath 查缓存 / slowpath 查控制面）
-> - v1.0.1：`agent_caps` 指针表（启动期 `alloc_pages_node` 分配）+ 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
+> - v1.0.1：`agent_caps` 静态数组（`__airymax_cap_table[1024]`，AIRY_ALIGNED(64)，sec_d 唯一写者）+ 64-bit Badge 内联校验（fastpath C-S9 ~10ns，无 radix tree 查找、无 RCU 锁）
 >
-> v1.0.1 Capability Folding 通过 Badge 模型天然满足离线校验要求：Badge 由 sec_d 在控制面在线时编译并写入 `agent_caps[src_task]`，控制面离线后 fastpath C-S9 仍可基于 `agent_caps[]` 内联校验（数组无锁多读者）。v1.0 的 `radix tree` 缓存、TTL 过期、`AIRY_ECAP_RADIX_MISS` 兜底码仅在 [DSL] 降级模式下作为 fallback 路径保留（H6）。v1.1 实现详情见 [03-capability-model.md §13.2](03-capability-model.md) 与 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)。
+> v1.0.1 Capability Folding 通过 Badge 模型天然满足离线校验要求：Badge 由 sec_d 在控制面在线时编译并写入 `agent_caps[src_task]`，控制面离线后 fastpath C-S9 仍可基于 `agent_caps[]` 内联校验（数组无锁多读者）。v1.0 的 `radix tree` 缓存、TTL 过期、`AIRY_ECAP_RADIX_MISS` 兜底码仅在 [DSL] 降级模式下作为 fallback 路径保留（H6）。v1.0.1 实现详情见 [03-capability-model.md §13.2](03-capability-model.md) 与 [07-ipc-fastpath.md §5.2](../30-interfaces/07-ipc-fastpath.md)。
 >
 > 下文 §3.1~§3.5 保留 v1.0 原始设计描述（radix tree 缓存模型），作为原则二的设计语义参考；实际实现以 v1.0.1 Capability Folding 为准。
 
@@ -208,7 +208,7 @@ static int airy_cap_check_fastpath(__u32 cap_id, __u64 required_badge)
 |------|--------|------|
 | 缓存命中且未过期 | 完全容忍 | fastpath 直接通过 |
 | 缓存命中但 stale | 部分容忍 | fastpath 通过但记录告警日志 |
-| 缓存未命中 | 不容忍 | fastpath 返回 `AIRY_EDSL_CAP_MINIMAL`（-206），消息暂存离线队列（见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §2.6） |
+| 缓存未命中 | 不容忍 | fastpath 返回 `-AIRY_EINVAL`（-5，[DSL] 5 核心码；原规划码 `AIRY_EDSL_CAP_MINIMAL`（-206）未注册于 [SC] error.h），消息暂存离线队列（见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §2.6） |
 
 ---
 
@@ -326,7 +326,7 @@ A-IPC 模块组成
 | [DSL] 降级项 | Reconciliation 超时时的表现 |
 |-------------|---------------------------|
 | IPC | 仅使用最简 128B 消息头，不依赖完整 Capability |
-| 错误码 | 返回 `AIRY_EDSL_CAP_MINIMAL`（-206，[DSL] 码空间，见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §2.6） |
+| 错误码 | 返回 `-AIRY_EINVAL`（-5，[DSL] 5 核心码；原规划码 `AIRY_EDSL_CAP_MINIMAL`（-206）未注册于 [SC] error.h，见 [08-sc-error-contract.md](../30-interfaces/08-sc-error-contract.md) §2.6） |
 | 调度 | EEVDF 默认（不依赖 SCHED_DEADLINE） |
 
 ---

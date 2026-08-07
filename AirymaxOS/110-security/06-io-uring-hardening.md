@@ -415,7 +415,7 @@ static int airy_uring_cmd_security_check(struct io_uring_cmd *ioucmd,
     }
 
     /* 第二层：Capability 校验（纯 C LSM，非 BPF）
-     * v1.1: IPC fastpath 走 C-S9 Badge 内联校验（airy_cap_badge_ok）；
+     * v1.0.1: IPC fastpath 走 C-S9 Badge 内联校验（airy_cap_badge_ok）；
      *       non-IPC 路径（如 buffer 注册）走 slowpath airy_cap_check()。
      *       本钩子是 security_uring_cmd LSM 入口，仅 slowpath 被 C-S9 失败时调用
      *       （详见 07-airy-lsm-design.md §3.3）。
@@ -432,7 +432,7 @@ static int airy_uring_cmd_security_check(struct io_uring_cmd *ioucmd,
 }
 
 /* 注册到 security_uring_cmd 钩子（OLK 6.6 唯一 io_uring 钩子）
- * v1.1: 不注册 uring_sqe（OLK 6.6 中不存在），opcode 白名单在本钩子内部分发
+ * v1.0.1: 不注册 uring_sqe（OLK 6.6 中不存在），opcode 白名单在本钩子内部分发
  */
 static struct security_hook_list airy_uring_hooks[] __lsm_ro_after_init = {
     LSM_HOOK_INIT(uring_cmd, airy_uring_cmd_security_check),
@@ -472,7 +472,7 @@ Agent 请求注册 buffer
        │
        ▼
 1. Capability 校验（纯 C LSM）
-   ├── 校验 AIRY_CAP_REGISTER_BUFFER 权限
+   ├── 校验 AIRY_CAP_PERM_FILE_OPEN 权限（[IND] 规划码：AIRY_CAP_REGISTER_BUFFER 未注册于 [SC] security_types.h，现以实有权限位替代）
    └── 校验 buffer 地址范围合法
        │
        ▼
@@ -497,12 +497,14 @@ static int airy_uring_register_buffer_check(struct io_ring_ctx *ctx,
                                               void __user *addr,
                                               unsigned long size)
 {
-    /* 1. Capability 校验：必须拥有 REGISTER_BUFFER 权限
-     * v1.1: buffer 注册是 non-IPC 路径，走 slowpath airy_cap_check()
+    /* 1. Capability 校验：必须拥有 buffer 注册权限
+     * [IND] 规划码：AIRY_CAP_REGISTER_BUFFER 未注册于 [SC] security_types.h，
+     *       现以实有权限位 AIRY_CAP_PERM_FILE_OPEN 替代（待正式立项后分配专用位）
+     * v1.0.1: buffer 注册是 non-IPC 路径，走 slowpath airy_cap_check()
      *       （IPC fastpath 走 C-S9 Badge 内联校验，详见 03-capability-model.md §4.3.2）
      */
     if (airy_cap_check(current_agent_id(), current_cap_id(),
-                       AIRY_CAP_REGISTER_BUFFER) < 0) {
+                       AIRY_CAP_PERM_FILE_OPEN) < 0) {
         pr_warn("airy: buffer register denied (no cap) pid=%d\n",
                 current->pid);
         return -AIRY_ECAP_PERM;
@@ -528,7 +530,7 @@ static int airy_uring_register_buffer_check(struct io_ring_ctx *ctx,
     return 0;
 }
 
-/* v1.1: 不注册 uring_register_buffers 钩子（OLK 6.6 中不存在）
+/* v1.0.1: 不注册 uring_register_buffers 钩子（OLK 6.6 中不存在）
  * buffer 注册校验改为 airy_uring_cmd_check() 在 IORING_OP_URING_CMD 子命令中调用
  * 本函数 airy_uring_register_buffer_check() 作为辅助函数被调用，不作为独立 LSM 钩子
  *
@@ -576,9 +578,9 @@ io_uring 安全加固依赖纯 C LSM 模块（详见 [07-airy-lsm-design.md](07-
 
 | io_uring 安全机制 | 纯 C LSM 钩子 | 说明 |
 |-----------------|-------------|------|
-| opcode 白名单 | `security_uring_cmd`（内部分发） | v1.1: 在 uring_cmd 钩子内基于 ioucmd->cmd_op 校验（OLK 6.6 无 uring_sqe 钩子） |
+| opcode 白名单 | `security_uring_cmd`（内部分发） | v1.0.1: 在 uring_cmd 钩子内基于 ioucmd->cmd_op 校验（OLK 6.6 无 uring_sqe 钩子） |
 | Capability 校验 | `security_uring_cmd` | URING_CMD 回调中校验 Badge |
-| buffer 注册校验 | `security_uring_cmd`（子命令分发） | v1.1: 在 uring_cmd 钩子内分发 buffer 注册子命令（OLK 6.6 无 uring_register_buffers 钩子） |
+| buffer 注册校验 | `security_uring_cmd`（子命令分发） | v1.0.1: 在 uring_cmd 钩子内分发 buffer 注册子命令（OLK 6.6 无 uring_register_buffers 钩子） |
 
 ### 6.3 与 seL4 Capability 模型的关系
 

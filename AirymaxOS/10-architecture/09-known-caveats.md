@@ -172,7 +172,7 @@ agentrt-linux 不引入 MCS（Mixed Criticality Systems）配置——此为 seL
 ```c
 void airy_notify_fallback(const char *feature, const char *reason)
 {
-        log_write(LOG_WARN, "feature fallback: %s reason=%s",
+        log_write(AIRY_LOG_WARN, "feature fallback: %s reason=%s",
                   feature, reason);
         airy_ipc_event_t event = {
                 .type = AIRY_EVENT_FEATURE_FALLBACK,
@@ -217,7 +217,7 @@ void airy_notify_fallback(const char *feature, const char *reason)
 agentrt-linux 同时使用 capability（seL4 借鉴）和 LSM（Linux 6.6 原生）两层安全模型：
 
 - **capability 层**：细粒度权限控制（agent spawn / GPU sched / NPU access）
-- **LSM 层**：系统级安全策略（hooks 250 ID，参见 [110-security/01-lsm-framework.md](../110-security/01-lsm-framework.md)）
+- **LSM 层**：系统级安全策略（7 钩子实现 + 250 框架总槽位，参见 [110-security/01-lsm-framework.md](../110-security/01-lsm-framework.md)）
 - **融合点**：capability 操作触发 LSM 钩子
 
 **已知限制**：
@@ -334,7 +334,7 @@ K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch，在 7 �
 
 | 仓库 | commit | 内容 |
 |------|--------|------|
-| kernel (ALK-6.6-dev) | `airy/arch: import sw_64 and add LAYER config fragments` | arch/sw_64/（366 文件）+ openeuler_defconfig 底座（x86/arm64）+ euler_hw 硬件碎片 + defconfig-agent IRON-7 覆盖 + Kconfig stale source 修复 |
+| kernel (ALK-6.6-dev) | `airy/arch: import sw_64 and add LAYER config fragments` | arch/sw_64/（367 文件）+ openeuler_defconfig 底座（x86/arm64）+ euler_hw 硬件碎片 + defconfig-agent IRON-7 覆盖 + Kconfig stale source 修复 |
 | agentrt-linux (main) | `airy/build: add LAYER build artifacts for openEuler toolchain reuse` | build/airy-kernel.spec + meta-airymax/ + custom/cfg_airymax/ + ks-airymax.cfg |
 | docs-closed (main) | `airy/docs: register LAYER implementation progress in build strategy` | 12-build-and-flash-strategy.md §11 实施进度章节 |
 
@@ -360,9 +360,9 @@ K9-1 将 Capability 撤销机制从全局 epoch 改为 per-agent epoch，在 7 �
 
 | 编号        | 问题                                      | 来源                                                                                                                | 状态                |
 | --------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------- |
-| P1-BUD-01 | SDK 错误码与系统调用错误码不一致（-401/-701 vs -15/-4） | [140-application-development/04-token-budget.md §16.1](../140-application-development/04-token-budget.md)         | 待修复               |
+| P1-BUD-01 | SDK 错误码与系统调用错误码不一致（-401/-701 vs -15/-4） | [140-application-development/04-token-budget.md §16.1](../140-application-development/04-token-budget.md)         | ✅ 已修复（2026-08-07）：04-token-budget.md 与 02-sdk-integration.md 已统一为 `-AIRY_ESCHED_BUDGET`（幅值 122）/ `-AIRY_EPERM`（幅值 12），§16.1 已登记 `-401/-701` → `airy_errno_to_app()` 转换表 |
 | P1-SYS-02 | 生命周期文档交叉引用错误                            | [140-application-development/07-syscall-registry.md §11.2](../140-application-development/07-syscall-registry.md) | ✅ 已修复（2026-07-09） |
-| P1-CAP-01 | README 文档索引未更新                          | [110-security/03-capability-model.md §15.1](../110-security/03-capability-model.md)                               | 待修复               |
+| P1-CAP-01 | README 文档索引未更新                          | [110-security/03-capability-model.md §15.1](../110-security/03-capability-model.md)                               | ✅ 已修复（2026-08-07）：README.md §3 子仓清单/§4 文档索引已含 110-security 与 capability 模型条目 |
 
 ### 9.3 维护者声明
 

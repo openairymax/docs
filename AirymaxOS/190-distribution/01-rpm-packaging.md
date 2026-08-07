@@ -101,11 +101,11 @@ airymaxos-base (虚拟组)
 └── security/                    # 安全穹顶库
 
 /usr/lib/systemd/system/
-├── gateway_d.service
-├── cogn_d.service
+├── agentrt-gateway.service
+├── agentrt-cogn.service
 └── ...
 
-/etc/airymaxos/
+/etc/agentrt/
 ├── locale.conf
 ├── memory_tiering.conf
 ├── cxl.conf
@@ -118,12 +118,12 @@ airymaxos-base (虚拟组)
 ├── docs/                        # 文档
 └── schemas/                     # 配置 schema
 
-/var/lib/airymaxos/
+/var/lib/agentrt/
 ├── memoryrovol/                 # 记忆卷载数据
 ├── cognition/                   # 认知状态
 └── logs/                        # 日志
 
-/var/log/airymaxos/              # 系统日志
+/var/log/agentrt/              # 系统日志
 ```
 
 ---
@@ -257,7 +257,7 @@ install -m 755 tools/bpf/bpftool/bpftool \
 
 # 安装 systemd unit
 mkdir -p %{buildroot}/usr/lib/systemd/system
-install -m 644 airymaxos-kernel-load-bpf.service \
+install -m 644 agentrt-kernel-load-bpf.service \
         %{buildroot}/usr/lib/systemd/system/
 ```
 
@@ -268,7 +268,7 @@ install -m 644 airymaxos-kernel-load-bpf.service \
 /boot/vmlinuz-%{kernel_version}-agentrt
 /boot/initramfs-%{kernel_version}-agentrt.img
 %attr(0755, root, root) /usr/lib/airymaxos/sched/sched_agent_cprime
-/usr/lib/systemd/system/airymaxos-kernel-load-bpf.service
+/usr/lib/systemd/system/agentrt-kernel-load-bpf.service
 
 %files modules
 /lib/modules/%{kernel_version}-agentrt/
@@ -348,13 +348,13 @@ make DESTDIR=%{buildroot} install
 
 # 安装 systemd unit
 mkdir -p %{buildroot}/usr/lib/systemd/system
-install -m 644 ../systemd/cogn_d.service \
+install -m 644 ../systemd/agentrt-cogn.service \
         %{buildroot}/usr/lib/systemd/system/
 
 # 安装默认配置
-mkdir -p %{buildroot}/etc/airymaxos/services
+mkdir -p %{buildroot}/etc/agentrt/services
 install -m 644 ../config/cogn_d.conf \
-        %{buildroot}/etc/airymaxos/services/
+        %{buildroot}/etc/agentrt/services/
 
 # 安装 locale 数据
 mkdir -p %{buildroot}/usr/share/locale/zh_CN/LC_MESSAGES
@@ -362,19 +362,19 @@ msgfmt ../po/zh_CN.po -o \
         %{buildroot}/usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-cogn_d.mo
 
 %post
-%systemd_post cogn_d.service
+%systemd_post agentrt-cogn.service
 
 %preun
-%systemd_preun cogn_d.service
+%systemd_preun agentrt-cogn.service
 
 %postun
-%systemd_postun_with_restart cogn_d.service
+%systemd_postun_with_restart agentrt-cogn.service
 
 %files
 %defattr(-, root, root, -)
 /usr/lib/airymaxos/services/cogn_d
-/usr/lib/systemd/system/cogn_d.service
-%config(noreplace) /etc/airymaxos/services/cogn_d.conf
+/usr/lib/systemd/system/agentrt-cogn.service
+%config(noreplace) /etc/agentrt/services/cogn_d.conf
 /usr/share/locale/zh_CN/LC_MESSAGES/airymaxos-cogn_d.mo
 /usr/share/locale/en_US/LC_MESSAGES/airymaxos-cogn_d.mo
 /usr/share/locale/ja_JP/LC_MESSAGES/airymaxos-cogn_d.mo
@@ -517,7 +517,7 @@ export TZ=UTC
 ### 6.2 构建环境标准化
 
 ```bash
-# /etc/airymaxos/buildenv.conf —— 可重现构建环境
+# /etc/agentrt/buildenv.conf —— 可重现构建环境
 # 所有构建必须在相同环境进行
 
 # 构建容器镜像版本
@@ -615,16 +615,16 @@ done
 
 ## 8. 错误码体系对接
 
-发行版管理错误码纳入 agentrt-linux 统一错误码体系（发行版错误段 -1000~-1099，SSoT 定义于 `include/uapi/linux/airymax/error.h`）：
+发行版管理错误码纳入 agentrt-linux 统一错误码体系（`include/uapi/linux/airymax/error.h`，[SC] 共享契约层）。**`AIRY_E*` 常量为正数幅值（如 POSIX errno），调用方返回 `-AIRY_E*` 产生负错误值**；[SC] error.h 中**不存在** `AIRY_DIST_*` 专用段（原虚构的 -1000~-1099 段已废弃，见 [160-compatibility/05-cross-distro.md §15.1](../160-compatibility/05-cross-distro.md)），打包管理场景复用既有段码，未来发行版专属错误码向 error.h 保留段 241-300 申请：
 
 | 错误码 | 数值 | 含义 |
 |--------|------|------|
-| AIRY_DIST_EPKG_BUILD | -1000 | 包构建失败 |
-| AIRY_DIST_EPKG_INSTALL | -1001 | 包安装失败 |
-| AIRY_DIST_EPKG_DEP | -1002 | 依赖冲突 |
-| AIRY_DIST_EPKG_VERIFY | -1003 | GPG 验证失败 |
-| AIRY_DIST_EPKG_REPRODUCIBLE | -1004 | 可重现构建失败 |
-| AIRY_DIST_EPKG_ARCH | -1005 | 架构不匹配 |
+| AIRY_EIO | 6 | 包构建/安装失败（子进程或 I/O 失败） |
+| AIRY_EEXIST | 2 | 依赖冲突（包已存在且版本不兼容） |
+| AIRY_EPERM | 12 | GPG 验证失败（签名/密钥校验拒绝） |
+| AIRY_ENOTSUP | 11 | 可重现构建失败（构建工具不支持） |
+| AIRY_EINVAL | 5 | 架构不匹配（包与平台不兼容） |
+| （保留段） | 241-300 | 后续发行版专属错误码向 [SC] error.h 申请注册 |
 
 集中错误处理示例：
 
@@ -640,19 +640,19 @@ int airy_pkg_install(const char *package_name)
 
 	ret = airy_pkg_check_dep(package_name);
 	if (ret < 0) {
-		ret = -AIRY_DIST_EPKG_DEP;
+		ret = -AIRY_EEXIST;
 		goto out_err;
 	}
 
 	ret = airy_pkg_verify_gpg(package_name);
 	if (ret < 0) {
-		ret = -AIRY_DIST_EPKG_VERIFY;
+		ret = -AIRY_EPERM;
 		goto out_err;
 	}
 
 	ret = system("dnf install -y %s", package_name);
 	if (ret != 0) {
-		ret = -AIRY_DIST_EPKG_INSTALL;
+		ret = -AIRY_EIO;
 		goto out_err;
 	}
 	return 0;

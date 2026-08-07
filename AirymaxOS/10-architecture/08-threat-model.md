@@ -73,7 +73,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 | #  | 资产                                      | 信任级别  | 价值评估 | 关联 SSoT 规则       | 泄露/篡改后果                  |
 | -- | --------------------------------------- | ----- | ---- | ---------------- | ------------------------ |
 | A1 | **内核内存空间**                              | L1    | 极高   | OS-SEC-125\~127  | 内核地址泄露 → KASLR 绕过 → 内核提权 |
-| A2 | **\[SC] 共享契约层头文件（10 个）**                 | L1    | 极高   | OS-IRON-014      | 双端契约不一致 → ABI 破坏 → 内存破坏  |
+| A2 | **\[SC] 共享契约层头文件（12 个）**                 | L1    | 极高   | OS-IRON-014      | 双端契约不一致 → ABI 破坏 → 内存破坏  |
 | A3 | **Capability 表（seL4 风格，44 ID）**         | L1    | 极高   | OS-SEC-001\~099  | capability 伪造/绕过 → 权限提升  |
 | A4 | **IPC 消息通道（128B 消息头，magic 0x41524531）** | L2    | 高    | OS-IFACE-003/004 | 消息篡改/伪造 → 跨租户越权通信        |
 | A5 | **Agent 任务描述符（magic 0x41475453）**       | L2    | 高    | OS-IFACE-001     | 任务描述符伪造 → 身份冒充           |
@@ -151,7 +151,7 @@ agentrt-linux 定义三级信任边界（L1/L2/L3），与 [`110-security/README
 | **攻击向量** | ① 资源耗尽——恶意 Agent 耗尽 slab/kfifo 导致其他 Agent 无法分配；② IPC 风暴——高频 `AIRY_IPC_OP_SEND` 占满 fastpath 与 slowpath 队列；③ LLM 推理饥饿——恶意 Agent 持续提交推理请求占用 CoreLoopThree kthread；④ capability 表膨胀——派生大量 capability 耗尽 CSpace；⑤ 触发频繁 `cond_resched()` 路径拖慢调度                                                                   |
 | **攻击场景** | 恶意 Agent 以线速发送 IPC 消息（SEND\_BATCH 批量发送），占满 kfifo 与等待队列，导致合法 Agent 的 io_uring CQE poll 长期阻塞，引发系统级 DoS                                                                                                                                                                                                          |
 | **影响评估** | 中高。单租户 DoS 可降级全系统可用性，但不应影响内核 L1 稳定性                                                                                                                                                                                                                                                                         |
-| **防护措施** | ① IPC 每租户速率限制（per-Agent token bucket）；② capability 表大小上限 `AIRY_CAP_MAX_AGENTS=1024`，CNode 槽位上限强制；③ CoreLoopThree kthread 公平调度（sched\_ext SCHED\_AGENT，按 Agent 配额）；④ 长循环抢占点规则——耗时 >1ms 或迭代 >1000 次必须 `cond_resched()`（OS-KER-228），防止单 Agent 独占 CPU；⑤ Landlock 沙箱限制 Agent 资源访问面；⑥ kfifo 满时 slowpath 排队而非丢消息，配合超时机制 |
+| **防护措施** | ① IPC 每租户速率限制（per-Agent token bucket）；② capability 表大小上限 `AIRY_CAP_MAX_AGENTS=1024`，CNode 槽位上限强制；③ CoreLoopThree kthread 公平调度（sched\_tac，按 Agent 配额）；④ 长循环抢占点规则——耗时 >1ms 或迭代 >1000 次必须 `cond_resched()`（OS-KER-228），防止单 Agent 独占 CPU；⑤ Landlock 沙箱限制 Agent 资源访问面；⑥ kfifo 满时 slowpath 排队而非丢消息，配合超时机制 |
 
 ### 3.6 E - Elevation of Privilege（权限提升）
 
@@ -221,17 +221,17 @@ capability 令牌经安全通道传递，禁止日志打印原始值（OS-SEC-12
 
 ### 4.2 LSM + Landlock 沙箱（OS-STD-SEC-010\~011）
 
-#### 4.2.1 Cupolas LSM 钩子（250 ID）
+#### 4.2.1 airy_lsm LSM 钩子（7 个实现，250 框架总槽位）
 
-agentrt-linux Cupolas 作为最后初始化的 LSM 注册到框架，与 capability、Landlock、Yama 等共存（不打 `LSM_FLAG_EXCLUSIVE` 标记）。Cupolas 消费 5 类核心钩子：
+agentrt-linux airy_lsm 作为纯 C LSM 注册到框架（`DEFINE_LSM(airy)`，`LSM_ORDER_MUTABLE`），与 capability、Landlock、Yama 等共存（不打 `LSM_FLAG_EXCLUSIVE` 标记）。airy_lsm 实现 7 个钩子（`AIRY_LSM_HOOK_IMPLEMENTED=7`，见 `airy_lsm.c`）；Linux 6.6 LSM 框架共暴露约 250 个钩子槽位（`AIRY_LSM_KERNEL_HOOK_TOTAL=250`，`lsm_types.h`，仅作规划上界，不用于数组定长）：
 
-| 钩子类别   | 代表钩子                                           | Cupolas 职责                        |
+| 钩子类别   | 实现钩子                                           | airy_lsm 职责                        |
 | ------ | ---------------------------------------------- | --------------------------------- |
-| inode  | `inode_alloc_security`/`inode_permission`      | 初始化 Agent 命名空间标签、校验跨 Agent 命名空间访问 |
-| file   | `file_open`                                    | Landlock 完成后追加 Agent 主体校验         |
-| task   | `task_create`                                  | Agent 创建权限裁决                      |
-| socket | `socket_create`/`socket_connect`/`socket_bind` | 网络访问控制                            |
-| cred   | `cred_prepare`                                 | capability 位图继承校验                 |
+| uring_cmd | `uring_cmd`                                    | io_uring 命令裁决（IPC 零拷贝路径）         |
+| task   | `task_alloc`/`task_free`                       | Agent 任务创建/释放钩子                  |
+| task   | `task_kill`                                    | 信号/终止权限裁决（`AIRY_CAP_PERM_KILL`）  |
+| file   | `file_open`                                    | 文件访问校验（`AIRY_CAP_PERM_FILE_OPEN`）|
+| inode  | `inode_alloc_security`/`inode_free_security`   | 初始化/释放 inode 安全 blob（`airy_inode_sec`） |
 
 钩子回调必须返回 \[SC] 4 值枚举之一（ALLOW/DENY/AUDIT/COMPLAIN，OS-SEC-008）。COMPLAIN 裁决通过 A-IPC 询问 daemon，5 秒超时后回退 ALLOW 并记录 AUDIT（OS-SEC-009）。审计事件必须包含 `agent_id` 字段（OS-SEC-010）。
 

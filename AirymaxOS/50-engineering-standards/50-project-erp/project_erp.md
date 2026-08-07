@@ -1532,7 +1532,7 @@ agentrt-linux（AirymaxOS）由 agentrt-linux 管理仓库统一纳管以下八�
 | 功能定位 | 系统服务管理层，包含 systemd 单元与服务编排 |
 | 核心语言 | Rust (85%), C (15%) |
 | 代码规模 | ~380K LOC |
-| 构建产物 | `airymaxos-svcmgr`, `airymaxos-*.service` |
+| 构建产物 | `agentrt-svcmgr`, `agentrt-*.service` |
 | 运行时资源 | CPU: 0.5 core; Memory: 512MB; Storage: 2GB (state) |
 | 维护团队 | Services SIG |
 | 当前版本 | v1.0.1（文档体系） |
@@ -1784,13 +1784,13 @@ agentrt-linux（AirymaxOS）的上游依赖涵盖内核、运行时、工具链�
 | 子系统 | 磁盘分区 | 最低 | 推荐 | 最大 | 文件系统 | 加密 |
 |--------|----------|------|------|------|----------|------|
 | kernel | /boot | 512MB | 1GB | 2GB | ext4 | 否 |
-| services | /var/lib/airymaxos | 1GB | 2GB | 10GB | btrfs | 可选 |
-| security | /var/lib/airymaxos/secure | 512MB | 1GB | 5GB | ext4 (encrypted) | 是 |
+| services | /var/lib/agentrt | 1GB | 2GB | 10GB | btrfs | 可选 |
+| security | /var/lib/agentrt/secure | 512MB | 1GB | 5GB | ext4 (encrypted) | 是 |
 | memory | N/A (仅运行时) | 0 | 0 | 0 | N/A | N/A |
-| cognition | /var/lib/airymaxos/models | 10GB | 20GB | 100GB | btrfs | 可选 |
-| cloudnative | /var/lib/airymaxos/containers | 5GB | 10GB | 50GB | btrfs / overlay2 | 可选 |
-| system | /var/log/airymaxos | 2GB | 5GB | 20GB | btrfs | 可选 |
-| tests-linux | /var/lib/airymaxos/artifacts | 20GB | 50GB | 200GB | btrfs | 否 |
+| cognition | /var/lib/agentrt/models | 10GB | 20GB | 100GB | btrfs | 可选 |
+| cloudnative | /var/lib/agentrt/containers | 5GB | 10GB | 50GB | btrfs / overlay2 | 可选 |
+| system | /var/log/agentrt | 2GB | 5GB | 20GB | btrfs | 可选 |
+| tests-linux | /var/lib/agentrt/artifacts | 20GB | 50GB | 200GB | btrfs | 否 |
 
 #### 6.4 网络资源分配
 

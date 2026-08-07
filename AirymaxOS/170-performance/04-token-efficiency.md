@@ -367,7 +367,7 @@ int airy_budget_check_efficiency(uint32_t agent_id)
 
     /* 检查是否达到 SLO */
     if (token_per_watt < agent->slo.token_per_watt_min) {
-        log_write(LOG_WARN,
+        log_write(AIRY_LOG_WARN,
             "agent %d efficiency below SLO: token/watt=%.2f min=%.2f",
             agent_id, token_per_watt, agent->slo.token_per_watt_min);
         return -EAGAIN;
@@ -635,7 +635,7 @@ int airy_auto_optimize_efficiency(uint32_t agent_id)
     /* 策略 1: Token/Watt 低于 SLO 时，启用批处理 */
     if (metrics.token_per_watt < SLO_TOKEN_PER_WATT) {
         airy_enable_batching(agent_id);
-        log_write(LOG_INFO,
+        log_write(AIRY_LOG_INFO,
             "enabled batching for agent %d: token/watt=%.2f",
             agent_id, metrics.token_per_watt);
     }
@@ -677,7 +677,7 @@ int airy_detect_efficiency_regression(uint32_t agent_id,
 {
     /* Token/Watt 回归超过 10% */
     if (current->token_per_watt < baseline->token_per_watt * 0.9) {
-        log_write(LOG_ERROR,
+        log_write(AIRY_LOG_ERROR,
             "EFFICIENCY REGRESSION: agent=%d token/watt "
             "baseline=%.2f current=%.2f drop=%.1f%%",
             agent_id,
@@ -689,7 +689,7 @@ int airy_detect_efficiency_regression(uint32_t agent_id,
 
     /* Token/Latency 回归超过 10% */
     if (current->token_per_latency < baseline->token_per_latency * 0.9) {
-        log_write(LOG_ERROR,
+        log_write(AIRY_LOG_ERROR,
             "EFFICIENCY REGRESSION: agent=%d token/latency drop",
             agent_id);
         return 1;
@@ -732,10 +732,12 @@ graph TD
 
 | 错误码 | 名称 | 含义 |
 |--------|------|------|
-| -ENOEFF | AIRY_ENOEFF | 能效指标不可用 |
-| -ENOENERGY | AIRY_ENOENERGY | 功耗数据不可读 |
-| -ELOWEFF | AIRY_ELOWEFF | 能效低于 SLO |
-| -EREGRESS | AIRY_EREGRESS | 检测到能效回归 |
+| -AIRY_ENOENT | AIRY_ENOENT | 能效指标不可用（原规划码 `AIRY_ENOEFF`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段不存在语义） |
+| -AIRY_EIO | AIRY_EIO | 功耗数据不可读（原规划码 `AIRY_ENOENERGY`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段 I/O 错误语义） |
+| -AIRY_EPERM | AIRY_EPERM | 能效低于 SLO（原规划码 `AIRY_ELOWEFF`，[IND] 规划码，未注册；映射 [SC] error.h POSIX 段拒绝语义） |
+| -AIRY_ECOG_CONFIDENCE | AIRY_ECOG_CONFIDENCE | 检测到能效回归（原规划码 `AIRY_EREGRESS`，[IND] 规划码，未注册；映射 [SC] error.h Cognition 段实有码） |
+
+> **说明**：error.h 无能效专用错误码子空间，能效场景统一映射 [SC] error.h 实有码；`AIRY_ENOEFF` / `AIRY_ENOENERGY` / `AIRY_ELOWEFF` / `AIRY_EREGRESS` 为 [IND] 规划码，未注册。
 
 ---
 

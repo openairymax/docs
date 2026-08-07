@@ -30,7 +30,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | KCSAN | Kernel Concurrency SANitizer，检测数据竞争 |
 | lockdep | Lock Dependency Validator，运行时锁依赖图分析 |
 | kmemleak | Kernel Memory Leak Detector，扫描内核内存引用检测泄漏 |
-| `airy_dyn_*` | agentrt-linux 专属动态分析钩子模块 |
+| `airy_dyn_*` | agentrt-linux 专属动态分析钩子模块（**规划，未实现**：`kernel/airymaxos/dyn/` 目录当前不存在） |
 | `nightly-dynamic-analysis` workflow | CI 每日运行的动态分析流水线 |
 
 ---
@@ -41,7 +41,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 内核动态分析是 Linux 6.6 内核基线中"在内核运行时检测内存、并发、未定义行为错误"的机制。其设计目标有三：**运行时反馈**（捕获编译期无法发现的错误，如越界访问、数据竞争）、**低开销生产可用**（KFENCE 采样式开销 < 1%）、**自动化定位**（崩溃栈与变量名直接打印）。
 
-agentrt-linux 完整继承 Linux 6.6 内核基线的动态分析框架（KASAN/KFENCE/UBSAN/KCSAN/lockdep/kmemleak），不修改任何上游源文件。agentrt-linux 专属动态分析以独立 `airy_dyn_*.c` 模块形式驻留于 `kernel/airymaxos/dyn/`，遵循 IRON-9 v3 [IND] 独立实现层原则。
+agentrt-linux 完整继承 Linux 6.6 内核基线的动态分析框架（KASAN/KFENCE/UBSAN/KCSAN/lockdep/kmemleak），不修改任何上游源文件。agentrt-linux 专属动态分析以独立 `airy_dyn_*.c` 模块形式驻留于 `kernel/airymaxos/dyn/`，遵循 IRON-9 v3 [IND] 独立实现层原则（**规划，未实现**：`kernel/airymaxos/dyn/` 目录与 `airy_dyn_*` 模块当前均不存在，以下 §8 为设计规划）。
 
 ```mermaid
 flowchart TB
@@ -216,7 +216,7 @@ KFENCE 是 agentrt-linux 生产环境**唯一**启用的动态分析工具（OS-
 [  234.567904] ==================================================================
 ```
 
-**OS-TEST-042**：生产环境 KFENCE 报告必须通过 `airy_dyn_kfence_report` tracepoint 实时上报至 A-ULP 日志系统（对应 Unify Design A-ULP 模块）；logger_d 必须将 KFENCE 报告标记为 `LOG_LEVEL_FATAL` 并触发 audit_d 审计。
+**OS-TEST-042**：生产环境 KFENCE 报告必须通过 `airy_dyn_kfence_report` tracepoint 实时上报至 A-ULP 日志系统（对应 Unify Design A-ULP 模块）；logger_d 必须将 KFENCE 报告标记为 `AIRY_LOG_FATAL` 并触发 audit_d 审计。（**规划，未实现**：`airy_dyn_kfence_report` tracepoint 当前不存在，待内核实现后启用）
 
 **OS-KER-112**：KFENCE 报告触发的 Agent 必须立即进入 STOPPING 状态（Agent 8 态生命周期的第 6 态），由 macro_d daemon 强制终止；禁止 KFENCE 报告的 Agent 继续运行，防止错误扩散。
 
@@ -438,14 +438,14 @@ unreferenced object 0xffff88800a2c5000 (size 256):
 
 ---
 
-## 8. agentrt-linux 专属动态分析
+## 8. agentrt-linux 专属动态分析（规划，未实现）
 
 ### 8.1 Token 预算溢出检测（`airy_dyn_token`）
 
-agentrt-linux 为每个 Agent 分配 Token 预算（用于约束 Agent 资源消耗），由 `airy_token_budget_account` 跟踪。`airy_dyn_token` 模块通过 hook `airy_token_budget_account` 检测溢出：
+agentrt-linux 为每个 Agent 分配 Token 预算（用于约束 Agent 资源消耗），由 `airy_token_budget_account` 跟踪。`airy_dyn_token` 模块通过 hook `airy_token_budget_account` 检测溢出（**规划，未实现**：模块与 `kernel/airymaxos/dyn/` 目录当前不存在）：
 
 ```c
-/* kernel/airymaxos/dyn/airy_dyn_token.c */
+/* kernel/airymaxos/dyn/airy_dyn_token.c（规划，未实现） */
 #include <linux/module.h>
 #include <linux/atomic.h>
 #include <linux/printk.h>
@@ -463,7 +463,7 @@ void airy_dyn_token_check_pre(u64 budget, u64 consumed, u64 delta)
         pr_err("airy_dyn_token: agent=%d state=%d\n",
                current->airy_agent_id, current->airy_agent_state);
         /* 触发 A-ULP FATAL 日志（对应 Unify Design A-ULP 模块） */
-        airy_ulps_emit(LOG_LEVEL_FATAL, AIRY_ERR_TOKEN_OVERFLOW,
+        airy_ulps_emit(AIRY_LOG_FATAL, -AIRY_ESCHED_BUDGET,
                        "Token budget overflow: budget=%llu consumed=%llu delta=%llu",
                        budget, consumed, delta);
     }
@@ -480,10 +480,10 @@ u64 airy_dyn_token_overflow_total(void)
 
 ### 8.2 Agent 内存泄漏检测（`airy_dyn_agent_mem`）
 
-`airy_dyn_agent_mem` 模块跟踪每个 Agent 的内存分配/释放对，检测 Agent 终止时未释放的内存：
+`airy_dyn_agent_mem` 模块跟踪每个 Agent 的内存分配/释放对，检测 Agent 终止时未释放的内存（**规划，未实现**）：
 
 ```c
-/* kernel/airymaxos/dyn/airy_dyn_agent_mem.c */
+/* kernel/airymaxos/dyn/airy_dyn_agent_mem.c（规划，未实现） */
 #include <linux/rbtree.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
@@ -543,7 +543,7 @@ int airy_dyn_agent_mem_audit(int agent_id)
         if (n->agent_id == agent_id) {
             pr_err("airy_dyn_agent_mem: leak! agent=%d ptr=%pK size=%zu\n",
                    agent_id, n->ptr, n->size);
-            airy_ulps_emit(LOG_LEVEL_FATAL, AIRY_ERR_MEM_LEAK,
+            airy_ulps_emit(AIRY_LOG_FATAL, -AIRY_EMEM_OOM,
                            "Agent %d leaked %zu bytes at %pK",
                            agent_id, n->size, n->ptr);
             leaked++;
@@ -558,10 +558,10 @@ int airy_dyn_agent_mem_audit(int agent_id)
 
 ### 8.3 IPC Ring 生命周期检测（`airy_dyn_ipc_ring`）
 
-`airy_dyn_ipc_ring` 模块检测 IPC Ring 缓冲区的生命周期错误：双释放、use-after-free、未释放、悬垂指针：
+`airy_dyn_ipc_ring` 模块检测 IPC Ring 缓冲区的生命周期错误：双释放、use-after-free、未释放、悬垂指针（**规划，未实现**）：
 
 ```c
-/* kernel/airymaxos/dyn/airy_dyn_ipc_ring.c */
+/* kernel/airymaxos/dyn/airy_dyn_ipc_ring.c（规划，未实现） */
 #include <linux/xarray.h>
 #include <linux/spinlock.h>
 #include <uapi/linux/airymax/ipc.h>
@@ -1151,10 +1151,10 @@ MODULE_LICENSE("GPL");
 | `airy_agent` slab 增长 | `/proc/slabinfo` | ≤ 0（活跃对象数应回到基线） |
 | `airy_token_budget` slab 增长 | `/proc/slabinfo` | ≤ 0 |
 | `airy_cap_entry` slab 增长 | `/proc/slabinfo` | ≤ 0 |
-| `airy_agent_mem_stats.total_bytes` | `airy_agent_mem_stats` tracepoint | 增长 ≤ 1MB |
-| `agent_caps[]` 利用率 | `airy_caps_usage` debugfs | 10000 次循环后回到 0% |
-| L1-L4 记忆残留 | `airy_mem_audit` tracepoint | 0（DEAD 后全部回收） |
-| 审计日志残留 | `airy_audit_chain` tracepoint | 0（DEAD 后链路关闭） |
+| `airy_agent_mem_stats.total_bytes` | `airy_agent_mem_stats` tracepoint（规划，未实现） | 增长 ≤ 1MB |
+| `agent_caps[]` 利用率 | `airy_caps_usage` debugfs（规划，未实现） | 10000 次循环后回到 0% |
+| L1-L4 记忆残留 | `airy_mem_audit` tracepoint（规划，未实现） | 0（DEAD 后全部回收） |
+| 审计日志残留 | `airy_audit_chain` tracepoint（规划，未实现） | 0（DEAD 后链路关闭） |
 
 ### 16.3 通过标准
 

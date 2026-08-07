@@ -31,12 +31,10 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 
 | 接口类别 | 子分类 | 覆盖子仓 | 关键契约 | 文档 |
 |---------|--------|---------|---------|------|
-| 系统调用 | agent 任务管理 | kernel / cognition | `AIRY_SYS_TASK_*` 用户态调度器策略 | [01-syscalls.md](01-syscalls.md) |
-| 系统调用 | IPC | kernel / services | `AIRY_SYS_IPC_*` io_uring 零拷贝 | 01-syscalls.md |
-| 系统调用 | 内存 | kernel / memory | `AIRY_SYS_ROVOL_*` 记忆卷载 | 01-syscalls.md |
-| 系统调用 | 调度 | kernel | `AIRY_SYS_SCHED_*` sched_tac 调度策略 | 01-syscalls.md |
-| 系统调用 | 安全 | kernel / security | `AIRY_SYS_CAP_*` capability 令牌 | 01-syscalls.md |
-| 系统调用 | 认知 | kernel / cognition | `AIRY_SYS_CLT_*` CoreLoopThree kthread | 01-syscalls.md |
+| 系统调用 | capability 调用（sec_d 专属） | kernel / security / cognition | `AIRY_SYS_CALL`（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD op-dispatch） | [01-syscalls.md](01-syscalls.md) |
+| 系统调用 | 记忆卷载控制 | kernel / memory | `AIRY_SYS_ROVOL_CTL`（snapshot/restore/migrate/tier op-dispatch） | 01-syscalls.md |
+| 系统调用 | 调度策略控制 | kernel | `AIRY_SYS_SCHED_CTL`（set/get op） | 01-syscalls.md |
+| 系统调用 | CoreLoopThree 通知 | kernel / cognition | `AIRY_SYS_CLT_NOTIFY`（阶段通知 + kthread 注册） | 01-syscalls.md |
 | IPC 协议 | 消息头 | 全部子仓 | 128B 定长 + 5 种 payload | [02-ipc-protocol.md](02-ipc-protocol.md) |
 | IPC 协议 | 通信原语 | services | Channel / Socket / FIFO / Eventpair | 02-ipc-protocol.md |
 | IPC 协议 | 零拷贝 | kernel / services | io_uring + IORING_OP_URING_CMD + registered buffer + mmap（不使用 page flipping） | 02-ipc-protocol.md |
@@ -47,7 +45,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 | 编码规范 | 命名 | 全部子仓 | `airy_` / `<service>_d` / `module_action_object()` | [04-coding-standard.md](04-coding-standard.md) |
 | 编码规范 | C 风格 | kernel / security / memory | 4 空格 + snake_case + 1TBS + Doxygen | 04-coding-standard.md |
 | 编码规范 | Rust 风格 | cognition / cloudnative | rustfmt + clippy + snake_case 函数 | 04-coding-standard.md |
-| 编码规范 | 日志 | 全部子仓 | ANSI 颜色 + log_write() + CLOCK_REALTIME | 04-coding-standard.md |
+| 编码规范 | 日志 | 全部子仓 | ANSI 颜色 + log_write() + CLOCK_MONOTONIC | 04-coding-standard.md |
 | **[SC] 共享契约** | 错误码 | kernel / 全部 | `AIRY_E*` Error（负数）+ `AIRY_FAULT_*` Fault（0x1000+）+ [DSL] 降级块 | [08-sc-error-contract.md](08-sc-error-contract.md) |
 | **[SC] 共享契约** | 日志类型 | kernel / services | 128B 固定记录 + 5 级日志枚举 + printk 8 级映射 | [09-sc-log-types-contract.md](09-sc-log-types-contract.md) |
 
@@ -57,11 +55,11 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 
 | 子仓 | 系统调用 | IPC 协议 | SDK API | 编码规范 | [SC] 共享契约 |
 |------|---------|---------|---------|---------|--------------|
-| kernel | `AIRY_SYS_TASK_*` / `IPC_*` / `ROVOL_*` / `SCHED_*` / `CAP_*` / `CLT_*` | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/uapi/linux/airymax/`（12 个头文件） |
+| kernel | `AIRY_SYS_CALL` / `ROVOL_CTL` / `SCHED_CTL` / `CLT_NOTIFY`（4 核心宏，功能经 op-dispatch） | 128B 消息头内核侧 | 不直接暴露 | C 风格 + Doxygen | 物理宿主 `kernel/include/uapi/linux/airymax/`（12 个头文件） |
 | services | 通过系统调用 + IPC | 128B 消息头用户态 + 4 通信原语 | daemon 客户端 | C 风格 + 日志 | `#include <airymax/*.h>` 引用 |
-| security | `AIRY_SYS_CAP_*` / `LSM_*` | capability 携带 | SafetyClient | C 风格 + 安全编码 | `lsm_types.h` / `security_types.h` |
-| memory | `AIRY_SYS_ROVOL_*` / `CXL_*` / `MGLRU_*` | MemoryRovol 迁移消息 | MemoryClient（嵌套） | C 风格 + 内存安全 | `memory_types.h` |
-| cognition | `AIRY_SYS_CLT_*` / `WASM_*` | CoreLoopThree 阶段通知 | CognitionClient + ChatClient | Rust 风格 | `cognition_types.h` |
+| security | `AIRY_SYS_CALL`（capability op-dispatch） / `LSM_*` | capability 携带 | SafetyClient | C 风格 + 安全编码 | `lsm_types.h` / `security_types.h` |
+| memory | `AIRY_SYS_ROVOL_CTL` / `CXL_*` / `MGLRU_*` | MemoryRovol 迁移消息 | MemoryClient（嵌套） | C 风格 + 内存安全 | `memory_types.h` |
+| cognition | `AIRY_SYS_CLT_NOTIFY` / `WASM_*` | CoreLoopThree 阶段通知 | CognitionClient + ChatClient | Rust 风格 | `cognition_types.h` |
 | cloudnative | 不直接暴露 | gRPC + CRD | agentctl + SDK | Go 风格 | 不直接涉及 |
 | system | sysctl / procfs | 不直接暴露 | DevStation CLI | 多语言 | 不直接涉及 |
 | tests-linux | 不直接暴露 | 测试协议 | 测试框架 API | 各语言规范 | 验证 [SC] 双端一致 |
@@ -107,7 +105,7 @@ agentrt-linux 接口设计层定义 8 子仓之间、内核与用户态之间、
 | 5 | [05-syscall-semantic-mapping.md](05-syscall-semantic-mapping.md) | P0-03 方案 D 分层 API 设计 + [SS] 语义映射表 + [IND] 独有调用 + SDK 层签名同源 + 调用路径选择 | 400-500 |
 | 6 | [06-codegen-pipeline.md](06-codegen-pipeline.md) | 代码生成流水线 + 多语言 SDK 自动生成 + 契约驱动开发 | 300-400 |
 | 7 | [07-ipc-fastpath.md](07-ipc-fastpath.md) | IPC fastpath 设计 + IORING_OP_URING_CMD + registered buffer + mmap + Capability 分层校验 + 数据面自治三原则 | 400-500 |
-| 8 | [08-sc-error-contract.md](08-sc-error-contract.md) | **[SC] error.h 二进制契约** + Error（负数可恢复）vs Fault（正数 0x1000+ 不可恢复）分层 + 5 子空间分配 + CI 逐字节校验 + [DSL] 降级块 | 300-400 |
+| 8 | [08-sc-error-contract.md](08-sc-error-contract.md) | **[SC] error.h 二进制契约** + Error（负数可恢复）vs Fault（正数 0x1000+ 不可恢复）分层 + 10 子空间分配 + CI 逐字节校验 + [DSL] 降级块 | 300-400 |
 | 9 | [09-sc-log-types-contract.md](09-sc-log-types-contract.md) | **[SC] log_types.h 二进制契约** + 128B 固定记录格式 + 5 级日志枚举 + printk 8 级映射 | 250-350 |
 
 > **[SC] 共享契约说明**：文档 #8、#9 是 Airymax Unify Design 五模块（A-UEF/A-ULP）的 [SC] 共享契约权威定义，物理宿主为 `kernel/include/uapi/linux/airymax/error.h` 与 `kernel/include/uapi/linux/airymax/log_types.h`，由 `sc-dual-ci.yml` 进行双端逐字节校验。详见 [10-architecture/10-unify-design.md](../10-architecture/10-unify-design.md) 与 [10-architecture/06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md)。

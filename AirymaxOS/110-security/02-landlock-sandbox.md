@@ -518,16 +518,22 @@ struct airy_inode_sec {
     __u32   owner_agent;      /* 拥有者 Agent ID */
 };
 
-/* capability slot（64 字节缓存行对齐） */
+/* capability slot（80 字节，AIRY_ALIGNED(64)，含 MDB 派生树） */
 struct airy_cap_slot {
     __u64   badge;            /* 64-bit Capability Folding badge */
     __u32   agent_id;
     __u32   flags;
     __u32   randtag;
     __u16   perms;
-    __u16   _pad;
-    __u8    _reserved[56];
-} __attribute__((aligned(64)));
+    __u16   epoch;            /* per-agent Epoch（O(1) 定向撤销） */
+    /* ── MDB 派生树（级联 REVOKE，K9-1 修复） ── */
+    __u32   parent_agent;     /* 派生来源 Agent ID（0 = 根） */
+    __u32   first_child;      /* 首个子 Agent ID（0 = 叶子） */
+    __u32   next_sibling;     /* 下一个兄弟 Agent ID（0 = 最后子节点） */
+    __u16   generation;       /* 派生深度（root=0，每 MINT/COPY +1） */
+    __u16   revocable;        /* 1 = 父 REVOKE 级联到本槽位 */
+    __u8    _reserved[40];    /* 缓存行填充（原 56，-16 给 MDB） */
+} AIRY_ALIGNED(64);
 
 #define AIRY_CAP_MAX_AGENTS     1024
 ```
@@ -699,7 +705,7 @@ Cupolas daemon 创建 ruleset 后按 L0→L1→L2 顺序追加规则并三次调
 - `110-security/README.md`（安全加固体系主索引）
 - `110-security/01-lsm-framework.md`（LSM 框架详解）
 - `110-security/03-capability-model.md`（capability 模型）
-- `110-security/07-cupolas-dome.md`（Cupolas 安全穹顶）
+- `110-security/07-airy-lsm-design.md`（纯 C LSM 设计）
 - `50-engineering-standards/04-engineering-philosophy.md`（双层稳定性哲学）
 - `20-modules/03-security.md`（security 子仓设计）
 - Linux 6.6 `security/landlock/setup.c`、`security/landlock/syscalls.c`、`security/landlock/fs.c`、`security/landlock/cred.c`、`security/landlock/ruleset.h`、`include/uapi/linux/landlock.h`

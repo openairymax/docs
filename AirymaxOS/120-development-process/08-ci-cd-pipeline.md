@@ -69,7 +69,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 |---------|---------|---------|
 | `ci-kernel.yml` | `kernel/**` / `services/**` / `security/**` / `memory/**` / `cognition/**` / `cloudnative/**` / `system/**` | `docs/**` / `*.md` |
 | `ssot-validate.yml` | `docs/AirymaxOS/**` / `kernel/include/uapi/linux/airymax/**` / `airy_defconfig` | — |
-| `sc-dual-ci.yml` | `kernel/include/uapi/linux/airymax/**`（仅 10 个 [SC] 头文件） | — |
+| `sc-dual-ci.yml` | `kernel/include/uapi/linux/airymax/**`（仅 12 个 [SC] 头文件） | — |
 | `nightly.yml` | 全部 | — |
 | `release.yml` | tag `v*` | — |
 | `mgmt-orchestrator.yml` | `agentrt-linux-mgmt/**` | — |
@@ -282,7 +282,7 @@ on:
 |-----|------|---------|
 | 1 | 四层归属校验 | 变更文件正确归属到 [SC] / [SS] / [IND] / [DSL] |
 | 2 | 权威源唯一性 | 变更不引入冲突权威源 |
-| 3 | [SC] 数量校验 | `kernel/include/uapi/linux/airymax/` 下保持 10 个 [SC] 头文件 |
+| 3 | [SC] 数量校验 | `kernel/include/uapi/linux/airymax/` 下保持 12 个 [SC] 头文件 |
 | 4 | 跨文档引用一致性 | SSoT 注册表中的链接有效 |
 | 5 | 五大选型守护 | 变更未偏离五大技术选型 |
 | 6 | `airy_defconfig` 锁定 | 五大选型配置不变 |
@@ -290,7 +290,7 @@ on:
 ### 4.4 Job 1：四层归属校验
 
 - **校验内容**：每个变更文件必须明确归属到 IRON-9 v3 四层模型之一：
-  - **[SC]**：共享契约层（10 个头文件）。
+  - **[SC]**：共享契约层（12 个头文件）。
   - **[SS]**：语义同源层（agentrt 与 agentrt-linux 共享语义但独立实现）。
   - **[IND]**：独立实现层（agentrt-linux 独有）。
   - **[DSL]**：降级生存层（fallback 实现）。
@@ -343,7 +343,7 @@ on:
 
 ### 5.1 设计目标
 
-`sc-dual-ci.yml` 守护 10 个 [SC] 头文件的双端（agentrt 与 agentrt-linux）逐字节一致性，以及编译器无关性。
+`sc-dual-ci.yml` 守护 12 个 [SC] 头文件的双端（agentrt 与 agentrt-linux）逐字节一致性，以及编译器无关性。
 
 ### 5.2 触发条件
 
@@ -364,7 +364,7 @@ on:
 | Job | 职责 | 通过标准 |
 |-----|------|---------|
 | 1 | 双端 PR 检测 | agentrt 端有对应 PR |
-| 2 | 双端逐字节校验 | 10 个 [SC] 头文件双端逐字节一致 |
+| 2 | 双端逐字节校验 | 12 个 [SC] 头文件双端逐字节一致 |
 | 3 | 编译器无关性校验 | 通过 `check-uapi-compiler-agnostic.sh` |
 | 4 | 五编译器编译 | GCC / Clang / MSVC / icx / armclang 全部编译通过 |
 | 5 | ABI 稳定性 | 通过 `check-abi.sh`（libabigail） |
@@ -380,9 +380,9 @@ on:
 - **校验步骤**：
   1. 从 agentrt-linux 拉取本 PR 分支。
   2. 从 agentrt 拉取对应 PR 分支（使用 GitHub API）。
-  3. 提取双端的 10 个 [SC] 头文件。
+  3. 提取双端的 12 个 [SC] 头文件。
   4. 对每个文件运行 `diff -u`。
-- **通过标准**：10 个文件全部 `diff` 无输出（零字节差异）。
+- **通过标准**：12 个文件全部 `diff` 无输出（零字节差异）。
 - **失败处理**：任何字节差异即 job 失败，阻断合并。
 - **OS-DEV-803**：[SC] 双端校验失败时，CI 评论列出差异，要求双端同步修改。
 
@@ -408,7 +408,7 @@ on:
 | icx | 2024+ | x86_64 |
 | armclang | 6.20+ | aarch64 |
 
-- **校验步骤**：每个编译器独立编译 10 个 [SC] 头文件。
+- **校验步骤**：每个编译器独立编译 12 个 [SC] 头文件。
 - **通过标准**：5 种编译器全部编译通过，零 warning。
 - **失败处理**：任何编译器编译失败即 job 失败。
 

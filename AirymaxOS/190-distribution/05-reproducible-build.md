@@ -94,7 +94,7 @@ agentrt-linux 可重现构建遵循三大设计哲学：
 ### 3.2 SOURCE_DATE_EPOCH 设定规则
 
 ```bash
-# /etc/airymaxos/build/env.sh（agentrt-linux 构建环境标准）
+# /etc/agentrt/build/env.sh（agentrt-linux 构建环境标准）
 # SOURCE_DATE_EPOCH 设定为最后一次 git commit 的时间戳
 export SOURCE_DATE_EPOCH=$(git -C "$SRC_DIR" log -1 --pretty=%ct)
 
@@ -1493,7 +1493,7 @@ git clone https://github.com/OpenAirymax/agentrt-linux.git
 cd agentrt-linux
 
 # 2. 设置构建环境
-source /etc/airymaxos/build/env.sh
+source /etc/agentrt/build/env.sh
 
 # 3. 构建所有产物
 ./scripts/reproducible-rpm-build.sh . x86_64

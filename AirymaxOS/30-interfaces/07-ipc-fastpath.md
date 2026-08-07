@@ -1464,7 +1464,7 @@ CBMC 与 KCSAN 形成互补——CBMC 在编译期保证单函数不变量，KCS
 
 - [接口设计](README.md)（父文档）
 - [02-ipc-protocol.md](02-ipc-protocol.md)（128B 消息头 + 5 payload + io_uring 零拷贝）
-- [01-syscalls.md](01-syscalls.md)（`AIRY_SYS_IPC_*` 系统调用 + capability invocation）
+- [01-syscalls.md](01-syscalls.md)（`AIRY_SYS_CALL`/`ROVOL_CTL`/`SCHED_CTL`/`CLT_NOTIFY` 4 核心系统调用 + capability invocation op-dispatch）
 - [50-engineering-standards/09-ssot-registry.md](../50-engineering-standards/09-ssot-registry.md)（SSoT 依赖：OS-IFACE-003/004、OS-ARCH-005/006、OS-KER-139、OS-SEC-121/122）
 - [50-engineering-standards/120-cross-project-code-sharing.md](../50-engineering-standards/120-cross-project-code-sharing.md) §Layout C（`ipc.h` 物理宿主）
 - [10-architecture/03-microkernel-strategy.md](../10-architecture/03-microkernel-strategy.md)（seL4 思想分布落地，ES-SEL4-4 借鉴来源）

@@ -335,9 +335,9 @@ Capability Folding 决策将 0.1.1 的 12 核心 syscall 精简为 v1.0.1 的 4 
 ### 2.3 ABI 稳定性
 
 - 编号在 MAJOR 版本内不可变更。
-- v1.0.1 起，slot 549-551 重新分配给保留的 3 个控制原语（`airy_sys_rovol_ctl`/`sched_ctl`/`clt_notify`，原 0.1.1 的 519-521 重新编号为 549-551）；原 0.1.1 的 8 个 seL4 风格 IPC syscall（send/recv/nbsend/nbrecv/reply_recv/yield/reply/notify）全部移除，其原 slot 516-518/522-523 纳入预留段 552-571，调用返回 `-AIRY_ENOSYS`，并在 Doxygen 注释中标注 `@deprecated since v1.0.1, use IORING_OP_URING_CMD instead`。
+- v1.0.1 起，slot 549-551 重新分配给保留的 3 个控制原语（`airy_sys_rovol_ctl`/`sched_ctl`/`clt_notify`，原 0.1.1 的 519-521 重新编号为 549-551）；原 0.1.1 的 8 个 seL4 风格 IPC syscall（send/recv/nbsend/nbrecv/reply_recv/yield/reply/notify）全部移除，其原 slot 516-518/522-523 纳入预留段 552-571，调用返回 `-ENOSYS`，并在 Doxygen 注释中标注 `@deprecated since v1.0.1, use IORING_OP_URING_CMD instead`。
 - 新增调用只能追加到预留段末尾（4-23），不可复用 0.1.1 已废弃编号。
-- 废弃调用保留编号但返回 `-AIRY_ENOSYS`，并在 Doxygen 注释中标注 `@deprecated`。
+- 废弃调用保留编号但返回 `-ENOSYS`，并在 Doxygen 注释中标注 `@deprecated`。
 
 ---
 
@@ -356,7 +356,7 @@ Capability Folding 决策将 0.1.1 的 12 核心 syscall 精简为 v1.0.1 的 4 
 #endif
 ```
 
-> **类型说明**：下述 syscall 签名中的 `cap_t` 为 capability 引用句柄类型（ARCH-1: `typedef uint32_t cap_idx_t; typedef cap_idx_t cap_t;`），定义于 [SC] 共享头文件 `include/uapi/linux/airymax/security_types.h`。详见 [20-modules/03-security.md §4.1](../20-modules/03-security.md)。
+> **类型说明**：下述 syscall 签名中的 `cap_t` 为 64 位 capability 引用句柄类型（SSoT：`typedef __u64 cap_t;`，无 `cap_idx_t`），定义于 [SC] 共享头文件 `include/uapi/linux/airymax/security_types.h`。详见 [20-modules/03-security.md §4.1](../20-modules/03-security.md)。
 
 ### 3.2 Capability Invocation（1 个）
 
@@ -412,7 +412,8 @@ AIRY_API int airy_sys_rovol_ctl(__u32 op, __u32 pid,
  * airy_sys_sched_ctl - Scheduling policy configuration
  * @op: Operation (0=set, 1=get).
  * @cgroup_path: Target cgroup path.
- * @policy: Policy name (scx_realtime / scx_batch / scx_interactive / scx_agent).
+ * @policy: Policy name (AIRY_SCHED_POLICY_DEADLINE / AIRY_SCHED_POLICY_FIFO /
+ *           AIRY_SCHED_POLICY_EEVDF / AIRY_SCHED_POLICY_BESTEFFORT).
  *
  * Unified scheduling control via user-space scheduler (sched_tac).
  *
@@ -447,10 +448,10 @@ AIRY_API int airy_sys_clt_notify(int task_id, __u32 phase);
 
 | 编号 | 调用名 | 分类 | 覆盖子仓 | 说明 |
 |------|--------|------|---------|------|
-| 0 | `airy_sys_call` | Capability Invocation | kernel / security / cognition | sec_d 专属管理入口（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD） |
-| 1 | `airy_sys_rovol_ctl` | 控制原语 | memory | 统一记忆卷载控制（snapshot/restore/migrate/tier） |
-| 2 | `airy_sys_sched_ctl` | 控制原语 | kernel | 统一调度策略配置（set/get） |
-| 3 | `airy_sys_clt_notify` | 控制原语 | cognition | CoreLoopThree 阶段通知 + kthread 注册 |
+| 548 | `airy_sys_call` | Capability Invocation | kernel / security / cognition | sec_d 专属管理入口（COMPILE_BADGE/REVOKE_BADGE/LSM_CTL/WASM_LOAD） |
+| 549 | `airy_sys_rovol_ctl` | 控制原语 | memory | 统一记忆卷载控制（snapshot/restore/migrate/tier） |
+| 550 | `airy_sys_sched_ctl` | 控制原语 | kernel | 统一调度策略配置（set/get） |
+| 551 | `airy_sys_clt_notify` | 控制原语 | cognition | CoreLoopThree 阶段通知 + kthread 注册 |
 
 **数据面**：IPC 高频收发、能力校验、记忆迁移、流式数据全部走 io_uring `IORING_OP_URING_CMD`（零 syscall），不占用 syscall 槽位。详见 [02-ipc-protocol.md §4.4](02-ipc-protocol.md)。
 
@@ -742,7 +743,7 @@ graph TB
         DSL_SKIP[C-S9 跳过<br/>capability_badge=0]
     end
 
-    RT_USR -.->|"编号同源 [SS] 0-3"| OS_TBL
+    RT_USR -.->|"编号同源 [SS] 548-551"| OS_TBL
     OS_TBL --> OS_DEF
     RT_USR ==>|"io_uring URING_CMD"| OS_FP
     OS_FP --> SS_BADGE

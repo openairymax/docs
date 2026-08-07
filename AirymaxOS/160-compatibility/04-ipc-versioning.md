@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**：agentrt-linux（AirymaxOS，极境智能体操作系统）兼容性工程体系核心子文档，定义 AgentsIPC 协议的版本化演进与运行时协商机制\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
-> **v4.3 锁定说明**：IRON-7 要求 0.1.1 → 1.0.1 直接过渡，禁止双轨制。IPC 协议锁定 **v1.1 为唯一基线**，v1.0 从未发布无遗留用户，版本协商机制降级为 v2.0+ 预留（M0 阶段不实现）。7 个 opcode 自 v1.1 起稳定，永不重定义、永不复用。\
+> **v4.3 锁定说明**：IRON-7 要求 0.1.1 → 1.0.1 直接过渡，禁止双轨制。IPC 协议锁定 **v1.0.1 为唯一基线**，v1.0 从未发布无遗留用户，版本协商机制降级为 v2.0+ 预留（M0 阶段不实现）。7 个 opcode 自 v1.0.1 起稳定，永不重定义、永不复用。\
 > **上级文档**：[agentrt-linux 设计文档](README.md)\
 > **同源映射**：Linux 6.6 系统调用兼容性（IRON-9 v3 [SC] 共享契约层，IPC 消息头与 agentrt 共享）\
 > **理论根基**：Linux 6.6 UABI 永不破坏哲学 + seL4 接口契约 XML 思想 + Airymax K-2 接口契约化 + C-2 增量演化\
@@ -105,7 +105,7 @@ AgentsIPC 协议遵循语义化版本（Semantic Versioning）：
 
 /* 当前协议版本 */
 #define AIRY_IPC_VERSION_1_0  AIRY_IPC_VERSION_MAKE(1, 0)
-#define AIRY_IPC_VERSION_1_1  AIRY_IPC_VERSION_MAKE(1, 1)
+#define AIRY_IPC_VERSION_1_0_1  AIRY_IPC_VERSION_MAKE(1, 1)
 #define AIRY_IPC_VERSION_1_2  AIRY_IPC_VERSION_MAKE(1, 2)
 #define AIRY_IPC_VERSION_CURRENT  AIRY_IPC_VERSION_1_2
 ```
@@ -262,9 +262,9 @@ stateDiagram-v2
 
 ### 5.1 消息头字段兼容性
 
-> **v4.3 锁定**：v1.1 是唯一基线，v1.0 从未发布。下表保留 v1.0 列供历史参考，v1.2/v2.0 列为未来演进预留。
+> **v4.3 锁定**：v1.0.1 是唯一基线，v1.0 从未发布。下表保留 v1.0 列供历史参考，v1.2/v2.0 列为未来演进预留。
 
-| 字段 | ~~v1.0~~ | v1.1 | v1.2（预留） | v2.0（预留） | 兼容性 |
+| 字段 | ~~v1.0~~ | v1.0.1 | v1.2（预留） | v2.0（预留） | 兼容性 |
 |------|------|------|------|------|--------|
 | magic | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
 | payload_len | ~~✓~~ | ✓ | ✓ | ✓ | 永不变更 |
@@ -299,12 +299,12 @@ stateDiagram-v2
 
 | 期望特性 | 降级行为 | 影响版本 |
 |---------|---------|---------|
-| ~~trace_id 贯穿~~ | ~~退化为本地日志关联~~ | ~~v1.0 → 无 trace_id~~（v1.0 未发布，v1.1 基线含 trace_id） |
-| ~~批量提交~~ | ~~退化为单条提交~~ | ~~v1.1 以下~~（v1.1 是最低基线，不降级） |
+| ~~trace_id 贯穿~~ | ~~退化为本地日志关联~~ | ~~v1.0 → 无 trace_id~~（v1.0 未发布，v1.0.1 基线含 trace_id） |
+| ~~批量提交~~ | ~~退化为单条提交~~ | ~~v1.0.1 以下~~（v1.0.1 是最低基线，不降级） |
 | 零拷贝 | 退化为用户态拷贝 | v2.0 以下（v2.0+ 预留） |
 | 序列号确认 | 退化为无序可靠传输 | v2.0 以下（v2.0+ 预留） |
 
-> **v4.3 锁定**：v1.1 是唯一基线，无降级。上表中划线项为历史设计，v1.0 从未发布故不存在降级场景。
+> **v4.3 锁定**：v1.0.1 是唯一基线，无降级。上表中划线项为历史设计，v1.0 从未发布故不存在降级场景。
 
 ### 6.2 降级日志
 
@@ -312,7 +312,7 @@ stateDiagram-v2
 
 ```c
 /* 降级日志示例 */
-log_write(LOG_WARN,
+log_write(AIRY_LOG_WARN,
     "IPC version downgrade: client=v%d.%d server=v%d.%d negotiated=v%d.%d "
     "feature=fast_path disabled reason=server_version_too_low",
     AIRY_IPC_VERSION_MAJOR(client_ver),
@@ -353,11 +353,11 @@ payload 版本化遵循"只追加不修改"原则：
 
 ### 8.1 操作码编号约束
 
-操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.1 起保持稳定，永不重定义、永不复用：
+操作码遵循 SSoT 权威定义（见 `50-engineering-standards/120-cross-project-code-sharing.md` §Layout C），7 个操作码自 v1.0.1 起保持稳定，永不重定义、永不复用：
 
 ```c
 /* include/uapi/linux/airymax/ipc.h [SC] 共享契约层（SSoT，不就地重定义） */
-/* v1.1: opcode 已升级为宏定义，非 enum（见 [SC] ipc.h） */
+/* v1.0.1: opcode 已升级为宏定义，非 enum（见 [SC] ipc.h） */
 #define AIRY_IPC_OP_SEND          0x0001
 #define AIRY_IPC_OP_RECV          0x0002
 #define AIRY_IPC_OP_SEND_BATCH    0x0003
@@ -369,13 +369,13 @@ payload 版本化遵循"只追加不修改"原则：
 
 | 操作码 | 名称 | 层次 | 版本兼容性 |
 |--------|------|------|-----------|
-| 0x0001 | AIRY_IPC_OP_SEND | [SC] SSoT | v1.1+ 稳定 |
-| 0x0002 | AIRY_IPC_OP_RECV | [SC] SSoT | v1.1+ 稳定 |
-| 0x0003 | AIRY_IPC_OP_SEND_BATCH | [SC] SSoT | v1.1+ 稳定 |
-| 0x0004 | AIRY_IPC_OP_CANCEL | [SC] SSoT | v1.1+ 稳定 |
-| 0x0005 | AIRY_IPC_OP_FREEZE | [SC] SSoT | v1.1+ 稳定 |
-| 0x0010 | AIRY_IPC_OP_CAP_REQUEST | [SC] SSoT | v1.1+ 稳定 |
-| 0x0011 | AIRY_IPC_OP_CAP_RESPONSE | [SC] SSoT | v1.1+ 稳定 |
+| 0x0001 | AIRY_IPC_OP_SEND | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0002 | AIRY_IPC_OP_RECV | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0003 | AIRY_IPC_OP_SEND_BATCH | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0004 | AIRY_IPC_OP_CANCEL | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0005 | AIRY_IPC_OP_FREEZE | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0010 | AIRY_IPC_OP_CAP_REQUEST | [SC] SSoT | v1.0.1+ 稳定 |
+| 0x0011 | AIRY_IPC_OP_CAP_RESPONSE | [SC] SSoT | v1.0.1+ 稳定 |
 | >= 0x100 | [IND] 独立扩展 | [IND] agentrt-linux 专属 | 版本协商中按需引入 |
 
 > **SSoT 约束**：操作码（0x0001-0x0011）由 SSoT 权威定义，本文档不重定义。agentrt-linux 专属扩展操作码（如 Agent 生命周期管理等）必须使用 >= 0x100 的值并标注 [IND] 独立扩展，避免与 SSoT 基础值（0x0001-0x0011）冲突。
@@ -398,7 +398,7 @@ case AIRY_IPC_OP_CANCEL:
 default:
     /* 未识别操作码 */
     cqe->res = -ENOSYS;
-    log_write(LOG_WARN, "unsupported IPC opcode: 0x%04x", opcode);
+    log_write(AIRY_LOG_WARN, "unsupported IPC opcode: 0x%04x", opcode);
     return 0;
 }
 ```
@@ -442,7 +442,7 @@ int airy_ipc_check_migration_compat(uint32_t src_version,
 {
     uint32_t common = src_version & dst_version;
     if (common == 0) {
-        log_write(LOG_ERROR,
+        log_write(AIRY_LOG_ERROR,
             "migration blocked: no common IPC version "
             "src=0x%08x dst=0x%08x", src_version, dst_version);
         return -EINVAL;
@@ -467,8 +467,8 @@ static const struct {
     uint32_t features;
     const char *description;
 } airy_ipc_supported_versions[] = {
-    /* v4.3 锁定：v1.1 是唯一基线，v1.0 从未发布 */
-    { AIRY_IPC_VERSION_1_1, AIRY_IPC_FEAT_TRACE_ID, "v1.1 唯一基线（trace_id）" },
+    /* v4.3 锁定：v1.0.1 是唯一基线，v1.0 从未发布 */
+    { AIRY_IPC_VERSION_1_0_1, AIRY_IPC_FEAT_TRACE_ID, "v1.0.1 唯一基线（trace_id）" },
     /* v2.0+ 版本条目在主版本变更时新增 */
     { 0, 0, NULL }  /* 终止符 */
 };
@@ -492,11 +492,11 @@ uint32_t airy_ipc_get_supported_bitmap(void)
 ```bash
 # 查看内核支持的 IPC 版本
 cat /sys/kernel/agentrt/ipc/supported_versions
-# 输出: v1.1
+# 输出: v1.0.1
 
 # 查看当前默认协商版本
 cat /sys/kernel/agentrt/ipc/default_version
-# 输出: v1.1
+# 输出: v1.0.1
 
 # 查看特性标志
 cat /sys/kernel/agentrt/ipc/features
@@ -622,6 +622,8 @@ impl IpcNegotiator {
 
 ### 12.1 IPC 错误码
 
+> **说明**：下表为 [IND] 层 IPC 协商内部错误码（借用 Linux errno 负值语义），**非 [SC] error.h 符号**；[SC] IPC 错误码为 `AIRY_EIPC_*` 系列（41-53，正数幅值，调用方返回 `-AIRY_EIPC_*`）。
+
 | 错误码 | 名称 | 含义 | 处理建议 |
 |--------|------|------|---------|
 | -EINVAL | AIRY_IPC_EINVAL | 无效参数 | 检查 payload 格式 |
@@ -640,21 +642,21 @@ int handle_handshake_failure(struct airy_ipc_connection *conn,
 {
     switch (error) {
     case -EOPNOTSUPP:
-        log_write(LOG_ERROR,
+        log_write(AIRY_LOG_ERROR,
             "IPC handshake failed: version unsupported "
             "client_min=%d client_max=%d server_supported=0x%08x",
             conn->client_min, conn->client_max,
             airy_ipc_get_supported_bitmap());
         break;
     case -ETIMEDOUT:
-        log_write(LOG_WARN,
+        log_write(AIRY_LOG_WARN,
             "IPC handshake timeout: client=%d retrying",
             conn->client_pid);
         /* 重试一次 */
         schedule_handshake_retry(conn);
         break;
     default:
-        log_write(LOG_ERROR,
+        log_write(AIRY_LOG_ERROR,
             "IPC handshake failed: error=%d client=%d",
             error, conn->client_pid);
     }
@@ -707,7 +709,7 @@ graph TD
 
 ```c
 /* 最低版本约束配置 */
-static uint16_t min_negotiated_version = AIRY_IPC_VERSION_1_1;
+static uint16_t min_negotiated_version = AIRY_IPC_VERSION_1_0_1;
 
 int airy_ipc_set_min_version(uint16_t min_ver)
 {
@@ -715,7 +717,7 @@ int airy_ipc_set_min_version(uint16_t min_ver)
         return -EINVAL;
     }
     min_negotiated_version = min_ver;
-    log_write(LOG_INFO, "IPC minimum negotiated version set to v%d.%d",
+    log_write(AIRY_LOG_INFO, "IPC minimum negotiated version set to v%d.%d",
         AIRY_IPC_VERSION_MAJOR(min_ver),
         AIRY_IPC_VERSION_MINOR(min_ver));
     return 0;
@@ -797,9 +799,9 @@ conn.send(0x10, b"...", Some(12345))?;
 # 查看 Agent 应用的 IPC 版本支持
 agentctl ipc version
 # 输出:
-# Client supports: v1.1
-# Server supports: v1.1
-# Negotiated: v1.1
+# Client supports: v1.0.1
+# Server supports: v1.0.1
+# Negotiated: v1.0.1
 # Features: fast_path trace_id
 
 # 查看特定连接的协商状态
@@ -818,10 +820,10 @@ agentctl ipc status --pid 1234
 agentctl ipc diagnose --pid 5678
 # 输出:
 # PID: 5678
-# Client version: v1.1
+# Client version: v1.0.1
 # Server version: v2.0
-# Negotiated version: v1.1 (baseline, no downgrade needed)
-# Disabled features: none (v1.1 baseline is fully supported)
+# Negotiated version: v1.0.1 (baseline, no downgrade needed)
+# Disabled features: none (v1.0.1 baseline is fully supported)
 # Warnings: 0
 ```
 
@@ -839,18 +841,18 @@ from airymaxos.ipc import IPCVersion, IPCNegotiator
 class TestIPCVersionNegotiation:
     def test_negotiate_highest_common(self):
         negotiator = IPCNegotiator([IPCVersion(1,1), IPCVersion(1,2)])
-        result = negotiator.negotiate(server_bitmap=0b110)  # v1.1 + v1.2
+        result = negotiator.negotiate(server_bitmap=0b110)  # v1.0.1 + v1.2
         assert result == IPCVersion(1, 2)
 
     def test_negotiate_lowest_when_no_high(self):
         negotiator = IPCNegotiator([IPCVersion(1,1), IPCVersion(1,2)])
-        result = negotiator.negotiate(server_bitmap=0b010)  # v1.1 only
+        result = negotiator.negotiate(server_bitmap=0b010)  # v1.0.1 only
         assert result == IPCVersion(1, 1)
 
     def test_negotiate_fail_no_common(self):
         negotiator = IPCNegotiator([IPCVersion(1,2)])
         with pytest.raises(RuntimeError):
-            negotiator.negotiate(server_bitmap=0b010)  # v1.1 only, no v1.2
+            negotiator.negotiate(server_bitmap=0b010)  # v1.0.1 only, no v1.2
 ```
 
 ### 19.2 集成测试

@@ -120,7 +120,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 /* Unified capability invocation: seL4 Call style */
 int ret = airy_sys_call(cap, &msg);
 if (ret < 0) {
-    log_write(LOG_ERROR, "cap invocation failed: errno=%d", ret);
+    log_write(AIRY_LOG_ERROR, "cap invocation failed: errno=%d", ret);
     return ret;
 }
 ```
@@ -308,7 +308,7 @@ eBPF struct\_ops 扩展，struct\_ops 状态机与 common\_value \[SC] 与 agent
 
 > **v1.0.1 Capability Folding 实现注记**：seL4 风格 CSpace+MDB 派生树的设计语义（ES-SEL4-05\~09 设计溯源）在 v1.0.1 Capability Folding 后工程实现已**简化**为：
 >
-> - **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节（24 base + 16 MDB + 40 reserved））替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `epoch`(2) + MDB 派生树字段 `parent_agent`(4) + `first_child`(4) + `next_sibling`(4) + `generation`(2) + `revocable`(2) + `_reserved[40]` = 80 字节（K9-1 fix 引入 per-agent `epoch` 字段 + MDB 左孩子右兄弟派生树，从原 `_reserved[56]` 中 carved out 16 字节，UAPI 二进制兼容）。
+> - **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，字段布局 80B（24 base + 16 MDB + 40 reserved），sizeof=128B（64B 对齐））替代动态 CSpace radix tree + MDB 双向链表，sec_d 为**唯一写者**（串行化写入消除并发同步开销）。每槽含 `badge`(8) + `agent_id`(4) + `flags`(4) + `randtag`(4) + `perms`(2) + `epoch`(2) + MDB 派生树字段 `parent_agent`(4) + `first_child`(4) + `next_sibling`(4) + `generation`(2) + `revocable`(2) + `_reserved[40]` = 80 字节（K9-1 fix 引入 per-agent `epoch` 字段 + MDB 左孩子右兄弟派生树，从原 `_reserved[56]` 中 carved out 16 字节，UAPI 二进制兼容）。
 > - **Badge 64-bit 编码**：`Epoch<<48 | RandomTag<<16 | Perms`（bits 63:48 为 16 位 Epoch，bits 47:16 为 32 位 RandomTag，bits 15:0 为 16 位 Perms），派生关系隐式编码在 RandomTag 中，无需 MDB 链表维护。
 > - **O(1) 撤销**：`airy_cap_epoch_bump(agent_id)` 递增目标 Agent 的 per-agent epoch（`agent_caps[agent_id].epoch`，K9-1 主要撤销机制），fastpath C-S9 校验路径通过 epoch 比对自动失效该 Agent 的旧 badge；`airy_cap_global_epoch` 作为补充性全局计数器仅在 UNFREEZE 全局撤销（`airy_cap_epoch_bump_all()`）时使用。
 > - **CNode 7 操作语义保留**（Copy/Mint/Move/Mutate/Revoke/Delete/Rotate），但实现路径通过 sec_d 串行化（不暴露并发 CNode 操作 API）。
@@ -422,7 +422,7 @@ v1.0.1 Capability Folding 决策对 seL4 风格 CSpace/MDB/radix tree 进行了�
 
 | 维度 | seL4 原始设计（设计溯源） | v1.0.1 Capability Folding 工程实现 | 简化理由 |
 | --- | --- | --- | --- |
-| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，sizeof=80 字节） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
+| cap 存储 | CSpace radix tree + CTE + mdb\_node 双向链表 | **`agent_caps[1024]` 静态数组**（128KB，每槽 `AIRY_ALIGNED(64)` cacheline 对齐，字段布局 80B，sizeof=128B（64B 对齐）） | `AIRY_CAP_MAX_AGENTS=1024` 上限已知，静态数组消除动态分配 + 并发同步 |
 | 写者模型 | 内核态多写者（CNode 操作并发） | **sec_d 唯一写者**（用户态串行化） | 用户态串行化消除内核锁，sec_d 持单写令牌 |
 | Badge 编码 | 64-bit badge 字段（endpoint\_cap/notification\_cap） | **`Epoch<<48 \| RandomTag<<16 \| Perms`** | epoch 位段支持 O(1) 撤销，RandomTag 隐式编码派生关系 |
 | 派生关系 | MDB（Mapping Database）双向链表维护父子 | **RandomTag 隐式编码**（同源派生共享 RandomTag） | 免链表维护，撤销通过 per-agent epoch 递增实现 |
@@ -975,7 +975,7 @@ agentrt-linux 基于 Linux 6.6 内核基线，充分利用以下原生特性：
 | 共享内容          | 符号                                          | 值/类型     | 说明                                                                   |
 | ------------- | ------------------------------------------- | -------- | -------------------------------------------------------------------- |
 | Capability ID | `AIRY_CAP_AGENT_SPAWN/GPU_SCHED/NPU_ACCESS` | 41/42/43 | Airymax 专属（从 41 开始，避免与 Linux 0-40 冲突）                                |
-| LSM 钩子        | `AIRY_LSM_HOOK_TASK_CREATE/IPC_SEND`        | 0/1      | 250 个 LSM 钩子 ID                                                      |
+| LSM 钩子        | `AIRY_LSM_KERNEL_HOOK_TOTAL`                | 250      | 7 个钩子已实现（`AIRY_LSM_HOOK_IMPLEMENTED=7`），250 个总槽位（lsm_types.h，无 AIRY_LSM_HOOK_TASK_CREATE 等 ID 宏） |
 | 策略裁决          | `airy_verdict`                              | 4 枚举     | ALLOW=0 / DENY=1 / AUDIT=2 / COMPLAIN=3                             |
 | Capability 操作 | `airy_cap_op`                               | 7 枚举     | COPY=0 / MINT=1 / MOVE=2 / MUTATE=3 / REVOKE=4 / DELETE=5 / ROTATE=6 |
 
@@ -1049,9 +1049,9 @@ agentrt-linux 的 Boot 流程基于 Linux 6.6 标准启动流程，增加以下�
 | A-ULS 码 | `[-121, -140]` | 10 | `AIRY_ESCHED_POLICY(-121)`, `AIRY_ELIFECYCLE_STATE(-127)` |
 | MemoryRoVol 码 | `[-141, -160]` | 8 | `AIRY_EMEM_TIER(-141)`, `AIRY_EMEM_OOM(-148)` |
 | Cognition 码 | `[-161, -180]` | 6 | `AIRY_ECOG_PHASE(-161)`, `AIRY_ECOG_CONFIDENCE(-166)` |
-| Log 码 | `[-181, -200]` | 6 | `AIRY_ELOG_RING_FULL(-181)`, `AIRY_ELOG_PERSIST(-186)` |
+| Log 码 | `[-181, -200]` | 6 | `AIRY_ELOG_RING(-181)`, `AIRY_ELOG_MAGIC(-186)` |
 | Object 码 | `[-201, -220]` | 4 | `AIRY_EOBJ_NOT_FOUND(-201)`, `AIRY_EOBJ_TYPE_MISMATCH(-204)` |
-| Syscall 码 | `[-221, -240]` | 4 | `AIRY_ESYS_NOTSUPP(-221)`, `AIRY_ESYS_BAD_HANDLE(-224)` |
+| Syscall 码 | `[-221, -240]` | 4 | `AIRY_ESYS_NUMBER(-221)`, `AIRY_ESYS_ABI(-224)` |
 | 预留 | `[-241, -300]` | 0 | — |
 
 **使用规范**：遵循 主流 Linux 发行版 工程规范，使用 goto 风格错误处理、`WARN_ON_ONCE()` 而非 `BUG()`。
@@ -1210,7 +1210,7 @@ AirymaxOS 用户态 **12 daemon** 在内核侧的切入点（daemon 命名后缀
 
 agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-018-openeuler-硬件驱动复用-layer-决策vanilla-66148--openeuler-硬件适配层正交叠加)）复用 openEuler OLK-6.6 的硬件适配能力：
 
-- **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.148 不含此架构
+- **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.149 不含此架构
 - **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
 - **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
 - **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）

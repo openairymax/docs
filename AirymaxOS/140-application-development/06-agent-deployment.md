@@ -437,7 +437,7 @@ agentdeploy apply -f agent.yaml
 agentdeploy status cognition-agent-01
 
 # 滚动更新
-agentdeploy update cognition-agent-01 --image=v1.0.2 --strategy=rolling
+agentdeploy update cognition-agent-01 --image=app-1.0.2 --strategy=rolling
 
 # 回滚
 agentdeploy rollback cognition-agent-01 --to-version=v1.0.1
@@ -692,10 +692,10 @@ stateDiagram-v2
 sequenceDiagram
     participant DEPLOY as agentdeploy
     participant OLD as 旧版本 v1.0.1（3 副本）
-    participant NEW as 新版本 v1.0.2
+    participant NEW as 新版本 app-1.0.2
     participant LB as 负载均衡
 
-    DEPLOY->>NEW: 启动 1 个新副本 v1.0.2
+    DEPLOY->>NEW: 启动 1 个新副本 app-1.0.2
     NEW-->>DEPLOY: 健康检查通过
     DEPLOY->>LB: 加入新副本到负载均衡
     DEPLOY->>OLD: 终止 1 个旧副本 v1.0.1
@@ -725,7 +725,7 @@ flowchart LR
         B2[副本 2]
         B3[副本 3]
     end
-    subgraph GREEN["Green 环境（新 v1.0.2）"]
+    subgraph GREEN["Green 环境（新 app-1.0.2）"]
         G1[副本 1]
         G2[副本 2]
         G3[副本 3]
@@ -738,7 +738,7 @@ flowchart LR
 ```
 
 Blue-Green 策略流程：
-1. 部署 Green 环境（v1.0.2），与 Blue 并行
+1. 部署 Green 环境（app-1.0.2），与 Blue 并行
 2. Green 健康检查通过后，切换负载均衡：100% 流量 → Green
 3. Blue 环境保留（用于快速回滚）
 4. 确认稳定后，终止 Blue 环境
@@ -750,7 +750,7 @@ flowchart LR
     subgraph STABLE["稳定版 v1.0.1（90%）"]
         S1[副本 1-3]
     end
-    subgraph CANARY["金丝雀 v1.0.2（10%）"]
+    subgraph CANARY["金丝雀 app-1.0.2（10%）"]
         C1[副本 1]
     end
 
@@ -762,7 +762,7 @@ flowchart LR
 ```
 
 Canary 策略流程：
-1. 部署 1 个 Canary 副本（v1.0.2），10% 流量
+1. 部署 1 个 Canary 副本（app-1.0.2），10% 流量
 2. 观察 `duration`（默认 300s），监控错误率、延迟
 3. 若指标正常，逐步扩大：10% → 30% → 50% → 100%
 4. 若指标异常，立即停止 Canary，回滚到稳定版
@@ -787,8 +787,8 @@ sequenceDiagram
     ROVOL->>SNAP: 创建快照 S1（v1.0.1 完整状态）
     Note over SNAP: S1 标记为 CHECKPOINT
 
-    DEPLOY->>AGENT: 滚动更新到 v1.0.2
-    Note over AGENT: Agent 运行 v1.0.2
+    DEPLOY->>AGENT: 滚动更新到 app-1.0.2
+    Note over AGENT: Agent 运行 app-1.0.2
 
     Note over DEPLOY: 健康检查连续失败 5 次
     DEPLOY->>DEPLOY: 触发回滚
@@ -963,13 +963,13 @@ agentdeploy apply -f agent.yaml --wait --timeout=300s
 
 ```bash
 # 滚动更新到新版本
-agentdeploy update cognition-agent-01 --image=v1.0.2
+agentdeploy update cognition-agent-01 --image=app-1.0.2
 
 # 指定策略
-agentdeploy update cognition-agent-01 --image=v1.0.2 --strategy=canary --weight=10
+agentdeploy update cognition-agent-01 --image=app-1.0.2 --strategy=canary --weight=10
 
 # 立即更新（不等待健康检查）
-agentdeploy update cognition-agent-01 --image=v1.0.2 --no-wait
+agentdeploy update cognition-agent-01 --image=app-1.0.2 --no-wait
 ```
 
 ### 10.4 `rollback` 命令
@@ -1265,9 +1265,9 @@ AGENT_NAME="cognition-agent-01"
 CURRENT=$(agentdeploy status ${AGENT_NAME} | jq -r '.version')
 echo "Current version: ${CURRENT}"
 
-# 2. 滚动更新到 v1.0.2
-echo "=== Rolling update to v1.0.2 ==="
-agentdeploy update ${AGENT_NAME} --image=v1.0.2 --strategy=rolling
+# 2. 滚动更新到 app-1.0.2
+echo "=== Rolling update to app-1.0.2 ==="
+agentdeploy update ${AGENT_NAME} --image=app-1.0.2 --strategy=rolling
 
 # 3. 等待并观察
 sleep 60
@@ -1290,7 +1290,7 @@ AGENT_NAME="cognition-agent-01"
 
 # 1. Canary 部署（10% 流量）
 echo "=== Canary deploy (10% traffic) ==="
-agentdeploy update ${AGENT_NAME} --image=v1.0.2 --strategy=canary --weight=10
+agentdeploy update ${AGENT_NAME} --image=app-1.0.2 --strategy=canary --weight=10
 
 # 2. 观察 5 分钟
 echo "=== Observing for 5 minutes ==="
@@ -1303,11 +1303,11 @@ if (( $(echo "$ERROR_RATE > 0.05" | bc -l) )); then
     agentdeploy rollback ${AGENT_NAME}
 else
     echo "=== Canary healthy, expanding to 50% ==="
-    agentdeploy update ${AGENT_NAME} --image=v1.0.2 --strategy=canary --weight=50
+    agentdeploy update ${AGENT_NAME} --image=app-1.0.2 --strategy=canary --weight=50
     sleep 300
 
     echo "=== Expanding to 100% ==="
-    agentdeploy update ${AGENT_NAME} --image=v1.0.2 --strategy=rolling
+    agentdeploy update ${AGENT_NAME} --image=app-1.0.2 --strategy=rolling
 fi
 ```
 
@@ -1355,8 +1355,8 @@ class TestAgentDeploy:
         # 部署 v1.0.1
         name = self.client.apply("test-fixtures/agent-v1.yaml", wait=True)
 
-        # 更新到 v1.0.2
-        self.client.update(name, "v1.0.2", strategy="rolling")
+        # 更新到 app-1.0.2
+        self.client.update(name, "app-1.0.2", strategy="rolling")
 
         # 验证版本
         status = self.client.status(name)
@@ -1370,7 +1370,7 @@ class TestAgentDeploy:
         name = self.client.apply("test-fixtures/healthy-agent.yaml", wait=True)
 
         # 更新到不健康版本
-        self.client.update(name, "unhealthy-v1.0.2")
+        self.client.update(name, "unhealthy-app-1.0.2")
 
         # 等待回滚触发
         import time

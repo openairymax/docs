@@ -164,7 +164,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | 8 | Unify Design（A-UEF/A-ULP/A-UCS/A-ULS/A-IPC 5 模块） | Tier 1 | [10-unify-design.md](../10-architecture/10-unify-design.md) | — |
 | 9 | [DSL] 降级生存层（[SC] 损坏时最小可运行子集） | Tier 1 | [11-degraded-survival-layer.md](../10-architecture/11-degraded-survival-layer.md) | 每个 [SC] 头文件 `#ifdef AIRY_SC_FALLBACK` 块 |
 | 10 | 内核基线（1.x.x Linux 6.6 LTS / 2.x.x Linux 7.1） | Tier 1 | [04-engineering-baseline.md](../10-architecture/04-engineering-baseline.md) | ADR-013 |
-| 11 | [SC] 头文件物理宿主与目录结构（TP-011） | Tier 1 | [07-directory-structure.md](../10-architecture/07-directory-structure.md) | [SC] 物理宿主 `kernel/include/uapi/linux/airymax/`（10 个头文件，OS-IRON-014 禁止物理副本） |
+| 11 | [SC] 头文件物理宿主与目录结构（TP-011） | Tier 1 | [07-directory-structure.md](../10-architecture/07-directory-structure.md) | [SC] 物理宿主 `kernel/include/uapi/linux/airymax/`（12 个头文件，OS-IRON-014 禁止物理副本） |
 
 **使用规则**：
 
@@ -179,9 +179,9 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | # | CI Workflow | 校验内容 | 覆盖层级 | 失败动作 |
 |---|------------|---------|---------|---------|
 | 1 | `ci-kernel.yml` | kernel Kbuild 18 配置矩阵 + checkpatch + sparse + Coccinelle + KUnit + kselftest | Tier 0/1 | 阻断合入 |
-| 2 | `sc-dual-ci.yml` | agentrt 与 AirymaxOS 两端 [SC] 头文件逐字节一致 + 编译器无关性 + Tier 0 权威源逐字节哈希校验（[SC] 10 头文件 + magic 值）+ 禁止新增 `AIRY_ERR_*` 双轨引用（错误码以 `AIRY_E*` 正数幅值为准，对齐错误码迁移阶段 3+） | Tier 0/1 | 阻断合入，Tier 0 变更要求 TSC 评审 |
-| 3 | `ssot-validate.yml` | §1.7 权威源清单引用一致性 + [SC] 头文件数量为 10 + 每个 [SC] 有 [DSL] 降级块 + [SS] 语义映射文档存在 + [IND] 实现未泄露到 [SC]/[SS] + Unify Design 5 模块边界一致性 + sched_tac 调度选型（禁 sched_ext）+ IPC 零拷贝选型（禁 page flipping）+ 内存选型（禁 DMA 一致性内存用于日志/IPC） | Tier 0/1 | 阻断合入 |
-| 4 | `mgmt-orchestrator.yml` | SSoT 规则 ID 校验 + 本注册表登记的 `OS-*` / agentrt 编号唯一性 + 主题文档引用编号均在注册表覆盖范围内 + 文件完整性（8 子仓 submodule 指针 + [SC] 10 头文件物理存在）+ 子仓 CI 状态聚合 + 文档格式（markdownlint + 版权头 + 链接有效性） | Tier 1/2 | 阻断合入 |
+| 2 | `sc-dual-ci.yml` | agentrt 与 AirymaxOS 两端 [SC] 头文件逐字节一致 + 编译器无关性 + Tier 0 权威源逐字节哈希校验（[SC] 12 头文件 + magic 值）+ 禁止新增 `AIRY_ERR_*` 双轨引用（错误码以 `AIRY_E*` 正数幅值为准，对齐错误码迁移阶段 3+） | Tier 0/1 | 阻断合入，Tier 0 变更要求 TSC 评审 |
+| 3 | `ssot-validate.yml` | §1.7 权威源清单引用一致性 + [SC] 头文件数量为 12 + 每个 [SC] 有 [DSL] 降级块 + [SS] 语义映射文档存在 + [IND] 实现未泄露到 [SC]/[SS] + Unify Design 5 模块边界一致性 + sched_tac 调度选型（禁 sched_ext）+ IPC 零拷贝选型（禁 page flipping）+ 内存选型（禁 DMA 一致性内存用于日志/IPC） | Tier 0/1 | 阻断合入 |
+| 4 | `mgmt-orchestrator.yml` | SSoT 规则 ID 校验 + 本注册表登记的 `OS-*` / agentrt 编号唯一性 + 主题文档引用编号均在注册表覆盖范围内 + 文件完整性（8 子仓 submodule 指针 + [SC] 12 头文件物理存在）+ 子仓 CI 状态聚合 + 文档格式（markdownlint + 版权头 + 链接有效性） | Tier 1/2 | 阻断合入 |
 | 5 | `nightly.yml` | develop 夜间构建（L5/L6 连接/协议验证）+ 性能回归检测 | — | 标记回退 |
 | 6 | `release.yml` | release tag 流水线（L7 发布验证）+ ABI 兼容性校验 | — | 阻断发布 |
 
@@ -214,7 +214,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-IRON-011 | 双源边界声明（01Reference/ 仅本地参考）                                                           | 04 §12                                   | —         |
 | OS-IRON-012 | seL4 借鉴仅限架构层（ES-SEL4-1\~5）                                                           | 04 §12                                   | —         |
 | OS-IRON-013 | 8 子仓独立 git 仓库 + submodule                                                            | 04 §13                                   | S-2       |
-| OS-IRON-014 | \[SC] 共享契约层 10 个核心头文件单一数据源（禁止物理副本）——10 个 [SC] 头文件物理宿主在 `kernel/include/uapi/linux/airymax/`，其他子仓通过 -I 引用（bpf\_struct\_ops.h 为补充共享文件，非 [SC] 核心）                   | 120 跨项目代码共享                              | E-7       |
+| OS-IRON-014 | \[SC] 共享契约层 10 核心 + 2 补充（`syscall.h`/`bpf_struct_ops.h`）共 12 个 [SC] 头文件单一数据源（禁止物理副本）——12 个 [SC] 头文件物理宿主在 `kernel/include/uapi/linux/airymax/`，其他子仓通过 -I 引用（syscall.h、bpf\_struct\_ops.h 为补充共享文件，非 [SC] 核心 10 个）                   | 120 跨项目代码共享                              | E-7       |
 | OS-IRON-015 | 编号管理元规则——OS-KER / OS-STD / OS-OBS / OS-DRV 等所有规则编号一经分配不得复用；废弃规则标记 `DEPRECATED` 但保留编号 | 90-observability/02-ebpf-probes.md §14.2 | S-1       |
 | OS-IRON-016 | UAPI 头文件编译器无关原则——`include/uapi/linux/airymax/` 下的用户态接口头文件必须坚持 C 标准（C11），避免直接使用 `__attribute__`/`__builtin_*`/`__asm__`/`__sync_*`/`__atomic_*`/`typeof` 等编译器扩展。唯一例外：结构体缓存行对齐必须通过 `AIRY_ALIGNED(N)` 宏（定义于 `uapi_compat.h`）实现，因 C11 `_Alignas` 不能用于结构体类型定义后的对齐指定。`AIRY_ALIGNED(N)` 是 OS-IRON-016 的 sanctioned exception，所有其他 `__attribute__` 用途仍被禁止 | 04-engineering-philosophy.md §2.4        | K-2 / E-7 |
 
@@ -854,8 +854,8 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 | OS-SEC-013 | 访问掩码合并必须用交集语义（final\_mask = L0 & L1 & L2），禁止并集或最宽优先       | 02-landlock-sandbox.md |
 | OS-SEC-014 | landlock\_restrict\_self 必须在 Agent 进程 fork() 后立即调用，禁止延迟施加 | 02-landlock-sandbox.md |
 | OS-SEC-015 | 沙箱创建失败必须终止 Agent 启动，禁止降级运行                                | 02-landlock-sandbox.md |
-| OS-SEC-016 | v1.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 | 01-lsm-framework.md    |
-| OS-SEC-017 | v1.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 | 01-lsm-framework.md    |
+| OS-SEC-016 | v1.0.1: Capability Badge 校验由 fastpath C-S9 内联完成，LSM 钩子不在正常路径上重复执行 capability 校验 | 01-lsm-framework.md    |
+| OS-SEC-017 | v1.0.1: LSM 钩子（`security_uring_cmd`）仅在 fastpath C-S9 失败时被调用，做策略裁决与冷酷执法 | 01-lsm-framework.md    |
 
 ### 9.2 C/C++ 安全编码规则（OS-SEC-100\~199）
 
@@ -1148,7 +1148,7 @@ agentrt 17 类规则前缀详见 [第 14 章](#第-14-章-agentrt-规则编号�
 
 | 编号             | 规则摘要                                                                           | 权威定义                    |
 | -------------- | ------------------------------------------------------------------------------ | ----------------------- |
-| OS-CHK-IRON-01 | \[SC] 共享契约层 10 个头文件必须 agentrt 与 agentrt-linux 完全一致                              | 05-dev-process §5 L1879 |
+| OS-CHK-IRON-01 | \[SC] 共享契约层 12 个头文件必须 agentrt 与 agentrt-linux 完全一致                              | 05-dev-process §5 L1879 |
 | OS-CHK-IRON-02 | \[SS] 语义同源层：SDK 层 API 签名应与 agentrt 同源；系统调用层签名独立演进，仅要求概念操作语义同源                  | 05-dev-process §5 L1907 |
 | OS-CHK-IRON-03 | \[IND] 独立层不应引用对方仓库的内部实现                                                        | 05-dev-process §5 L1913 |
 | OS-CHK-IRON-04 | agentrt-linux 工程思想与上游 Linux 保持一致性                                              | 05-dev-process §5 L1929 |

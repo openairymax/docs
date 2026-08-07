@@ -744,12 +744,12 @@ Token 预算引入一个新错误码，追加到 [30-interfaces/01-syscalls.md](
 /* 正确：检查预算错误并优雅降级 */
 int ret = airy_budget_consume(agent_id, tokens, &usage);
 if (ret == -AIRY_ESCHED_BUDGET) {
-    log_write(LOG_WARN, "token budget exhausted, agent=%u", agent_id);
+    log_write(AIRY_LOG_WARN, "token budget exhausted, agent=%u", agent_id);
     /* 触发 BLOCKED 挂起：保存记忆快照（8 态语义，见 01-agent-lifecycle.md §1.1） */
     airy_sys_sched_ctl(AIRY_SCHED_YIELD, agent_cgroup_path, "SAVE_MEMORY");
     return ret;
 } else if (ret < 0) {
-    log_write(LOG_ERROR, "budget_consume failed: %d (%s)",
+    log_write(AIRY_LOG_ERROR, "budget_consume failed: %d (%s)",
               ret, airy_strerror(ret));
     return ret;
 }
@@ -807,14 +807,14 @@ void monitor_agent_budget(const char *agent_cgroup_path)
         airy_budget_parse_policy(policy_out, &budget);
         uint32_t pct = (budget.current_tokens * 100) / budget.max_tokens;
 
-        log_write(LOG_INFO, "agent=%s tokens=%u/%u (%u%%) consumed=%llu",
+        log_write(AIRY_LOG_INFO, "agent=%s tokens=%u/%u (%u%%) consumed=%llu",
                   agent_cgroup_path, budget.current_tokens, budget.max_tokens,
                   pct, (unsigned long long)budget.total_consumed);
 
         if (pct <= 20)
-            log_write(LOG_WARN, "budget warning: agent=%s at %u%%", agent_cgroup_path, pct);
+            log_write(AIRY_LOG_WARN, "budget warning: agent=%s at %u%%", agent_cgroup_path, pct);
         if (pct <= 5)
-            log_write(LOG_ERROR, "budget critical: agent=%s at %u%%", agent_cgroup_path, pct);
+            log_write(AIRY_LOG_ERROR, "budget critical: agent=%s at %u%%", agent_cgroup_path, pct);
     }
 }
 ```
@@ -837,11 +837,11 @@ int handle_budget_exhaustion(const char *agent_cgroup_path)
     /* 2. 恢复 Agent（从 BLOCKED 到 RUNNING，v1.0.1: io_uring 重激活） */
     ret = io_uring_register(ring_fd, IORING_REGISTER_AIRY_AGENT, agent_cgroup_path, 0);
     if (ret < 0) {
-        log_write(LOG_ERROR, "resume failed: %d", ret);
+        log_write(AIRY_LOG_ERROR, "resume failed: %d", ret);
         return ret;
     }
 
-    log_write(LOG_INFO, "agent %s budget restored and resumed", agent_cgroup_path);
+    log_write(AIRY_LOG_INFO, "agent %s budget restored and resumed", agent_cgroup_path);
     return AIRY_EOK;
 }
 ```
@@ -899,7 +899,7 @@ agentrt-bench budget-overhead --agents 100 --duration 60
 
 # Token 吞吐基准（对比 CFS）
 agentrt-bench token-stream --duration 60 --concurrency 8 \
-    --scheduler scx_agent
+    --scheduler default_eevdf
 
 # 能效基准（RAPL 功耗）
 perf stat -e power/energy-pkg/ \
@@ -970,7 +970,7 @@ static void test_budget_exhaustion(struct kunit *test)
 
 ### 15.2 [SC] 层共享
 
-Token 预算的 `airy_token_budget` 结构体定义在 `include/uapi/linux/airymax/sched.h`（[SC] 共享头文件）中，agentrt 与 agentrt-linux 代码字面共享。
+Token 预算的 `airy_token_budget` 为**文档级结构体**（定义见本文档 §3.1），尚未注册为 [SC] 头文件类型——[SC] `sched.h` 当前仅定义 `struct airy_task_desc`（11 字段，64B）。待 [SC] 注册后 agentrt 与 agentrt-linux 代码字面共享。
 
 ### 15.3 [IND] 层独立
 
@@ -1044,8 +1044,8 @@ agentrt-linux 独有的维度：
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | 0.1.1 | 2026-07-09 | 初始版本。定义令牌桶算法、三级阈值设计、核心数据结构（`airy_token_budget` + `airy_token_budget_config` + `airy_token_usage`）、三级预算层级、消耗计量与审计、耗尽状态机、恢复机制（自动补充 + 手动注入 + 借用）、系统调用集成（523/524）、调度集成（token_factor Q16.16）、SDK 集成（四语言）、性能约束（Token/Watt/Latency）、错误码统一（AIRY_EBUDGET_EXHAUSTED = -15）、KUnit 测试 |
-| v1.0.1 | 2026-11-08 | 内核实现完成，自适应补充算法落地，多级预算层级支持，性能基准达标 |
 | v1.0.1 | 2026-07-21 | 版本号统一：按 IRON-7 铁律，所有文档版本号统一为 v1.0.1（禁止 v1.0/v1.1/v1.1.1/v1.2/v2.0 中间过渡版本） |
+| v1.0.1 | 2026-11-08 | 内核实现完成，自适应补充算法落地，多级预算层级支持，性能基准达标 |
 
 ---
 

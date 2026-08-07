@@ -22,7 +22,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **目标读者**：agentrt-linux 内核开发者、Logger Daemon 开发者、agentrt 用户态开发者
 - **前置知识**：理解 [10-unify-design.md](../10-architecture/10-unify-design.md) A-ULP 模块定位、[06-iron9-shared-model.md](../10-architecture/06-iron9-shared-model.md) [SC] 层概念
 - **预计阅读时间**：20 分钟
-- **核心概念**：128B 固定记录、`LOG_*` 5 级枚举、printk 8 级映射、Fastpath 禁止格式化
+- **核心概念**：128B 固定记录、`AIRY_LOG_*` 5 级枚举、printk 8 级映射、Fastpath 禁止格式化
 - **复杂度标识**：中级
 
 ---

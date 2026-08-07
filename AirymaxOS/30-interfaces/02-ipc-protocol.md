@@ -4,7 +4,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **文档定位**：agentrt-linux（AirymaxOS） 进程间通信协议的 Layout C v4 128B 消息头、5 种 payload、io_uring 零拷贝与同源映射、Capability Folding Badge 模型\
 > **文档版本**：v1.0.1\
 > **最后更新**： 2026-07-26\
-> **v4.3 锁定说明**：IPC 协议锁定 v1.1 为唯一基线（IRON-7），v1.0 从未发布，版本协商机制降级为 v2.0+ 预留。7 opcode 自 v1.1 起稳定。\
+> **v4.3 锁定说明**：IPC 协议锁定 v1.0.1 为唯一基线（IRON-7），v1.0 从未发布，版本协商机制降级为 v2.0+ 预留。7 opcode 自 v1.0.1 起稳定。\
 > **上级文档**：[agentrt-linux 设计文档](README.md)
 
 ---
@@ -18,7 +18,7 @@ agentrt-linux IPC 协议与 agentrt AgentsIPC 同源，保留 128 字节定长�
 3. **机制与策略分离**: 协议提供消息传递机制，消息语义（RPC / 事件 / 流）由 payload 类型决定。
 4. **零拷贝优先**: 高频路径基于 io_uring + registered buffers + IORING_OP_URING_CMD 语义映射，避免数据复制。
 5. **可观测性**: 消息头携带 `trace_id`（OpenTelemetry）与 `timestamp_ns`，全链路可追踪。
-6. **版本协商（v2.0+ 预留）**: v1.1 是唯一协议基线（v4.3 锁定，IRON-7），M0 阶段不实现版本协商逻辑。128B 定长消息头不含 `version` 字段，通过 `opcode` 区分消息类型、`reserved[72]` 预留扩展空间。未来 v2.0 主版本变更时启用版本协商（见 [04-ipc-versioning.md](../160-compatibility/04-ipc-versioning.md)）。
+6. **版本协商（v2.0+ 预留）**: v1.0.1 是唯一协议基线（v4.3 锁定，IRON-7），M0 阶段不实现版本协商逻辑。128B 定长消息头不含 `version` 字段，通过 `opcode` 区分消息类型、`reserved[72]` 预留扩展空间。未来 v2.0 主版本变更时启用版本协商（见 [04-ipc-versioning.md](../160-compatibility/04-ipc-versioning.md)）。
 7. **Capability Folding**: `capability_badge` 字段（offset 40-47，D-9 修复后 8 字节对齐）承载 64-bit Native Word Badge（Epoch + Random Tag + Perms），fastpath C-S9 内联校验（~10ns），IPC 数据传递即能力校验，无双平面、无独立 capability syscall。
 8. **完整性校验**: `crc32` 字段（offset 52-55）覆盖 `header[0:52) + payload`，C-S12 在投递前校验，防 Ring 数据损坏。
 
@@ -617,7 +617,7 @@ agentrt-linux IPC 与 agentrt AgentsIPC 同源，保留 128B 定长消息头布�
 | magic | 'ARE1' | 'ARE1' | 完全兼容（同源 agentrt） |
 | src_task / dst_task | 任务 ID | 任务 ID | 完全兼容 |
 | trace_id | OpenTelemetry | OpenTelemetry | 完全兼容 |
-| timestamp_ns | CLOCK_REALTIME | CLOCK_REALTIME | 完全兼容 |
+| timestamp_ns | CLOCK_MONOTONIC | CLOCK_MONOTONIC | 完全兼容 |
 | 底层传输 | 用户态消息队列 | io_uring 零拷贝 | agentrt-linux 升级 |
 | payload 协议 | 自定义 | 5 种（REQUEST/RESPONSE/EVENT/STREAM/CONTROL） | agentrt-linux 扩展 |
 | capability | 应用权限模型 | seL4 风格 capability | agentrt-linux 升级 |
@@ -690,7 +690,7 @@ IPC 性能约束对齐非功能性需求 NFR-P-002（详见 [00-requirements/03-
 | `struct airy_ipc_msg_hdr` 128B 定长头（Layout C v4） | 自然对齐消息头结构（D-9 修复后移除 packed，使用 `AIRY_ALIGNED(64)` 宏——定义于 `uapi_compat.h`，跨编译器可移植，详见 [C_Cpp_coding_style.md §6.5.1](../50-engineering-standards/10-coding-style/C_Cpp_coding_style.md) OS-IRON-016；字段顺序 magic/opcode/flags/trace_id/timestamp_ns/src_task/dst_task/capability_badge/payload_len/crc32/reserved[72]） | send/recv 路径 |
 | `AIRY_IPC_OP_*` opcode | SEND/RECV/SEND_BATCH/CANCEL/FREEZE/CAP_REQUEST/CAP_RESPONSE 操作码 | io_uring `cmd_op` 路由 |
 | `AIRY_IPC_FLAG_*` flags 位 | ZEROCOPY/CAP_CARRY/ENCRYPT/COMPRESS/BATCH_TAIL 标志位 | 消息处理 |
-| `AIRY_IPC_TYPE_*` 5 种 payload | REQUEST/RESPONSE/EVENT/STREAM/CONTROL 类型枚举 | payload 解码 |
+| payload 协议类型（非 [SC] 宏） | REQUEST/RESPONSE/EVENT/STREAM/CONTROL 5 种类型由 payload 体首字段携带（无 `AIRY_IPC_TYPE_*` 宏） | payload 解码 |
 | `AIRY_BADGE_*` 位布局宏 | Epoch/RandomTag/Perms 提取与编译宏 | Badge 校验与编译 |
 | `AIRY_CAP_PERM_*` 权限位 | SEND/RECV/DERIVE/KILL/FILE_OPEN/ROTATE/SUPERVISE 权限位 | C-S9 权限校验 |
 
@@ -864,10 +864,11 @@ graph TB
 跨节点 IPC 需要区分单节点内 Agent 身份与跨节点 Agent 身份：
 
 ```c
-/* kernel/include/uapi/linux/airymax/agent_id.h —— Agent 身份模型（v1.0.1 新增）
+/* Agent 身份模型（v1.0.1 规划）——文档级定义，非 [SC] 共享契约头
  *
- * 物理宿主: kernel/include/uapi/linux/airymax/agent_id.h
- * 共享层: [SC] 共享契约层（agentrt 与 agentrt-linux 共享）
+ * 注意: agent_id.h 不在 [SC] 12 个头文件清单（uapi_compat/syscalls/syscall/
+ * security_types/sched/memory_types/log_types/lsm_types/error/ipc/
+ * bpf_struct_ops/cognition_types）内，本节类型为文档级设计，待 [SC] 注册后生效。
  */
 
 /* Local Agent ID: 单节点内唯一，用于 agent_caps[] 索引与 fastpath C-S9

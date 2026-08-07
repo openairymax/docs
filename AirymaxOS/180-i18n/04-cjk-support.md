@@ -269,7 +269,7 @@ int main(void)
 agentrt-linux 打包以下 CJK 字体作为发行版默认字体：
 
 ```bash
-# /etc/airymaxos/fonts.conf —— 字体配置
+# /etc/agentrt/fonts.conf —— 字体配置
 # 系统默认 CJK 字体：思源黑体（Source Han Sans）
 
 # 字体 RPM 包结构
@@ -358,7 +358,7 @@ airymaxos-fonts-cjk-common-1.0.1-1.noarch.rpm    # 通用 CJK（共享字形）
 CJK 字体回退顺序（按 locale 优先级）：
 
 ```bash
-# /etc/airymaxos/font-fallback.conf —— 字体回退
+# /etc/agentrt/font-fallback.conf —— 字体回退
 zh_CN.UTF-8:
   primary:    Source Han Sans CN
   fallback1:  Noto Sans CJK SC
@@ -500,7 +500,7 @@ gsettings set org.freedesktop.ibus.general.hotkey triggers \
 ### 5.2 输入法配置文件
 
 ```ini
-# /etc/airymaxos/ibus/config.ini —— IBus 默认配置
+# /etc/agentrt/ibus/config.ini —— IBus 默认配置
 [general]
 preload-engines = ["xkb:us::eng", "libpinyin", "anthy", "hangul"]
 hotkey-triggers = ["<Super>space"]
@@ -530,7 +530,7 @@ word-commit = false
 ### 5.3 字体配置示例
 
 ```bash
-# /etc/airymaxos/ibus/font.conf —— IBus 字体配置
+# /etc/agentrt/ibus/font.conf —— IBus 字体配置
 # 根据当前输入法自动切换字体
 [font-default]
 font = "Sarasa Mono SC 14"

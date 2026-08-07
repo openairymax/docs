@@ -718,7 +718,7 @@ systemd 集成的关键配置参数：
 
 ### 13.3 单元文件保护
 
-- `/usr/lib/systemd/system/airy-*.service` 文件权限 0644，属主 `root:root`。
+- `/usr/lib/systemd/system/agentrt-*.service` 文件权限 0644，属主 `root:root`。
 - 运维修改通过 drop-in（`/etc/systemd/system/<unit>.d/`），不修改原文件。
 - sec_d 监控单元文件目录，非授权修改触发 CRITICAL 告警。
 

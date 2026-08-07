@@ -46,7 +46,7 @@ Agent 行为追踪是 agentrt-linux 专属的可观测性 L9 层，专门追踪�
 | 组件 | 实现位置 | 职责 |
 |------|----------|------|
 | 行为追踪核心 | `kernel/corekern/airy/airy_trace.c`（规划） | per-Agent 追踪上下文管理 |
-| ftrace tracepoint | `include/trace/events/airy.h` | 内核态行为事件 |
+| ftrace tracepoint | `include/trace/events/airy.h`（**规划**：内核当前无此头文件） | 内核态行为事件 |
 | user_events 桥接 | `daemons/cogn_d/user_events.c` | 用户态行为事件 |
 | eBPF 探针 | `tools/agentrt/ebpf/agent_trace.bpf.c` | 可编程深度追踪 |
 | 调用图生成 | `kernel/corekern/airy/airy_call_graph.c`（规划） | Agent 调用图构建 |
@@ -523,7 +523,7 @@ Agent 42 Behavior Trend (7 days):
 
 ### 7.1 8 态生命周期
 
-Agent 8 态生命周期迁移是行为追踪的核心维度。每个状态转换通过 `airy_agent_state_change` tracepoint 记录：
+Agent 8 态生命周期迁移是行为追踪的核心维度。每个状态转换通过 `airy_agent_state_change` tracepoint 记录（**规划**：内核当前无此 tracepoint）：
 
 ```bash
 $ cat /sys/kernel/tracing/trace | grep agent_state_change
@@ -569,7 +569,7 @@ Agent 42 State Duration Analysis:
 
 ### 8.1 IPC 交互事件
 
-Agent 间的 IPC 交互通过 `airy_ipc_send` 与 `airy_ipc_recv` tracepoint 记录：
+Agent 间的 IPC 交互通过 `airy_ipc_send` 与 `airy_ipc_recv` tracepoint 记录（**规划**：内核当前无这两个 tracepoint）：
 
 ```bash
 $ cat /sys/kernel/tracing/trace | grep airy_ipc

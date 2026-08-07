@@ -7,7 +7,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 > **上级文档**：[60-driver-model README](README.md)\
 > **同源映射**：agentrt `daemons`（用户态 dev_d 守护进程）+ Linux 6.6 `drivers/base/devres.c`（devm 资源托管实现）\
 > **理论根基**：Linux 6.6 内核基线 + Airymax 五维正交 24 原则 + Airymax Unify Design（A-ULS 设备生命周期监管）\
-> **核心约束**：IRON-9 v3 [SC] 共享契约层——`error.h`（`AIRY_E_DEV_*`）与 `sched.h`（Agent 8 态生命周期）通过 [SC] 头文件三路桥接
+> **核心约束**：IRON-9 v3 [SC] 共享契约层——`error.h`（`AIRY_E*` 错误码；设备错误统一映射 [SC] error.h POSIX 段，error.h 无设备专用子空间）与 `sched.h`（Agent 8 态生命周期）通过 [SC] 头文件三路桥接
 
 ---
 
@@ -116,7 +116,7 @@ agentrt-linux v1.0.1 将 devm 资源托管扩展至 Agent 虚拟设备资源，�
 1. **资源生命周期绑定 Agent 设备**：Token 预算、记忆卷载、IPC 通道等资源的生命周期与 Agent 虚拟设备绑定，设备注销时自动释放
 2. **资源配额强约束**：每个 Agent 可分配的资源数有上限，由 A-ULS 模块的 dev_d daemon 强制
 3. **Capability 模型校验**：`CAP_DEV_ALLOC` / `CAP_DEV_FREE` 校验嵌入 devm 资源申请/释放路径
-4. **[SC] 错误码统一**：所有 `devm_airy_*` 失败路径返回 `AIRY_E_DEV_*` 错误码（[SC] `error.h`）
+4. **[SC] 错误码统一**：所有 `devm_airy_*` 失败路径返回 `AIRY_E*` 错误码（[SC] `error.h`），设备错误统一映射 [SC] error.h POSIX 段实有码（error.h 无设备专用子空间）
 
 ### 3.2 struct agent_dev_resource
 
@@ -172,11 +172,11 @@ Agent 设备资源分配与释放的对外接口（封装 devres 框架）：
  * @cap_mask:   调用方持有的 Capability 掩码（必须含 CAP_DEV_ALLOC）
  *
  * 上下文：可能睡眠（GFP_KERNEL 分配）
- * 返回：成功返回资源句柄（非零），失败返回负数错误码：
- *   -AIRY_E_DEV_NOCAP     Capability 校验失败
- *   -AIRY_E_DEV_QUOTA     资源配额耗尽
- *   -AIRY_E_DEV_NOMEM     内存分配失败
- *   -AIRY_E_DEV_INVAL     参数非法
+ * 返回：成功返回资源句柄（非零），失败返回负数错误码（设备错误统一
+ *   映射 [SC] error.h POSIX 段，error.h 无设备专用子空间）：
+ *   -AIRY_EPERM           Capability 校验失败
+ *   -AIRY_ENOMEM          资源配额耗尽 / 内存分配失败
+ *   -AIRY_EINVAL          参数非法
  */
 u64 airy_dev_alloc(struct device *dev, enum airy_res_type type,
                    size_t size, u32 flags, u32 cap_mask);
@@ -204,21 +204,21 @@ u64 airy_dev_alloc(struct device *dev, enum airy_res_type type,
 
     /* 1. Capability 校验（纯 C LSM 钩子注入） */
     if (!airy_cap_has(cap_mask, CAP_DEV_ALLOC)) {
-        rc = -AIRY_E_DEV_NOCAP;
+        rc = -AIRY_EPERM;
         goto out_err;
     }
 
     /* 2. 资源配额检查（与 dev_d daemon 交互，RCU 读侧） */
     rc = airy_quota_check(dev, type, size);
     if (rc) {
-        rc = -AIRY_E_DEV_QUOTA;
+        rc = -AIRY_ENOMEM;
         goto out_err;
     }
 
     /* 3. devres 框架分配（含 data 区域） */
     res = devres_alloc(airy_dev_release, sizeof(*res) + size, GFP_KERNEL);
     if (!res) {
-        rc = -AIRY_E_DEV_NOMEM;
+        rc = -AIRY_ENOMEM;
         goto out_err;
     }
 
@@ -372,13 +372,13 @@ static inline int airy_quota_check(struct device *dev,
     switch (type) {
     case AIRY_RES_MEM:
         if (q->instance_used[agent_id].mem_used + size > q->class_mem_max[class])
-            return -AIRY_E_DEV_QUOTA;
+            return -AIRY_ENOMEM;
         if (airy_global_mem_used + size > q->global_mem_max)
-            return -AIRY_E_DEV_QUOTA_GLOBAL;
+            return -AIRY_ENOMEM;
         break;
     case AIRY_RES_DMA:
         if (q->instance_used[agent_id].dma_used + 1 > q->class_dma_max[class])
-            return -AIRY_E_DEV_QUOTA;
+            return -AIRY_ENOMEM;
         break;
     /* ... 其他类型 ... */
     }
@@ -392,7 +392,7 @@ static inline int airy_quota_check(struct device *dev,
 
 | 策略 | 行为 | 适用场景 |
 |------|------|---------|
-| `AIRY_QUOTA_REJECT` | 立即返回 `-AIRY_E_DEV_QUOTA` | 默认策略，硬约束 |
+| `AIRY_QUOTA_REJECT` | 立即返回 `-AIRY_ENOMEM` | 默认策略，硬约束 |
 | `AIRY_QUOTA_QUEUE` | 排队等待其他 Agent 释放 | 交互式工作负载 |
 | `AIRY_QUOTA_MIGRATE` | 触发 Agent 迁移到其他节点 | 分布式部署 |
 | `AIRY_QUOTA_ESCALATE` | 上报 macro_d 仲裁 | 高优先级 Agent |
@@ -425,12 +425,12 @@ static int airy_dev_alloc_check(struct device *dev, u32 cap_mask)
 
     /* 必须持有 CAP_DEV_ALLOC */
     if (!(cred->cap_mask & CAP_DEV_ALLOC))
-        return -AIRY_E_DEV_NOCAP;
+        return -AIRY_EPERM;
 
     /* 配额绕过需要更高权限 */
     if ((cap_mask & CAP_DEV_QUOTA_BYPASS) &&
         !(cred->cap_mask & CAP_DEV_QUOTA_BYPASS))
-        return -AIRY_E_DEV_NOCAP;
+        return -AIRY_EPERM;
 
     return 0;
 }
@@ -457,25 +457,23 @@ static struct security_hook_list airy_hooks[] __lsm_ro_after_init = {
 
 ## 7. [SC] 关联：error.h 与 sched.h
 
-### 7.1 error.h — AIRY_E_DEV_* 错误码
+### 7.1 error.h — 设备错误码映射
 
-[SC] `include/uapi/linux/airymax/error.h` 定义的设备资源错误码（与 [SC] 共享契约层三路桥接至内核态、用户态、daemon 态）：
+[SC] `include/uapi/linux/airymax/error.h` **未定义设备专用错误码子空间**（无 `AIRY_E_DEV_*` / `AIRY_E_VFIO_*` 段）。设备驱动失败路径统一映射至 [SC] error.h POSIX 段实有码（与 [SC] 共享契约层三路桥接至内核态、用户态、daemon 态）：
 
-```c
-/* [SC] include/uapi/linux/airymax/error.h — 设备资源错误码段 */
-#define AIRY_E_DEV_BASE             (-2000)
+| 设备场景 | 映射错误码 | 语义 |
+|---------|-----------|------|
+| Capability 校验失败 / 权限拒绝 | `-AIRY_EPERM` | 拒绝 |
+| 资源配额耗尽 / 内存分配失败 | `-AIRY_ENOMEM` | 资源不足 |
+| 设备名 / 句柄冲突（已存在） | `-AIRY_EEXIST` | 已存在 |
+| 参数非法 | `-AIRY_EINVAL` | 参数非法 |
+| 资源忙（被占用） | `-AIRY_EBUSY` | 设备忙 |
+| 资源操作超时 | `-AIRY_EAGAIN` | 超时 |
+| 资源句柄不存在 | `-AIRY_ENOENT` | 不存在 |
+| 资源访问故障（copy_to_user 等） | `-AIRY_EFAULT` | 访问故障 |
+| 未支持 / 不可用 | `-AIRY_ENOTSUP` | 未支持 |
 
-#define AIRY_E_DEV_NOCAP            (AIRY_E_DEV_BASE - 1)   /* Capability 校验失败 */
-#define AIRY_E_DEV_QUOTA            (AIRY_E_DEV_BASE - 2)   /* Agent 实例配额耗尽 */
-#define AIRY_E_DEV_QUOTA_GLOBAL     (AIRY_E_DEV_BASE - 3)   /* 全局配额耗尽 */
-#define AIRY_E_DEV_NOMEM            (AIRY_E_DEV_BASE - 4)   /* 内存分配失败 */
-#define AIRY_E_DEV_INVAL            (AIRY_E_DEV_BASE - 5)   /* 参数非法 */
-#define AIRY_E_DEV_NOENT            (AIRY_E_DEV_BASE - 6)   /* 资源句柄不存在 */
-#define AIRY_E_DEV_BUSY             (AIRY_E_DEV_BASE - 7)   /* 资源忙（被占用） */
-#define AIRY_E_DEV_FAULT            (AIRY_E_DEV_BASE - 8)   /* 资源访问故障 */
-#define AIRY_E_DEV_TIMEOUT          (AIRY_E_DEV_BASE - 9)   /* 资源操作超时 */
-#define AIRY_E_DEV_STATE            (AIRY_E_DEV_BASE - 10)  /* Agent 状态不允许该操作 */
-```
+> **设备错误统一映射 [SC] error.h POSIX 段（error.h 无设备专用子空间）**：本目录所有 `-AIRY_E_DEV_*` / `-AIRY_E_VFIO_*` 一律改写为上述实有码。
 
 错误码通过 A-UEF（统一错误码）模块的 [SC] 头文件三路桥接：
 
@@ -637,7 +635,7 @@ v1.0（`01-device-model.md`）已定义 `devm_` 框架核心机制与 Linux 上�
 2. **三级配额模型**：全局 / Agent 类 / Agent 实例
 3. **Capability 钩子**：`CAP_DEV_ALLOC` / `CAP_DEV_FREE`
 4. **dev_d daemon 配额管理**：用户态配额策略下发与裁决
-5. **[SC] 错误码扩展**：`AIRY_E_DEV_*` 错误码段
+5. **[SC] 错误码映射**：设备错误统一映射 [SC] `error.h` POSIX 段实有码（error.h 无设备专用子空间，不新增 `AIRY_E_DEV_*` 段）
 
 ---
 

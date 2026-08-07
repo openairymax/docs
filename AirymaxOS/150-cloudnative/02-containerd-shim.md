@@ -397,9 +397,9 @@ func registerAgentToKernel(meta *AgentMeta) (uint32, error) {
 		},
 	}
 
-	/* syscall(AIRY_SYS_AGENT_CREATE) */
+	/* [IND] 规划伪码：Agent 创建经 AIRY_SYS_CALL(548) op 子命令承载（op 码待 [SC] 注册） */
 	ret, _, errno := syscall.Syscall(
-		SYS_AIRY_AGENT_CREATE,
+		AIRY_SYS_CALL,
 		uintptr(unsafe.Pointer(&config)),
 		uintptr(meta.TraceID), 0)
 
@@ -450,8 +450,9 @@ func mountMemoryRovol(agentID uint32,
 		Layers:   config.Layers,
 		Capacity: config.Capacity,
 	}
+	/* [IND] 规划伪码：MemoryRovol 卷载经 AIRY_SYS_ROVOL_CTL(549) op 子命令承载（op 码待 [SC] 注册） */
 	ret, _, errno := syscall.Syscall(
-		SYS_AIRY_MEMORYROVOL_MOUNT,
+		AIRY_SYS_ROVOL_CTL,
 		uintptr(unsafe.Pointer(&mountSpec)),
 		uintptr(unsafe.Pointer(&hostPath[0])), 0)
 	if errno != 0 {
@@ -597,11 +598,13 @@ func cleanupRovolMount(m *RovolMount) {
 }
 
 func cleanupAgentBudget(agentID uint32) {
-	syscall.Syscall(SYS_AIRY_BUDGET_REVOKE, uintptr(agentID), 0, 0)
+	/* [IND] 规划伪码：budget revoke 经 AIRY_SYS_CALL(548) op 子命令承载 */
+	syscall.Syscall(AIRY_SYS_CALL, uintptr(agentID), 0, 0)
 }
 
 func cleanupAgentRegistration(agentID uint32) {
-	syscall.Syscall(SYS_AIRY_AGENT_DESTROY, uintptr(agentID), 0, 0)
+	/* [IND] 规划伪码：agent destroy 经 AIRY_SYS_CALL(548) op 子命令承载 */
+	syscall.Syscall(AIRY_SYS_CALL, uintptr(agentID), 0, 0)
 }
 ```
 
