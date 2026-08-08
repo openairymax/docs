@@ -63,7 +63,7 @@ agentrt-linux 通过 LAYER 方案（[ADR-018](../10-architecture/05-adrs.md#adr-
 - **arch/sw_64/**：完整导入申威架构支持（367 文件），vanilla 6.6.149 不含此架构
 - **arch/{x86,arm64}/configs/openeuler_defconfig**：作为硬件配置底座
 - **configs/euler_hw_{x86,arm64,sw64}.config**：硬件相关 CONFIG 碎片
-- **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook，不触及 sched/security）
+- **drivers/hooks/**：openEuler Vendor Hooks 框架（极简，仅 bonding 一个具体 hook `vendor_bond_check_dev_link`，不触及 sched/security；已落地：`drivers/hooks/{Kconfig,Makefile,vendor_hooks.c}` + `include/trace/hooks/{vendor_hooks.h,bonding.h}`，x86/arm64 经 euler_hw_*.config 启用）
 
 核心子系统（调度/安全/IPC/内存）保持 vanilla 基线纯净，由 `configs/defconfig-agent` IRON-7 覆盖保障。驱动代码通过标准 Linux 驱动模型（device/driver/bus）接入，与核心子系统通过既定接口交互，不改变核心子系统行为。
 

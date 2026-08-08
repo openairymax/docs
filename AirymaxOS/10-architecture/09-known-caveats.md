@@ -86,6 +86,16 @@ agentrt-linux 1.0.1 阶段的形式化验证路径如下：
 | allmodconfig | ✅           | ✅           | ✅           |
 | 编译器          | gcc + clang | gcc + clang | gcc + clang |
 
+### 2.4 SMP 验证覆盖（v1.0.1，E4，对齐 seL4 `CAVEATS.md` L127-155）
+
+| 并发机制 | SMP 验证状态 | 说明 |
+|---------|------------|------|
+| fastpath lock-free ring（`airy_ipc_ring_post` / C-S0~C-S12） | ⚠️ 单核验证 + CBMC 模型检验；**SMP 多核并发验证待 M2** | 无锁环形缓冲，依赖内存屏障；SMP 验证纳入 M2 收敛项 N10（IPC 并发扩展） |
+| per-bucket 散列锁（`airy_cap_bucket_locks`，P2 TOCTOU fix） | ⚠️ 逻辑验证通过（register/derive 同锁）；**SMP 压力测试待 M2** | 128 桶散列 spinlock，消除 register+derive 双写竞态；多核并发用例待补 |
+| 全局原子量（`airy_cap_global_epoch` / per-agent `epoch`） | ✅ 原子语义 + KUnit | `READ_ONCE`/`WRITE_ONCE` 无锁多读者，fastpath 单写者（sec_d） |
+
+> **SMP 部署前置条件**：上表 ⚠️ 项（多核 lock-free ring、per-bucket 锁）在生产部署到 SMP 多核平台前，必须完成并发压力验证（详见 [80-testing/README.md](../../80-testing/README.md) 与 KUnit 回归矩阵）。
+
 ***
 
 ## 3. 实时性限制

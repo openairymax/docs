@@ -54,9 +54,9 @@ L2 消息在 L1 通道上传输时，整个 `struct airy_ipc_msg_hdr` + payload 
 
 ### 2.1 结构体定义
 
-> **SSoT 声明**：IPC 消息头结构体权威定义位于 `include/airymax/ipc.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件，逐字节相同）。本节 `struct airy_ipc_msg_hdr` 必须与 `docs/AirymaxRT/30-interfaces/06-ipc/README.md` §2.1 以及源码 `agentrt/commons/include/airymax/ipc.h` 逐字节一致（128 字节，8 字段，`__attribute__((packed))`，`_Static_assert(sizeof(...) == 128)`）。
+> **SSoT 声明**：IPC 消息头结构体权威定义位于 `include/airymax/ipc.h`（[SC] 共享契约层，agentrt 与 agentrt-linux 共享同一物理头文件，逐字节相同）。本节 `struct airy_ipc_msg_hdr` 必须与 `docs/AirymaxRT/30-interfaces/06-ipc/README.md` §2.1 以及源码 `agentrt/commons/include/airymax/ipc.h` 逐字节一致（128 字节，Layout C v4，11 字段，`__attribute__((aligned(64)))`，`_Static_assert(sizeof(...) == 128)`）。
 >
-> **修正说明**：本节早期草案使用 `are_ipc_message_header_t`（typedef）+ `uint32_t/uint16_t/uint64_t` + 13 字段 + 无 `__attribute__((packed))` + 无真实 `_Static_assert`，与 [SC] SSoT 三重违规（命名/类型/布局）。已统一为 SSoT 版本 `struct airy_ipc_msg_hdr`（无 typedef）+ `__u32/__u16/__u64/__u8` UAPI 类型 + 8 字段 + `__attribute__((packed))` + `_Static_assert`。L2 开放标准接口（`are_ipc_*` 函数族）仍可由第三方实现，但消息头结构体必须与 [SC] SSoT 逐字节一致。
+> **修正说明**：本节早期草案使用 `are_ipc_message_header_t`（typedef）+ `uint32_t/uint16_t/uint64_t` + 13 字段 + 无真实 `_Static_assert`，与 [SC] SSoT 三重违规（命名/类型/布局）；后统一为 8 字段 + `__attribute__((packed))` 的过渡版，仍未包含 Capability Folding（badge）与 CRC 校验字段。当前已统一为 [SC] SSoT 最终版 `struct airy_ipc_msg_hdr`（Layout C v4：`__u32/__u16/__u64/__u8` UAPI 类型 + 11 字段 + `capability_badge`@40 + `crc32`@52 + `reserved[72]`@56 + `__attribute__((aligned(64)))` + 每字段 `_Static_assert`）。L2 开放标准接口（`are_ipc_*` 函数族）仍可由第三方实现，但消息头结构体必须与 [SC] SSoT 逐字节一致。
 
 ```c
 /* SSoT: include/airymax/ipc.h —— [SC] 共享契约层，agentrt 与 agentrt-linux 逐字节共享 */
@@ -64,7 +64,7 @@ L2 消息在 L1 通道上传输时，整个 `struct airy_ipc_msg_hdr` + payload 
 
 /* ==================== 常量 ==================== */
 #define AIRY_IPC_MAGIC        0x41524531u  /* "ARE1"，big-endian: 'A','R','E','1' */
-#define AIRY_IPC_HDR_SZ       128          /* 定长，禁止变更（影响所有 ABI） */
+#define AIRY_IPC_HDR_SIZE     128          /* 定长，禁止变更（影响所有 ABI） */
 #define ARE_IPC_MAX_PAYLOAD   (512u * 1024u)  /* 512 KiB，L2 负载上限 */
 
 /* ==================== L2 协议消息类型（由 opcode 字段承载） ==================== */
@@ -86,45 +86,59 @@ typedef enum {
     ARE_PROTO_CUSTOM   = 4,  /* 实现者自定义（payload 自描述） */
 } are_proto_t;
 
-/* ==================== flags 位定义 ==================== */
-#define AIRY_IPC_F_COMPRESSED    0x0001u  /* payload 经 zlib 压缩 */
-#define AIRY_IPC_F_ENCRYPTED     0x0002u  /* payload 经 TLS/AES-GCM 加密 */
-#define AIRY_IPC_F_STREAMING     0x0004u  /* 流式消息分片（需重组） */
-#define AIRY_IPC_F_DROPPABLE     0x0008u  /* 背压时可丢弃（日志/指标类） */
-#define AIRY_IPC_F_IDEMPOTENT    0x0010u  /* 幂等请求，可安全重试 */
-#define AIRY_IPC_F_TRACE_SAMPLED 0x0020u /* 该 trace 已被采样 */
+/* ==================== flags 位定义（[SC] SSoT，与 include/airymax/ipc.h 一致） ==================== */
+#define AIRY_IPC_FLAG_ZEROCOPY   0x0001u  /* 零拷贝路径 */
+#define AIRY_IPC_FLAG_CAP_CARRY  0x0002u  /* 携带 capability */
+#define AIRY_IPC_FLAG_ENCRYPT    0x0004u  /* payload 已加密（0.1.1 保留未启用） */
+#define AIRY_IPC_FLAG_COMPRESS   0x0008u  /* payload 已压缩（0.1.1 保留未启用） */
+#define AIRY_IPC_FLAG_BATCH_TAIL 0x0010u  /* 批量中最后一条 SQE */
+#define AIRY_IPC_FLAG_RESERVED   0xFFE0u  /* bits 5-15 必须为零（C-S10 校验） */
 
-/* ==================== 128 字节消息头（[SC] SSoT，与 include/airymax/ipc.h 逐字节一致） ==================== */
+/* ==================== 128 字节消息头（[SC] SSoT，Layout C v4，与 include/airymax/ipc.h 逐字节一致） ==================== */
 /**
  * struct airy_ipc_msg_hdr - IPC message header (128 bytes, [SC] shared)
  * @magic: Must be AIRY_IPC_MAGIC (0x41524531 'ARE1').
  * @opcode: Operation code; see enum airy_ipc_op.
- * @flags: Message flags (AIRY_IPC_F_*).
+ * @flags: Message flags (AIRY_IPC_FLAG_*).
  * @trace_id: Distributed trace identifier for cross-daemon tracing.
- * @timestamp_ns: Timestamp in nanoseconds (CLOCK_REALTIME).
+ * @timestamp_ns: Timestamp in nanoseconds (monotonic).
  * @src_task: Source task identifier.
  * @dst_task: Destination task identifier.
+ * @capability_badge: 64-bit Capability Folding badge (Epoch<<48 | RandomTag<<16 | Perms).
  * @payload_len: Payload length in bytes (excludes this 128B header).
- * @reserved: 84 bytes padding, must be zero.
+ * @crc32: CRC32 of payload (IEEE 802.3).
+ * @reserved: 72 bytes padding, must be zero.
  *
- * Fixed 128-byte header, layout never changes. Shared between
+ * Fixed 128-byte header (aligned(64)), layout never changes. Shared between
  * agentrt (user-space) and agentrt-linux (kernel) via [SC] contract layer.
- * Recipients MUST validate magic before processing.
+ * Recipients MUST validate magic (and, on the fastpath, crc32) before processing.
  */
 struct airy_ipc_msg_hdr {
-    __u32   magic;          /* offset 0,  'ARE1' (0x41524531) */
-    __u16   opcode;         /* offset 4,  操作码（见 enum airy_ipc_op） */
-    __u16   flags;          /* offset 6,  消息标志（AIRY_IPC_F_*） */
-    __u64   trace_id;       /* offset 8,  分布式追踪 ID（贯穿全链路） */
-    __u64   timestamp_ns;   /* offset 16, 纳秒时间戳（CLOCK_REALTIME） */
-    __u64   src_task;       /* offset 24, 源任务 ID（整型 task ID，非字符串） */
-    __u64   dst_task;       /* offset 32, 目标任务 ID（整型 task ID，非字符串） */
-    __u32   payload_len;    /* offset 40, 负载长度（不含本 128B 头） */
-    __u8    reserved[84];   /* offset 44, 84 字节保留，必须为零 */
-} __attribute__((packed));
+    __u32   magic;             /* offset  0,  'ARE1' (0x41524531) */
+    __u16   opcode;            /* offset  4,  操作码（见 enum airy_ipc_op） */
+    __u16   flags;             /* offset  6,  消息标志（AIRY_IPC_FLAG_*） */
+    __u64   trace_id;          /* offset  8,  分布式追踪 ID（贯穿全链路） */
+    __u64   timestamp_ns;      /* offset 16, 纳秒时间戳（单调时钟） */
+    __u64   src_task;          /* offset 24, 源任务 ID（整型 task ID，非字符串） */
+    __u64   dst_task;          /* offset 32, 目标任务 ID（整型 task ID，非字符串） */
+    __u64   capability_badge;  /* offset 40, Capability Folding badge（64 位） */
+    __u32   payload_len;       /* offset 48, 负载长度（不含本 128B 头） */
+    __u32   crc32;             /* offset 52, payload 的 CRC32（IEEE 802.3） */
+    __u8    reserved[72];      /* offset 56, 72 字节保留，必须为零 */
+} __attribute__((aligned(64)));
 
 _Static_assert(sizeof(struct airy_ipc_msg_hdr) == 128,
     "IPC message header must be exactly 128 bytes");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, magic) == 0,
+    "magic must be at offset 0");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, capability_badge) == 40,
+    "capability_badge must be at offset 40");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, payload_len) == 48,
+    "payload_len must be at offset 48");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, crc32) == 52,
+    "crc32 must be at offset 52");
+_Static_assert(offsetof(struct airy_ipc_msg_hdr, reserved) == 56,
+    "reserved must be at offset 56");
 
 /* ==================== 完整消息（L2 便利包装，非 [SC] SSoT） ==================== */
 typedef struct {
