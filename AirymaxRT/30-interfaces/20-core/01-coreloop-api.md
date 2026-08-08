@@ -495,11 +495,13 @@ void airy_cognition_set_gccp_interact(airy_cognition_engine_t *engine,
                                       airy_gccp_interact_cb_t cb, void *user_data);
 void airy_cognition_set_tc3_models(airy_cognition_engine_t *engine,
                                    const char *s2, const char *verify, const char *expert);
+void airy_cognition_set_grad_enabled(airy_cognition_engine_t *engine, int enabled);
 ```
 
 - `set_gccp_enabled` — 在 Phase 0 拆解后启用/禁用 GCCP 意图完备确认阶段。
 - `set_gccp_interact` — 注入产品层交互回调（询问四问：终点/起点/卡点/受众，返回回答 JSON）。
-- `set_tc3_models` — 双思考 TC3 三独立模型注入（t2 主思考 / t1-f 快思考-事实 / t1-p 快思考-专业）；TC3 成功后自动激活 `dual_coordinate` 双模型交叉验证。
+- `set_tc3_models` — 双思考系统三模型注入（t2 主思考生成 / t1-f 快思考-事实终裁 / t1-p 快思考-专业逻辑验证），模型由用户自选（非固定厂商）。
+- `set_grad_enabled` — 启用/禁用 GRAD 计划级批判循环（默认启用）：模型 A（t2）生成/修正 DAG 计划 → 模型 C（t1-p）确定性四验（E-01~E-04）→ 模型 B（t1-f）语境终裁；GRAD 启用时替代 Phase 2 文本级批判循环，`!enable_grad` 时回退 TC3 文本循环（t2/t1-f/t1-p + `dual_coordinate` 交叉验证）。
 
 ### 工作大厅 Work Hall（work_hall.h）
 

@@ -135,7 +135,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **系统内代码**: `cog_*` / `airy_cog_*`
 
-**参见**: Thinkdual（双思考系统）、CoreLoopThree（三层认知循环）、MAC（多智能体协作框架）
+**参见**: 双思考系统（GRAD 计划级批判循环）、CoreLoopThree（三层认知循环）、MAC（多智能体协作框架）
 
 ---
 
@@ -173,7 +173,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | L2 执行层 | Execution Engine | 任务执行 → 单元调度 → 补偿事务 |
 | L3 记忆层 | Memory Engine | 结果写入 → 查询 → 挂载 |
 
-认知层实现双思考系统（Thinkdual）的 t2/t1-f/t1-p 三组件认知架构。
+认知层实现双思考系统（GRAD 计划级批判循环）的 t2/t1-f/t1-p 三权分立架构。
 
 **标准名称**: 三层认知循环 (CoreLoopThree)
 
@@ -183,7 +183,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **代码目录**: `agentrt/atoms/coreloopthree/`
 
-**参见**: Thinkdual（双思考系统）、MemoryRovol（记忆卷载）、TaskFlow（任务流引擎）
+**参见**: 双思考系统（GRAD 计划级批判循环）、MemoryRovol（记忆卷载）、TaskFlow（任务流引擎）
 
 ---
 
@@ -246,7 +246,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 **旧称/禁止使用**: "Multi-Agent System"（过于泛化）
 
-**参见**: Thinkdual（双思考系统）、CognitiveEvolution（认知进化系统）
+**参见**: 双思考系统（GRAD 计划级批判循环）、CognitiveEvolution（认知进化系统）
 
 ---
 
@@ -368,28 +368,28 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 
 ---
 
-### Thinkdual / 双思考系统
+### 双思考系统（GRAD 计划级批判循环）
 
-**定义**: Airymax 的核心认知创新，由三组件构成的认知架构：
+**定义**: Airymax 的核心认知创新，默认实现为 **GRAD（Goal-oriented Relative Accuracy Determination）计划级批判循环**，采用三权分立架构，验证对象为 DAG 计划（结构化图纸）而非文本：
 
-| 组件 | 角色 | 功能 |
-|------|------|------|
-| **t2 主思考** | 慢思考 | 深度推理、反思调整、长期规划 |
-| **t1-f 快思考** | 快思考-事实 | 快速响应、流式验证、事实核查 |
-| **t1-p 专业思考** | 快思考-专业 | 专业领域仲裁、深度质量评估 |
+| 角色 | 模型槽位 | 功能 |
+|------|----------|------|
+| **模型 A（生成者）** | t2 主思考 | 构造/修正 DAG 计划（骨架 → 增量补丁 Δ_k） |
+| **模型 C（逻辑验证者）** | t1-p 专业思考 | 确定性四验（E-01 因果 / E-02 死锁 / E-03 资源 / E-04 目的漂移） |
+| **模型 B（语境终裁者）** | t1-f 快思考 | 结合历史语境与目标 G 对 C 的判决终审 |
 
-三组件通过 triple_coordinator 协同工作。"双思"指深度思考（t2）与快速思考（t1）两大思维模式的协作。
+以 GCCP 目标 G 为强锚定，通过差分熵削减（仅验证增量补丁及其一阶闭包）实现 O(M×N)→O(N+M·Δ_max)。"双思"指深度思考（t2）与快速思考（t1）两大思维模式的协作。旧 TC3 **文本级**批判循环保留为降级回退路径（`!enable_grad` 时启用）。
 
-**标准中文名**: 双思考系统（正式）/ Thinkdual（简称）
-**标准英文名**: Thinkdual Cognitive Dual-Thinking System（完整）/ Thinkdual（简化）
+**标准中文名**: 双思考系统（正式）
+**标准英文名**: Dual-Thinking System（完整）/ GRAD-based Plan-Level Critique Loop（当前实现）
 
-**旧称/禁止使用**: "认知双思系统"、"双系统认知模型"、"Thinkdual 认知双思系统"、"Triple Coordinator"（triple_coordinator 是协调器，非系统名称）
+**旧称/禁止使用**: "认知双思系统"、"双系统认知模型"、"Thinkdual"（历史简称，已弃用）、"Triple Coordinator"（triple_coordinator 是 TC3 降级路径的协调器，非系统名称）
 
-**系统内代码**: `tc_*`（思考链）/ `mc_*`（元认知）/ `sc_*`（流式验证）/ `tc3_*`（协调器）
+**系统内代码**: `grad_*`（GRAD 计划级批判循环）/ `tc3_*`（TC3 文本级降级回退）/ `tc_*`（思考链）/ `mc_*`（元认知）/ `sc_*`（流式验证）
 
-**代码目录**: `agentrt/atoms/coreloopthree/src/cognition/`
+**代码目录**: `agentrt/atoms/coreloopthree/src/cognition/critique/`
 
-**参见**: CoreLoopThree（三层认知循环）、CognitiveEvolution（认知进化系统）
+**参见**: CoreLoopThree（三层认知循环）、GCCP（目标完备确认）、GRAD（计划级批判循环协议）
 
 ---
 
@@ -435,7 +435,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 | 服务隔离 | Service Isolation | — | — |
 | 技能 | Skill | `airy_sys_skill_*` | — |
 | 任务流引擎 | TaskFlow | `airy_taskflow_*` | — |
-| 双思考系统 | Thinkdual | `tc_*` / `mc_*` / `sc_*` | 认知双思系统、双系统认知模型、Thinkdual 认知双思系统 |
+| 双思考系统 | GRAD 计划级批判循环 | `grad_*` / `tc3_*`（降级） | Thinkdual（历史简称，已弃用）、认知双思系统、双系统认知模型 |
 | 分时推理框架 | TimeSliceInfer | `ts_*` | 时间切片推理 |
 | 跟踪标识符 | TraceID | — | — |
 

@@ -17,7 +17,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 2. **行动层 (Execution Layer)** → **执行体 (Execution Body)**：负责任务执行、补偿事务、责任链追踪
 3. **记忆层 (Memory Layer)** → **记忆体 (Memory Body)**：负责记忆写入、查询检索、上下文挂载
 
-作为 Airymax 架构设计原则的工程实践典范，CoreLoopThree 将 **双系统认知理论**具象化为可执行的运行时层次，在 Airymax 中实现为 **双思考系统 (Thinkdual)**——t2（慢思考）/ t1-f（快思考-事实）/ t1-p（快思考-专业）三组件认知架构，通过策略可插拔接口和标准化数据流，实现认知决策、行动执行与记忆积累的有机统一。同时，三层架构通过 **正交分离 (Orthogonal Separation)** 与 **协同反馈 (Synergistic Feedback)** 机制，形成了完整的智能体认知-行动-记忆闭环，体现了 MCIS 中 **多体协同 (Multi-Body Collaboration)** 的核心思想。
+作为 Airymax 架构设计原则的工程实践典范，CoreLoopThree 将 **双系统认知理论**具象化为可执行的运行时层次，在 Airymax 中实现为 **双思考系统（GRAD 计划级批判循环）**——模型 A（t2 生成）/ 模型 C（t1-p 确定性四验）/ 模型 B（t1-f 语境终裁）三权分立架构，通过策略可插拔接口和标准化数据流，实现认知决策、行动执行与记忆积累的有机统一。同时，三层架构通过 **正交分离 (Orthogonal Separation)** 与 **协同反馈 (Synergistic Feedback)** 机制，形成了完整的智能体认知-行动-记忆闭环，体现了 MCIS 中 **多体协同 (Multi-Body Collaboration)** 的核心思想。
 
 ### 1.1 设计理念
 
@@ -64,7 +64,7 @@ Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
 - **System 2（慢思考）** → 认知层的深度分析与策略规划
 - **记忆桥梁作用**：连接快慢思考，提供经验支撑与模式积累
 
-> **注**: 上述 System 1/2 来自 Kahneman 双过程认知科学理论。在 Airymax 中实现为 **双思考系统 (Thinkdual)** 的三组件：t2（慢思考）、t1-f（快思考-事实）、t1-p（快思考-专业）。
+> **注**: 上述 System 1/2 来自 Kahneman 双过程认知科学理论。在 Airymax 中实现为 **双思考系统** 的三权分立架构：模型 A（t2 生成者）、模型 C（t1-p 逻辑验证者）、模型 B（t1-f 语境终裁者），验证对象为 **DAG 计划（GRAD 计划级批判循环，默认启用）**；旧 TC3 文本级批判循环保留为降级回退。详见 [GRAD 协议](09-grad.md)。
 
 #### 设计美学体现：简约至上的层次抽象
 - **极简主义**：三层架构实现认知过程的完整抽象，避免冗余设计
@@ -90,7 +90,7 @@ CoreLoopThree 架构的理论基础深刻体现了 **体系并行 (MCIS)** 与 *
 #### 认知观维度：双系统理论与认知科学的工程实现
 - **ACT-R/SOAR 认知架构** → **认知层**的目标栈管理与产生式规则引擎，实现符号推理与规划能力
 - **海马体-新皮层记忆理论** → **记忆层**的 L1-L4 渐进式抽象机制，模拟人类记忆的层级处理过程
-- **双系统认知理论** → 在 Airymax 中实现为 **双思考系统 (Thinkdual)**：t2（慢思考，认知层深度分析）与 t1-f/t1-p（快思考，行动层快速执行）的协同工作，实现快慢思考的有机结合
+- **双系统认知理论** → 在 Airymax 中实现为 **双思考系统（GRAD 计划级批判循环）**：模型 A（t2 深度生成与规划）与模型 C（t1-p 确定性四验）/ 模型 B（t1-f 语境终裁）的协同工作，实现快慢思考的有机结合
 - **认知负荷理论** → 通过责任链追踪和可解释性设计，降低人机协作的认知负荷，提升协作效率
 
 #### 系统观维度：工程两论在智能体系统中的核心实践
@@ -116,7 +116,7 @@ CoreLoopThree 架构的理论基础深刻体现了 **体系并行 (MCIS)** 与 *
 |----------|----------|----------|----------|
 | 正交分离 | 认知≠行动≠记忆的清晰边界 | 系统观 | MCIS 正交解耦 |
 | 策略可插拔 | 每层的标准化策略接口 | 工程观 | 模块化设计 |
-| 双思考系统 (Thinkdual) | t2（认知层慢思考）+ t1-f/t1-p（行动层快思考） | 认知观 | 双系统认知理论 |
+| 双思考系统 | GRAD 计划级批判循环（t2 生成 + t1-p 确定性四验 + t1-f 语境终裁，验证 DAG 计划） | 认知观 | 双系统认知理论 |
 | 渐进式抽象 | L1-L4 记忆层级架构 | 认知观 | 海马体-新皮层理论 |
 | 反馈调节 | 认知层"思考-反思-调整"微循环 | 系统观 | 控制论负反馈 |
 | 责任链追踪 | 完整的执行轨迹记录 | 设计美学 | 可解释性设计 |
@@ -376,7 +376,7 @@ typedef airy_err_t (*airy_dispatch_func_t)(
 > - **GCCP 意图完备确认**：插入在 Phase 0 拆解之后、Phase 1 规划之前。对不完备的大任务集指令向用户询问四问（终点/起点/卡点/受众），融合回答补全可验证目标（Q5 完成判据）。LLM 不可用时启发式降级。详见 [目标完备确认协议 (GCCP)](07-gccp.md)。
 > - **GRAD 计划级批判循环**：插入在 Phase 1 规划之后、Phase 2 执行之前。以 GCCP 目标 G 为锚，对 DAG 计划执行确定性四验（E-01 因果/E-02 死锁/E-03 资源/E-04 目的漂移）+ 语境终裁 + 增量修正，差分熵削减 O(M×N)→O(N+M·Δ)。GRAD 启用时替代 Phase 2 文本级批判循环。详见 [基于目标的相对逻辑准确判定协议 (GRAD)](09-grad.md)。
 > - **工作大厅**：规划产出的 `airy_task_plan_t` 经 Plan→TaskFlow DAG 适配层转换为工作流，在大厅中注册、提交、看板轮询、取消；节点 handler 路由到 `agent_d` 驱动真实 agent 执行。详见 [工作大厅 (Work Hall)](08-work-hall.md)。
-> - **双思考三模型激活**：Thinkdual TC3 支持 t2（主思考）/ t1-f（快思考-事实）/ t1-p（快思考-专业）三独立模型注入（`airy_cognition_set_tc3_models`）；TC3 成功后激活 `dual_coordinate` 双模型交叉验证，结果写入 working memory（`dual_coordinate`）供 Phase 3 审计与 Phase 4 对齐读取。
+> - **双思考三权分立（GRAD）**：默认以 GRAD 计划级批判循环执行——模型 A（t2）生成/修正 DAG 计划，模型 C（t1-p）确定性四验（E-01~E-04），模型 B（t1-f）结合目标 G 与四验报告终裁；三模型经 `airy_cognition_set_tc3_models` 注入（用户自选），`airy_cognition_set_grad_enabled` 控制开关（默认启用）。GRAD 启用时替代 Phase 2 文本级批判循环；`!enable_grad` 时回退 TC3 文本循环（t2/t1-f/t1-p + `dual_coordinate` 交叉验证），结果写入 working memory 供 Phase 3 审计与 Phase 4 对齐读取。
 
 ### 3.3 API 接口
 
@@ -867,7 +867,7 @@ void airy_sys_init(void* cognition, void* execution, void* memory) {
 - ✅ GCCP 目标完备确认协议（五问模型 + LLM 驱动 + 启发式降级）
 - ✅ 工作大厅（任务图注册 / 看板 / 取消 / ops 注入）
 - ✅ Plan→TaskFlow DAG 适配层（依赖关系真实执行）
-- ✅ 双思考 TC3 三独立模型激活（t2/t1-f/t1-p）+ dual_coordinate 交叉验证
+- ✅ 双思考系统 GRAD 计划级批判循环（t2 生成 / t1-p 确定性四验 E-01~E-04 / t1-f 语境终裁，差分熵削减）+ TC3 文本级降级回退
 - ✅ 产品化交互式 CLI（airy_cli：GCCP 四问 + 工作大厅闭环）
 - 🔲 强化学习决策优化（规划中）
 
